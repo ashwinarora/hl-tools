@@ -18,6 +18,8 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@nktkas/hyperliquid": "^0.32.1",
+    "@reown/appkit": "^1.8.19",
+    "@reown/appkit-adapter-wagmi": "^1.8.19",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/match-sorter-utils": "latest",
     "@tanstack/react-devtools": "latest",
@@ -53,6 +55,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.1.4",
     "jsdom": "^28.1.0",
+    "shadcn": "^4.0.2",
     "typescript": "^5.7.2",
     "vite": "^7.3.1",
     "vite-tsconfig-paths": "^5.1.4",

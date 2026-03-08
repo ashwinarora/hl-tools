@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
-import { config } from "#/lib/wagmiConfig";
+import { wagmiAdapter } from "#/lib/wagmiConfig";
 
 let context:
   | {
@@ -31,7 +31,7 @@ export default function TanStackQueryProvider({
   const { queryClient } = getContext();
 
   return (
-    <WagmiProvider config={config}>
+    <WagmiProvider config={wagmiAdapter.wagmiConfig}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </WagmiProvider>
   );
