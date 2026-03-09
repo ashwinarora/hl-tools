@@ -1,7 +1,8 @@
+import type { WebData2WsEvent } from "@nktkas/hyperliquid";
 import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
+import WalletTable from "#/components/WalletTable";
 import { useWebData } from "#/hooks/useWebData";
-import type { WebData2WsEvent } from "@nktkas/hyperliquid";
 
 export const Route = createFileRoute("/")({ component: App });
 
@@ -35,8 +36,8 @@ function StatsColumn({
           <CardTitle className="text-sm">{title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between">
+          {["a", "b", "c", "d"].map((id) => (
+            <div key={id} className="flex items-center justify-between">
               <div className="h-3 w-24 animate-pulse rounded bg-muted" />
               <div className="h-3.5 w-16 animate-pulse rounded bg-muted" />
             </div>
@@ -90,7 +91,7 @@ function App() {
   }
 
   return (
-    <main className="page-wrap px-4 py-8">
+    <main className="page-wrap px-4 py-8 space-y-8">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <StatsColumn
           title="Mainnet"
@@ -103,6 +104,7 @@ function App() {
           isLoading={testnet.isLoading}
         />
       </div>
+      <WalletTable />
     </main>
   );
 }
