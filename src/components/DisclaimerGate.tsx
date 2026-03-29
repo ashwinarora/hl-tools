@@ -1,43 +1,27 @@
-import { ShieldAlert } from "lucide-react";
+import { Info } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { Card, CardContent } from "#/components/ui/card";
-import { Checkbox } from "#/components/ui/checkbox";
+import { Button } from "#/components/ui/button";
 
 export default function DisclaimerGate({ children }: { children: ReactNode }) {
-	const [accepted, setAccepted] = useState(false);
+  const [accepted, setAccepted] = useState(false);
 
-	if (accepted) return <>{children}</>;
+  if (accepted) return <>{children}</>;
 
-	return (
-		<Card className="border-amber-500/40 bg-amber-500/5">
-			<CardContent className="flex flex-col gap-4 py-5">
-				<div className="flex items-start gap-3">
-					<ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-					<div className="space-y-2 text-sm text-muted-foreground">
-						<p>
-							<strong className="text-foreground">Use at your own risk.</strong>{" "}
-							hl-tools is not responsible for any loss of funds. All
-							transactions are irreversible and interact directly with
-							Hyperliquid.
-						</p>
-						<p>
-							All funds go directly to Hyperliquid &mdash; this platform does
-							not hold, custody, or take any portion of your funds.
-						</p>
-					</div>
-				</div>
-				<label
-					htmlFor="disclaimer-accept"
-					className="flex cursor-pointer items-center gap-2 text-sm font-medium"
-				>
-					<Checkbox
-						id="disclaimer-accept"
-						checked={accepted}
-						onCheckedChange={(v) => setAccepted(v === true)}
-					/>
-					I understand and accept the risks
-				</label>
-			</CardContent>
-		</Card>
-	);
+  return (
+    <div className="rounded-lg border border-border bg-muted/50 px-5 py-4">
+      <div className="flex items-start gap-3">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Heads up &mdash; hl-tools sends funds directly to Hyperliquid on
+            your behalf. We don&apos;t touch or keep any of it. Use at your own
+            discretion.
+          </p>
+          <Button size="sm" onClick={() => setAccepted(true)}>
+            Got it, let&apos;s go
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
