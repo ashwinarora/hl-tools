@@ -18,8 +18,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@nktkas/hyperliquid": "^0.32.1",
-    "@reown/appkit": "^1.8.19",
-    "@reown/appkit-adapter-wagmi": "^1.8.19",
+    "@rainbow-me/rainbowkit": "^2.2.10",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/match-sorter-utils": "latest",
     "@tanstack/react-devtools": "latest",
@@ -42,7 +41,7 @@
     "tailwindcss": "^4.1.18",
     "tw-animate-css": "^1.3.6",
     "viem": "2.x",
-    "wagmi": "^3.5.0",
+    "wagmi": "^2.19.5",
     "zod": "^4.3.6",
     "zustand": "^5.0.11"
   },
