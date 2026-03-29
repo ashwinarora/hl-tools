@@ -1,213 +1,93 @@
-Welcome to your new TanStack Start app! 
+# hl-tools
 
-# Getting Started
+Mine Hyperliquid testnet USDC using automated faucet claims. Generate wallets, activate them with a small amount of mainnet USDC, and receive ~$1,000 testnet USDC per wallet.
 
-To run this application:
+## How It Works
+
+Each Hyperliquid wallet can claim ~$1,000 testnet USDC from the faucet, but needs $2 mainnet USDC to activate. hl-tools generates temporary wallets, activates them, claims the faucet, sends the testnet USDC to you, and forwards the mainnet USDC to the next wallet in the chain. You get it all back minus ~$0.02 per wallet in gas.
+
+### Auto Mode (Recommended)
+
+Specify how many wallets (1-50) and the app handles everything. For N wallets:
+
+| | Amount |
+|---|---|
+| You send | N + 1 USDC |
+| You get back (mainnet) | ~N + 1 USDC minus fees |
+| You get (testnet) | N x 1,000 USDC |
+| Net cost per wallet | ~$0.02 |
+
+**Example**: 5 wallets = send $6, get back ~$5.90 mainnet + $5,000 testnet.
+
+### Manual Mode
+
+Step-by-step control over each wallet: Add Wallet, Activate ($2), Claim Faucet, Drain Testnet, Drain Mainnet. Useful for testing or when you want full control.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22+ or Bun
+- A Web3 wallet (MetaMask, Rabby, etc.)
+- Mainnet USDC on Hyperliquid
+
+### Setup
 
 ```bash
+git clone https://github.com/ashwinarora/hl-tools.git
+cd hl-tools
 bun install
+```
+
+Create a `.env` file:
+
+```
+VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+```
+
+You can get a WalletConnect project ID from [cloud.walletconnect.com](https://cloud.walletconnect.com/).
+
+### Development
+
+```bash
 bun --bun run dev
 ```
 
-# Building For Production
+Opens on [http://localhost:3000](http://localhost:3000).
 
-To build this application for production:
+### Production
 
 ```bash
 bun --bun run build
+node .output/server/index.mjs
 ```
 
-## Testing
+## Tech Stack
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+- **Framework**: TanStack Start (React 19, SSR, Nitro)
+- **Routing**: TanStack Router (file-based)
+- **Web3**: wagmi, viem, RainbowKit
+- **Hyperliquid**: @nktkas/hyperliquid SDK
+- **Styling**: Tailwind CSS v4, shadcn/ui
+- **Animations**: motion (Framer Motion)
+- **State**: Zustand, TanStack Query
+- **Tooling**: Biome (lint/format), Vitest, TypeScript (strict)
+
+## Scripts
 
 ```bash
-bun --bun run test
+bun --bun run dev        # Dev server
+bun --bun run build      # Production build
+bun --bun run test       # Run tests
+bun --bun run check      # Lint + format check
+bun --bun run lint       # Lint only
+bun --bun run format     # Format only
 ```
 
-## Styling
+## Disclaimer
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+hl-tools sends funds directly to Hyperliquid on your behalf. We don't touch or keep any of it. Use at your own discretion.
 
-### Removing Tailwind CSS
+## License
 
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `bun install @tailwindcss/vite tailwindcss -D`
-
-## Linting & Formatting
-
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
-
-```bash
-bun --bun run lint
-bun --bun run format
-bun --bun run check
-```
-
-
-## Shadcn
-
-Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
-
-```bash
-pnpm dlx shadcn@latest add button
-```
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+MIT
