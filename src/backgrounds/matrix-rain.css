@@ -1,0 +1,66 @@
+/* Background: Matrix Rain (CSS-only)
+ * Vertical dashed lines falling at different speeds. Digital rain vibe.
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      oklch(0.55 0.15 150 / 0.04) 0px,
+      oklch(0.55 0.15 150 / 0.04) 3px,
+      transparent 3px,
+      transparent 12px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      oklch(0.55 0.15 150 / 0.03) 0px,
+      oklch(0.55 0.15 150 / 0.03) 2px,
+      transparent 2px,
+      transparent 16px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      oklch(0.55 0.15 150 / 0.025) 0px,
+      oklch(0.55 0.15 150 / 0.025) 4px,
+      transparent 4px,
+      transparent 20px
+    );
+  background-size: 30px 15px, 50px 18px, 70px 24px;
+  animation: matrix-fall 4s linear infinite;
+  mask-image: linear-gradient(to bottom, transparent 5%, black 30%, black 70%, transparent 95%);
+}
+
+.dark body::after {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      oklch(0.5 0.2 150 / 0.06) 0px,
+      oklch(0.5 0.2 150 / 0.06) 3px,
+      transparent 3px,
+      transparent 12px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      oklch(0.5 0.2 150 / 0.05) 0px,
+      oklch(0.5 0.2 150 / 0.05) 2px,
+      transparent 2px,
+      transparent 16px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      oklch(0.5 0.2 150 / 0.04) 0px,
+      oklch(0.5 0.2 150 / 0.04) 4px,
+      transparent 4px,
+      transparent 20px
+    );
+}
+
+@keyframes matrix-fall {
+  from { background-position: 0 0, 0 0, 0 0; }
+  to { background-position: 0 60px, 0 72px, 0 96px; }
+}

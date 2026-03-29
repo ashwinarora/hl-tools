@@ -1,0 +1,80 @@
+/* Background: Circuit Board
+ * Layered grid with accent nodes and a scanning line animation.
+ * Techy, data-center aesthetic.
+ * Usage: @import './backgrounds/circuit.css'; in styles.css
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    /* fine grid */
+    linear-gradient(oklch(0.5 0.05 260 / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.5 0.05 260 / 0.04) 1px, transparent 1px),
+    /* coarse grid */
+    linear-gradient(oklch(0.5 0.08 260 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.5 0.08 260 / 0.06) 1px, transparent 1px),
+    /* node dots at intersections */
+    radial-gradient(circle 2px, oklch(0.55 0.12 260 / 0.12) 1px, transparent 1px);
+  background-size:
+    20px 20px,
+    20px 20px,
+    80px 80px,
+    80px 80px,
+    80px 80px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 20%, transparent 70%);
+}
+
+/* scanning line */
+body::before {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 200px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    oklch(0.6 0.15 260 / 0.04) 50%,
+    transparent
+  );
+  animation: scan-line 8s linear infinite;
+}
+
+.dark body::after {
+  background-image:
+    linear-gradient(oklch(0.6 0.08 260 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.6 0.08 260 / 0.05) 1px, transparent 1px),
+    linear-gradient(oklch(0.6 0.1 260 / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.6 0.1 260 / 0.08) 1px, transparent 1px),
+    radial-gradient(circle 2px, oklch(0.5 0.15 260 / 0.15) 1px, transparent 1px);
+  background-size:
+    20px 20px,
+    20px 20px,
+    80px 80px,
+    80px 80px,
+    80px 80px;
+}
+
+.dark body::before {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    oklch(0.5 0.2 260 / 0.06) 50%,
+    transparent
+  );
+}
+
+@keyframes scan-line {
+  from {
+    top: -200px;
+  }
+  to {
+    top: 100vh;
+  }
+}

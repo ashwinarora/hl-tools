@@ -1,0 +1,63 @@
+/* Background: Radar Sweep
+ * Concentric rings with a rotating sweep highlight. Command center feel.
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-radial-gradient(
+      circle at 50% 60%,
+      transparent 0px,
+      transparent 79px,
+      oklch(0.5 0.08 260 / 0.04) 80px
+    );
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  width: 120vmax;
+  height: 120vmax;
+  left: 50%;
+  top: 60%;
+  translate: -50% -50%;
+  z-index: -1;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    oklch(0.6 0.15 260 / 0.06) 30deg,
+    transparent 60deg,
+    transparent 360deg
+  );
+  animation: radar-spin 6s linear infinite;
+  mask-image: radial-gradient(circle, black 10%, transparent 50%);
+}
+
+.dark body::after {
+  background-image:
+    repeating-radial-gradient(
+      circle at 50% 60%,
+      transparent 0px,
+      transparent 79px,
+      oklch(0.6 0.1 260 / 0.06) 80px
+    );
+}
+
+.dark body::before {
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    oklch(0.5 0.2 260 / 0.1) 30deg,
+    transparent 60deg,
+    transparent 360deg
+  );
+}
+
+@keyframes radar-spin {
+  to { rotate: 360deg; }
+}

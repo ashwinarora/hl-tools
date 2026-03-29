@@ -1,0 +1,18 @@
+/* Background: Neon Mesh
+ * Triangular wireframe mesh with glowing accent nodes. Low-poly 3D feel.
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpath d='M0 0L40 40L80 0M0 80L40 40L80 80M0 0L0 80M80 0L80 80M0 0L80 0M0 80L80 80' fill='none' stroke='%236366f1' stroke-opacity='0.05' stroke-width='0.5'/%3E%3Ccircle cx='0' cy='0' r='1.5' fill='%236366f1' fill-opacity='0.08'/%3E%3Ccircle cx='80' cy='0' r='1.5' fill='%236366f1' fill-opacity='0.08'/%3E%3Ccircle cx='40' cy='40' r='2' fill='%236366f1' fill-opacity='0.1'/%3E%3Ccircle cx='0' cy='80' r='1.5' fill='%236366f1' fill-opacity='0.08'/%3E%3Ccircle cx='80' cy='80' r='1.5' fill='%236366f1' fill-opacity='0.08'/%3E%3C/svg%3E");
+  background-size: 80px 80px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 20%, transparent 70%);
+}
+
+.dark body::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpath d='M0 0L40 40L80 0M0 80L40 40L80 80M0 0L0 80M80 0L80 80M0 0L80 0M0 80L80 80' fill='none' stroke='%238b5cf6' stroke-opacity='0.07' stroke-width='0.5'/%3E%3Ccircle cx='0' cy='0' r='1.5' fill='%238b5cf6' fill-opacity='0.12'/%3E%3Ccircle cx='80' cy='0' r='1.5' fill='%238b5cf6' fill-opacity='0.12'/%3E%3Ccircle cx='40' cy='40' r='2' fill='%238b5cf6' fill-opacity='0.15'/%3E%3Ccircle cx='0' cy='80' r='1.5' fill='%238b5cf6' fill-opacity='0.12'/%3E%3Ccircle cx='80' cy='80' r='1.5' fill='%238b5cf6' fill-opacity='0.12'/%3E%3C/svg%3E");
+}

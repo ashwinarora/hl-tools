@@ -1,0 +1,19 @@
+/* Background: Topography
+ * Contour map lines. Technical / geographic data visualization feel.
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cpath d='M306 600Q270 570 240 540T200 480T180 420T180 360T200 300T240 240T306 180' fill='none' stroke='%236366f1' stroke-opacity='0.05' stroke-width='1.5'/%3E%3Cpath d='M306 600Q340 570 370 540T400 480T420 420T420 360T400 300T370 240T306 180' fill='none' stroke='%236366f1' stroke-opacity='0.05' stroke-width='1.5'/%3E%3Cpath d='M150 600Q120 540 110 480T120 360T160 260T220 180T300 120' fill='none' stroke='%236366f1' stroke-opacity='0.04' stroke-width='1.5'/%3E%3Cpath d='M450 600Q480 540 490 480T480 360T440 260T380 180T300 120' fill='none' stroke='%236366f1' stroke-opacity='0.04' stroke-width='1.5'/%3E%3Cpath d='M50 600Q30 500 40 400T100 240T200 120T300 60' fill='none' stroke='%236366f1' stroke-opacity='0.03' stroke-width='1.5'/%3E%3Cpath d='M550 600Q570 500 560 400T500 240T400 120T300 60' fill='none' stroke='%236366f1' stroke-opacity='0.03' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-size: 600px 600px;
+  opacity: 0.8;
+}
+
+.dark body::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cpath d='M306 600Q270 570 240 540T200 480T180 420T180 360T200 300T240 240T306 180' fill='none' stroke='%238b5cf6' stroke-opacity='0.07' stroke-width='1.5'/%3E%3Cpath d='M306 600Q340 570 370 540T400 480T420 420T420 360T400 300T370 240T306 180' fill='none' stroke='%238b5cf6' stroke-opacity='0.07' stroke-width='1.5'/%3E%3Cpath d='M150 600Q120 540 110 480T120 360T160 260T220 180T300 120' fill='none' stroke='%238b5cf6' stroke-opacity='0.06' stroke-width='1.5'/%3E%3Cpath d='M450 600Q480 540 490 480T480 360T440 260T380 180T300 120' fill='none' stroke='%238b5cf6' stroke-opacity='0.06' stroke-width='1.5'/%3E%3Cpath d='M50 600Q30 500 40 400T100 240T200 120T300 60' fill='none' stroke='%238b5cf6' stroke-opacity='0.04' stroke-width='1.5'/%3E%3Cpath d='M550 600Q570 500 560 400T500 240T400 120T300 60' fill='none' stroke='%238b5cf6' stroke-opacity='0.04' stroke-width='1.5'/%3E%3C/svg%3E");
+  opacity: 1;
+}

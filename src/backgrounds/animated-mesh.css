@@ -1,0 +1,65 @@
+/* Background: Animated Gradient Mesh
+ * Soft shifting gradients that slowly move. Apple-style premium feel.
+ * Usage: @import './backgrounds/animated-mesh.css'; in styles.css
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 20% 50%,
+      oklch(0.7 0.1 280 / 0.1),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 80% at 80% 20%,
+      oklch(0.7 0.1 200 / 0.08),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 50% 90%,
+      oklch(0.7 0.08 150 / 0.06),
+      transparent 60%
+    );
+  background-size: 200% 200%;
+  animation: mesh-shift 25s ease-in-out infinite alternate;
+}
+
+.dark body::after {
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 20% 50%,
+      oklch(0.4 0.12 280 / 0.15),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 80% at 80% 20%,
+      oklch(0.4 0.12 200 / 0.12),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 50% 90%,
+      oklch(0.4 0.08 150 / 0.08),
+      transparent 60%
+    );
+  background-size: 200% 200%;
+}
+
+@keyframes mesh-shift {
+  0% {
+    background-position:
+      0% 0%,
+      100% 0%,
+      50% 100%;
+  }
+  100% {
+    background-position:
+      40% 60%,
+      60% 40%,
+      30% 70%;
+  }
+}

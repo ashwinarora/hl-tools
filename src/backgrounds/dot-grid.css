@@ -1,0 +1,26 @@
+/* Background: Dot Grid
+ * Faint repeating dot pattern. Clean, modern tool aesthetic.
+ * Usage: @import './backgrounds/dot-grid.css'; in styles.css
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(
+    circle,
+    oklch(0.5 0 0 / 0.12) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+.dark body::after {
+  background-image: radial-gradient(
+    circle,
+    oklch(0.7 0 0 / 0.08) 1px,
+    transparent 1px
+  );
+}

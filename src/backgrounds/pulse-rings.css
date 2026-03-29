@@ -1,0 +1,46 @@
+/* Background: Pulse Rings
+ * Expanding concentric rings pulsing outward from center. Sonar / broadcast feel.
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  width: 150vmax;
+  height: 150vmax;
+  left: 50%;
+  top: 40%;
+  translate: -50% -50%;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle,
+    transparent 0px,
+    transparent 98px,
+    oklch(0.55 0.1 260 / 0.04) 99px,
+    oklch(0.55 0.1 260 / 0.04) 100px
+  );
+  animation: pulse-expand 4s ease-out infinite;
+  mask-image: radial-gradient(circle, black 10%, transparent 45%);
+}
+
+.dark body::after {
+  background: repeating-radial-gradient(
+    circle,
+    transparent 0px,
+    transparent 98px,
+    oklch(0.5 0.15 260 / 0.06) 99px,
+    oklch(0.5 0.15 260 / 0.06) 100px
+  );
+}
+
+@keyframes pulse-expand {
+  from {
+    scale: 0.8;
+    opacity: 1;
+  }
+  to {
+    scale: 1.2;
+    opacity: 0;
+  }
+}
