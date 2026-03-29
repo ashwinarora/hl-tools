@@ -1,6 +1,6 @@
+import type { WebData2WsEvent } from "@nktkas/hyperliquid";
 import { useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
-import type { WebData2WsEvent } from "@nktkas/hyperliquid";
 import {
 	mainnetSubscriptionClient,
 	testnetSubscriptionClient,

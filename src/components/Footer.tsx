@@ -13,6 +13,10 @@ export default function Footer() {
 				</div>
 				<p className="text-sm">&copy; {year} hl-tools</p>
 			</div>
+			<p className="page-wrap mt-3 text-center text-xs text-muted-foreground/70">
+				All funds go directly to Hyperliquid. hl-tools takes no fees or
+				commission.
+			</p>
 		</footer>
 	);
 }

@@ -1,7 +1,12 @@
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import {
+	darkTheme,
+	lightTheme,
+	RainbowKitProvider,
+} from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
+import { useResolvedTheme } from "#/hooks/useResolvedTheme";
 import { config } from "#/lib/wagmiConfig";
 
 import "@rainbow-me/rainbowkit/styles.css";
@@ -32,11 +37,13 @@ export default function TanStackQueryProvider({
 	children: ReactNode;
 }) {
 	const { queryClient } = getContext();
+	const resolved = useResolvedTheme();
+	const rainbowTheme = resolved === "dark" ? darkTheme() : lightTheme();
 
 	return (
 		<WagmiProvider config={config}>
 			<QueryClientProvider client={queryClient}>
-				<RainbowKitProvider>{children}</RainbowKitProvider>
+				<RainbowKitProvider theme={rainbowTheme}>{children}</RainbowKitProvider>
 			</QueryClientProvider>
 		</WagmiProvider>
 	);

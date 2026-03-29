@@ -1,18 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "#/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 
 export const Route = createFileRoute("/how-to-use")({ component: HowToUse });
 
 function Section({
 	title,
 	children,
-}: { title: string; children: React.ReactNode }) {
+}: {
+	title: string;
+	children: React.ReactNode;
+}) {
 	return (
 		<Card>
 			<CardHeader>
@@ -29,7 +27,11 @@ function Step({
 	n,
 	title,
 	children,
-}: { n: number; title: string; children: React.ReactNode }) {
+}: {
+	n: number;
+	title: string;
+	children: React.ReactNode;
+}) {
 	return (
 		<div className="flex gap-3">
 			<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
@@ -77,8 +79,9 @@ function HowToUse() {
 					<strong>$2 real mainnet USDC</strong> to activate it on Hyperliquid.
 				</p>
 				<p>
-					There are two modes: <strong>Manual</strong> (you control each step)
-					and <strong>Auto</strong> (the app runs the entire chain for you).
+					There are two modes: <strong>Auto</strong> (recommended &mdash; the
+					app runs the entire chain for you) and <strong>Manual</strong> (you
+					control each step).
 				</p>
 			</Section>
 
@@ -99,63 +102,8 @@ function HowToUse() {
 				</Step>
 			</Section>
 
-			{/* Manual Mode */}
-			<Section title="Manual Mode — Step by Step">
-				<p className="font-medium text-foreground">
-					Manual mode gives you full control. You create wallets one by one and
-					trigger each action yourself.
-				</p>
-
-				<Step n={1} title='Click "Add Wallet"'>
-					This generates a random Ethereum wallet (private key + address) stored
-					in your browser&apos;s localStorage. You can add as many as you like.
-				</Step>
-
-				<Step n={2} title='Activate — Click "Receive $2"'>
-					This sends <strong>$2 mainnet USDC</strong> from your connected wallet
-					to the generated wallet. This activates the wallet on Hyperliquid
-					mainnet so it can send transactions.
-				</Step>
-
-				<Step n={3} title='Claim Faucet — Click "Claim"'>
-					Calls the Hyperliquid testnet faucet API for that wallet. The wallet
-					receives <strong>~$1,000 testnet USDC</strong>. This is the core
-					mining action.
-				</Step>
-
-				<Step n={4} title='Drain Testnet — Click "Send"'>
-					Sends all testnet USDC (minus a $0.01 gas buffer) from the generated
-					wallet back to your connected wallet.
-				</Step>
-
-				<Step n={5} title='Drain Mainnet — Click "Send"'>
-					Sends all mainnet USDC (minus $0.01 gas buffer) from the generated
-					wallet back to your connected wallet. This recovers most of the $2 you
-					sent.
-				</Step>
-
-				<Step n={6} title="Repeat">
-					Create more wallets and repeat steps 2–5 for each one. Each wallet
-					mines ~$1,000 testnet USDC.
-				</Step>
-
-				<div className="rounded-lg border border-border bg-muted/50 p-4 space-y-1">
-					<p className="font-medium text-foreground text-xs uppercase tracking-wide">
-						Manual Mode Math (per wallet)
-					</p>
-					<MathRow label="You send (activation)" value="$2.00" />
-					<MathRow label="You recover (drain mainnet)" value="~$1.99" />
-					<MathRow label="Net mainnet cost" value="~$0.01" />
-					<MathRow label="Testnet USDC mined" value="~$1,000" />
-					<MathRow
-						label="Effective ratio"
-						value="~$0.01 → $1,000 testnet"
-					/>
-				</div>
-			</Section>
-
 			{/* Auto Mode */}
-			<Section title="Auto Mode — Step by Step">
+			<Section title="Auto Mode — Step by Step (Default)">
 				<p className="font-medium text-foreground">
 					Auto mode chains multiple wallets together in a single automated run.
 					You specify how many wallets to use, and the app handles everything.
@@ -271,16 +219,69 @@ Result: You spent ~$0.02×N in fees, got N×$1,000 testnet USDC`}</pre>
 				</div>
 			</Section>
 
+			{/* Manual Mode */}
+			<Section title="Manual Mode — Step by Step">
+				<p className="font-medium text-foreground">
+					Manual mode gives you full control. You create wallets one by one and
+					trigger each action yourself.
+				</p>
+
+				<Step n={1} title='Click "Add Wallet"'>
+					This generates a random Ethereum wallet (private key + address) stored
+					in your browser&apos;s localStorage. You can add as many as you like.
+				</Step>
+
+				<Step n={2} title='Activate — Click "Receive $2"'>
+					This sends <strong>$2 mainnet USDC</strong> from your connected wallet
+					to the generated wallet. This activates the wallet on Hyperliquid
+					mainnet so it can send transactions.
+				</Step>
+
+				<Step n={3} title='Claim Faucet — Click "Claim"'>
+					Calls the Hyperliquid testnet faucet API for that wallet. The wallet
+					receives <strong>~$1,000 testnet USDC</strong>. This is the core
+					mining action.
+				</Step>
+
+				<Step n={4} title='Drain Testnet — Click "Send"'>
+					Sends all testnet USDC (minus a $0.01 gas buffer) from the generated
+					wallet back to your connected wallet.
+				</Step>
+
+				<Step n={5} title='Drain Mainnet — Click "Send"'>
+					Sends all mainnet USDC (minus $0.01 gas buffer) from the generated
+					wallet back to your connected wallet. This recovers most of the $2 you
+					sent.
+				</Step>
+
+				<Step n={6} title="Repeat">
+					Create more wallets and repeat steps 2–5 for each one. Each wallet
+					mines ~$1,000 testnet USDC.
+				</Step>
+
+				<div className="rounded-lg border border-border bg-muted/50 p-4 space-y-1">
+					<p className="font-medium text-foreground text-xs uppercase tracking-wide">
+						Manual Mode Math (per wallet)
+					</p>
+					<MathRow label="You send (activation)" value="$2.00" />
+					<MathRow label="You recover (drain mainnet)" value="~$1.99" />
+					<MathRow label="Net mainnet cost" value="~$0.01" />
+					<MathRow label="Testnet USDC mined" value="~$1,000" />
+					<MathRow label="Effective ratio" value="~$0.01 → $1,000 testnet" />
+				</div>
+			</Section>
+
 			{/* Tips */}
 			<Section title="Tips & Notes">
 				<ul className="list-disc space-y-2 pl-5">
 					<li>
-						<strong>Auto mode is recommended</strong> for mining large amounts.
-						It's faster and handles all the wallet-to-wallet forwarding for you.
+						<strong>Auto mode is the default and recommended</strong> for most
+						users. It's faster and handles all the wallet-to-wallet forwarding
+						for you.
 					</li>
 					<li>
-						<strong>Manual mode is useful</strong> for testing, exploring, or
-						when you want to control individual wallet actions.
+						<strong>Manual mode is available</strong> for testing, exploring, or
+						when you want full control over individual wallet actions.
 					</li>
 					<li>
 						<strong>Wallets are stored in localStorage.</strong> They persist

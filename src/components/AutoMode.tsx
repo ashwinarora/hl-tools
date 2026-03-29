@@ -122,8 +122,10 @@ function WalletStepRow({
 
 function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 	const [amount, setAmount] = useState("");
+	const [confirming, setConfirming] = useState(false);
 	const parsed = Number.parseInt(amount, 10);
 	const isValid = !Number.isNaN(parsed) && parsed >= 1 && parsed <= 50;
+	const needsConfirm = isValid && parsed > 10;
 
 	return (
 		<Card>
@@ -146,7 +148,10 @@ function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 						step={1}
 						placeholder="e.g. 5"
 						value={amount}
-						onChange={(e) => setAmount(e.target.value)}
+						onChange={(e) => {
+							setAmount(e.target.value);
+							setConfirming(false);
+						}}
 					/>
 				</div>
 				{isValid && (
@@ -177,13 +182,49 @@ function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 						</div>
 					</div>
 				)}
-				<Button
-					onClick={() => onStart(parsed)}
-					disabled={!isValid}
-					className="w-full"
-				>
-					Start Chain
-				</Button>
+				{needsConfirm && !confirming ? (
+					<Button
+						onClick={() => setConfirming(true)}
+						disabled={!isValid}
+						className="w-full"
+					>
+						Start Chain
+					</Button>
+				) : needsConfirm && confirming ? (
+					<div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+						<p className="text-xs text-muted-foreground">
+							You're about to create{" "}
+							<strong className="text-foreground">{parsed} wallets</strong> and
+							send{" "}
+							<strong className="text-foreground">{fmt(parsed + 1)}</strong>{" "}
+							mainnet USDC. Are you sure?
+						</p>
+						<div className="flex gap-2">
+							<Button
+								onClick={() => onStart(parsed)}
+								className="flex-1"
+								size="sm"
+							>
+								Confirm &amp; Start
+							</Button>
+							<Button
+								variant="outline"
+								onClick={() => setConfirming(false)}
+								size="sm"
+							>
+								Cancel
+							</Button>
+						</div>
+					</div>
+				) : (
+					<Button
+						onClick={() => onStart(parsed)}
+						disabled={!isValid}
+						className="w-full"
+					>
+						Start Chain
+					</Button>
+				)}
 			</CardContent>
 		</Card>
 	);
