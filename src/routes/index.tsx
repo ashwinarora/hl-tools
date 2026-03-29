@@ -165,10 +165,10 @@ function StatsColumn({
 type Mode = "auto" | "manual";
 
 const triggerBase =
-  "flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border bg-card px-6 py-5 transition-all";
-const triggerActive = "border-primary bg-primary/5 shadow-md";
+  "flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border px-6 py-5 transition-all";
+const triggerActive = "border-primary bg-card shadow-md";
 const triggerInactive =
-  "border-border hover:border-muted-foreground/30 hover:shadow-sm";
+  "border-border bg-transparent hover:border-muted-foreground/30 hover:shadow-sm";
 
 function App() {
   const mainnet = useWebData("mainnet");
