@@ -1,0 +1,45 @@
+/* Background: Diagonal Hatch
+ * Fine diagonal lines like an engineering blueprint. Technical, precise.
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      oklch(0.5 0.06 260 / 0.05) 0px,
+      oklch(0.5 0.06 260 / 0.05) 1px,
+      transparent 1px,
+      transparent 16px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      oklch(0.5 0.06 260 / 0.03) 0px,
+      oklch(0.5 0.06 260 / 0.03) 1px,
+      transparent 1px,
+      transparent 16px
+    );
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 70%);
+}
+
+.dark body::after {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      oklch(0.6 0.08 260 / 0.06) 0px,
+      oklch(0.6 0.08 260 / 0.06) 1px,
+      transparent 1px,
+      transparent 16px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      oklch(0.6 0.08 260 / 0.04) 0px,
+      oklch(0.6 0.08 260 / 0.04) 1px,
+      transparent 1px,
+      transparent 16px
+    );
+}

@@ -1,0 +1,40 @@
+/* Background: Starfield
+ * Layered dots at different sizes/opacities drifting slowly. Deep space feel.
+ * Renders on #bg-layer div in root layout.
+ */
+
+#bg-layer {
+  background-image:
+    radial-gradient(1.5px 1.5px at 10% 20%, oklch(0.35 0.1 260 / 0.3), transparent),
+    radial-gradient(1px 1px at 30% 65%, oklch(0.35 0.08 260 / 0.25), transparent),
+    radial-gradient(2px 2px at 55% 15%, oklch(0.3 0.12 260 / 0.3), transparent),
+    radial-gradient(1px 1px at 70% 80%, oklch(0.35 0.08 260 / 0.22), transparent),
+    radial-gradient(1.5px 1.5px at 85% 35%, oklch(0.4 0.06 260 / 0.2), transparent),
+    radial-gradient(2px 2px at 20% 90%, oklch(0.3 0.1 260 / 0.28), transparent),
+    radial-gradient(1px 1px at 45% 45%, oklch(0.4 0.08 260 / 0.18), transparent),
+    radial-gradient(2.5px 2.5px at 92% 60%, oklch(0.3 0.14 260 / 0.3), transparent),
+    radial-gradient(1.5px 1.5px at 65% 50%, oklch(0.35 0.06 260 / 0.2), transparent),
+    radial-gradient(2px 2px at 5% 55%, oklch(0.3 0.1 260 / 0.25), transparent);
+  background-size: 300px 300px, 250px 250px, 350px 350px, 200px 200px, 400px 400px,
+    280px 280px, 320px 320px, 360px 360px, 220px 220px, 380px 380px;
+  animation: starfield-drift 60s linear infinite;
+}
+
+.dark #bg-layer {
+  background-image:
+    radial-gradient(1.5px 1.5px at 10% 20%, oklch(0.85 0.06 260 / 0.4), transparent),
+    radial-gradient(1px 1px at 30% 65%, oklch(0.85 0.06 260 / 0.35), transparent),
+    radial-gradient(2px 2px at 55% 15%, oklch(0.88 0.1 260 / 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 70% 80%, oklch(0.85 0.06 260 / 0.3), transparent),
+    radial-gradient(1px 1px at 85% 35%, oklch(0.8 0.05 260 / 0.25), transparent),
+    radial-gradient(2px 2px at 20% 90%, oklch(0.88 0.1 260 / 0.35), transparent),
+    radial-gradient(1px 1px at 45% 45%, oklch(0.8 0.05 260 / 0.22), transparent),
+    radial-gradient(2.5px 2.5px at 92% 60%, oklch(0.9 0.12 260 / 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 65% 50%, oklch(0.8 0.05 260 / 0.25), transparent),
+    radial-gradient(2px 2px at 5% 55%, oklch(0.85 0.1 260 / 0.32), transparent);
+}
+
+@keyframes starfield-drift {
+  from { background-position: 0 0; }
+  to { background-position: -300px 200px; }
+}

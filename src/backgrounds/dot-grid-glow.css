@@ -1,0 +1,47 @@
+/* Background: Dot Grid + Radial Glow
+ * Dot pattern with a soft gradient glow centered behind content.
+ * Usage: @import './backgrounds/dot-grid-glow.css'; in styles.css
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle,
+    oklch(0.5 0 0 / 0.12) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 30%,
+    oklch(0.65 0.08 260 / 0.08),
+    transparent 70%
+  );
+}
+
+.dark body::after {
+  background-image: radial-gradient(
+    circle,
+    oklch(0.7 0 0 / 0.08) 1px,
+    transparent 1px
+  );
+}
+
+.dark body::before {
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 30%,
+    oklch(0.35 0.1 260 / 0.12),
+    transparent 70%
+  );
+}

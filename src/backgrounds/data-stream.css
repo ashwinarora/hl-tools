@@ -1,0 +1,68 @@
+/* Background: Data Stream
+ * Horizontal flowing lines at different speeds/opacities. Network traffic / data flow.
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      oklch(0.55 0.12 220 / 0.04) 0px,
+      oklch(0.55 0.12 220 / 0.04) 40px,
+      transparent 40px,
+      transparent 80px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      oklch(0.55 0.1 260 / 0.03) 0px,
+      oklch(0.55 0.1 260 / 0.03) 60px,
+      transparent 60px,
+      transparent 140px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      oklch(0.5 0.08 200 / 0.025) 0px,
+      oklch(0.5 0.08 200 / 0.025) 25px,
+      transparent 25px,
+      transparent 100px
+    );
+  background-size: 160px 4px, 280px 2px, 200px 1px;
+  background-position: 0 20%, 0 50%, 0 75%;
+  background-repeat: repeat-x;
+  animation: data-flow 8s linear infinite;
+  mask-image: linear-gradient(to right, transparent 5%, black 20%, black 80%, transparent 95%);
+}
+
+.dark body::after {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      oklch(0.5 0.15 220 / 0.06) 0px,
+      oklch(0.5 0.15 220 / 0.06) 40px,
+      transparent 40px,
+      transparent 80px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      oklch(0.5 0.12 260 / 0.05) 0px,
+      oklch(0.5 0.12 260 / 0.05) 60px,
+      transparent 60px,
+      transparent 140px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      oklch(0.45 0.1 200 / 0.04) 0px,
+      oklch(0.45 0.1 200 / 0.04) 25px,
+      transparent 25px,
+      transparent 100px
+    );
+}
+
+@keyframes data-flow {
+  from { background-position: 0 20%, 0 50%, 0 75%; }
+  to { background-position: 320px 20%, -280px 50%, 200px 75%; }
+}

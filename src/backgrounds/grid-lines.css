@@ -1,0 +1,23 @@
+/* Background: Grid Lines
+ * Faint graph-paper lines with radial edge fade. Crypto/dev tool vibe.
+ * Usage: @import './backgrounds/grid-lines.css'; in styles.css
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(oklch(0.5 0 0 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.5 0 0 / 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 70%);
+}
+
+.dark body::after {
+  background-image:
+    linear-gradient(oklch(0.7 0 0 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.7 0 0 / 0.05) 1px, transparent 1px);
+}

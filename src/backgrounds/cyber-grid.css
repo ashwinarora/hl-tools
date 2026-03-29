@@ -1,0 +1,47 @@
+/* Background: Cyber Grid
+ * Perspective grid floor fading into the distance with a soft neon glow.
+ * Think Tron / cyberpunk terminal aesthetic, but tasteful.
+ * Usage: @import './backgrounds/cyber-grid.css'; in styles.css
+ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(oklch(0.55 0.1 260 / 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.55 0.1 260 / 0.07) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: linear-gradient(to top, black 0%, transparent 60%);
+  transform: perspective(500px) rotateX(45deg);
+  transform-origin: bottom center;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 80% 40% at 50% 100%,
+    oklch(0.55 0.15 260 / 0.1),
+    transparent 70%
+  );
+}
+
+.dark body::after {
+  background-image:
+    linear-gradient(oklch(0.6 0.15 260 / 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.6 0.15 260 / 0.1) 1px, transparent 1px);
+}
+
+.dark body::before {
+  background: radial-gradient(
+    ellipse 80% 40% at 50% 100%,
+    oklch(0.4 0.2 260 / 0.15),
+    transparent 70%
+  );
+}

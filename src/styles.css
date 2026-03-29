@@ -5,12 +5,30 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* @import './backgrounds/dot-grid.css';  */
+/* @import './backgrounds/animated-mesh.css';  */
+/* @import './backgrounds/dot-grid-glow.css';  */
+/* @import './backgrounds/grid-lines.css';  */
+/* @import './backgrounds/aurora.css';  */
+/* @import './backgrounds/circuit.css';  */
+/* @import './backgrounds/cyber-grid.css';  */
+/* @import './backgrounds/hex-grid.css';  */
+/* @import './backgrounds/radar-sweep.css';  */
+/* @import './backgrounds/matrix-rain.css';  */
+/* @import './backgrounds/topography.css';  */
+/* @import './backgrounds/pulse-rings.css';  */
+/* @import './backgrounds/diagonal-hatch.css';  */
+/* @import './backgrounds/warp-speed.css';  */
+/* @import './backgrounds/neon-mesh.css';  */
+/* @import './backgrounds/data-stream.css';  */
+@import './backgrounds/starfield.css';
+
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.91 0.008 286);
   --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
+  --card: oklch(0.93 0.006 286);
   --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
+  --popover: oklch(0.93 0.006 286);
   --popover-foreground: oklch(0.141 0.005 285.823);
   --primary: oklch(0.21 0.006 285.885);
   --primary-foreground: oklch(0.985 0 0);

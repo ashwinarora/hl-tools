@@ -7,7 +7,7 @@ import ThemeToggle from "./ThemeToggle";
 
 export default function Header() {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 px-4 backdrop-blur-lg">
+    <header className="sticky top-0 z-50 px-4">
       <nav className="page-wrap flex h-14 items-center gap-x-4 sm:h-16">
         <Link
           to="/"

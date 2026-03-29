@@ -1,0 +1,89 @@
+/* Background: Aurora
+ * Animated flowing color bands like the northern lights.
+ * Multiple translucent gradient strips that drift horizontally.
+ * Usage: @import './backgrounds/aurora.css'; in styles.css
+ */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -50% -20% auto;
+  height: 60%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      oklch(0.65 0.15 280 / 0.08) 20%,
+      oklch(0.65 0.18 200 / 0.1) 40%,
+      oklch(0.6 0.15 160 / 0.07) 60%,
+      oklch(0.65 0.15 280 / 0.08) 80%,
+      transparent 100%
+    );
+  filter: blur(80px);
+  animation: aurora-drift 20s ease-in-out infinite alternate;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: -30% -30% auto;
+  height: 50%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      oklch(0.6 0.12 320 / 0.06) 25%,
+      oklch(0.65 0.15 220 / 0.08) 50%,
+      oklch(0.6 0.12 140 / 0.06) 75%,
+      transparent 100%
+    );
+  filter: blur(100px);
+  animation: aurora-drift-reverse 25s ease-in-out infinite alternate;
+}
+
+.dark body::before {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      oklch(0.45 0.18 280 / 0.15) 20%,
+      oklch(0.45 0.2 200 / 0.18) 40%,
+      oklch(0.4 0.18 160 / 0.12) 60%,
+      oklch(0.45 0.18 280 / 0.15) 80%,
+      transparent 100%
+    );
+}
+
+.dark body::after {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      oklch(0.4 0.15 320 / 0.1) 25%,
+      oklch(0.45 0.18 220 / 0.14) 50%,
+      oklch(0.4 0.15 140 / 0.1) 75%,
+      transparent 100%
+    );
+}
+
+@keyframes aurora-drift {
+  from {
+    transform: translateX(-15%) skewX(-5deg);
+  }
+  to {
+    transform: translateX(15%) skewX(5deg);
+  }
+}
+
+@keyframes aurora-drift-reverse {
+  from {
+    transform: translateX(10%) skewX(3deg);
+  }
+  to {
+    transform: translateX(-10%) skewX(-3deg);
+  }
+}
