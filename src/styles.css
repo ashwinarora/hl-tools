@@ -136,3 +136,48 @@ body,
     color: var(--foreground);
   }
 }
+
+@keyframes border-rotate {
+  from {
+    --border-angle: 0deg;
+  }
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.mining-glow {
+  animation: border-rotate 4s linear infinite;
+  border-image: conic-gradient(
+      from var(--border-angle),
+      oklch(0.7 0.15 330),
+      oklch(0.7 0.15 270),
+      oklch(0.7 0.15 210),
+      oklch(0.7 0.15 150),
+      oklch(0.7 0.15 90),
+      oklch(0.7 0.15 30),
+      oklch(0.7 0.15 330)
+    )
+    1;
+  border-radius: 0;
+}
+
+.mining-glow-wrapper {
+  animation: border-rotate 4s linear infinite;
+  background: conic-gradient(
+    from var(--border-angle),
+    oklch(0.7 0.15 330),
+    oklch(0.7 0.15 270),
+    oklch(0.7 0.15 210),
+    oklch(0.7 0.15 150),
+    oklch(0.7 0.15 90),
+    oklch(0.7 0.15 30),
+    oklch(0.7 0.15 330)
+  );
+}

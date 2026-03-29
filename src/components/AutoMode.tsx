@@ -1,14 +1,21 @@
 import { Check, CircleAlert, Loader2, Minus } from "lucide-react";
-import { useState } from "react";
+import {
+	motion,
+	useAnimate,
+	useMotionValue,
+	useMotionValueEvent,
+	useSpring,
+} from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Input } from "#/components/ui/input";
-import {
-	type ChainState,
-	type SubStep,
-	useAutoChain,
-	type WalletStep,
+import type {
+	ChainState,
+	SubStep,
+	WalletStep,
+	WalletStepStatus,
 } from "#/hooks/useAutoChain";
 
 function fmt(value: number): string {
@@ -25,6 +32,24 @@ const SUB_STEP_LABELS: Record<SubStep, string> = {
 	"forward-mainnet": "Forward mainnet",
 };
 
+/* ── Animation 3: Animated testnet counter ── */
+function AnimatedAmount({ value }: { value: number }) {
+	const mv = useMotionValue(value);
+	const spring = useSpring(mv, { stiffness: 120, damping: 20 });
+	const [display, setDisplay] = useState(value);
+
+	useEffect(() => {
+		mv.set(value);
+	}, [value, mv]);
+
+	useMotionValueEvent(spring, "change", (latest) => {
+		setDisplay(latest);
+	});
+
+	return <>{fmt(display)}</>;
+}
+
+/* ── SubStepRow with checkmark micro-animation (Animation 4) ── */
 function SubStepRow({
 	subStep,
 	wallet,
@@ -46,7 +71,14 @@ function SubStepRow({
 	return (
 		<div className="flex items-center gap-2 text-xs">
 			{isCompleted ? (
-				<Check className="size-3.5 text-green-500" />
+				<motion.span
+					initial={{ scale: 0 }}
+					animate={{ scale: 1 }}
+					transition={{ type: "spring", stiffness: 500, damping: 25 }}
+					className="inline-flex"
+				>
+					<Check className="size-3.5 text-green-500" />
+				</motion.span>
 			) : isActive && !hasError ? (
 				<Loader2 className="size-3.5 animate-spin text-muted-foreground" />
 			) : hasError ? (
@@ -69,6 +101,7 @@ function SubStepRow({
 	);
 }
 
+/* ── WalletStepRow with active highlight (2) + completion flash (5) ── */
 function WalletStepRow({
 	wallet,
 	total,
@@ -77,6 +110,25 @@ function WalletStepRow({
 	total: number;
 }) {
 	const isLast = wallet.index === total - 1;
+	const [scope, animateFlash] = useAnimate();
+	const prevStatusRef = useRef<WalletStepStatus>(wallet.status);
+
+	useEffect(() => {
+		if (
+			prevStatusRef.current === "in-progress" &&
+			wallet.status === "completed"
+		) {
+			animateFlash(
+				scope.current,
+				{
+					backgroundColor: ["rgba(34,197,94,0.15)", "rgba(34,197,94,0)"],
+				},
+				{ duration: 0.3, ease: "easeOut" },
+			);
+		}
+		prevStatusRef.current = wallet.status;
+	}, [wallet.status, animateFlash, scope]);
+
 	const statusBadge = {
 		pending: <Badge variant="secondary">Pending</Badge>,
 		"in-progress": (
@@ -90,7 +142,22 @@ function WalletStepRow({
 	}[wallet.status];
 
 	return (
-		<div className="space-y-1.5 rounded-md border p-3">
+		<div
+			ref={scope}
+			className="relative space-y-1.5 overflow-hidden rounded-md border p-3"
+		>
+			{/* Animation 2: pulsing left border on active wallet */}
+			{wallet.status === "in-progress" && (
+				<motion.div
+					className="absolute inset-y-0 left-0 w-0.5 bg-primary"
+					animate={{ opacity: [0.4, 1, 0.4] }}
+					transition={{
+						duration: 2,
+						repeat: Number.POSITIVE_INFINITY,
+						ease: "easeInOut",
+					}}
+				/>
+			)}
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2">
 					<span className="text-sm font-medium">
@@ -186,7 +253,7 @@ function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 					<Button
 						onClick={() => setConfirming(true)}
 						disabled={!isValid}
-						className="w-full"
+						className="w-full hover:cursor-pointer"
 					>
 						Start Chain
 					</Button>
@@ -220,7 +287,7 @@ function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 					<Button
 						onClick={() => onStart(parsed)}
 						disabled={!isValid}
-						className="w-full"
+						className="w-full hover:cursor-pointer"
 					>
 						Start Chain
 					</Button>
@@ -243,16 +310,32 @@ function AutoModeProgress({
 	const isDone = state.status === "completed";
 	const isError = state.status === "error";
 
+	/* Animation 1: progress bar */
+	const completedCount = state.wallets.filter(
+		(w) => w.status === "completed",
+	).length;
+	const progressPct =
+		state.inputAmount > 0 ? (completedCount / state.inputAmount) * 100 : 0;
+
 	return (
 		<Card>
 			<CardHeader>
 				<div className="flex items-center justify-between">
+					{/* Animation 6b: "Chain Complete" title fade-in */}
 					<CardTitle className="text-sm">
-						{isDone
-							? "Chain Complete"
-							: isError
-								? "Chain Error"
-								: "Auto Chain Progress"}
+						{isDone ? (
+							<motion.span
+								initial={{ opacity: 0, scale: 0.95 }}
+								animate={{ opacity: 1, scale: 1 }}
+								transition={{ duration: 0.25, ease: "easeOut" }}
+							>
+								Chain Complete
+							</motion.span>
+						) : isError ? (
+							"Chain Error"
+						) : (
+							"Auto Chain Progress"
+						)}
 					</CardTitle>
 					<div className="flex gap-2">
 						{isRunning && (
@@ -269,6 +352,19 @@ function AutoModeProgress({
 				</div>
 			</CardHeader>
 			<CardContent className="space-y-3">
+				{/* Animation 1: progress bar */}
+				<div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+					<motion.div
+						className={
+							progressPct >= 100
+								? "h-full rounded-full bg-green-500"
+								: "h-full rounded-full bg-primary"
+						}
+						animate={{ width: `${progressPct}%` }}
+						transition={{ duration: 0.4, ease: "easeOut" }}
+					/>
+				</div>
+
 				{/* Seed status */}
 				<div className="flex items-center gap-2 text-xs">
 					{state.status === "seeding" ? (
@@ -281,30 +377,52 @@ function AutoModeProgress({
 
 				{/* Wallet steps */}
 				<div className="space-y-2">
-					{state.wallets.map((wallet) => (
-						<WalletStepRow
+					{state.wallets.map((wallet, i) => (
+						<motion.div
 							key={wallet.address}
-							wallet={wallet}
-							total={state.inputAmount}
-						/>
+							initial={{ opacity: 0, y: 6 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{
+								duration: 0.25,
+								ease: "easeOut",
+								delay: i * 0.05,
+							}}
+						>
+							<WalletStepRow wallet={wallet} total={state.inputAmount} />
+						</motion.div>
 					))}
 				</div>
 
-				{/* Summary */}
-				<div className="flex items-center justify-between border-t pt-3 text-sm">
+				{/* Animation 6a: summary with scale pulse on completion */}
+				<motion.div
+					key={isDone ? "done" : "progress"}
+					className="flex items-center justify-between border-t pt-3 text-sm"
+					animate={isDone ? { scale: [1, 1.02, 1] } : undefined}
+					transition={{ duration: 0.3, ease: "easeOut" }}
+				>
 					<span className="text-muted-foreground">Testnet collected</span>
 					<span className="font-semibold tabular-nums">
-						{fmt(state.totalTestnetCollected)} / {fmt(state.inputAmount * 1000)}
+						{/* Animation 3: animated counter */}
+						<AnimatedAmount value={state.totalTestnetCollected} /> /{" "}
+						{fmt(state.inputAmount * 1000)}
 					</span>
-				</div>
+				</motion.div>
 			</CardContent>
 		</Card>
 	);
 }
 
-export default function AutoMode() {
-	const { state, start, abort, reset } = useAutoChain();
-
+export default function AutoMode({
+	state,
+	start,
+	abort,
+	reset,
+}: {
+	state: ChainState;
+	start: (n: number) => void;
+	abort: () => void;
+	reset: () => void;
+}) {
 	if (state.status === "idle") {
 		return <AutoModeForm onStart={start} />;
 	}
