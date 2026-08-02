@@ -1,4 +1,3 @@
-import type { WebData2WsEvent } from "@nktkas/hyperliquid";
 import { createFileRoute } from "@tanstack/react-router";
 import { MousePointerClick, Zap } from "lucide-react";
 import {
@@ -16,7 +15,7 @@ import { Badge } from "#/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import WalletTable from "#/components/WalletTable";
 import { useAutoChain } from "#/hooks/useAutoChain";
-import { useWebData } from "#/hooks/useWebData";
+import { useWebData, type WebDataSnapshot } from "#/hooks/useWebData";
 import { cn } from "#/lib/utils";
 
 export const Route = createFileRoute("/")({ component: App });
@@ -77,7 +76,7 @@ function StatsColumn({
   isMining,
 }: {
   title: string;
-  data: WebData2WsEvent | null;
+  data: WebDataSnapshot | null;
   isLoading: boolean;
   delay: number;
   isMining?: boolean;
@@ -104,15 +103,9 @@ function StatsColumn({
   const withdrawable = Number.parseFloat(data.clearinghouseState.withdrawable);
   const accountValue = Number.parseFloat(marginSummary.accountValue);
 
-  const spotBalances = data.spotState?.balances ?? [];
-  const spotTotal = spotBalances.reduce(
-    (sum, b) => sum + Number.parseFloat(b.total),
-    0,
-  );
-  const spotHold = spotBalances.reduce(
-    (sum, b) => sum + Number.parseFloat(b.hold),
-    0,
-  );
+  const usdc = data.spotState?.balances.find((b) => b.coin === "USDC");
+  const spotTotal = usdc ? Number.parseFloat(usdc.total) : 0;
+  const spotHold = usdc ? Number.parseFloat(usdc.hold) : 0;
 
   const card = (
     <Card className="gap-2">

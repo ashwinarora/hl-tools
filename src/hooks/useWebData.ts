@@ -1,4 +1,7 @@
-import type { WebData2WsEvent } from "@nktkas/hyperliquid";
+import type {
+	ClearinghouseStateWsEvent,
+	SpotStateWsEvent,
+} from "@nktkas/hyperliquid";
 import { useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 import {
@@ -6,11 +9,16 @@ import {
 	testnetSubscriptionClient,
 } from "#/lib/hlClient";
 
+export type WebDataSnapshot = {
+	clearinghouseState: ClearinghouseStateWsEvent["clearinghouseState"];
+	spotState: SpotStateWsEvent["spotState"];
+};
+
 export function useWebData(network: "mainnet" | "testnet" = "mainnet") {
 	const { address, isConnected } = useAccount();
-	const [data, setData] = useState<WebData2WsEvent | null>(null);
+	const [data, setData] = useState<WebDataSnapshot | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
-	const subRef = useRef<{ unsubscribe(): Promise<void> } | null>(null);
+	const subsRef = useRef<{ unsubscribe(): Promise<void> }[]>([]);
 
 	const client =
 		network === "testnet"
@@ -26,26 +34,41 @@ export function useWebData(network: "mainnet" | "testnet" = "mainnet") {
 
 		setIsLoading(true);
 		let cancelled = false;
+		const partial: Partial<WebDataSnapshot> = {};
 
-		client
-			.webData2({ user: address }, (event) => {
-				if (!cancelled) {
-					setData(event);
-					setIsLoading(false);
-				}
-			})
-			.then((sub) => {
-				if (cancelled) {
-					sub.unsubscribe();
-				} else {
-					subRef.current = sub;
-				}
-			});
+		const emit = () => {
+			if (cancelled) return;
+			if (partial.clearinghouseState && partial.spotState) {
+				setData(partial as WebDataSnapshot);
+				setIsLoading(false);
+			}
+		};
+
+		const subscribeAll = async () => {
+			const [chSub, spotSub] = await Promise.all([
+				client.clearinghouseState({ user: address, dex: "" }, (event) => {
+					partial.clearinghouseState = event.clearinghouseState;
+					emit();
+				}),
+				client.spotState({ user: address }, (event) => {
+					partial.spotState = event.spotState;
+					emit();
+				}),
+			]);
+			if (cancelled) {
+				chSub.unsubscribe();
+				spotSub.unsubscribe();
+			} else {
+				subsRef.current = [chSub, spotSub];
+			}
+		};
+
+		subscribeAll();
 
 		return () => {
 			cancelled = true;
-			subRef.current?.unsubscribe();
-			subRef.current = null;
+			for (const sub of subsRef.current) sub.unsubscribe();
+			subsRef.current = [];
 		};
 	}, [address, client]);
 

@@ -366,14 +366,28 @@ function AutoModeProgress({
 				</div>
 
 				{/* Seed status */}
-				<div className="flex items-center gap-2 text-xs">
-					{state.status === "seeding" ? (
-						<Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-					) : (
-						<Check className="size-3.5 text-green-500" />
-					)}
-					<span>Seed: Send {fmt(state.inputAmount + 1)} to Wallet #1</span>
-				</div>
+				{(() => {
+					const firstWallet = state.wallets[0];
+					const seedFailed =
+						state.status === "error" &&
+						firstWallet?.status === "error" &&
+						firstWallet.currentSubStep === null &&
+						firstWallet.completedSubSteps.length === 0;
+					return (
+						<div className="flex items-center gap-2 text-xs">
+							{state.status === "seeding" ? (
+								<Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+							) : seedFailed ? (
+								<CircleAlert className="size-3.5 text-destructive" />
+							) : (
+								<Check className="size-3.5 text-green-500" />
+							)}
+							<span className={seedFailed ? "text-destructive" : undefined}>
+								Seed: Send {fmt(state.inputAmount + 1)} to Wallet #1
+							</span>
+						</div>
+					);
+				})()}
 
 				{/* Wallet steps */}
 				<div className="space-y-2">
