@@ -16,7 +16,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import WalletTable from "#/components/WalletTable";
 import { useAutoChain } from "#/hooks/useAutoChain";
 import { useWebData, type WebDataSnapshot } from "#/hooks/useWebData";
+import type { AbstractionMode } from "#/lib/hlActions";
 import { cn } from "#/lib/utils";
+
+const ABSTRACTION_LABEL: Record<AbstractionMode, string> = {
+  unifiedAccount: "Unified",
+  portfolioMargin: "Portfolio margin",
+  disabled: "Standard",
+};
 
 export const Route = createFileRoute("/")({ component: App });
 
@@ -85,7 +92,14 @@ function StatsColumn({
     return (
       <Card className="gap-2">
         <CardHeader className="pb-0">
-          <CardTitle className="text-sm">{title}</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">{title}</CardTitle>
+            {data && (
+              <Badge variant="secondary" className="text-[10px]">
+                {ABSTRACTION_LABEL[data.abstraction]}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {["a", "b", "c", "d"].map((id) => (
@@ -110,7 +124,12 @@ function StatsColumn({
   const card = (
     <Card className="gap-2">
       <CardHeader className="pb-0">
-        <CardTitle className="text-sm">{title}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm">{title}</CardTitle>
+          <Badge variant="secondary" className="text-[10px]">
+            {ABSTRACTION_LABEL[data.abstraction]}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-1.5">
         {isMining ? (

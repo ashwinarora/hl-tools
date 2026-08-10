@@ -18,9 +18,14 @@ import {
 } from "#/components/ui/table";
 import {
 	claimFaucet,
+	decideChainKind,
+	dexForKind,
 	fetchBalance,
+	fetchUserProfile,
+	isUnifiedLike,
 	sendFromGeneratedWallet,
 	sendFromUserWallet,
+	TRANSFER_FEE_BUFFER,
 } from "#/lib/hlActions";
 import { type GeneratedWallet, useWalletStore } from "#/store/walletStore";
 
@@ -46,6 +51,7 @@ export default function WalletTable() {
 	const { wallets, addWallet, removeWallet } = useWalletStore();
 	const [balances, setBalances] = useState<BalanceMap>({});
 	const [loading, setLoading] = useState<Record<string, string>>({});
+	const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
 	const setWalletLoading = (addr: string, action: string | null) => {
 		setLoading((prev) => {
@@ -73,12 +79,31 @@ export default function WalletTable() {
 	}, [wallets]);
 
 	const handleReceive = async (addr: `0x${string}`) => {
-		if (!walletClient) return;
+		if (!walletClient || !userAddress) return;
 		setWalletLoading(addr, "receive");
+		setRowErrors((prev) => {
+			const next = { ...prev };
+			delete next[addr];
+			return next;
+		});
 		try {
-			await sendFromUserWallet(walletClient, addr, "2");
+			const profile = await fetchUserProfile(userAddress, false);
+			const kind = decideChainKind(profile, 2);
+			if (kind === null) {
+				setRowErrors((prev) => ({
+					...prev,
+					[addr]: `Not enough USDC — need $2. You have $${Math.max(profile.spotUsdc, profile.perpsWithdrawable).toFixed(2)}.`,
+				}));
+				return;
+			}
+			const dex = dexForKind(kind);
+			await sendFromUserWallet(walletClient, addr, "2", dex, dex, false);
 		} catch (e) {
 			console.error("Receive failed:", e);
+			setRowErrors((prev) => ({
+				...prev,
+				[addr]: e instanceof Error ? e.message : String(e),
+			}));
 		} finally {
 			setWalletLoading(addr, null);
 		}
@@ -104,13 +129,22 @@ export default function WalletTable() {
 				? balances[wallet.address]?.testnet
 				: balances[wallet.address]?.mainnet;
 			if (!bal || bal <= 0) return;
-			const amount = (bal - 0.01).toFixed(2);
+			const amount = (bal - TRANSFER_FEE_BUFFER).toFixed(2);
 			if (Number.parseFloat(amount) <= 0) return;
+			// Wallet's mainnet/testnet money is in its perps (faucet, or usd-kind seed).
+			// Destination follows the user's mode: unified/PM users can only receive on spot.
+			const userProfile = await fetchUserProfile(userAddress, isTestnet).catch(
+				() => null,
+			);
+			const destDex =
+				userProfile && isUnifiedLike(userProfile.abstraction) ? "spot" : "";
 			await sendFromGeneratedWallet(
 				wallet.privateKey,
 				userAddress,
 				amount,
 				isTestnet,
+				"",
+				destDex,
 			);
 		} catch (e) {
 			console.error(`Send ${isTestnet ? "testnet" : "mainnet"} failed:`, e);
@@ -150,14 +184,21 @@ export default function WalletTable() {
 			id: "receive",
 			header: "Activate",
 			cell: ({ row }) => (
-				<Button
-					size="xs"
-					variant="outline"
-					disabled={loading[row.original.address] === "receive"}
-					onClick={() => handleReceive(row.original.address)}
-				>
-					{loading[row.original.address] === "receive" ? "..." : "Receive $2"}
-				</Button>
+				<div className="flex flex-col gap-1">
+					<Button
+						size="xs"
+						variant="outline"
+						disabled={loading[row.original.address] === "receive"}
+						onClick={() => handleReceive(row.original.address)}
+					>
+						{loading[row.original.address] === "receive" ? "..." : "Receive $2"}
+					</Button>
+					{rowErrors[row.original.address] && (
+						<span className="max-w-40 text-[10px] leading-tight text-destructive">
+							{rowErrors[row.original.address]}
+						</span>
+					)}
+				</div>
 			),
 		}),
 		columnHelper.display({

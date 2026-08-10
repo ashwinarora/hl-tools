@@ -4,6 +4,7 @@ import type {
 } from "@nktkas/hyperliquid";
 import { useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
+import { type AbstractionMode, fetchUserProfile } from "#/lib/hlActions";
 import {
 	mainnetSubscriptionClient,
 	testnetSubscriptionClient,
@@ -12,6 +13,7 @@ import {
 export type WebDataSnapshot = {
 	clearinghouseState: ClearinghouseStateWsEvent["clearinghouseState"];
 	spotState: SpotStateWsEvent["spotState"];
+	abstraction: AbstractionMode;
 };
 
 export function useWebData(network: "mainnet" | "testnet" = "mainnet") {
@@ -38,11 +40,28 @@ export function useWebData(network: "mainnet" | "testnet" = "mainnet") {
 
 		const emit = () => {
 			if (cancelled) return;
-			if (partial.clearinghouseState && partial.spotState) {
+			if (
+				partial.clearinghouseState &&
+				partial.spotState &&
+				partial.abstraction
+			) {
 				setData(partial as WebDataSnapshot);
 				setIsLoading(false);
 			}
 		};
+
+		const isTestnet = network === "testnet";
+		fetchUserProfile(address, isTestnet)
+			.then((profile) => {
+				if (cancelled) return;
+				partial.abstraction = profile.abstraction;
+				emit();
+			})
+			.catch(() => {
+				if (cancelled) return;
+				partial.abstraction = "disabled";
+				emit();
+			});
 
 		const subscribeAll = async () => {
 			const [chSub, spotSub] = await Promise.all([
@@ -70,7 +89,7 @@ export function useWebData(network: "mainnet" | "testnet" = "mainnet") {
 			for (const sub of subsRef.current) sub.unsubscribe();
 			subsRef.current = [];
 		};
-	}, [address, client]);
+	}, [address, client, network]);
 
 	return { data, isConnected, isLoading };
 }

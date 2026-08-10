@@ -3,9 +3,16 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { useAccount, useWalletClient } from "wagmi";
 import {
 	claimFaucet,
-	fetchBalance,
+	decideChainKind,
+	dexForKind,
+	fetchUsdcBalance,
+	fetchUserProfile,
+	pocketForKind,
+	type SendKind,
 	sendFromGeneratedWallet,
 	sendFromUserWallet,
+	TRANSFER_FEE_BUFFER,
+	userDestinationDex,
 } from "#/lib/hlActions";
 
 // --- Types ---
@@ -42,12 +49,14 @@ export interface ChainState {
 	totalTestnetCollected: number;
 	inputAmount: number;
 	error: string | null;
+	chainKind: SendKind | null;
 }
 
 // --- Reducer ---
 
 type ChainAction =
 	| { type: "START"; inputAmount: number }
+	| { type: "SET_KIND"; kind: SendKind }
 	| { type: "SEED_START" }
 	| { type: "SEED_COMPLETE" }
 	| {
@@ -73,6 +82,7 @@ const initialState: ChainState = {
 	totalTestnetCollected: 0,
 	inputAmount: 0,
 	error: null,
+	chainKind: null,
 };
 
 function chainReducer(state: ChainState, action: ChainAction): ChainState {
@@ -83,6 +93,8 @@ function chainReducer(state: ChainState, action: ChainAction): ChainState {
 				status: "seeding",
 				inputAmount: action.inputAmount,
 			};
+		case "SET_KIND":
+			return { ...state, chainKind: action.kind };
 		case "SEED_START":
 			return { ...state, status: "seeding" };
 		case "SEED_COMPLETE":
@@ -175,11 +187,12 @@ function generateWallet() {
 async function waitForBalance(
 	address: `0x${string}`,
 	isTestnet: boolean,
+	pocket: "perp" | "spot",
 	minBalance = 0.5,
 	maxRetries = 15,
 ): Promise<number> {
 	for (let i = 0; i < maxRetries; i++) {
-		const bal = await fetchBalance(address, isTestnet);
+		const bal = await fetchUsdcBalance(address, isTestnet, pocket);
 		if (bal >= minBalance) return bal;
 		await new Promise((r) => setTimeout(r, 2000));
 	}
@@ -209,6 +222,41 @@ export function useAutoChain() {
 			dispatch({ type: "START", inputAmount: N });
 
 			try {
+				// Preflight: decide which mainnet pocket funds the chain.
+				const profile = await fetchUserProfile(userAddress, false);
+				const kind = decideChainKind(profile, N + 1);
+				if (kind === null) {
+					const have = Math.max(
+						profile.perpsWithdrawable,
+						profile.spotUsdc,
+					).toFixed(2);
+					const pocket =
+						profile.abstraction === "unifiedAccount" ||
+						profile.abstraction === "portfolioMargin"
+							? "spot"
+							: "spot or perps";
+					dispatch({
+						type: "CHAIN_ERROR",
+						error: `Insufficient USDC — need $${N + 1} in your ${pocket}. You have $${have}.`,
+					});
+					return;
+				}
+				dispatch({ type: "SET_KIND", kind });
+				const mainnetPocket = pocketForKind(kind);
+				const chainDex = dexForKind(kind);
+				// Testnet drain destination depends on user's testnet mode.
+				const userTestnetProfile = await fetchUserProfile(userAddress, true)
+					.then((p) => p)
+					.catch(() => null);
+				const userTestnetDestDex = userDestinationDex(
+					userTestnetProfile?.abstraction ?? "disabled",
+					"",
+				);
+				const userMainnetDestDex = userDestinationDex(
+					profile.abstraction,
+					chainDex,
+				);
+
 				// Generate wallet #1
 				const wallet1 = generateWallet();
 				dispatch({
@@ -220,13 +268,20 @@ export function useAutoChain() {
 					},
 				});
 
-				// Seed: user sends N+1 USDC to wallet #1
+				// Seed: user sends N+1 USDC to wallet #1 via sendAsset
 				dispatch({ type: "SEED_START" });
-				await sendFromUserWallet(walletClient, wallet1.address, String(N + 1));
+				await sendFromUserWallet(
+					walletClient,
+					wallet1.address,
+					String(N + 1),
+					chainDex,
+					chainDex,
+					false,
+				);
 				dispatch({ type: "SEED_COMPLETE" });
 
-				// Wait for wallet #1 to receive mainnet balance
-				await waitForBalance(wallet1.address, false);
+				// Wait for wallet #1 to receive mainnet balance in the seeded pocket
+				await waitForBalance(wallet1.address, false, mainnetPocket);
 
 				let currentWallet = wallet1;
 
@@ -234,7 +289,7 @@ export function useAutoChain() {
 					currentIdx = i;
 					if (abortRef.current) break;
 
-					// Claim faucet
+					// Claim faucet (money always lands in the generated wallet's perps)
 					dispatch({ type: "SET_SUBSTEP", index: i, subStep: "claim-faucet" });
 					await claimFaucet(currentWallet.address);
 					dispatch({
@@ -245,15 +300,21 @@ export function useAutoChain() {
 
 					if (abortRef.current) break;
 
-					// Wait for testnet balance then drain
+					// Wait for testnet perps balance then drain via usdSend
 					dispatch({ type: "SET_SUBSTEP", index: i, subStep: "drain-testnet" });
-					const testnetBal = await waitForBalance(currentWallet.address, true);
-					const drainAmount = (testnetBal - 0.01).toFixed(2);
+					const testnetBal = await waitForBalance(
+						currentWallet.address,
+						true,
+						"perp",
+					);
+					const drainAmount = (testnetBal - TRANSFER_FEE_BUFFER).toFixed(2);
 					await sendFromGeneratedWallet(
 						currentWallet.privateKey,
 						userAddress,
 						drainAmount,
 						true,
+						"", // faucet money is in generated wallet's testnet perps
+						userTestnetDestDex,
 					);
 					dispatch({
 						type: "COMPLETE_SUBSTEP",
@@ -264,17 +325,21 @@ export function useAutoChain() {
 
 					if (abortRef.current) break;
 
-					// Forward mainnet
+					// Forward mainnet from the pocket that matches chain kind
 					dispatch({
 						type: "SET_SUBSTEP",
 						index: i,
 						subStep: "forward-mainnet",
 					});
-					const mainnetBal = await fetchBalance(currentWallet.address, false);
-					const forwardAmount = (mainnetBal - 0.01).toFixed(2);
+					const mainnetBal = await fetchUsdcBalance(
+						currentWallet.address,
+						false,
+						mainnetPocket,
+					);
+					const forwardAmount = (mainnetBal - TRANSFER_FEE_BUFFER).toFixed(2);
 
 					if (i < N - 1) {
-						// Generate next wallet and forward
+						// Generate next wallet and forward within the chain pocket
 						const nextWallet = generateWallet();
 						dispatch({
 							type: "ADD_WALLET",
@@ -289,6 +354,8 @@ export function useAutoChain() {
 							nextWallet.address,
 							forwardAmount,
 							false,
+							chainDex,
+							chainDex,
 						);
 						dispatch({
 							type: "COMPLETE_SUBSTEP",
@@ -298,15 +365,17 @@ export function useAutoChain() {
 						dispatch({ type: "WALLET_COMPLETE", index: i });
 
 						// Wait for next wallet to receive
-						await waitForBalance(nextWallet.address, false);
+						await waitForBalance(nextWallet.address, false, mainnetPocket);
 						currentWallet = nextWallet;
 					} else {
-						// Last wallet: send mainnet back to user
+						// Last wallet: send mainnet back to user, honoring their mode.
 						await sendFromGeneratedWallet(
 							currentWallet.privateKey,
 							userAddress,
 							forwardAmount,
 							false,
+							chainDex,
+							userMainnetDestDex,
 						);
 						dispatch({
 							type: "COMPLETE_SUBSTEP",

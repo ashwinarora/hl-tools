@@ -7,6 +7,7 @@ import {
 	useSpring,
 } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { useAccount } from "wagmi";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
@@ -17,6 +18,13 @@ import type {
 	WalletStep,
 	WalletStepStatus,
 } from "#/hooks/useAutoChain";
+import {
+	type AbstractionMode,
+	decideChainKind,
+	fetchUserProfile,
+	type SendKind,
+	type UserProfile,
+} from "#/lib/hlActions";
 
 function fmt(value: number): string {
 	return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -187,17 +195,65 @@ function WalletStepRow({
 	);
 }
 
+const ABSTRACTION_LABEL: Record<AbstractionMode, string> = {
+	unifiedAccount: "Unified account",
+	portfolioMargin: "Portfolio margin",
+	disabled: "Standard",
+};
+
+function pocketLabel(kind: SendKind): string {
+	return kind === "spot" ? "spot" : "perps";
+}
+
+function availableInPocket(profile: UserProfile, kind: SendKind): number {
+	return kind === "spot" ? profile.spotUsdc : profile.perpsWithdrawable;
+}
+
 function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
+	const { address: userAddress } = useAccount();
 	const [amount, setAmount] = useState("");
 	const [confirming, setConfirming] = useState(false);
+	const [profile, setProfile] = useState<UserProfile | null>(null);
 	const parsed = Number.parseInt(amount, 10);
 	const isValid = !Number.isNaN(parsed) && parsed >= 1 && parsed <= 50;
 	const needsConfirm = isValid && parsed > 10;
 
+	useEffect(() => {
+		if (!userAddress) {
+			setProfile(null);
+			return;
+		}
+		let cancelled = false;
+		fetchUserProfile(userAddress, false)
+			.then((p) => {
+				if (!cancelled) setProfile(p);
+			})
+			.catch(() => {
+				if (!cancelled) setProfile(null);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [userAddress]);
+
+	const required = isValid ? parsed + 1 : 0;
+	const kind = isValid && profile ? decideChainKind(profile, required) : null;
+	const canStart = isValid && (!profile || kind !== null);
+	const availableMax = profile
+		? Math.max(profile.spotUsdc, profile.perpsWithdrawable)
+		: 0;
+
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle className="text-sm">Auto Miner</CardTitle>
+				<div className="flex items-center justify-between">
+					<CardTitle className="text-sm">Auto Miner</CardTitle>
+					{profile && (
+						<Badge variant="secondary" className="text-[10px]">
+							{ABSTRACTION_LABEL[profile.abstraction]}
+						</Badge>
+					)}
+				</div>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="space-y-2">
@@ -247,12 +303,30 @@ function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 							<span className="text-muted-foreground">Net mainnet cost</span>
 							<span className="font-semibold tabular-nums">{fmt(parsed)}</span>
 						</div>
+						{profile && kind && (
+							<div className="flex justify-between border-t pt-1 text-muted-foreground">
+								<span>Available</span>
+								<span className="tabular-nums">
+									{fmt(availableInPocket(profile, kind))} in {pocketLabel(kind)}
+								</span>
+							</div>
+						)}
+					</div>
+				)}
+				{isValid && profile && kind === null && (
+					<div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+						Not enough USDC — need {fmt(parsed + 1)}
+						{profile.abstraction === "unifiedAccount" ||
+						profile.abstraction === "portfolioMargin"
+							? " in your spot (unified) balance"
+							: " in your spot or perps balance"}
+						. You have {fmt(availableMax)}.
 					</div>
 				)}
 				{needsConfirm && !confirming ? (
 					<Button
 						onClick={() => setConfirming(true)}
-						disabled={!isValid}
+						disabled={!canStart}
 						className="w-full hover:cursor-pointer"
 					>
 						Start Chain
@@ -271,6 +345,7 @@ function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 								onClick={() => onStart(parsed)}
 								className="flex-1"
 								size="sm"
+								disabled={!canStart}
 							>
 								Confirm &amp; Start
 							</Button>
@@ -286,7 +361,7 @@ function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 				) : (
 					<Button
 						onClick={() => onStart(parsed)}
-						disabled={!isValid}
+						disabled={!canStart}
 						className="w-full hover:cursor-pointer"
 					>
 						Start Chain
