@@ -257,9 +257,13 @@ export async function drainGeneratedWallet(
 	): Promise<void> => {
 		if (balance <= 0) return;
 		const reserve = Math.min(balance, reservePool);
-		reservePool -= reserve;
 		const amount = (balance - reserve).toFixed(2);
+		// If we can't actually send from this pocket, don't burn the reserve
+		// on it — the next pocket needs the headroom to pay the activation
+		// fee. Consuming reserve pre-emptively caused the second pocket to
+		// send without headroom and get rejected.
 		if (Number.parseFloat(amount) <= 0) return;
+		reservePool -= reserve;
 		const destinationDex: Pocket = userUnified ? "spot" : sourceDex;
 		await sendFromGeneratedWallet(
 			privateKey,

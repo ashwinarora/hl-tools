@@ -121,10 +121,12 @@ function WalletStepRow({
 	wallet,
 	total,
 	balance,
+	onBalanceStale,
 }: {
 	wallet: WalletStep;
 	total: number;
 	balance: { mainnet: number | null; testnet: number | null };
+	onBalanceStale: (address: `0x${string}`) => void;
 }) {
 	const { address: userAddress } = useAccount();
 	const isLast = wallet.index === total - 1;
@@ -198,6 +200,10 @@ function WalletStepRow({
 					description: `${truncateAddress(wallet.address)} holds $0.00 on ${kind}.`,
 				});
 			}
+			// Invalidate the wallet's polled balance so the row updates
+			// even though the chain has completed and background polling
+			// stopped. Without this, Drain stays enabled on a $0 row.
+			onBalanceStale(wallet.address);
 		} catch (e) {
 			console.error(`Drain ${kind} failed:`, e);
 			toast.error(`Drain ${kind} failed`, {
@@ -515,9 +521,19 @@ function AutoModeProgress({
 		() => state.wallets.map((w) => w.address),
 		[state.wallets],
 	);
-	const { balances } = useWalletBalances(
+	const { balances, refresh: refreshBalances } = useWalletBalances(
 		addresses,
 		isRunning || isError || isAborted,
+	);
+
+	const handleRowBalanceStale = useCallback(
+		(_address: `0x${string}`) => {
+			// Cheapest signal that keeps the API simple: kick the whole polling
+			// hook to refetch every wallet. The one we just drained will settle
+			// to $0; the other rows repaint their existing values.
+			void refreshBalances();
+		},
+		[refreshBalances],
 	);
 
 	return (
@@ -627,6 +643,7 @@ function AutoModeProgress({
 										testnet: null,
 									}
 								}
+								onBalanceStale={handleRowBalanceStale}
 							/>
 						</motion.div>
 					))}
@@ -665,7 +682,7 @@ export default function AutoMode({
 	abort: () => void;
 	reset: () => Promise<void> | void;
 	computeWalletsAtRisk: () => Promise<WalletAtRisk[]>;
-	forceReset: () => void;
+	forceReset: () => Promise<void> | void;
 	onSwitchToManual: () => void;
 }) {
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -746,11 +763,22 @@ export default function AutoMode({
 		}
 	}, [computeWalletsAtRisk, reset]);
 
-	const handleForceReset = useCallback(() => {
-		forceReset();
-		toast.warning("Auto wallets deleted forever", {
-			description: "Private keys removed from browser.",
+	const handleForceReset = useCallback(async () => {
+		const toastId = toast.loading("Deleting auto wallets", {
+			description: "Waiting for any in-flight chain send to complete…",
 		});
+		try {
+			await forceReset();
+			toast.warning("Auto wallets deleted forever", {
+				id: toastId,
+				description: "Private keys removed from browser.",
+			});
+		} catch (e) {
+			toast.error("Delete failed", {
+				id: toastId,
+				description: e instanceof Error ? e.message : String(e),
+			});
+		}
 	}, [forceReset]);
 
 	if (state.status === "idle") {

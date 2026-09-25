@@ -28,6 +28,14 @@ export default function RecoveryBanner({
 
 	if (autoWallets.length === 0) return null;
 
+	// A null balance is either "still loading" or "the last fetch errored".
+	// Treat those as possibly-holds-funds — the alternative is telling users
+	// their wallets are safe to delete when we haven't actually confirmed
+	// they're empty.
+	const anyPending = autoAddresses.some(
+		(addr) =>
+			balances[addr]?.mainnet == null || balances[addr]?.testnet == null,
+	);
 	const totalMainnet = autoAddresses.reduce(
 		(sum, addr) => sum + (balances[addr]?.mainnet ?? 0),
 		0,
@@ -36,7 +44,18 @@ export default function RecoveryBanner({
 		(sum, addr) => sum + (balances[addr]?.testnet ?? 0),
 		0,
 	);
-	const hasFunds = totalMainnet >= 0.005 || totalTestnet >= 0.005;
+	const hasFunds = anyPending || totalMainnet >= 0.005 || totalTestnet >= 0.005;
+
+	let body: string;
+	if (anyPending) {
+		body =
+			"Checking balances — recover in Manual mode or wait for the check to complete.";
+	} else if (hasFunds) {
+		body = `Funds held: ${fmt(totalMainnet)} mainnet, ${fmt(totalTestnet)} testnet. Recover before they're lost.`;
+	} else {
+		body =
+			"Balances appear to be zero — you can safely delete them in Manual mode.";
+	}
 
 	return (
 		<div
@@ -52,11 +71,7 @@ export default function RecoveryBanner({
 						⚠ You have {autoWallets.length} wallet
 						{autoWallets.length === 1 ? "" : "s"} from a previous session.
 					</p>
-					<p className="mt-1 text-[13px] opacity-95">
-						{hasFunds
-							? `Funds held: ${fmt(totalMainnet)} mainnet, ${fmt(totalTestnet)} testnet. Recover before they're lost.`
-							: "Balances appear to be zero — you can safely delete them in Manual mode."}
-					</p>
+					<p className="mt-1 text-[13px] opacity-95">{body}</p>
 				</div>
 				<Button
 					size="xs"

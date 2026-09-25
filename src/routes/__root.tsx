@@ -6,10 +6,17 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { lazy, Suspense } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import MockPanel from "../components/MockPanel";
 import { Toaster } from "../components/ui/sonner";
+
+// Dev-only lazy import — Vite replaces `import.meta.env.DEV` with `false` at
+// build time. The ternary evaluates to `null`, the lazy() call is dead-code
+// eliminated, and the MockPanel chunk is never emitted in production.
+const MockPanel = import.meta.env.DEV
+	? lazy(() => import("../components/MockPanel"))
+	: null;
 
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import TanStackQueryProvider from "../integrations/tanstack-query/root-provider";
@@ -98,7 +105,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 							TanStackQueryDevtools,
 						]}
 					/>
-					<MockPanel />
+					{MockPanel && (
+						<Suspense fallback={null}>
+							<MockPanel />
+						</Suspense>
+					)}
 					<Toaster />
 				</TanStackQueryProvider>
 				<Scripts />

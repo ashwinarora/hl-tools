@@ -234,6 +234,18 @@ export function useAutoChain() {
 	const abortRef = useRef(false);
 	const runningRef = useRef(false);
 
+	// Wait until the runner's finally block has cleared runningRef, or until
+	// the timeout fires. Called by reset/forceReset so we never delete auto
+	// wallet private keys while the parked loop still holds them and might
+	// still complete an in-flight send that lands funds in the freshly
+	// generated (and about-to-be-deleted) next wallet.
+	const waitRunnerExit = useCallback(async (timeoutMs = 60000) => {
+		const startedAt = Date.now();
+		while (runningRef.current && Date.now() - startedAt < timeoutMs) {
+			await new Promise((r) => setTimeout(r, 100));
+		}
+	}, []);
+
 	// Force the balance-polling hook to refetch the given wallet on demand.
 	// Used after each sub-step so row balances catch up to on-chain state
 	// without waiting for the next 3s poll tick.
@@ -394,6 +406,11 @@ export function useAutoChain() {
 					if (i < N - 1) {
 						// Chain hop: next wallet is fresh — reserve $1 for its activation
 						// fee, forward the rest. Generated wallet ends with $0.
+						// One final abort check before we spawn a fresh wallet and move
+						// real funds into it — everything before this point is idempotent
+						// state manipulation, but the next line commits new keys to the
+						// store followed by a real mainnet send.
+						if (abortRef.current) break;
 						const forwardAmount = (mainnetBal - TRANSFER_FEE_BUFFER).toFixed(2);
 						const nextWallet = generateWallet();
 						useWalletStore
@@ -511,11 +528,15 @@ export function useAutoChain() {
 	}, []);
 
 	const reset = useCallback(async () => {
+		// Wait for any parked loop to naturally exit BEFORE we touch the
+		// persistent store — otherwise the in-flight send in the parked loop
+		// could land funds in a wallet whose key we prune here. abortRef is
+		// left true; the parked loop's next `if (abortRef.current) break;`
+		// fires and its finally clears runningRef, which unblocks us.
+		await waitRunnerExit();
 		await cleanupEmpty();
-		abortRef.current = false;
-		runningRef.current = false;
 		dispatch({ type: "RESET" });
-	}, [cleanupEmpty]);
+	}, [cleanupEmpty, waitRunnerExit]);
 
 	// Query all auto-origin wallets' balances live (bypassing cache) and return
 	// the subset that hold any funds. Used to power the Reset confirmation.
@@ -530,31 +551,24 @@ export function useAutoChain() {
 	> => {
 		const { wallets } = useWalletStore.getState();
 		const autoWallets = wallets.filter((w) => w.origin === "auto");
+		// Errors intentionally propagate — a silent zero here would hide a
+		// wallet that MAY still hold funds from the confirmation dialog, and
+		// the caller would then delete its key without warning. The caller
+		// surfaces the error as a toast so the user can retry.
 		const results = await Promise.all(
 			autoWallets.map(async (w, i) => {
-				try {
-					const [mainPerp, mainSpot, testPerp, testSpot] = await Promise.all([
-						fetchUsdcBalance(w.address, false, "perp"),
-						fetchUsdcBalance(w.address, false, "spot"),
-						fetchUsdcBalance(w.address, true, "perp"),
-						fetchUsdcBalance(w.address, true, "spot"),
-					]);
-					return {
-						index: i + 1,
-						address: w.address,
-						mainnet: mainPerp + mainSpot,
-						testnet: testPerp + testSpot,
-					};
-				} catch {
-					// If the check fails, treat as "unknown but keep" — return zeros
-					// so the wallet isn't flagged as at risk but also stays in store.
-					return {
-						index: i + 1,
-						address: w.address,
-						mainnet: 0,
-						testnet: 0,
-					};
-				}
+				const [mainPerp, mainSpot, testPerp, testSpot] = await Promise.all([
+					fetchUsdcBalance(w.address, false, "perp"),
+					fetchUsdcBalance(w.address, false, "spot"),
+					fetchUsdcBalance(w.address, true, "perp"),
+					fetchUsdcBalance(w.address, true, "spot"),
+				]);
+				return {
+					index: i + 1,
+					address: w.address,
+					mainnet: mainPerp + mainSpot,
+					testnet: testPerp + testSpot,
+				};
 			}),
 		);
 		return results.filter((r) => r.mainnet >= 0.005 || r.testnet >= 0.005);
@@ -562,18 +576,18 @@ export function useAutoChain() {
 
 	// Force-delete ALL auto-origin wallets from the store (regardless of
 	// balance) and reset the reducer. Called only after the user explicitly
-	// confirms the ResetConfirmDialog.
-	const forceReset = useCallback(() => {
+	// confirms the ResetConfirmDialog. Waits for the runner to exit before
+	// deleting keys — see reset() for why.
+	const forceReset = useCallback(async () => {
+		await waitRunnerExit();
 		const { wallets, removeWallet } = useWalletStore.getState();
 		for (const w of wallets) {
 			if (w.origin === "auto") {
 				removeWallet(w.address);
 			}
 		}
-		abortRef.current = false;
-		runningRef.current = false;
 		dispatch({ type: "RESET" });
-	}, []);
+	}, [waitRunnerExit]);
 
 	return {
 		state,
