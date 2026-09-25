@@ -91,9 +91,13 @@ function HowToUse() {
 					You need a wallet with some mainnet USDC deposited on Hyperliquid.
 				</Step>
 				<Step n={2} title="Mainnet USDC on Hyperliquid">
-					Manual mode needs <strong>$2 per wallet</strong> you want to activate.
-					Auto mode needs <strong>N + 1 USDC</strong> (where N is the number of
-					wallets). The extra $1 is a gas buffer that gets returned.
+					Manual mode needs <strong>$2 per wallet</strong> in your Hyperliquid
+					balance ($1 gets signed to the wallet, plus a $1 activation fee that
+					Hyperliquid charges on top). Auto mode needs{" "}
+					<strong>N + 1 USDC</strong> in your Hyperliquid balance for a chain of
+					N wallets — you sign for $N and pay $1 in seed activation fee. The
+					last wallet returns $1 to you, so your net cost is $N (≈ $1 per
+					wallet).
 				</Step>
 				<Step n={3} title="Connect your wallet">
 					Click the wallet button in the top-right corner of the page to
@@ -120,9 +124,11 @@ function HowToUse() {
 				</Step>
 
 				<Step n={3} title="Seeding phase">
-					The app sends <strong>N + 1 USDC</strong> from your wallet to the
-					first generated wallet. The extra $1 is a gas buffer to cover
-					transaction fees across the chain.
+					Your wallet signs a transaction to send <strong>$N USDC</strong> to
+					the first generated wallet. Because that wallet is a fresh HyperCore
+					account, Hyperliquid charges a <strong>$1 activation fee</strong> on
+					top — so your Hyperliquid balance debits{" "}
+					<strong>$N + $1 total</strong>. The recipient receives the full $N.
 				</Step>
 
 				<Step n={4} title="Chain loop (automated for each wallet)">
@@ -140,8 +146,9 @@ function HowToUse() {
 					<div className="flex gap-2">
 						<span className="text-xs font-bold text-primary">4b.</span>
 						<p>
-							<strong>Drain testnet</strong> — Sends all testnet USDC (minus
-							$0.01 fee) back to your wallet.
+							<strong>Drain testnet</strong> — Sends the wallet's testnet USDC
+							back to you. Reserves $1 defensively for a possible one-time
+							activation fee (only if this is your first-ever testnet transfer).
 						</p>
 					</div>
 					<div className="flex gap-2">
@@ -163,27 +170,30 @@ function HowToUse() {
 					<p className="font-medium text-foreground text-xs uppercase tracking-wide">
 						Auto Mode Math (example: N = 5 wallets)
 					</p>
-					<MathRow label="Initial send to Wallet #1" value="$6.00 (5 + 1)" />
+					<MathRow label="Wallet signs (Rabby popup)" value="$5.00" />
+					<MathRow label="Wallet debits (+$1 activation fee)" value="$6.00" />
 					<MathRow label="Wallets generated" value="5" />
 					<MathRow label="Faucet claims" value="5 × $1,000" />
 					<MathRow label="Testnet USDC received" value="$5,000" />
+					<MathRow label="Mainnet returned to you" value="$1.00" />
 					<MathRow
-						label="Mainnet returned to you"
-						value="~$5.00 (minus fees)"
+						label="Activation fees paid across chain"
+						value="5 × $1.00"
 					/>
-					<MathRow label="Net mainnet cost" value="~$0.10 (gas fees)" />
-					<MathRow label="Effective ratio" value="~$0.10 → $5,000 testnet" />
+					<MathRow label="Net mainnet cost" value="$5.00" />
+					<MathRow label="Effective ratio" value="$5.00 → $5,000 testnet" />
 				</div>
 
 				<div className="rounded-lg border border-border bg-muted/50 p-4 space-y-1">
 					<p className="font-medium text-foreground text-xs uppercase tracking-wide">
 						General Formula
 					</p>
-					<MathRow label="You send" value="N + 1 USDC" />
-					<MathRow label="You get back (mainnet)" value="~N + 1 − (N × 0.02)" />
-					<MathRow label="You get (testnet)" value="N × 1,000 USDC" />
-					<MathRow label="Net mainnet cost" value="~N × $0.02 (fees)" />
-					<MathRow label="Per-wallet cost" value="~$0.02" />
+					<MathRow label="You sign (Rabby popup)" value="$N" />
+					<MathRow label="Your wallet debits" value="$N + $1" />
+					<MathRow label="You get back (mainnet)" value="$1" />
+					<MathRow label="You get (testnet)" value="N × $1,000" />
+					<MathRow label="Net mainnet cost" value="$N" />
+					<MathRow label="Per-wallet cost" value="$1.00" />
 				</div>
 			</Section>
 
@@ -191,31 +201,31 @@ function HowToUse() {
 			<Section title="How USDC Flows in Auto Mode">
 				<div className="overflow-x-auto rounded-lg border border-border bg-muted/50 p-4 font-mono text-xs leading-relaxed">
 					<pre className="text-foreground">{`Your Wallet
-    │
-    ├─ sends (N+1) USDC ──▶ Wallet #1
+    │  (debits $N + $1 fee, signs $N)
+    ├─ signs $N USDC ──▶ Wallet #1 (receives $N, activated)
     │                          │
     │   ┌──────────────────────┘
     │   │
     │   ├─ claim faucet ──▶ +$1,000 testnet
-    │   ├─ drain testnet ──▶ $1,000 → Your Wallet (testnet)
-    │   └─ forward mainnet ──▶ Wallet #2
+    │   ├─ drain testnet ──▶ ~$1,000 → Your Wallet (testnet)
+    │   └─ forward mainnet ──▶ Wallet #2  (sends $N-1, pays $1 fee)
     │                             │
     │   ┌─────────────────────────┘
     │   │
     │   ├─ claim faucet ──▶ +$1,000 testnet
-    │   ├─ drain testnet ──▶ $1,000 → Your Wallet (testnet)
-    │   └─ forward mainnet ──▶ Wallet #3
+    │   ├─ drain testnet ──▶ ~$1,000 → Your Wallet (testnet)
+    │   └─ forward mainnet ──▶ Wallet #3  (sends $N-2, pays $1 fee)
     │                             │
     │           ... continues for all N wallets ...
     │                             │
     │   ┌─────────────────────────┘
-    │   │
+    │   │  (Wallet #N has exactly $1 left)
     │   ├─ claim faucet ──▶ +$1,000 testnet
-    │   ├─ drain testnet ──▶ $1,000 → Your Wallet (testnet)
-    │   └─ forward mainnet ──▶ Your Wallet (returned!)
+    │   ├─ drain testnet ──▶ ~$1,000 → Your Wallet (testnet)
+    │   └─ forward mainnet ──▶ Your Wallet (returns $1, no fee — you are activated)
     │
     ▼
-Result: You spent ~$0.02×N in fees, got N×$1,000 testnet USDC`}</pre>
+Result: You spent $N in activation fees, got N × $1,000 testnet USDC`}</pre>
 				</div>
 			</Section>
 
@@ -231,10 +241,13 @@ Result: You spent ~$0.02×N in fees, got N×$1,000 testnet USDC`}</pre>
 					in your browser&apos;s localStorage. You can add as many as you like.
 				</Step>
 
-				<Step n={2} title='Activate — Click "Receive $2"'>
-					This sends <strong>$2 mainnet USDC</strong> from your connected wallet
-					to the generated wallet. This activates the wallet on Hyperliquid
-					mainnet so it can send transactions.
+				<Step n={2} title='Activate — Click "Receive $1"'>
+					Your wallet signs a transaction to send{" "}
+					<strong>$1 mainnet USDC</strong> to the generated wallet. Because that
+					wallet is fresh, Hyperliquid charges a{" "}
+					<strong>$1 activation fee</strong> on top — your Hyperliquid balance
+					debits $2 total. The generated wallet receives the full $1 and is now
+					activated on mainnet.
 				</Step>
 
 				<Step n={3} title='Claim Faucet — Click "Claim"'>
@@ -244,14 +257,16 @@ Result: You spent ~$0.02×N in fees, got N×$1,000 testnet USDC`}</pre>
 				</Step>
 
 				<Step n={4} title='Drain Testnet — Click "Send"'>
-					Sends all testnet USDC (minus a $0.01 gas buffer) from the generated
-					wallet back to your connected wallet.
+					Sends the wallet's testnet USDC back to your connected wallet.
+					Reserves $1 defensively for a one-time activation fee (only charged if
+					this is the first-ever testnet transfer to your address).
 				</Step>
 
 				<Step n={5} title='Drain Mainnet — Click "Send"'>
-					Sends all mainnet USDC (minus $0.01 gas buffer) from the generated
-					wallet back to your connected wallet. This recovers most of the $2 you
-					sent.
+					Sends the wallet's <strong>full</strong> mainnet balance back to your
+					connected wallet. Since your wallet is already activated on mainnet,
+					this transfer pays no fee. You recover the full $1 — making the net
+					cost exactly $1 per wallet (the activation fee).
 				</Step>
 
 				<Step n={6} title="Repeat">
@@ -263,11 +278,15 @@ Result: You spent ~$0.02×N in fees, got N×$1,000 testnet USDC`}</pre>
 					<p className="font-medium text-foreground text-xs uppercase tracking-wide">
 						Manual Mode Math (per wallet)
 					</p>
-					<MathRow label="You send (activation)" value="$2.00" />
-					<MathRow label="You recover (drain mainnet)" value="~$1.99" />
-					<MathRow label="Net mainnet cost" value="~$0.01" />
+					<MathRow label="You sign (Rabby popup)" value="$1.00" />
+					<MathRow
+						label="Your wallet debits (+$1 activation fee)"
+						value="$2.00"
+					/>
+					<MathRow label="You recover (drain mainnet)" value="$1.00" />
+					<MathRow label="Net mainnet cost" value="$1.00" />
 					<MathRow label="Testnet USDC mined" value="~$1,000" />
-					<MathRow label="Effective ratio" value="~$0.01 → $1,000 testnet" />
+					<MathRow label="Effective ratio" value="$1.00 → $1,000 testnet" />
 				</div>
 			</Section>
 
@@ -289,13 +308,17 @@ Result: You spent ~$0.02×N in fees, got N×$1,000 testnet USDC`}</pre>
 					</li>
 					<li>
 						<strong>You can abort an auto chain</strong> mid-run by clicking the
-						Abort button. Any mainnet USDC still in the chain wallets will need
-						to be recovered manually.
+						Abort button. All generated wallets are persisted in your browser
+						storage — each wallet row shows its live mainnet and testnet
+						balances with dedicated Drain buttons, so recovering stranded funds
+						is one click. No need to dig for private keys.
 					</li>
 					<li>
-						<strong>The $0.01 gas buffer</strong> per transaction ensures that
-						the send operation has enough room to complete. This is why the net
-						cost per wallet is ~$0.02 (two sends: drain + forward).
+						<strong>The $1 activation fee</strong> is charged by Hyperliquid any
+						time you send USDC (or any asset) to a fresh HyperCore account. It
+						comes on top of the amount you sign for, from your balance —
+						recipients receive the full signed amount. This is the only
+						meaningful cost of running the chain: $1 per wallet you activate.
 					</li>
 					<li>
 						<strong>Faucet limits:</strong> The Hyperliquid testnet faucet may

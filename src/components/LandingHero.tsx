@@ -134,7 +134,11 @@ export default function LandingHero() {
 				</h2>
 				<Card>
 					<CardContent className="divide-y divide-border">
-						<Row label="You send (mainnet USDC)" value="$6.00" />
+						<Row
+							label="You send (mainnet USDC)"
+							value="$5.00"
+							hint="+ $1 activation fee = $6.00 debited"
+						/>
 						<Row
 							label="Activation fees"
 							value="~$5.00"

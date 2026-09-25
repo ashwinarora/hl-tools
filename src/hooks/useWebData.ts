@@ -45,7 +45,11 @@ export function useWebData(network: "mainnet" | "testnet" = "mainnet") {
 				partial.spotState &&
 				partial.abstraction
 			) {
-				setData(partial as WebDataSnapshot);
+				// Spread to create a new object each emit — React's useState uses
+				// Object.is for change detection; mutating `partial` in place and
+				// passing the same reference would skip re-renders and leave the
+				// UI stale after subsequent WebSocket updates.
+				setData({ ...partial } as WebDataSnapshot);
 				setIsLoading(false);
 			}
 		};

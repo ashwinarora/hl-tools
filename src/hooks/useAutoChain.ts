@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useReducer, useRef } from "react";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { useAccount, useWalletClient } from "wagmi";
@@ -7,6 +8,7 @@ import {
 	dexForKind,
 	fetchUsdcBalance,
 	fetchUserProfile,
+	isUserActivated,
 	pocketForKind,
 	type SendKind,
 	sendFromGeneratedWallet,
@@ -14,6 +16,7 @@ import {
 	TRANSFER_FEE_BUFFER,
 	userDestinationDex,
 } from "#/lib/hlActions";
+import { useWalletStore } from "#/store/walletStore";
 
 // --- Types ---
 
@@ -40,7 +43,8 @@ export type ChainStatus =
 	| "seeding"
 	| "running"
 	| "completed"
-	| "error";
+	| "error"
+	| "aborted";
 
 export interface ChainState {
 	status: ChainStatus;
@@ -73,6 +77,7 @@ type ChainAction =
 	| { type: "COLLECT_TESTNET"; amount: number }
 	| { type: "CHAIN_COMPLETE" }
 	| { type: "CHAIN_ERROR"; error: string }
+	| { type: "CHAIN_ABORT" }
 	| { type: "RESET" };
 
 const initialState: ChainState = {
@@ -169,6 +174,24 @@ function chainReducer(state: ChainState, action: ChainAction): ChainState {
 			return { ...state, status: "completed" };
 		case "CHAIN_ERROR":
 			return { ...state, status: "error", error: action.error };
+		case "CHAIN_ABORT":
+			// Flip any in-progress wallet to error so the drain buttons unblock
+			// (canDrain in AutoMode checks status !== "in-progress"). Preserves
+			// completed wallets and their balances so the user can drain them.
+			return {
+				...state,
+				status: "aborted",
+				wallets: state.wallets.map((w) =>
+					w.status === "in-progress"
+						? {
+								...w,
+								status: "error",
+								currentSubStep: null,
+								error: "Aborted by user",
+							}
+						: w,
+				),
+			};
 		case "RESET":
 			return initialState;
 		default:
@@ -207,8 +230,21 @@ export function useAutoChain() {
 	const [state, dispatch] = useReducer(chainReducer, initialState);
 	const { data: walletClient } = useWalletClient();
 	const { address: userAddress } = useAccount();
+	const queryClient = useQueryClient();
 	const abortRef = useRef(false);
 	const runningRef = useRef(false);
+
+	// Force the balance-polling hook to refetch the given wallet on demand.
+	// Used after each sub-step so row balances catch up to on-chain state
+	// without waiting for the next 3s poll tick.
+	const invalidateWalletBalance = useCallback(
+		(address: `0x${string}`) => {
+			queryClient.invalidateQueries({
+				queryKey: ["wallet-balance", address],
+			});
+		},
+		[queryClient],
+	);
 
 	const start = useCallback(
 		async (inputAmount: number) => {
@@ -256,9 +292,19 @@ export function useAutoChain() {
 					profile.abstraction,
 					chainDex,
 				);
+				// Whether the user is activated on testnet — decides if we need to
+				// reserve $1 on the first drain-testnet. After the first successful
+				// drain, the user is activated so subsequent drains skip the reserve.
+				let userTestnetActivated = await isUserActivated(
+					userAddress,
+					true,
+				).catch(() => false);
 
 				// Generate wallet #1
 				const wallet1 = generateWallet();
+				useWalletStore
+					.getState()
+					.addAutoWallet(wallet1.privateKey, wallet1.address);
 				dispatch({
 					type: "ADD_WALLET",
 					wallet: {
@@ -268,12 +314,14 @@ export function useAutoChain() {
 					},
 				});
 
-				// Seed: user sends N+1 USDC to wallet #1 via sendAsset
+				// Seed: user signs for $N USDC to wallet #1. Hyperliquid charges an
+				// additional $1 activation fee on top (wallet #1 is fresh), so total
+				// wallet outflow is $N + $1. Recipient receives exactly $N.
 				dispatch({ type: "SEED_START" });
 				await sendFromUserWallet(
 					walletClient,
 					wallet1.address,
-					String(N + 1),
+					String(N),
 					chainDex,
 					chainDex,
 					false,
@@ -297,17 +345,21 @@ export function useAutoChain() {
 						index: i,
 						subStep: "claim-faucet",
 					});
+					invalidateWalletBalance(currentWallet.address);
 
 					if (abortRef.current) break;
 
-					// Wait for testnet perps balance then drain via usdSend
+					// Wait for testnet perps balance then drain to user. Reserve $1
+					// only if the user isn't yet activated on testnet; after the first
+					// successful drain, they will be, so subsequent drains send full.
 					dispatch({ type: "SET_SUBSTEP", index: i, subStep: "drain-testnet" });
 					const testnetBal = await waitForBalance(
 						currentWallet.address,
 						true,
 						"perp",
 					);
-					const drainAmount = (testnetBal - TRANSFER_FEE_BUFFER).toFixed(2);
+					const drainReserve = userTestnetActivated ? 0 : TRANSFER_FEE_BUFFER;
+					const drainAmount = (testnetBal - drainReserve).toFixed(2);
 					await sendFromGeneratedWallet(
 						currentWallet.privateKey,
 						userAddress,
@@ -316,12 +368,14 @@ export function useAutoChain() {
 						"", // faucet money is in generated wallet's testnet perps
 						userTestnetDestDex,
 					);
+					userTestnetActivated = true;
 					dispatch({
 						type: "COMPLETE_SUBSTEP",
 						index: i,
 						subStep: "drain-testnet",
 					});
 					dispatch({ type: "COLLECT_TESTNET", amount: Math.round(testnetBal) });
+					invalidateWalletBalance(currentWallet.address);
 
 					if (abortRef.current) break;
 
@@ -336,11 +390,15 @@ export function useAutoChain() {
 						false,
 						mainnetPocket,
 					);
-					const forwardAmount = (mainnetBal - TRANSFER_FEE_BUFFER).toFixed(2);
 
 					if (i < N - 1) {
-						// Generate next wallet and forward within the chain pocket
+						// Chain hop: next wallet is fresh — reserve $1 for its activation
+						// fee, forward the rest. Generated wallet ends with $0.
+						const forwardAmount = (mainnetBal - TRANSFER_FEE_BUFFER).toFixed(2);
 						const nextWallet = generateWallet();
+						useWalletStore
+							.getState()
+							.addAutoWallet(nextWallet.privateKey, nextWallet.address);
 						dispatch({
 							type: "ADD_WALLET",
 							wallet: {
@@ -363,12 +421,16 @@ export function useAutoChain() {
 							subStep: "forward-mainnet",
 						});
 						dispatch({ type: "WALLET_COMPLETE", index: i });
+						invalidateWalletBalance(currentWallet.address);
+						invalidateWalletBalance(nextWallet.address);
 
 						// Wait for next wallet to receive
 						await waitForBalance(nextWallet.address, false, mainnetPocket);
 						currentWallet = nextWallet;
 					} else {
-						// Last wallet: send mainnet back to user, honoring their mode.
+						// Last hop: user is already activated on mainnet (they seeded us),
+						// so no activation fee applies. Send the full remaining balance.
+						const forwardAmount = mainnetBal.toFixed(2);
 						await sendFromGeneratedWallet(
 							currentWallet.privateKey,
 							userAddress,
@@ -383,31 +445,143 @@ export function useAutoChain() {
 							subStep: "forward-mainnet",
 						});
 						dispatch({ type: "WALLET_COMPLETE", index: i });
+						invalidateWalletBalance(currentWallet.address);
 					}
 				}
 
-				if (!abortRef.current) {
+				if (abortRef.current) {
+					// abort() already dispatched, but re-dispatch is idempotent and
+					// defends against a race where abortRef flipped after abort()'s
+					// dispatch but before we got here.
+					dispatch({ type: "CHAIN_ABORT" });
+				} else {
 					dispatch({ type: "CHAIN_COMPLETE" });
 				}
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
-				dispatch({ type: "WALLET_ERROR", index: currentIdx, error: msg });
+				const isAbort =
+					abortRef.current ||
+					(err instanceof Error &&
+						(err.name === "AbortError" || msg.includes("aborted")));
+				if (isAbort) {
+					dispatch({ type: "CHAIN_ABORT" });
+				} else {
+					dispatch({ type: "WALLET_ERROR", index: currentIdx, error: msg });
+				}
 			} finally {
 				runningRef.current = false;
 			}
 		},
-		[walletClient, userAddress],
+		[walletClient, userAddress, invalidateWalletBalance],
 	);
 
 	const abort = useCallback(() => {
 		abortRef.current = true;
+		// Dispatch immediately so the UI reacts in the same tick without
+		// waiting for the in-flight await to unwind. The loop's next check
+		// (or the post-loop guard) will also dispatch — idempotent.
+		dispatch({ type: "CHAIN_ABORT" });
 	}, []);
 
-	const reset = useCallback(() => {
+	// Remove any auto-origin wallets from persistent storage that hold no funds
+	// on either network. Called after a chain finishes so the wallet list stays
+	// clean, and before a full reset so non-empty wallets survive (users can
+	// still drain them from the manual wallet table view).
+	const cleanupEmpty = useCallback(async () => {
+		const { wallets, removeIfEmpty } = useWalletStore.getState();
+		const autoWallets = wallets.filter((w) => w.origin === "auto");
+		await Promise.all(
+			autoWallets.map(async (w) => {
+				try {
+					const [mainPerp, mainSpot, testPerp, testSpot] = await Promise.all([
+						fetchUsdcBalance(w.address, false, "perp"),
+						fetchUsdcBalance(w.address, false, "spot"),
+						fetchUsdcBalance(w.address, true, "perp"),
+						fetchUsdcBalance(w.address, true, "spot"),
+					]);
+					removeIfEmpty(w.address, {
+						mainnet: mainPerp + mainSpot,
+						testnet: testPerp + testSpot,
+					});
+				} catch {
+					// If the check fails, err on the side of keeping the wallet.
+				}
+			}),
+		);
+	}, []);
+
+	const reset = useCallback(async () => {
+		await cleanupEmpty();
+		abortRef.current = false;
+		runningRef.current = false;
+		dispatch({ type: "RESET" });
+	}, [cleanupEmpty]);
+
+	// Query all auto-origin wallets' balances live (bypassing cache) and return
+	// the subset that hold any funds. Used to power the Reset confirmation.
+	// The `index` matches Wallet #N as displayed in the AutoModeProgress rows.
+	const computeWalletsAtRisk = useCallback(async (): Promise<
+		Array<{
+			index: number;
+			address: `0x${string}`;
+			mainnet: number;
+			testnet: number;
+		}>
+	> => {
+		const { wallets } = useWalletStore.getState();
+		const autoWallets = wallets.filter((w) => w.origin === "auto");
+		const results = await Promise.all(
+			autoWallets.map(async (w, i) => {
+				try {
+					const [mainPerp, mainSpot, testPerp, testSpot] = await Promise.all([
+						fetchUsdcBalance(w.address, false, "perp"),
+						fetchUsdcBalance(w.address, false, "spot"),
+						fetchUsdcBalance(w.address, true, "perp"),
+						fetchUsdcBalance(w.address, true, "spot"),
+					]);
+					return {
+						index: i + 1,
+						address: w.address,
+						mainnet: mainPerp + mainSpot,
+						testnet: testPerp + testSpot,
+					};
+				} catch {
+					// If the check fails, treat as "unknown but keep" — return zeros
+					// so the wallet isn't flagged as at risk but also stays in store.
+					return {
+						index: i + 1,
+						address: w.address,
+						mainnet: 0,
+						testnet: 0,
+					};
+				}
+			}),
+		);
+		return results.filter((r) => r.mainnet >= 0.005 || r.testnet >= 0.005);
+	}, []);
+
+	// Force-delete ALL auto-origin wallets from the store (regardless of
+	// balance) and reset the reducer. Called only after the user explicitly
+	// confirms the ResetConfirmDialog.
+	const forceReset = useCallback(() => {
+		const { wallets, removeWallet } = useWalletStore.getState();
+		for (const w of wallets) {
+			if (w.origin === "auto") {
+				removeWallet(w.address);
+			}
+		}
 		abortRef.current = false;
 		runningRef.current = false;
 		dispatch({ type: "RESET" });
 	}, []);
 
-	return { state, start, abort, reset };
+	return {
+		state,
+		start,
+		abort,
+		reset,
+		cleanupEmpty,
+		computeWalletsAtRisk,
+		forceReset,
+	};
 }

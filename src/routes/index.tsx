@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import WalletTable from "#/components/WalletTable";
 import { useAutoChain } from "#/hooks/useAutoChain";
 import { useWebData, type WebDataSnapshot } from "#/hooks/useWebData";
-import type { AbstractionMode } from "#/lib/hlActions";
+import { type AbstractionMode, isUnifiedLike } from "#/lib/hlActions";
 import { cn } from "#/lib/utils";
 
 const ABSTRACTION_LABEL: Record<AbstractionMode, string> = {
@@ -122,6 +122,27 @@ function StatsColumn({
 	const spotTotal = usdc ? Number.parseFloat(usdc.total) : 0;
 	const spotHold = usdc ? Number.parseFloat(usdc.hold) : 0;
 
+	// In Unified / Portfolio Margin mode, perps and spot share a single balance
+	// that Hyperliquid surfaces via spotClearinghouseState. The perps endpoint
+	// returns $0 for `withdrawable` and `accountValue`, so showing those rows
+	// makes it look like the account is empty when it isn't. Collapse to three
+	// clean rows in that case; keep the four-row breakdown for Standard.
+	const unified = isUnifiedLike(data.abstraction);
+	const unifiedAvailable = spotTotal - spotHold;
+
+	const rows: { label: string; value: number }[] = unified
+		? [
+				{ label: "Total Balance", value: spotTotal },
+				{ label: "Available", value: unifiedAvailable },
+				{ label: "On Hold", value: spotHold },
+			]
+		: [
+				{ label: "Perps Withdrawable", value: withdrawable },
+				{ label: "Account Value", value: accountValue },
+				{ label: "Spot Balance", value: spotTotal },
+				{ label: "Spot On Hold", value: spotHold },
+			];
+
 	const card = (
 		<Card className="gap-2">
 			<CardHeader className="pb-0">
@@ -131,23 +152,20 @@ function StatsColumn({
 						{ABSTRACTION_LABEL[data.abstraction]}
 					</Badge>
 				</div>
+				{unified && (
+					<p className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
+						One balance funds both spot and perps trading.
+					</p>
+				)}
 			</CardHeader>
 			<CardContent className="space-y-1.5">
-				{isMining ? (
-					<>
-						<AnimatedRow label="Perps Withdrawable" value={withdrawable} />
-						<AnimatedRow label="Account Value" value={accountValue} />
-						<AnimatedRow label="Spot Balance" value={spotTotal} />
-						<AnimatedRow label="Spot On Hold" value={spotHold} />
-					</>
-				) : (
-					<>
-						<Row label="Perps Withdrawable" value={fmt(withdrawable)} />
-						<Row label="Account Value" value={fmt(accountValue)} />
-						<Row label="Spot Balance" value={fmt(spotTotal)} />
-						<Row label="Spot On Hold" value={fmt(spotHold)} />
-					</>
-				)}
+				{isMining
+					? rows.map((r) => (
+							<AnimatedRow key={r.label} label={r.label} value={r.value} />
+						))
+					: rows.map((r) => (
+							<Row key={r.label} label={r.label} value={fmt(r.value)} />
+						))}
 			</CardContent>
 		</Card>
 	);
@@ -271,6 +289,9 @@ function App() {
 									start={chain.start}
 									abort={chain.abort}
 									reset={chain.reset}
+									computeWalletsAtRisk={chain.computeWalletsAtRisk}
+									forceReset={chain.forceReset}
+									onSwitchToManual={() => setMode("manual")}
 								/>
 							) : (
 								<WalletTable />
