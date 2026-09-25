@@ -16,9 +16,12 @@ export type Pocket = "" | "spot";
 export type PocketLocal = "perp" | "spot"; // for local balance queries
 export type SendKind = "usd" | "spot"; // kept for backwards compat: usd=>perps, spot=>spot
 
-// Reserve enough per transfer to cover Hyperliquid's $1 fee charged on
-// transfers to fresh recipients (every generated wallet is fresh).
-export const TRANSFER_FEE_BUFFER = 1.02;
+// Hyperliquid charges a flat $1 activation fee, on top of the sent amount,
+// from the sender's balance, whenever the destination address is a fresh
+// HyperCore account. Subtract this from a sender's balance before forwarding
+// to the next fresh recipient so the fee has room to be paid. Do NOT subtract
+// it when the destination is already activated — no fee is charged there.
+export const TRANSFER_FEE_BUFFER = 1.0;
 
 const usdcTokenCache: Partial<Record<"mainnet" | "testnet", string>> = {};
 
@@ -189,4 +192,91 @@ export async function sendFromUserWallet(
 		destinationDex,
 		isTestnet,
 	);
+}
+
+// Check whether an address is an activated HyperCore account (i.e., sending
+// USDC to it will NOT incur the $1 activation fee). Any non-zero balance in
+// either pocket is a definitive positive signal; if both are zero, we fall
+// back to checking the ledger for any past inbound transfer.
+export async function isUserActivated(
+	address: `0x${string}`,
+	isTestnet: boolean,
+): Promise<boolean> {
+	const [perp, spot] = await Promise.all([
+		fetchUsdcBalance(address, isTestnet, "perp"),
+		fetchUsdcBalance(address, isTestnet, "spot"),
+	]);
+	if (perp > 0 || spot > 0) return true;
+	const host = isTestnet
+		? "https://api.hyperliquid-testnet.xyz"
+		: "https://api.hyperliquid.xyz";
+	const res = await fetch(`${host}/info`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			type: "userNonFundingLedgerUpdates",
+			user: address,
+			startTime: 0,
+		}),
+	});
+	const events = await res.json();
+	return Array.isArray(events) && events.length > 0;
+}
+
+// Drain a generated wallet's USDC (perp + spot) back to the user in one call.
+// Reserves $1 for the activation fee only if the user is NOT yet activated on
+// the target HyperCore network (mainnet or testnet). Once activated, sends the
+// full balance from each pocket. Routes to the user's spot pocket if their
+// abstraction is unified/PM. Returns true if anything was sent.
+export async function drainGeneratedWallet(
+	privateKey: `0x${string}`,
+	userAddress: `0x${string}`,
+	isTestnet: boolean,
+): Promise<boolean> {
+	const walletAddress = privateKeyToAccount(privateKey).address;
+	const [perp, spot] = await Promise.all([
+		fetchUsdcBalance(walletAddress, isTestnet, "perp"),
+		fetchUsdcBalance(walletAddress, isTestnet, "spot"),
+	]);
+	if (perp <= 0 && spot <= 0) return false;
+
+	const [userProfile, userActivated] = await Promise.all([
+		fetchUserProfile(userAddress, isTestnet).catch(() => null),
+		isUserActivated(userAddress, isTestnet).catch(() => false),
+	]);
+	const userUnified = !!(userProfile && isUnifiedLike(userProfile.abstraction));
+
+	// Reserve $1 only if the user still needs activation on this network.
+	// Consumed by the first outbound transfer; subsequent pockets send full.
+	let reservePool = userActivated ? 0 : TRANSFER_FEE_BUFFER;
+	let sent = false;
+
+	const drainOne = async (
+		balance: number,
+		sourceDex: Pocket,
+	): Promise<void> => {
+		if (balance <= 0) return;
+		const reserve = Math.min(balance, reservePool);
+		const amount = (balance - reserve).toFixed(2);
+		// If we can't actually send from this pocket, don't burn the reserve
+		// on it — the next pocket needs the headroom to pay the activation
+		// fee. Consuming reserve pre-emptively caused the second pocket to
+		// send without headroom and get rejected.
+		if (Number.parseFloat(amount) <= 0) return;
+		reservePool -= reserve;
+		const destinationDex: Pocket = userUnified ? "spot" : sourceDex;
+		await sendFromGeneratedWallet(
+			privateKey,
+			userAddress,
+			amount,
+			isTestnet,
+			sourceDex,
+			destinationDex,
+		);
+		sent = true;
+	};
+
+	await drainOne(perp, "");
+	await drainOne(spot, "spot");
+	return sent;
 }

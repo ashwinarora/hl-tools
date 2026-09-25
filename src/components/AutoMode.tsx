@@ -6,8 +6,13 @@ import {
 	useMotionValueEvent,
 	useSpring,
 } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useAccount } from "wagmi";
+import RecoveryBanner from "#/components/RecoveryBanner";
+import ResetConfirmDialog, {
+	type WalletAtRisk,
+} from "#/components/ResetConfirmDialog";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
@@ -18,9 +23,11 @@ import type {
 	WalletStep,
 	WalletStepStatus,
 } from "#/hooks/useAutoChain";
+import { useWalletBalances } from "#/hooks/useWalletBalances";
 import {
 	type AbstractionMode,
 	decideChainKind,
+	drainGeneratedWallet,
 	fetchUserProfile,
 	type SendKind,
 	type UserProfile,
@@ -113,13 +120,22 @@ function SubStepRow({
 function WalletStepRow({
 	wallet,
 	total,
+	balance,
+	onBalanceStale,
 }: {
 	wallet: WalletStep;
 	total: number;
+	balance: { mainnet: number | null; testnet: number | null };
+	onBalanceStale: (address: `0x${string}`) => void;
 }) {
+	const { address: userAddress } = useAccount();
 	const isLast = wallet.index === total - 1;
 	const [scope, animateFlash] = useAnimate();
 	const prevStatusRef = useRef<WalletStepStatus>(wallet.status);
+	const [draining, setDraining] = useState<"mainnet" | "testnet" | null>(null);
+	// Synchronous mutex — protects against double-click that could open two
+	// Rabby popups or fire two send calls before React state settles.
+	const drainingRef = useRef(false);
 
 	useEffect(() => {
 		if (
@@ -149,6 +165,57 @@ function WalletStepRow({
 		error: <Badge variant="destructive">Error</Badge>,
 	}[wallet.status];
 
+	// Drain buttons are only enabled when the chain isn't actively using this
+	// wallet, and there's a positive balance to drain.
+	const canDrain = wallet.status !== "in-progress" && !!userAddress;
+	const mainnetBal = balance.mainnet ?? 0;
+	const testnetBal = balance.testnet ?? 0;
+	const hasMainnet = mainnetBal > 0.005;
+	const hasTestnet = testnetBal > 0.005;
+	const isErrored = wallet.status === "error";
+	const strandedNote = isErrored && (hasMainnet || hasTestnet);
+
+	async function doDrain(kind: "mainnet" | "testnet") {
+		if (!userAddress) return;
+		if (drainingRef.current) return;
+		drainingRef.current = true;
+		setDraining(kind);
+		const toastId = toast.loading(`Draining ${kind}`, {
+			description: `${truncateAddress(wallet.address)}…`,
+		});
+		try {
+			const sent = await drainGeneratedWallet(
+				wallet.privateKey,
+				userAddress,
+				kind === "testnet",
+			);
+			if (sent) {
+				toast.success(`Drained ${kind}`, {
+					id: toastId,
+					description: `${truncateAddress(wallet.address)} → your wallet.`,
+				});
+			} else {
+				toast.info("Nothing to drain", {
+					id: toastId,
+					description: `${truncateAddress(wallet.address)} holds $0.00 on ${kind}.`,
+				});
+			}
+			// Invalidate the wallet's polled balance so the row updates
+			// even though the chain has completed and background polling
+			// stopped. Without this, Drain stays enabled on a $0 row.
+			onBalanceStale(wallet.address);
+		} catch (e) {
+			console.error(`Drain ${kind} failed:`, e);
+			toast.error(`Drain ${kind} failed`, {
+				id: toastId,
+				description: e instanceof Error ? e.message : String(e),
+			});
+		} finally {
+			setDraining(null);
+			drainingRef.current = false;
+		}
+	}
+
 	return (
 		<div
 			ref={scope}
@@ -166,7 +233,7 @@ function WalletStepRow({
 					}}
 				/>
 			)}
-			<div className="flex items-center justify-between">
+			<div className="flex items-center justify-between gap-2">
 				<div className="flex items-center gap-2">
 					<span className="text-sm font-medium">
 						Wallet {wallet.index + 1}/{total}
@@ -176,6 +243,44 @@ function WalletStepRow({
 					</span>
 				</div>
 				{statusBadge}
+			</div>
+			<div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
+				<div className="flex items-center gap-1.5">
+					<span className="text-muted-foreground">Mainnet</span>
+					<span
+						className={`tabular-nums ${
+							hasMainnet && isErrored ? "font-semibold text-destructive" : ""
+						}`}
+					>
+						{balance.mainnet == null ? "—" : fmt(mainnetBal)}
+					</span>
+					<Button
+						size="xs"
+						variant="outline"
+						disabled={!canDrain || !hasMainnet || draining !== null}
+						onClick={() => doDrain("mainnet")}
+					>
+						{draining === "mainnet" ? "..." : "Drain"}
+					</Button>
+				</div>
+				<div className="flex items-center gap-1.5">
+					<span className="text-muted-foreground">Testnet</span>
+					<span
+						className={`tabular-nums ${
+							hasTestnet && isErrored ? "font-semibold text-destructive" : ""
+						}`}
+					>
+						{balance.testnet == null ? "—" : fmt(testnetBal)}
+					</span>
+					<Button
+						size="xs"
+						variant="outline"
+						disabled={!canDrain || !hasTestnet || draining !== null}
+						onClick={() => doDrain("testnet")}
+					>
+						{draining === "testnet" ? "..." : "Drain"}
+					</Button>
+				</div>
 			</div>
 			{wallet.status !== "pending" && (
 				<div className="space-y-1 pl-1">
@@ -188,6 +293,12 @@ function WalletStepRow({
 					/>
 					{wallet.error && (
 						<p className="mt-1 text-xs text-destructive">{wallet.error}</p>
+					)}
+					{strandedNote && (
+						<p className="text-[11px] text-destructive">
+							Funds are still in this wallet — use the Drain buttons above to
+							recover.
+						</p>
 					)}
 				</div>
 			)}
@@ -293,11 +404,21 @@ function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 						</div>
 						<div className="flex justify-between">
 							<span className="text-muted-foreground">
-								Initial send (returned at end)
+								Wallet signs (Rabby popup)
+							</span>
+							<span className="font-semibold tabular-nums">{fmt(parsed)}</span>
+						</div>
+						<div className="flex justify-between">
+							<span className="text-muted-foreground">
+								Wallet debits ($1 activation fee on top)
 							</span>
 							<span className="font-semibold tabular-nums">
 								{fmt(parsed + 1)}
 							</span>
+						</div>
+						<div className="flex justify-between">
+							<span className="text-muted-foreground">Returned at end</span>
+							<span className="font-semibold tabular-nums">{fmt(1)}</span>
 						</div>
 						<div className="flex justify-between">
 							<span className="text-muted-foreground">Net mainnet cost</span>
@@ -336,9 +457,10 @@ function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 						<p className="text-xs text-muted-foreground">
 							You're about to create{" "}
 							<strong className="text-foreground">{parsed} wallets</strong> and
-							send{" "}
+							send <strong className="text-foreground">{fmt(parsed)}</strong>{" "}
+							mainnet USDC (your wallet will debit{" "}
 							<strong className="text-foreground">{fmt(parsed + 1)}</strong>{" "}
-							mainnet USDC. Are you sure?
+							including the $1 activation fee). Are you sure?
 						</p>
 						<div className="flex gap-2">
 							<Button
@@ -384,6 +506,7 @@ function AutoModeProgress({
 	const isRunning = state.status === "running" || state.status === "seeding";
 	const isDone = state.status === "completed";
 	const isError = state.status === "error";
+	const isAborted = state.status === "aborted";
 
 	/* Animation 1: progress bar */
 	const completedCount = state.wallets.filter(
@@ -392,12 +515,34 @@ function AutoModeProgress({
 	const progressPct =
 		state.inputAmount > 0 ? (completedCount / state.inputAmount) * 100 : 0;
 
+	// Poll balances for every wallet in the chain. Active polling while the
+	// chain is running, errored, or aborted (user needs live balances to drain).
+	const addresses = useMemo(
+		() => state.wallets.map((w) => w.address),
+		[state.wallets],
+	);
+	const { balances, refresh: refreshBalances } = useWalletBalances(
+		addresses,
+		isRunning || isError || isAborted,
+	);
+
+	const handleRowBalanceStale = useCallback(
+		(_address: `0x${string}`) => {
+			// Cheapest signal that keeps the API simple: kick the whole polling
+			// hook to refetch every wallet. The one we just drained will settle
+			// to $0; the other rows repaint their existing values.
+			void refreshBalances();
+		},
+		[refreshBalances],
+	);
+
 	return (
 		<Card>
 			<CardHeader>
 				<div className="flex items-center justify-between">
-					{/* Animation 6b: "Chain Complete" title fade-in */}
-					<CardTitle className="text-sm">
+					<CardTitle
+						className={`text-sm ${isAborted ? "text-destructive" : ""}`}
+					>
 						{isDone ? (
 							<motion.span
 								initial={{ opacity: 0, scale: 0.95 }}
@@ -406,6 +551,8 @@ function AutoModeProgress({
 							>
 								Chain Complete
 							</motion.span>
+						) : isAborted ? (
+							"Chain Aborted"
 						) : isError ? (
 							"Chain Error"
 						) : (
@@ -418,7 +565,7 @@ function AutoModeProgress({
 								Abort
 							</Button>
 						)}
-						{(isDone || isError) && (
+						{(isDone || isError || isAborted) && (
 							<Button variant="outline" size="xs" onClick={onReset}>
 								{isDone ? "Run Again" : "Reset"}
 							</Button>
@@ -427,6 +574,13 @@ function AutoModeProgress({
 				</div>
 			</CardHeader>
 			<CardContent className="space-y-3">
+				{isAborted && (
+					<div className="rounded-md border border-red-500/70 bg-red-500/15 p-3 text-xs text-red-200">
+						⚠ Chain aborted. Any wallets below with a balance still hold your
+						funds. Drain them before clicking Reset — Reset will delete the
+						private keys forever.
+					</div>
+				)}
 				{/* Animation 1: progress bar */}
 				<div className="h-1 w-full overflow-hidden rounded-full bg-muted">
 					<motion.div
@@ -458,7 +612,10 @@ function AutoModeProgress({
 								<Check className="size-3.5 text-green-500" />
 							)}
 							<span className={seedFailed ? "text-destructive" : undefined}>
-								Seed: Send {fmt(state.inputAmount + 1)} to Wallet #1
+								Seed: Send {fmt(state.inputAmount)} to Wallet #1{" "}
+								<span className="text-muted-foreground">
+									(+ $1 activation fee = {fmt(state.inputAmount + 1)} debited)
+								</span>
 							</span>
 						</div>
 					);
@@ -477,7 +634,17 @@ function AutoModeProgress({
 								delay: i * 0.05,
 							}}
 						>
-							<WalletStepRow wallet={wallet} total={state.inputAmount} />
+							<WalletStepRow
+								wallet={wallet}
+								total={state.inputAmount}
+								balance={
+									balances[wallet.address] ?? {
+										mainnet: null,
+										testnet: null,
+									}
+								}
+								onBalanceStale={handleRowBalanceStale}
+							/>
 						</motion.div>
 					))}
 				</div>
@@ -506,15 +673,136 @@ export default function AutoMode({
 	start,
 	abort,
 	reset,
+	computeWalletsAtRisk,
+	forceReset,
+	onSwitchToManual,
 }: {
 	state: ChainState;
 	start: (n: number) => void;
 	abort: () => void;
-	reset: () => void;
+	reset: () => Promise<void> | void;
+	computeWalletsAtRisk: () => Promise<WalletAtRisk[]>;
+	forceReset: () => Promise<void> | void;
+	onSwitchToManual: () => void;
 }) {
+	const [dialogOpen, setDialogOpen] = useState(false);
+	const [walletsAtRisk, setWalletsAtRisk] = useState<WalletAtRisk[]>([]);
+	// Persistent id for the chain-level lifecycle toast. Spawned on Start,
+	// updated to success/error/aborted by the state.status effect below.
+	const chainToastRef = useRef<string | number | null>(null);
+	const prevStatusRef = useRef(state.status);
+
+	// Watch chain status transitions and update the persistent toast.
+	useEffect(() => {
+		const prev = prevStatusRef.current;
+		const next = state.status;
+		if (prev !== next && chainToastRef.current !== null) {
+			if (next === "completed") {
+				toast.success("Chain complete", {
+					id: chainToastRef.current,
+					description: `Mined ${state.inputAmount}×$1,000 testnet USDC. Net cost ~$${state.inputAmount}.`,
+				});
+				chainToastRef.current = null;
+			} else if (next === "aborted") {
+				toast.warning("Chain aborted", {
+					id: chainToastRef.current,
+					description:
+						"Wallets with residual balances are listed below. Drain before Reset.",
+				});
+				chainToastRef.current = null;
+			} else if (next === "error") {
+				toast.error("Chain error", {
+					id: chainToastRef.current,
+					description: state.error ?? "Unknown error.",
+				});
+				chainToastRef.current = null;
+			}
+		}
+		prevStatusRef.current = next;
+	}, [state.status, state.error, state.inputAmount]);
+
+	const handleStart = useCallback(
+		(n: number) => {
+			chainToastRef.current = toast.loading(`Starting chain (N=${n})`, {
+				description:
+					"Sign the seed send in your wallet — chain will run automatically.",
+			});
+			start(n);
+		},
+		[start],
+	);
+
+	const handleAbort = useCallback(() => {
+		abort();
+		// The status-transition effect will resolve the persistent chain toast
+		// into a "Chain aborted" warning within the same tick.
+	}, [abort]);
+
+	const handleReset = useCallback(async () => {
+		const toastId = toast.loading("Preparing reset", {
+			description: "Checking wallets for residual funds…",
+		});
+		try {
+			const risky = await computeWalletsAtRisk();
+			if (risky.length === 0) {
+				await reset();
+				toast.success("Chain reset", {
+					id: toastId,
+					description: "Auto wallets pruned. Ready for another run.",
+				});
+				return;
+			}
+			toast.dismiss(toastId);
+			setWalletsAtRisk(risky);
+			setDialogOpen(true);
+		} catch (e) {
+			toast.error("Reset check failed", {
+				id: toastId,
+				description: e instanceof Error ? e.message : String(e),
+			});
+		}
+	}, [computeWalletsAtRisk, reset]);
+
+	const handleForceReset = useCallback(async () => {
+		const toastId = toast.loading("Deleting auto wallets", {
+			description: "Waiting for any in-flight chain send to complete…",
+		});
+		try {
+			await forceReset();
+			toast.warning("Auto wallets deleted forever", {
+				id: toastId,
+				description: "Private keys removed from browser.",
+			});
+		} catch (e) {
+			toast.error("Delete failed", {
+				id: toastId,
+				description: e instanceof Error ? e.message : String(e),
+			});
+		}
+	}, [forceReset]);
+
 	if (state.status === "idle") {
-		return <AutoModeForm onStart={start} />;
+		return (
+			<>
+				<RecoveryBanner onSwitchToManual={onSwitchToManual} />
+				<AutoModeForm onStart={handleStart} />
+			</>
+		);
 	}
 
-	return <AutoModeProgress state={state} onAbort={abort} onReset={reset} />;
+	return (
+		<>
+			<AutoModeProgress
+				state={state}
+				onAbort={handleAbort}
+				onReset={handleReset}
+			/>
+			<ResetConfirmDialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				walletsAtRisk={walletsAtRisk}
+				onConfirm={handleForceReset}
+			/>
+		</>
+	);
 }
