@@ -367,7 +367,7 @@ function AssetsTool() {
 									}
 									description={
 										resolution.matches.length
-											? "Choose one of the matches on the left. The resolver never picks for you when a query is ambiguous."
+											? "Choose one of the matches. The resolver never picks for you when a query is ambiguous."
 											: "Try another spelling, or compare networks."
 									}
 								/>
