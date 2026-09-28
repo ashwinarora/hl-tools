@@ -25,7 +25,11 @@ export function SequenceDiagram({
 		<div className="min-w-0">
 			<ol className="space-y-2 sm:hidden">
 				{steps.map((s, i) => (
-					<li key={`${i}-${s.label}`} className="flex gap-2.5 text-sm">
+					<li
+						// biome-ignore lint/suspicious/noArrayIndexKey: steps can repeat labels; order is the identity
+						key={`${i}-${s.label}`}
+						className="flex gap-2.5 text-sm"
+					>
 						<span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-2 font-mono text-2xs">
 							{i + 1}
 						</span>
@@ -81,7 +85,10 @@ export function SequenceDiagram({
 						const right = Math.max(a, b);
 						const rtl = b < a;
 						return (
-							<Fragment key={`${i}-${s.label}`}>
+							<Fragment
+								// biome-ignore lint/suspicious/noArrayIndexKey: steps can repeat labels; order is the identity
+								key={`${i}-${s.label}`}
+							>
 								<div
 									className="relative px-2 py-2.5"
 									style={{

@@ -234,6 +234,7 @@ export function ComposeTab({
 								aria-label="Intent"
 							>
 								{INTENTS.map((i) => (
+									// biome-ignore lint/a11y/useSemanticElements: ARIA radio pattern on buttons keeps the card styling
 									<button
 										key={i.id}
 										type="button"
