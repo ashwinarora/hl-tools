@@ -50,7 +50,10 @@ export function SigningForm({
 				>
 					<Select
 						id={`${id}-sample`}
-						value=""
+						value={
+							SIGNING_SAMPLES.find((x) => x.requestBody === value.text)?.id ??
+							""
+						}
 						onChange={(e) => {
 							if (e.target.value) onSample(e.target.value);
 						}}
