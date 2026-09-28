@@ -217,7 +217,7 @@ function App() {
 				<Callout
 					tone="warning"
 					title="This tool signs and sends real transactions"
-					className="max-w-2xl flex-1"
+					className="w-full lg:w-auto lg:max-w-2xl lg:flex-1"
 				>
 					Unlike the rest of the hub, the faucet miner moves mainnet USDC from
 					your connected wallet through generated wallets. Everything runs in
@@ -231,11 +231,14 @@ function App() {
 						<BookOpen className="size-4" aria-hidden />
 						How it works
 					</Link>
-					<ConnectButton
-						showBalance={false}
-						chainStatus={{ smallScreen: "icon", largeScreen: "full" }}
-						accountStatus={{ smallScreen: "avatar", largeScreen: "full" }}
-					/>
+					{/* Disconnected visitors connect from the hero's call to action. */}
+					{isConnected && (
+						<ConnectButton
+							showBalance={false}
+							chainStatus={{ smallScreen: "icon", largeScreen: "full" }}
+							accountStatus={{ smallScreen: "avatar", largeScreen: "full" }}
+						/>
+					)}
 				</div>
 			</div>
 			{!isConnected ? <LandingHero /> : <Connected />}

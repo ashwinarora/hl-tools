@@ -3,6 +3,9 @@ import { ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 
 export const Route = createFileRoute("/faucet-miner/how-to-use")({
+	head: () => ({
+		meta: [{ title: "How the faucet miner works — hl-tools" }],
+	}),
 	component: HowToUse,
 });
 
@@ -112,9 +115,8 @@ function HowToUse() {
 					wallet).
 				</Step>
 				<Step n={3} title="Connect your wallet">
-					Click the wallet button in the top-right corner of the page to
-					connect. Once connected, your mainnet and testnet account stats will
-					appear on the home page.
+					Click Connect Wallet on the faucet miner page. Once connected, your
+					mainnet and testnet account balances appear there.
 				</Step>
 			</Section>
 
