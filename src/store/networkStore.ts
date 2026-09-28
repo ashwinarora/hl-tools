@@ -57,8 +57,17 @@ export function useNetworkHydrated(): boolean {
 	useEffect(() => {
 		const api = useNetworkStore.persist;
 		if (!api) return;
-		if (api.hasHydrated()) setHydrated(true);
-		return api.onFinishHydration(() => setHydrated(true));
+		if (api.hasHydrated()) {
+			setHydrated(true);
+			return;
+		}
+		const unsubscribe = api.onFinishHydration(() => setHydrated(true));
+		// Don't depend solely on the root layout's rehydrate call: rehydrating
+		// is an idempotent localStorage read, and it guarantees this listener
+		// fires even if the root's call happened on a different module instance
+		// (Vite can load two copies after a hot update).
+		void api.rehydrate();
+		return unsubscribe;
 	}, []);
 	return hydrated;
 }
