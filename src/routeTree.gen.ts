@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as McpRouteImport } from './routes/mcp'
 import { Route as HowToUseRouteImport } from './routes/how-to-use'
 import { Route as ChangesRouteImport } from './routes/changes'
 import { Route as FaucetMinerRouteRouteImport } from './routes/faucet-miner/route'
@@ -24,11 +23,6 @@ import { Route as ToolsCorewriterRouteImport } from './routes/tools/corewriter'
 import { Route as ToolsAssetsRouteImport } from './routes/tools/assets'
 import { Route as FaucetMinerHowToUseRouteImport } from './routes/faucet-miner/how-to-use'
 
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const HowToUseRoute = HowToUseRouteImport.update({
   id: '/how-to-use',
   path: '/how-to-use',
@@ -100,7 +94,6 @@ export interface FileRoutesByFullPath {
   '/faucet-miner': typeof FaucetMinerRouteRouteWithChildren
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
-  '/mcp': typeof McpRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
@@ -115,7 +108,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
-  '/mcp': typeof McpRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
@@ -132,7 +124,6 @@ export interface FileRoutesById {
   '/faucet-miner': typeof FaucetMinerRouteRouteWithChildren
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
-  '/mcp': typeof McpRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
@@ -150,7 +141,6 @@ export interface FileRouteTypes {
     | '/faucet-miner'
     | '/changes'
     | '/how-to-use'
-    | '/mcp'
     | '/faucet-miner/how-to-use'
     | '/tools/assets'
     | '/tools/corewriter'
@@ -165,7 +155,6 @@ export interface FileRouteTypes {
     | '/'
     | '/changes'
     | '/how-to-use'
-    | '/mcp'
     | '/faucet-miner/how-to-use'
     | '/tools/assets'
     | '/tools/corewriter'
@@ -181,7 +170,6 @@ export interface FileRouteTypes {
     | '/faucet-miner'
     | '/changes'
     | '/how-to-use'
-    | '/mcp'
     | '/faucet-miner/how-to-use'
     | '/tools/assets'
     | '/tools/corewriter'
@@ -198,7 +186,6 @@ export interface RootRouteChildren {
   FaucetMinerRouteRoute: typeof FaucetMinerRouteRouteWithChildren
   ChangesRoute: typeof ChangesRoute
   HowToUseRoute: typeof HowToUseRoute
-  McpRoute: typeof McpRoute
   ToolsAssetsRoute: typeof ToolsAssetsRoute
   ToolsCorewriterRoute: typeof ToolsCorewriterRoute
   ToolsOrdersRoute: typeof ToolsOrdersRoute
@@ -210,13 +197,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/how-to-use': {
       id: '/how-to-use'
       path: '/how-to-use'
@@ -329,7 +309,6 @@ const rootRouteChildren: RootRouteChildren = {
   FaucetMinerRouteRoute: FaucetMinerRouteRouteWithChildren,
   ChangesRoute: ChangesRoute,
   HowToUseRoute: HowToUseRoute,
-  McpRoute: McpRoute,
   ToolsAssetsRoute: ToolsAssetsRoute,
   ToolsCorewriterRoute: ToolsCorewriterRoute,
   ToolsOrdersRoute: ToolsOrdersRoute,
