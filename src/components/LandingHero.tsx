@@ -1,5 +1,4 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { Link } from "@tanstack/react-router";
 import {
 	ArrowRight,
 	Coins,
@@ -29,7 +28,7 @@ function ConnectCta() {
 					size="lg"
 					onClick={openConnectModal}
 					disabled={!mounted}
-					className="h-11 px-6 text-base font-semibold"
+					className="h-10 px-5 font-semibold"
 				>
 					Connect Wallet
 					<ArrowRight className="h-4 w-4" />
@@ -65,35 +64,23 @@ const trustPoints = [
 
 export default function LandingHero() {
 	return (
-		<main className="page-wrap px-4 py-12 sm:py-16 space-y-16">
-			{/* Hero */}
+		<div className="space-y-12">
+			{/* Connect prompt */}
 			<motion.section
 				{...fadeIn(0)}
-				className="flex flex-col items-center text-center space-y-5 pt-6 sm:pt-10"
+				className="flex flex-col items-start gap-4 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between"
 			>
-				<Badge variant="secondary" className="gap-1.5">
-					<Sparkles className="h-3 w-3" />
-					Hyperliquid testnet faucet miner
-				</Badge>
-				<h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight max-w-3xl">
-					Mine testnet USDC on Hyperliquid.
-				</h1>
-				<p className="text-base sm:text-lg text-muted-foreground max-w-2xl">
-					Chain generated wallets through the faucet.{" "}
-					<span className="text-foreground font-medium">
-						Pay ~$1, mine ~$1,000 testnet USDC
-					</span>
-					{" — per wallet. Chain 5, get $5,000."}
-				</p>
-				<div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-					<ConnectCta />
-					<Button variant="ghost" size="lg" asChild className="h-11 text-base">
-						<Link to="/how-to-use">
-							How it works
-							<ArrowRight className="h-4 w-4" />
-						</Link>
-					</Button>
+				<div className="space-y-1">
+					<Badge variant="secondary" className="gap-1.5">
+						<Sparkles className="h-3 w-3" />
+						Pay ~$1, mine ~$1,000 testnet USDC per wallet
+					</Badge>
+					<p className="text-sm text-muted-foreground">
+						Connect the wallet that holds your mainnet USDC on Hyperliquid to
+						see balances and start mining.
+					</p>
 				</div>
+				<ConnectCta />
 			</motion.section>
 
 			{/* How it works */}
@@ -178,7 +165,7 @@ export default function LandingHero() {
 					View source →
 				</a>
 			</motion.section>
-		</main>
+		</div>
 	);
 }
 

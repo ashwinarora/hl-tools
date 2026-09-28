@@ -11,7 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as HowToUseRouteImport } from './routes/how-to-use'
+import { Route as ChangesRouteImport } from './routes/changes'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FaucetMinerIndexRouteImport } from './routes/faucet-miner/index'
+import { Route as FaucetMinerHowToUseRouteImport } from './routes/faucet-miner/how-to-use'
+import { Route as DevViewportRouteImport } from './routes/dev.viewport'
 
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
@@ -23,40 +27,98 @@ const HowToUseRoute = HowToUseRouteImport.update({
   path: '/how-to-use',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChangesRoute = ChangesRouteImport.update({
+  id: '/changes',
+  path: '/changes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FaucetMinerIndexRoute = FaucetMinerIndexRouteImport.update({
+  id: '/faucet-miner/',
+  path: '/faucet-miner/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaucetMinerHowToUseRoute = FaucetMinerHowToUseRouteImport.update({
+  id: '/faucet-miner/how-to-use',
+  path: '/faucet-miner/how-to-use',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevViewportRoute = DevViewportRouteImport.update({
+  id: '/dev/viewport',
+  path: '/dev/viewport',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
   '/mcp': typeof McpRoute
+  '/dev/viewport': typeof DevViewportRoute
+  '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/faucet-miner/': typeof FaucetMinerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
   '/mcp': typeof McpRoute
+  '/dev/viewport': typeof DevViewportRoute
+  '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/faucet-miner': typeof FaucetMinerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
   '/mcp': typeof McpRoute
+  '/dev/viewport': typeof DevViewportRoute
+  '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/faucet-miner/': typeof FaucetMinerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/how-to-use' | '/mcp'
+  fullPaths:
+    | '/'
+    | '/changes'
+    | '/how-to-use'
+    | '/mcp'
+    | '/dev/viewport'
+    | '/faucet-miner/how-to-use'
+    | '/faucet-miner/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/how-to-use' | '/mcp'
-  id: '__root__' | '/' | '/how-to-use' | '/mcp'
+  to:
+    | '/'
+    | '/changes'
+    | '/how-to-use'
+    | '/mcp'
+    | '/dev/viewport'
+    | '/faucet-miner/how-to-use'
+    | '/faucet-miner'
+  id:
+    | '__root__'
+    | '/'
+    | '/changes'
+    | '/how-to-use'
+    | '/mcp'
+    | '/dev/viewport'
+    | '/faucet-miner/how-to-use'
+    | '/faucet-miner/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ChangesRoute: typeof ChangesRoute
   HowToUseRoute: typeof HowToUseRoute
   McpRoute: typeof McpRoute
+  DevViewportRoute: typeof DevViewportRoute
+  FaucetMinerHowToUseRoute: typeof FaucetMinerHowToUseRoute
+  FaucetMinerIndexRoute: typeof FaucetMinerIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,6 +137,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HowToUseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/changes': {
+      id: '/changes'
+      path: '/changes'
+      fullPath: '/changes'
+      preLoaderRoute: typeof ChangesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -82,13 +151,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/faucet-miner/': {
+      id: '/faucet-miner/'
+      path: '/faucet-miner'
+      fullPath: '/faucet-miner/'
+      preLoaderRoute: typeof FaucetMinerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faucet-miner/how-to-use': {
+      id: '/faucet-miner/how-to-use'
+      path: '/faucet-miner/how-to-use'
+      fullPath: '/faucet-miner/how-to-use'
+      preLoaderRoute: typeof FaucetMinerHowToUseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/viewport': {
+      id: '/dev/viewport'
+      path: '/dev/viewport'
+      fullPath: '/dev/viewport'
+      preLoaderRoute: typeof DevViewportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ChangesRoute: ChangesRoute,
   HowToUseRoute: HowToUseRoute,
   McpRoute: McpRoute,
+  DevViewportRoute: DevViewportRoute,
+  FaucetMinerHowToUseRoute: FaucetMinerHowToUseRoute,
+  FaucetMinerIndexRoute: FaucetMinerIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

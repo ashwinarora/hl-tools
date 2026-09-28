@@ -6,14 +6,23 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { Toaster } from "../components/ui/sonner";
+import { NETWORK_INIT_SCRIPT, useNetworkStore } from "../store/networkStore";
 
 // Dev-only lazy import — Vite replaces `import.meta.env.DEV` with `false` at
 // build time. The ternary evaluates to `null`, the lazy() call is dead-code
 // eliminated, and the MockPanel chunk is never emitted in production.
+// TanStack devtools are opt-in during development (`?devtools=1` or
+// localStorage.devtools = "1") so the floating launcher doesn't cover tool UI.
+const showDevtools =
+	import.meta.env.DEV &&
+	typeof window !== "undefined" &&
+	(new URLSearchParams(window.location.search).get("devtools") === "1" ||
+		window.localStorage.getItem("devtools") === "1");
+
 const MockPanel = import.meta.env.DEV
 	? lazy(() => import("../components/MockPanel"))
 	: null;
@@ -56,10 +65,26 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "hl-tools",
+				title: "hl-tools — Hyperliquid developer tools",
 			},
+			{
+				name: "description",
+				content:
+					"Read-only diagnostics for Hyperliquid developers: resolve assets, inspect signatures, decode CoreWriter actions, trace HyperEVM → HyperCore, lint orders, debug WebSockets and probe RPCs.",
+			},
+			{ name: "theme-color", content: "#0f1115" },
 		],
 		links: [
+			{ rel: "preconnect", href: "https://fonts.googleapis.com" },
+			{
+				rel: "preconnect",
+				href: "https://fonts.gstatic.com",
+				crossOrigin: "anonymous",
+			},
+			{
+				rel: "stylesheet",
+				href: "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600;700&display=swap",
+			},
 			{
 				rel: "icon",
 				type: "image/svg+xml",
@@ -74,37 +99,52 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 	shellComponent: RootDocument,
 });
 
+/** Rehydrate the persisted network after mount (store uses skipHydration). */
+function NetworkHydrator() {
+	useEffect(() => {
+		void useNetworkStore.persist.rehydrate();
+	}, []);
+	return null;
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
 				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+				<script dangerouslySetInnerHTML={{ __html: NETWORK_INIT_SCRIPT }} />
 				<HeadContent />
 			</head>
-			<body className="font-sans antialiased transition-colors duration-200 [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
-				<div
-					id="bg-layer"
-					className="pointer-events-none fixed inset-0 z-0"
-					aria-hidden="true"
-				/>
+			<body className="font-sans antialiased">
+				<a
+					href="#main"
+					className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-brand"
+				>
+					Skip to content
+				</a>
+				<NetworkHydrator />
 				<TanStackQueryProvider>
-					<div className="relative z-10 flex min-h-screen flex-col">
+					<div className="relative flex min-h-screen flex-col">
 						<Header />
-						<div className="flex-1">{children}</div>
+						<div id="main" className="flex-1">
+							{children}
+						</div>
 						<Footer />
 					</div>
-					<TanStackDevtools
-						config={{
-							position: "bottom-right",
-						}}
-						plugins={[
-							{
-								name: "Tanstack Router",
-								render: <TanStackRouterDevtoolsPanel />,
-							},
-							TanStackQueryDevtools,
-						]}
-					/>
+					{showDevtools && (
+						<TanStackDevtools
+							config={{
+								position: "bottom-right",
+							}}
+							plugins={[
+								{
+									name: "Tanstack Router",
+									render: <TanStackRouterDevtoolsPanel />,
+								},
+								TanStackQueryDevtools,
+							]}
+						/>
+					)}
 					{MockPanel && (
 						<Suspense fallback={null}>
 							<MockPanel />
