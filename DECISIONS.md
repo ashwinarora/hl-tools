@@ -44,6 +44,50 @@ Non-obvious choices made while turning hl-tools into a developer tooling hub, an
 
 **Design tokens.** A cool neutral ramp, one brand accent (mint), and five semantic roles. "Unknown / unsupported" is violet with a dashed border so it can never be mistaken for an error (red) or a warning (amber). Mainnet and testnet have their own colours (green / amber dot) used by every network badge.
 
+**Sharing uses the URL fragment, behind an explicit confirmation.** The Signing Inspector and the failure explainer can share their input, but only after the user ticks "this content is public". The state goes into `#share=<base64url>`, which browsers never send to the server or in `Referer`, and it is stripped from the address bar as soon as the receiving page has read it. Samples use `?sample=<id>` instead, which names a built-in sample and carries no content.
+
+**"Try with a sample" always shows a result.** A sample that only prefilled inputs made two tools look empty on arrival, so the RPC probe runs its sample comparison and the WebSocket Workbench connects on arrival. Both are bounded, read-only and public. Samples that carry a network (the testnet `usdSend` vector, testnet trace hashes) switch the global network *after* the stored preference has been restored, so the preference cannot override them a moment later.
+
+**`useNetworkHydrated` rehydrates its own store.** Sample logic waits for the persisted network. Relying only on the root layout's `rehydrate()` call proved fragile: during server rendering zustand attaches no `persist` API at all (localStorage is unavailable), which crashed SSR, and in development Vite can load a second copy of the store module after a hot update, so the listener never fired. The hook now tolerates a missing API and calls `rehydrate()` itself; it's an idempotent localStorage read.
+
+**Radio groups follow the WAI-ARIA pattern.** The network switch and every segmented control are button-based radio groups (to keep the segmented styling); arrow keys, Home and End move the selection and only the checked option is a tab stop. Shared in `src/lib/radioGroup.ts`.
+
+**The faucet miner keeps its behaviour and adopts the shell.** Its logic is unchanged. Only presentation moved: hub `ToolPage` header with the same verified-date/source block, a warning callout stating it is the one tool that signs, theme tokens instead of hard-coded amber/red text, and RainbowKit's button only once a wallet is connected (the landing hero already offers Connect Wallet). The old `/how-to-use` URL 301-redirects to `/faucet-miner/how-to-use`.
+
+**Template leftovers removed.** The initial TanStack Start template shipped a public `POST /mcp` route with an `addTodo` demo that wrote `mcp-todos.json` to disk. It had nothing to do with the product and was a writable endpoint on a public site, so it was deleted with its dependencies (`@modelcontextprotocol/sdk`, `zod`).
+
+## Tools
+
+**Signing Inspector samples are generated from the Python SDK vectors.** `scripts/gen_signing_samples.py` turns vectors into full request bodies (`src/samples/signing.ts`), so every sample's signature really recovers to the SDK's public test address and a sample can never drift from what the tests check. The inspector has no private-key field; it only hashes and recovers.
+
+**Compare mode reports the first divergent byte, not just a text diff.** Two payloads that look identical as JSON can hash differently (`"100"` vs `"100.0"`, key order). The compare view encodes both with byte spans and names the field containing the first differing byte, then shows the JSON diff for context.
+
+**Multisig envelopes are out of scope, and the tool says so.** Detected multisig payloads get an explicit "out of scope" diagnostic instead of a wrong hash.
+
+**CoreWriter decoding never guesses.** An unknown version byte, an undefined action id and malformed ABI data each produce their own explicit result (`unknown-version`, `unknown-action`, `malformed`). The body of an unknown version is not decoded. The builder refuses human inputs that are not exactly representable at the action's scale (e.g. `limitPx` with more than 8 decimals) rather than truncating.
+
+**Trace conclusions carry evidence labels.** Each link is `observed` (read from the chain or info API), `inferred` (derived by a stated rule, e.g. matching an order without cloid by coin/side/price/size/time) or `unknown`. A cloid makes a limit order observable via `orderStatus`; without one the match is inferred and labelled so. Limit orders, `usdClassTransfer` and `sendAsset`/`spotSend` are traced; other decoded actions say "trace not supported for this action yet". A hash that isn't on the selected network is looked up on the other network and reported, but the tool never switches networks on its own.
+
+**Trace timing is reported with its resolution.** HyperEVM block timestamps are whole seconds, so "+0.437 s after the block" carries a "(block time has 1 s resolution)" caveat.
+
+**The composer never rounds user input.** An invalid price or size blocks the payload and offers the nearest valid values in each direction with the delta; the user picks one. A positive size that rounds to zero lots is a prominent blocking error. Values the composer derives itself (market price = mid ± slippage) are rounded in the conservative direction (buys down, sells up) and the rounding is shown. Sizes and prices are `Decimal` end to end; prefills from live mids never pass through floats.
+
+**The failure explainer treats `"status":"ok"` as the start, not the answer.** A batch response is explained per status entry, a single error for a multi-order request is flagged as a whole-batch pre-validation rejection, and a truncated response is reported as malformed JSON rather than matched against the error catalogue.
+
+**WebSocket reconnect analysis is honest about what the protocol allows.** No Hyperliquid channel has sequence numbers or a resume cursor (stated per channel in the ordering table). After a simulated disconnect the workbench diffs state before and after; for `trades` it compares the re-subscribe replay with REST `recentTrades` to count what was missed. That `trades` replays recent trades on subscribe without an `isSnapshot` flag was found while testing and encoded in websocket rules 1.1.0.
+
+**Recorded sessions are bounded and sanitised.** Recording stops at 5,000 messages, 8 MB or 30 minutes; IndexedDB keeps the 20 newest sessions. Exports replace every address with a stable pseudonym (`0x000…0001`, …) and imports are strictly validated (format, version, monotonic timestamps) with a specific reason on rejection.
+
+**The RPC probe decides "historical" with exact controls.** Comparing a historical answer with the latest one only shows they differ. The probe uses a nonce oracle instead: a transaction from X with nonce n in block B proves X's nonce at B−1 was exactly n. It also checks that a well-known contract (USDC) has no code at block 1000. Public HyperEVM RPCs failed both on 2026-09-28 (they answer historical queries with latest state) and are flagged. dRPC passed.
+
+**The probe is bounded, paced and runs `eth_getLogs` last.** Around 25 requests, 250 ms apart, for the public endpoint's 100 requests/minute limit. Large log ranges exhausted the public testnet limit for the checks after them, so the range probe now runs last. A rate-limited check is reported as "inconclusive · rate limited", never as unsupported. Endpoint URLs are shown redacted (`?apikey=•••`) and are never persisted or put in the page URL; a CORS-blocked endpoint aborts with an explanation.
+
 ## Testing
 
 **Browser testing uses the Chrome DevTools MCP.** Viewport emulation (`emulate`) gives exact desktop (1440×900) and mobile (375×812, DPR 2) sizes and light/dark `prefers-color-scheme`. The faucet miner is exercised with the Rabby wallet in that browser; mining itself is only run under the existing MSW mock harness so no real funds move.
+
+**Every browser bug becomes a fixture or a regression test where the logic lives in core.** Examples: `@abc` malformed-prefix note (resolver cases), truncated exchange response (explain cases), rate-limited probe (probe test). Presentation-only bugs are logged in TESTING.md with the fix.
+
+**Committed screenshots come from an isolated browser context at DPR 1.** No wallet is connected and storage is fresh, so no address or balance appears in the repository. DPR 1 keeps full-page mobile captures of long pages small enough to review and to commit.
+
+**The root Vitest config runs the workspace projects** rather than inheriting `vite.config.ts`, whose TanStack Start/Nitro plugins kept the process alive after every run.
