@@ -17,6 +17,7 @@
 		{ "name": "orderStatus unknownOid", "input": "{\"status\":\"unknownOid\"}", "kind": "order-status", "outcomes": ["unknown"] },
 		{ "name": "WS orderUpdates rejected", "input": "[{\"order\":{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"50000.0\",\"sz\":\"0.0\",\"oid\":9,\"timestamp\":1790000000000,\"origSz\":\"0.01\"},\"status\":\"perpMarginRejected\",\"statusTimestamp\":1790000000000}]", "kind": "order-updates", "outcomes": ["rejected"] },
 		{ "name": "garbage", "input": "{\"foo\":1}", "kind": "unrecognised", "outcomes": [] },
+		{ "name": "truncated JSON is reported as malformed, not as an error message", "input": "{\"status\":\"ok\",", "kind": "malformed-json", "outcomes": [], "bug": "Found in browser 2026-09-28: truncated JSON was explained as an unknown error string" },
 		{ "name": "unknown error text", "input": "Something nobody has seen before", "kind": "error-text", "outcomes": ["error"], "catalog": [null] }
 	]
 }

@@ -53,6 +53,7 @@ export interface Explanation {
 		| "order-updates"
 		| "error-text"
 		| "http-error"
+		| "malformed-json"
 		| "unrecognised";
 	readonly summary: string;
 	readonly entries: readonly ExplainedEntry[];
@@ -365,7 +366,18 @@ export function explainResponse(input: string, request?: unknown): Explanation {
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(text);
-	} catch {
+	} catch (e) {
+		if (text.startsWith("{") || text.startsWith("[")) {
+			return {
+				kind: "malformed-json",
+				summary: "This looks like JSON but doesn't parse.",
+				entries: [],
+				unknownFields: [],
+				notes: [
+					`${(e as Error).message}. It may have been truncated when copied — paste the complete response body.`,
+				],
+			};
+		}
 		// A bare error string (possibly quoted).
 		const entry = explainError(text.replace(/^"|"$/g, ""), null);
 		return {
