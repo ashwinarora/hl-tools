@@ -222,3 +222,24 @@ describe("inspectAction diagnostics", () => {
 		);
 	});
 });
+
+describe("signing samples", () => {
+	it("every built-in sample recovers the SDK test signer", async () => {
+		const { SIGNING_SAMPLES } = await import("../src/samples/signing.ts");
+		expect(SIGNING_SAMPLES.length).toBeGreaterThanOrEqual(5);
+		for (const s of SIGNING_SAMPLES) {
+			const parts = splitRequestBody(parseJson(s.requestBody));
+			const r = await inspectAction({
+				action: parts.action,
+				nonce: parts.nonce ?? null,
+				network: s.network,
+				vaultAddress: parts.vaultAddress,
+				expiresAfter: parts.expiresAfter,
+				signature: parts.signature,
+				now: Number(parts.nonce),
+			});
+			expect(r.hashes?.digest, s.id).toBe(s.digest);
+			expect(r.recovered, s.id).toBe(s.expectedSigner);
+		}
+	});
+});

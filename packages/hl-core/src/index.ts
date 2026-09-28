@@ -11,4 +11,5 @@ export * from "./resolver/metadata.ts";
 export * from "./resolver/resolve.ts";
 export * from "./resolver/snippets.ts";
 export * from "./rules/index.ts";
+export * from "./samples/signing.ts";
 export * from "./signing.ts";

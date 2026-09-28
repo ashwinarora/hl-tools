@@ -15,6 +15,7 @@ import { Route as ChangesRouteImport } from './routes/changes'
 import { Route as FaucetMinerRouteRouteImport } from './routes/faucet-miner/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FaucetMinerIndexRouteImport } from './routes/faucet-miner/index'
+import { Route as ToolsSigningRouteImport } from './routes/tools/signing'
 import { Route as ToolsAssetsRouteImport } from './routes/tools/assets'
 import { Route as FaucetMinerHowToUseRouteImport } from './routes/faucet-miner/how-to-use'
 
@@ -48,6 +49,11 @@ const FaucetMinerIndexRoute = FaucetMinerIndexRouteImport.update({
   path: '/',
   getParentRoute: () => FaucetMinerRouteRoute,
 } as any)
+const ToolsSigningRoute = ToolsSigningRouteImport.update({
+  id: '/tools/signing',
+  path: '/tools/signing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolsAssetsRoute = ToolsAssetsRouteImport.update({
   id: '/tools/assets',
   path: '/tools/assets',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/tools/assets': typeof ToolsAssetsRoute
+  '/tools/signing': typeof ToolsSigningRoute
   '/faucet-miner/': typeof FaucetMinerIndexRoute
 }
 export interface FileRoutesByTo {
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/tools/assets': typeof ToolsAssetsRoute
+  '/tools/signing': typeof ToolsSigningRoute
   '/faucet-miner': typeof FaucetMinerIndexRoute
 }
 export interface FileRoutesById {
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/tools/assets': typeof ToolsAssetsRoute
+  '/tools/signing': typeof ToolsSigningRoute
   '/faucet-miner/': typeof FaucetMinerIndexRoute
 }
 export interface FileRouteTypes {
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/faucet-miner/how-to-use'
     | '/tools/assets'
+    | '/tools/signing'
     | '/faucet-miner/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/faucet-miner/how-to-use'
     | '/tools/assets'
+    | '/tools/signing'
     | '/faucet-miner'
   id:
     | '__root__'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/faucet-miner/how-to-use'
     | '/tools/assets'
+    | '/tools/signing'
     | '/faucet-miner/'
   fileRoutesById: FileRoutesById
 }
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   HowToUseRoute: typeof HowToUseRoute
   McpRoute: typeof McpRoute
   ToolsAssetsRoute: typeof ToolsAssetsRoute
+  ToolsSigningRoute: typeof ToolsSigningRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FaucetMinerIndexRouteImport
       parentRoute: typeof FaucetMinerRouteRoute
     }
+    '/tools/signing': {
+      id: '/tools/signing'
+      path: '/tools/signing'
+      fullPath: '/tools/signing'
+      preLoaderRoute: typeof ToolsSigningRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tools/assets': {
       id: '/tools/assets'
       path: '/tools/assets'
@@ -211,6 +231,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowToUseRoute: HowToUseRoute,
   McpRoute: McpRoute,
   ToolsAssetsRoute: ToolsAssetsRoute,
+  ToolsSigningRoute: ToolsSigningRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
