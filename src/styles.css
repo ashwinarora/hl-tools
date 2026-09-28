@@ -304,3 +304,8 @@ html:not([data-network]) .net-seg[data-net-seg="mainnet"] {
   color: var(--foreground);
   box-shadow: 0 0 0 1px var(--border), 0 1px 2px 0 oklch(0 0 0 / 0.08);
 }
+
+/* RainbowKit (faucet miner only): use the design-system typeface. */
+[data-rk] {
+  --rk-fonts-body: "Geist", ui-sans-serif, system-ui, sans-serif;
+}

@@ -12,10 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as HowToUseRouteImport } from './routes/how-to-use'
 import { Route as ChangesRouteImport } from './routes/changes'
+import { Route as FaucetMinerRouteRouteImport } from './routes/faucet-miner/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FaucetMinerIndexRouteImport } from './routes/faucet-miner/index'
+import { Route as ToolsAssetsRouteImport } from './routes/tools/assets'
 import { Route as FaucetMinerHowToUseRouteImport } from './routes/faucet-miner/how-to-use'
-import { Route as DevViewportRouteImport } from './routes/dev.viewport'
 
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
@@ -32,34 +33,40 @@ const ChangesRoute = ChangesRouteImport.update({
   path: '/changes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FaucetMinerRouteRoute = FaucetMinerRouteRouteImport.update({
+  id: '/faucet-miner',
+  path: '/faucet-miner',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FaucetMinerIndexRoute = FaucetMinerIndexRouteImport.update({
-  id: '/faucet-miner/',
-  path: '/faucet-miner/',
+  id: '/',
+  path: '/',
+  getParentRoute: () => FaucetMinerRouteRoute,
+} as any)
+const ToolsAssetsRoute = ToolsAssetsRouteImport.update({
+  id: '/tools/assets',
+  path: '/tools/assets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FaucetMinerHowToUseRoute = FaucetMinerHowToUseRouteImport.update({
-  id: '/faucet-miner/how-to-use',
-  path: '/faucet-miner/how-to-use',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevViewportRoute = DevViewportRouteImport.update({
-  id: '/dev/viewport',
-  path: '/dev/viewport',
-  getParentRoute: () => rootRouteImport,
+  id: '/how-to-use',
+  path: '/how-to-use',
+  getParentRoute: () => FaucetMinerRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/faucet-miner': typeof FaucetMinerRouteRouteWithChildren
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
   '/mcp': typeof McpRoute
-  '/dev/viewport': typeof DevViewportRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/tools/assets': typeof ToolsAssetsRoute
   '/faucet-miner/': typeof FaucetMinerIndexRoute
 }
 export interface FileRoutesByTo {
@@ -67,29 +74,31 @@ export interface FileRoutesByTo {
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
   '/mcp': typeof McpRoute
-  '/dev/viewport': typeof DevViewportRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/tools/assets': typeof ToolsAssetsRoute
   '/faucet-miner': typeof FaucetMinerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/faucet-miner': typeof FaucetMinerRouteRouteWithChildren
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
   '/mcp': typeof McpRoute
-  '/dev/viewport': typeof DevViewportRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/tools/assets': typeof ToolsAssetsRoute
   '/faucet-miner/': typeof FaucetMinerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/faucet-miner'
     | '/changes'
     | '/how-to-use'
     | '/mcp'
-    | '/dev/viewport'
     | '/faucet-miner/how-to-use'
+    | '/tools/assets'
     | '/faucet-miner/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -97,28 +106,28 @@ export interface FileRouteTypes {
     | '/changes'
     | '/how-to-use'
     | '/mcp'
-    | '/dev/viewport'
     | '/faucet-miner/how-to-use'
+    | '/tools/assets'
     | '/faucet-miner'
   id:
     | '__root__'
     | '/'
+    | '/faucet-miner'
     | '/changes'
     | '/how-to-use'
     | '/mcp'
-    | '/dev/viewport'
     | '/faucet-miner/how-to-use'
+    | '/tools/assets'
     | '/faucet-miner/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FaucetMinerRouteRoute: typeof FaucetMinerRouteRouteWithChildren
   ChangesRoute: typeof ChangesRoute
   HowToUseRoute: typeof HowToUseRoute
   McpRoute: typeof McpRoute
-  DevViewportRoute: typeof DevViewportRoute
-  FaucetMinerHowToUseRoute: typeof FaucetMinerHowToUseRoute
-  FaucetMinerIndexRoute: typeof FaucetMinerIndexRoute
+  ToolsAssetsRoute: typeof ToolsAssetsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -144,6 +153,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChangesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/faucet-miner': {
+      id: '/faucet-miner'
+      path: '/faucet-miner'
+      fullPath: '/faucet-miner'
+      preLoaderRoute: typeof FaucetMinerRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -153,36 +169,48 @@ declare module '@tanstack/react-router' {
     }
     '/faucet-miner/': {
       id: '/faucet-miner/'
-      path: '/faucet-miner'
+      path: '/'
       fullPath: '/faucet-miner/'
       preLoaderRoute: typeof FaucetMinerIndexRouteImport
+      parentRoute: typeof FaucetMinerRouteRoute
+    }
+    '/tools/assets': {
+      id: '/tools/assets'
+      path: '/tools/assets'
+      fullPath: '/tools/assets'
+      preLoaderRoute: typeof ToolsAssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/faucet-miner/how-to-use': {
       id: '/faucet-miner/how-to-use'
-      path: '/faucet-miner/how-to-use'
+      path: '/how-to-use'
       fullPath: '/faucet-miner/how-to-use'
       preLoaderRoute: typeof FaucetMinerHowToUseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dev/viewport': {
-      id: '/dev/viewport'
-      path: '/dev/viewport'
-      fullPath: '/dev/viewport'
-      preLoaderRoute: typeof DevViewportRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof FaucetMinerRouteRoute
     }
   }
 }
 
+interface FaucetMinerRouteRouteChildren {
+  FaucetMinerHowToUseRoute: typeof FaucetMinerHowToUseRoute
+  FaucetMinerIndexRoute: typeof FaucetMinerIndexRoute
+}
+
+const FaucetMinerRouteRouteChildren: FaucetMinerRouteRouteChildren = {
+  FaucetMinerHowToUseRoute: FaucetMinerHowToUseRoute,
+  FaucetMinerIndexRoute: FaucetMinerIndexRoute,
+}
+
+const FaucetMinerRouteRouteWithChildren =
+  FaucetMinerRouteRoute._addFileChildren(FaucetMinerRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FaucetMinerRouteRoute: FaucetMinerRouteRouteWithChildren,
   ChangesRoute: ChangesRoute,
   HowToUseRoute: HowToUseRoute,
   McpRoute: McpRoute,
-  DevViewportRoute: DevViewportRoute,
-  FaucetMinerHowToUseRoute: FaucetMinerHowToUseRoute,
-  FaucetMinerIndexRoute: FaucetMinerIndexRoute,
+  ToolsAssetsRoute: ToolsAssetsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

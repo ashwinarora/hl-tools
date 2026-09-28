@@ -1,15 +1,5 @@
-import {
-	darkTheme,
-	lightTheme,
-	RainbowKitProvider,
-} from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { WagmiProvider } from "wagmi";
-import { useResolvedTheme } from "#/hooks/useResolvedTheme";
-import { config } from "#/lib/wagmiConfig";
-
-import "@rainbow-me/rainbowkit/styles.css";
 
 let context:
 	| {
@@ -31,20 +21,19 @@ export function getContext() {
 	return context;
 }
 
+/**
+ * App-wide providers. Deliberately no wallet stack here: wagmi, RainbowKit
+ * and WalletConnect are mounted only under /faucet-miner (see
+ * src/integrations/wallet), so read-only tool pages make no wallet,
+ * telemetry or third-party RPC requests.
+ */
 export default function TanStackQueryProvider({
 	children,
 }: {
 	children: ReactNode;
 }) {
 	const { queryClient } = getContext();
-	const resolved = useResolvedTheme();
-	const rainbowTheme = resolved === "dark" ? darkTheme() : lightTheme();
-
 	return (
-		<WagmiProvider config={config}>
-			<QueryClientProvider client={queryClient}>
-				<RainbowKitProvider theme={rainbowTheme}>{children}</RainbowKitProvider>
-			</QueryClientProvider>
-		</WagmiProvider>
+		<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 	);
 }

@@ -284,7 +284,7 @@ export function ObservedLine({
 				</span>
 			</span>
 			{source && (
-				<span className="truncate font-mono text-subtle-foreground">
+				<span className="min-w-0 break-words font-mono text-subtle-foreground">
 					{source}
 				</span>
 			)}

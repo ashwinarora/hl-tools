@@ -153,7 +153,16 @@ export function resolveAsset<N extends Network>(
 	const spotRef = /^@(\d+)$/.exec(q);
 	const outcomeCoin = /^#(\d+)$/.exec(q);
 	const outcomeToken = /^\+(\d+)$/.exec(q);
-	if (spotRef) {
+	const badPrefix = /^([@#+])(?!\d+$)/.exec(q);
+	if (badPrefix) {
+		const what =
+			badPrefix[1] === "@"
+				? 'a spot pair index, e.g. "@107"'
+				: badPrefix[1] === "#"
+					? 'an outcome encoding, e.g. "#12090"'
+					: 'an outcome token encoding, e.g. "+12090"';
+		notes.push(`"${badPrefix[1]}" must be followed only by digits: ${what}.`);
+	} else if (spotRef) {
 		const idx = Number(spotRef[1]);
 		addAsset(universe.spotByIndex.get(idx), "spot-pair-index", 100);
 		if (!universe.spotByIndex.has(idx))
