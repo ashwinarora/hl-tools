@@ -92,7 +92,7 @@ function SubStepRow({
 					transition={{ type: "spring", stiffness: 500, damping: 25 }}
 					className="inline-flex"
 				>
-					<Check className="size-3.5 text-green-500" />
+					<Check className="size-3.5 text-success" />
 				</motion.span>
 			) : isActive && !hasError ? (
 				<Loader2 className="size-3.5 animate-spin text-muted-foreground" />
@@ -453,7 +453,7 @@ function AutoModeForm({ onStart }: { onStart: (amount: number) => void }) {
 						Start Chain
 					</Button>
 				) : needsConfirm && confirming ? (
-					<div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+					<div className="space-y-2 rounded-lg border border-warning/35 bg-warning-soft p-3">
 						<p className="text-xs text-muted-foreground">
 							You're about to create{" "}
 							<strong className="text-foreground">{parsed} wallets</strong> and
@@ -575,7 +575,7 @@ function AutoModeProgress({
 			</CardHeader>
 			<CardContent className="space-y-3">
 				{isAborted && (
-					<div className="rounded-md border border-red-500/70 bg-red-500/15 p-3 text-xs text-red-200">
+					<div className="rounded-md border border-danger/35 bg-danger-soft p-3 text-xs text-foreground">
 						⚠ Chain aborted. Any wallets below with a balance still hold your
 						funds. Drain them before clicking Reset — Reset will delete the
 						private keys forever.
@@ -586,7 +586,7 @@ function AutoModeProgress({
 					<motion.div
 						className={
 							progressPct >= 100
-								? "h-full rounded-full bg-green-500"
+								? "h-full rounded-full bg-success"
 								: "h-full rounded-full bg-primary"
 						}
 						animate={{ width: `${progressPct}%` }}
@@ -609,7 +609,7 @@ function AutoModeProgress({
 							) : seedFailed ? (
 								<CircleAlert className="size-3.5 text-destructive" />
 							) : (
-								<Check className="size-3.5 text-green-500" />
+								<Check className="size-3.5 text-success" />
 							)}
 							<span className={seedFailed ? "text-destructive" : undefined}>
 								Seed: Send {fmt(state.inputAmount)} to Wallet #1{" "}

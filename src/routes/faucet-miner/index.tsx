@@ -226,12 +226,16 @@ function App() {
 				<div className="flex items-center gap-2">
 					<Link
 						to="/faucet-miner/how-to-use"
-						className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3 text-sm hover:bg-surface-2"
+						className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-border-strong bg-surface px-3 text-sm hover:bg-surface-2"
 					>
 						<BookOpen className="size-4" aria-hidden />
 						How it works
 					</Link>
-					<ConnectButton showBalance={false} />
+					<ConnectButton
+						showBalance={false}
+						chainStatus={{ smallScreen: "icon", largeScreen: "full" }}
+						accountStatus={{ smallScreen: "avatar", largeScreen: "full" }}
+					/>
 				</div>
 			</div>
 			{!isConnected ? <LandingHero /> : <Connected />}
@@ -279,8 +283,10 @@ function Connected() {
 						)}
 					>
 						<Zap className="h-6 w-6" />
-						<div className="flex items-center gap-2">
-							<span className="text-lg font-semibold">Auto Mode</span>
+						<div className="flex flex-col items-center gap-1 sm:flex-row sm:gap-2">
+							<span className="whitespace-nowrap text-base font-semibold sm:text-lg">
+								Auto Mode
+							</span>
 							<Badge variant="secondary" className="text-[10px]">
 								Recommended
 							</Badge>
@@ -300,7 +306,9 @@ function Connected() {
 						)}
 					>
 						<MousePointerClick className="h-6 w-6" />
-						<span className="text-lg font-semibold">Manual Mode</span>
+						<span className="whitespace-nowrap text-base font-semibold sm:text-lg">
+							Manual Mode
+						</span>
 						<span className="text-xs font-normal text-muted-foreground">
 							Step-by-step control
 						</span>

@@ -1,3 +1,4 @@
+import { AlertTriangle } from "lucide-react";
 import { useMemo } from "react";
 import { Button } from "#/components/ui/button";
 import { useWalletBalances } from "#/hooks/useWalletBalances";
@@ -61,17 +62,21 @@ export default function RecoveryBanner({
 		<div
 			className={`mb-3 rounded-lg border p-3.5 text-xs ${
 				hasFunds
-					? "border-red-500/70 bg-red-500/15 text-red-200 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]"
-					: "border-amber-500/60 bg-amber-500/10 text-amber-200"
+					? "border-danger/50 bg-danger-soft text-foreground"
+					: "border-warning/35 bg-warning-soft text-foreground"
 			}`}
 		>
 			<div className="flex items-center justify-between gap-3">
 				<div>
-					<p className="text-sm font-semibold">
-						⚠ You have {autoWallets.length} wallet
+					<p className="flex items-start gap-1.5 text-sm font-semibold">
+						<AlertTriangle
+							aria-hidden
+							className={`mt-0.5 size-4 shrink-0 ${hasFunds ? "text-danger" : "text-warning"}`}
+						/>
+						You have {autoWallets.length} wallet
 						{autoWallets.length === 1 ? "" : "s"} from a previous session.
 					</p>
-					<p className="mt-1 text-[13px] opacity-95">{body}</p>
+					<p className="mt-1 text-[13px] text-muted-foreground">{body}</p>
 				</div>
 				<Button
 					size="xs"

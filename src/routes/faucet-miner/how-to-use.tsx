@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 
 export const Route = createFileRoute("/faucet-miner/how-to-use")({
@@ -61,24 +61,34 @@ function MathRow({ label, value }: { label: string; value: string }) {
 function HowToUse() {
 	return (
 		<main className="page-wrap space-y-6 pb-16 pt-6 sm:pt-8">
-			<div className="flex items-center gap-3">
-				<Link
-					to="/faucet-miner"
-					className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+			<div>
+				<nav
+					aria-label="Breadcrumb"
+					className="mb-4 flex items-center gap-1 text-xs text-muted-foreground"
 				>
-					<ArrowLeft className="h-4 w-4" />
-					Back
-				</Link>
-				<h1 className="text-2xl font-bold tracking-tight">How to Use</h1>
+					<Link to="/" className="hover:text-foreground">
+						Tools
+					</Link>
+					<ChevronRight className="size-3" aria-hidden />
+					<Link to="/faucet-miner" className="hover:text-foreground">
+						Testnet Faucet Miner
+					</Link>
+					<ChevronRight className="size-3" aria-hidden />
+					<span className="text-foreground">How it works</span>
+				</nav>
+				<h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+					How the faucet miner works
+				</h1>
 			</div>
 
 			{/* Overview */}
-			<Section title="What is hl-tools?">
+			<Section title="What does it do?">
 				<p>
-					hl-tools lets you mine Hyperliquid <strong>testnet USDC</strong> by
-					using the testnet faucet. Each faucet claim gives a generated wallet{" "}
-					<strong>~$1,000 testnet USDC</strong>, but each wallet needs{" "}
-					<strong>$2 real mainnet USDC</strong> to activate it on Hyperliquid.
+					The faucet miner lets you mine Hyperliquid{" "}
+					<strong>testnet USDC</strong> by using the testnet faucet. Each faucet
+					claim gives a generated wallet <strong>~$1,000 testnet USDC</strong>,
+					but each wallet needs <strong>$2 real mainnet USDC</strong> to
+					activate it on Hyperliquid.
 				</p>
 				<p>
 					There are two modes: <strong>Auto</strong> (recommended &mdash; the
