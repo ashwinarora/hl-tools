@@ -210,9 +210,9 @@ describe("explainer fixtures", () => {
 			const r = explainResponse(c.input, c.request);
 			expect(r.kind).toBe(c.kind);
 			expect(r.entries.map((e) => e.outcome)).toEqual(c.outcomes);
-			c.catalog?.forEach((id, i) =>
-				expect(r.entries[i]?.catalog?.id ?? null).toBe(id),
-			);
+			for (const [i, id] of (c.catalog ?? []).entries()) {
+				expect(r.entries[i]?.catalog?.id ?? null).toBe(id);
+			}
 		});
 	}
 });
