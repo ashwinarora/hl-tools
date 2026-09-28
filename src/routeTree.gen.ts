@@ -15,6 +15,7 @@ import { Route as ChangesRouteImport } from './routes/changes'
 import { Route as FaucetMinerRouteRouteImport } from './routes/faucet-miner/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FaucetMinerIndexRouteImport } from './routes/faucet-miner/index'
+import { Route as ToolsWebsocketRouteImport } from './routes/tools/websocket'
 import { Route as ToolsTraceRouteImport } from './routes/tools/trace'
 import { Route as ToolsSigningRouteImport } from './routes/tools/signing'
 import { Route as ToolsOrdersRouteImport } from './routes/tools/orders'
@@ -51,6 +52,11 @@ const FaucetMinerIndexRoute = FaucetMinerIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => FaucetMinerRouteRoute,
+} as any)
+const ToolsWebsocketRoute = ToolsWebsocketRouteImport.update({
+  id: '/tools/websocket',
+  path: '/tools/websocket',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ToolsTraceRoute = ToolsTraceRouteImport.update({
   id: '/tools/trace',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/tools/orders': typeof ToolsOrdersRoute
   '/tools/signing': typeof ToolsSigningRoute
   '/tools/trace': typeof ToolsTraceRoute
+  '/tools/websocket': typeof ToolsWebsocketRoute
   '/faucet-miner/': typeof FaucetMinerIndexRoute
 }
 export interface FileRoutesByTo {
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/tools/orders': typeof ToolsOrdersRoute
   '/tools/signing': typeof ToolsSigningRoute
   '/tools/trace': typeof ToolsTraceRoute
+  '/tools/websocket': typeof ToolsWebsocketRoute
   '/faucet-miner': typeof FaucetMinerIndexRoute
 }
 export interface FileRoutesById {
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/tools/orders': typeof ToolsOrdersRoute
   '/tools/signing': typeof ToolsSigningRoute
   '/tools/trace': typeof ToolsTraceRoute
+  '/tools/websocket': typeof ToolsWebsocketRoute
   '/faucet-miner/': typeof FaucetMinerIndexRoute
 }
 export interface FileRouteTypes {
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/tools/orders'
     | '/tools/signing'
     | '/tools/trace'
+    | '/tools/websocket'
     | '/faucet-miner/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/tools/orders'
     | '/tools/signing'
     | '/tools/trace'
+    | '/tools/websocket'
     | '/faucet-miner'
   id:
     | '__root__'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/tools/orders'
     | '/tools/signing'
     | '/tools/trace'
+    | '/tools/websocket'
     | '/faucet-miner/'
   fileRoutesById: FileRoutesById
 }
@@ -180,6 +192,7 @@ export interface RootRouteChildren {
   ToolsOrdersRoute: typeof ToolsOrdersRoute
   ToolsSigningRoute: typeof ToolsSigningRoute
   ToolsTraceRoute: typeof ToolsTraceRoute
+  ToolsWebsocketRoute: typeof ToolsWebsocketRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -225,6 +238,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/faucet-miner/'
       preLoaderRoute: typeof FaucetMinerIndexRouteImport
       parentRoute: typeof FaucetMinerRouteRoute
+    }
+    '/tools/websocket': {
+      id: '/tools/websocket'
+      path: '/tools/websocket'
+      fullPath: '/tools/websocket'
+      preLoaderRoute: typeof ToolsWebsocketRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/tools/trace': {
       id: '/tools/trace'
@@ -295,6 +315,7 @@ const rootRouteChildren: RootRouteChildren = {
   ToolsOrdersRoute: ToolsOrdersRoute,
   ToolsSigningRoute: ToolsSigningRoute,
   ToolsTraceRoute: ToolsTraceRoute,
+  ToolsWebsocketRoute: ToolsWebsocketRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
