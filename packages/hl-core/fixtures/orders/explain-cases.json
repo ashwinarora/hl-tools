@@ -1,0 +1,22 @@
+{
+	"description": "Failure explainer cases. `input` is pasted text; optional `request` is the action. Expected `kind` and per-entry `outcomes`. Examples marked docs come from the exchange-endpoint and error-responses pages.",
+	"cases": [
+		{ "name": "docs: resting", "input": "{\"status\":\"ok\",\"response\":{\"type\":\"order\",\"data\":{\"statuses\":[{\"resting\":{\"oid\":77738308}}]}}}", "kind": "exchange-response", "outcomes": ["resting"] },
+		{ "name": "docs: filled", "input": "{\"status\":\"ok\",\"response\":{\"type\":\"order\",\"data\":{\"statuses\":[{\"filled\":{\"totalSz\":\"0.02\",\"avgPx\":\"1891.4\",\"oid\":77747314}}]}}}", "kind": "exchange-response", "outcomes": ["filled"] },
+		{ "name": "docs: min value error", "input": "{\"status\":\"ok\",\"response\":{\"type\":\"order\",\"data\":{\"statuses\":[{\"error\":\"Order must have minimum value of $10.\"}]}}}", "kind": "exchange-response", "outcomes": ["rejected"], "catalog": ["min-notional-perp"] },
+		{ "name": "docs: cancel success + missing order", "input": "{\"status\":\"ok\",\"response\":{\"type\":\"cancel\",\"data\":{\"statuses\":[\"success\",{\"error\":\"Order was never placed, already canceled, or filled.\"}]}}}", "kind": "exchange-response", "outcomes": ["cancelled", "error"], "catalog": [null, "missing-order"] },
+		{ "name": "IOC partial fill detected with request", "input": "{\"status\":\"ok\",\"response\":{\"type\":\"order\",\"data\":{\"statuses\":[{\"filled\":{\"totalSz\":\"0.4\",\"avgPx\":\"100.5\",\"oid\":1}}]}}}", "request": { "type": "order", "orders": [{ "a": 0, "b": true, "p": "101", "s": "1", "r": false, "t": { "limit": { "tif": "Ioc" } } }], "grouping": "na" }, "kind": "exchange-response", "outcomes": ["partially-filled"] },
+		{ "name": "bracket: entry resting, children waiting", "input": "{\"status\":\"ok\",\"response\":{\"type\":\"order\",\"data\":{\"statuses\":[{\"resting\":{\"oid\":5}},\"waitingForFill\",\"waitingForFill\"]}}}", "kind": "exchange-response", "outcomes": ["resting", "waiting", "waiting"] },
+		{ "name": "tick size", "input": "{\"status\":\"ok\",\"response\":{\"type\":\"order\",\"data\":{\"statuses\":[{\"error\":\"Price must be divisible by tick size. asset=0\"}]}}}", "kind": "exchange-response", "outcomes": ["rejected"], "catalog": ["tick"] },
+		{ "name": "post-only would match", "input": "{\"status\":\"ok\",\"response\":{\"type\":\"order\",\"data\":{\"statuses\":[{\"error\":\"Post only order would have immediately matched, bbo was 83001@83002. asset=0\"}]}}}", "kind": "exchange-response", "outcomes": ["rejected"], "catalog": ["bad-alo"] },
+		{ "name": "default (transfer accepted)", "input": "{\"status\":\"ok\",\"response\":{\"type\":\"default\"}}", "kind": "exchange-response", "outcomes": ["accepted"] },
+		{ "name": "top-level: unknown signer", "input": "{\"status\":\"err\",\"response\":\"L1 error: User or API Wallet 0x0123456789abcdef0123456789abcdef01234567 does not exist.\"}", "kind": "top-level-error", "outcomes": ["error"], "catalog": ["signer-missing"] },
+		{ "name": "bare string: must deposit", "input": "Must deposit before performing actions. User: 0xabc", "kind": "error-text", "outcomes": ["error"], "catalog": ["must-deposit"] },
+		{ "name": "HTTP 422", "input": "422 Failed to deserialize the JSON body into the target type: orders[0].p: invalid type: floating point `100.5`, expected a string", "kind": "http-error", "outcomes": ["error"], "catalog": ["deserialize"] },
+		{ "name": "orderStatus canceled by reduce-only", "input": "{\"status\":\"order\",\"order\":{\"order\":{\"coin\":\"ETH\",\"side\":\"A\",\"limitPx\":\"2500.0\",\"sz\":\"0.1\",\"oid\":42,\"timestamp\":1790000000000,\"origSz\":\"0.1\",\"tif\":\"Gtc\"},\"status\":\"reduceOnlyCanceled\",\"statusTimestamp\":1790000001000}}", "kind": "order-status", "outcomes": ["cancelled"] },
+		{ "name": "orderStatus unknownOid", "input": "{\"status\":\"unknownOid\"}", "kind": "order-status", "outcomes": ["unknown"] },
+		{ "name": "WS orderUpdates rejected", "input": "[{\"order\":{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"50000.0\",\"sz\":\"0.0\",\"oid\":9,\"timestamp\":1790000000000,\"origSz\":\"0.01\"},\"status\":\"perpMarginRejected\",\"statusTimestamp\":1790000000000}]", "kind": "order-updates", "outcomes": ["rejected"] },
+		{ "name": "garbage", "input": "{\"foo\":1}", "kind": "unrecognised", "outcomes": [] },
+		{ "name": "unknown error text", "input": "Something nobody has seen before", "kind": "error-text", "outcomes": ["error"], "catalog": [null] }
+	]
+}

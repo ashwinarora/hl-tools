@@ -1,0 +1,24 @@
+{
+	"description": "Precision linter cases against fixtures/metadata/mainnet.json. BTC: szDecimals 5 → max 1 px decimal. @107 (HYPE/USDC spot): szDecimals 2 → max 6 px decimals. PURR/USDC: szDecimals 0 → max 8. Add a case for every linter bug.",
+	"price": [
+		{ "coin": "BTC", "input": "83000", "valid": true, "wire": "83000" },
+		{ "coin": "BTC", "input": "83000.5", "valid": false, "note": "6 significant figures", "options": ["83000", "83001"] },
+		{ "coin": "BTC", "input": "123456", "valid": true, "note": "integer prices always allowed" },
+		{ "coin": "BTC", "input": "8300.55", "valid": false, "options": ["8300.5", "8300.6"] },
+		{ "coin": "BTC", "input": "83000.0", "valid": true, "wire": "83000", "note": "trailing zeros stripped on the wire" },
+		{ "coin": "@107", "input": "42.123", "valid": true },
+		{ "coin": "@107", "input": "0.0012345", "valid": false, "note": "7 decimals > 6", "options": ["0.001234", "0.001235"] },
+		{ "coin": "PURR/USDC", "input": "0.00012345", "valid": true },
+		{ "coin": "BTC", "input": "abc", "valid": false },
+		{ "coin": "BTC", "input": "-5", "valid": false },
+		{ "coin": "BTC", "input": "0", "valid": false }
+	],
+	"size": [
+		{ "coin": "BTC", "input": "0.001", "valid": true },
+		{ "coin": "BTC", "input": "0.000012", "valid": false, "options": ["0.00001", "0.00002"] },
+		{ "coin": "BTC", "input": "0.000001", "valid": false, "roundsToZero": true, "note": "positive size rounds to zero → blocking" },
+		{ "coin": "PURR/USDC", "input": "0.5", "valid": false, "roundsToZero": true },
+		{ "coin": "PURR/USDC", "input": "12", "valid": true },
+		{ "coin": "BTC", "input": "0", "valid": false }
+	]
+}
