@@ -113,3 +113,23 @@ cd packages/hl-core && bunx vitest run
 | — | malformed request JSON `{"type": "order", "orders": [,]}` | "Unexpected character ',' at line 1, column 30" | ✅ |
 | — | malformed response `{"status":"ok",` | reported as malformed JSON | ❌ → fixed. Was explained as an unknown error string. Fixture added. |
 | — | 375px light | pre-flight readable | ❌ → fixed. The table hid the size column; now stacked cards below `sm`. |
+
+## 5. WebSocket Workbench — `/tools/websocket`
+
+| Network | Input | Expected | Result |
+|---|---|---|---|
+| mainnet | sample `l2book` → Connect | ack (server echoes `nSigFigs:null, mantissa:null, fast:false`), first snapshot, live stream, freshness | ✅ |
+| mainnet | Simulate disconnect 5 s → Reconnect | state diff before/after (time, bids, asks changed); "snapshot channel: nothing to backfill" | ✅ |
+| mainnet | `trades` BTC, disconnect 10 s → Reconnect | REST recentTrades: 9 trades happened during the gap; the re-subscribe replay recovered 9 | ✅ |
+| mainnet | Record 6 s → Stop & save | session listed (5 msgs, 6.0 s) in IndexedDB | ✅ |
+| mainnet | Export (captured in-page, no file written) | format `hl-tools.ws-session`, `sanitized: true`, 15 addresses all pseudonymised | ✅ |
+| — | Import that export | parsed, saved and replayed | ✅ |
+| — | Replay bundled sample | "Replay finished (15 messages, 8.0 s recorded)" | ✅ |
+| — | Import `not json at all` / wrong format / out-of-order messages | specific rejection for each | ✅ |
+| mainnet | l2Book coin `HYPE/USDC` | "not a coin string on mainnet. Did you mean @107 (HYPE/USDC)?" | ✅ |
+| mainnet | userFills user `0x1234` | "user must be a 20-byte address", connect disabled | ✅ |
+| mainnet | userFills HLP vault | snapshot message flagged isSnapshot (0 fills) | ✅ |
+| testnet | switch global network with a mainnet stream open | banner "This connection is on mainnet; the global network is now testnet"; stream stays pinned | ✅ |
+| testnet | Resubscribe l2Book BTC | `wss://api.hyperliquid-testnet.xyz/ws`, testnet snapshot | ✅ |
+| — | finding while testing | trades' first message replays 30 recent trades with no `isSnapshot` flag (undocumented) | encoded in websocket rules 1.1.0 |
+| — | 375px light | no overflow | ✅ |
