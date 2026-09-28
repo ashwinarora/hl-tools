@@ -49,12 +49,16 @@ export function useNetwork(): Network {
  * on mount (e.g. a sample tied to a network) must wait for this.
  */
 export function useNetworkHydrated(): boolean {
-	const [hydrated, setHydrated] = useState(() =>
-		useNetworkStore.persist.hasHydrated(),
+	// On the server localStorage is unavailable, so zustand attaches no
+	// `persist` API at all; treat that as "not hydrated yet".
+	const [hydrated, setHydrated] = useState(
+		() => useNetworkStore.persist?.hasHydrated() ?? false,
 	);
 	useEffect(() => {
-		if (useNetworkStore.persist.hasHydrated()) setHydrated(true);
-		return useNetworkStore.persist.onFinishHydration(() => setHydrated(true));
+		const api = useNetworkStore.persist;
+		if (!api) return;
+		if (api.hasHydrated()) setHydrated(true);
+		return api.onFinishHydration(() => setHydrated(true));
 	}, []);
 	return hydrated;
 }
