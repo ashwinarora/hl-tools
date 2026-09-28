@@ -2,7 +2,7 @@
 
 Browser verification is the acceptance gate. Every tool was exercised end to end in Chrome via the Chrome DevTools MCP against the dev server (`bun --bun run dev`, port 3000): real inputs typed into the real controls, rendered output read back from the DOM, screenshots reviewed. Unit tests (`packages/hl-core`, Vitest) cover the protocol core.
 
-Viewports: desktop 1440×900 (DPR 1) and mobile 375×812 (DPR 2, touch), each in dark and light themes (`prefers-color-scheme` emulation plus the in-app theme setting).
+Viewports: desktop 1440×900 (DPR 1) and mobile 375×812 (touch; DPR 2 while testing, DPR 1 for the committed full-page screenshots to keep them small), each in dark and light themes (`prefers-color-scheme` emulation plus the in-app theme setting).
 
 Screenshots from the final regression pass are in [`docs/screenshots/`](docs/screenshots/) and linked per page below.
 
@@ -18,6 +18,32 @@ cd packages/hl-core && bunx vitest run
 | `decimal.test.ts` | Parsing (valid/invalid lexemes, exponents), exact add/sub/mul, divide with each rounding mode, decimal-place and significant-figure rounding, 1e8/1e6 scaling round trips, wire formatting |
 | `signing.test.ts` | 49 Python SDK vectors (MsgPack bytes, action hash, EIP-712 digest, recovered signer) on both networks; MsgPack int/float formats vs Python; decoder strictness; order-preserving JSON; inspector diagnostics (key order, trailing zeros, uppercase addresses, `f:false`, network mismatch, multisig out of scope, request-body splitting, short r/s padding) |
 | `resolver.test.ts` | Cases in `fixtures/resolver/cases.json` against metadata snapshots of both networks; explicit-index normalisation; HIP-3 dex/meta mismatch rejection; cross-network pairing; snippet pricing |
+| `corewriter.test.ts` | Decode fixtures (`fixtures/corewriter/cases.json`: every action id, unknown version, unknown action, malformed bytes); encoding reproduces the real mainnet limit-order bytes; inexact fixed-point input refused; cast/Solidity snippets; precompile input/output codec incl. a dynamic struct; trace replays of five recorded transactions (cloid match, ledger match, inference without cloid, unsupported action, sender with no HyperCore history, not-found with other-network check) |
+| `orders.test.ts` | Precision linter fixtures (`fixtures/orders/lint-cases.json`: perp/spot/HIP-3 tick and lot rules, sizes that round to zero); composer (normalTpsl bracket, blocking instead of rounding, explicit rounding options, TP/SL side checks, conservative market price, reduce-only close, minimum notional, builder fee caps, post-only crossing); explainer fixtures (`fixtures/orders/explain-cases.json`) |
+| `ws.test.ts` | Subscription building and validation for all 20 channels, each with an ordering statement; recorded mainnet l2Book/trades sessions (dedupe by `(time, tid)`, state diff); session files (consistent address pseudonyms, recording bound, strict import with reasons) |
+| `probe.test.ts` | URL redaction; probe against scripted endpoints: honest archive node, node answering historical queries with latest state, network mismatch, rate limiting reported as inconclusive (browser bug 2026-09-28), CORS abort |
+
+253 tests, all passing. `bun --bun run test` runs the workspace projects through a root `vitest.config.ts`.
+
+## 0. Homepage, shell and `/changes`
+
+| Input | Expected | Result |
+|---|---|---|
+| Paste box: `HYPE` | "Symbol or ID → asset resolver" | ✅ |
+| Paste box: tx hash `0x4b65…d949`, Enter | routes to `/tools/trace` and traces it; the hash is handed over in memory and never appears in the URL | ✅ URL stays `/tools/trace` |
+| Paste box: 70-byte CoreWriter hex `0x01000002…0f4240` | "Starts with version byte 0x01 → CoreWriter action bytes" | ✅ |
+| Paste box: `https://rpc.hyperliquid.xyz/evm` | "URL → RPC capability probe" | ✅ |
+| Paste box: exchange response `{"status":"ok","response":{…tick size…}}`, Enter | "Exchange response → failure explainer"; explainer opens with "1 rejected · tick size" | ✅ |
+| Paste box: `{"action":{"type":"cancel",…},"nonce":…}` | "Action payload → signing inspector" | ✅ |
+| Paste box: `{"method":"subscribe",…}` | "Subscription message → WebSocket workbench" | ✅ |
+| Paste box: `Order must have minimum value of $10.` | "Error message → failure explainer" | ✅ |
+| Paste box: a long English question | "Not recognised — open a tool below.", Open disabled | ✅ |
+| Every "Try with a sample" link (7) | tool opens with a result, not an empty state | ❌ → fixed. RPC and WebSocket samples only prefilled; they now run/connect on arrival. The trace sample could render an empty page (SSR crash in `useNetworkHydrated`) or fill the hash without tracing (hydration event never delivered); both fixed. |
+| Server-rendered HTML of all 11 pages (`curl`) | full page content, no "switched to client rendering" | ❌ → fixed (same SSR crash on Signing, CoreWriter, Trace, Composer) |
+| Network switch with the keyboard | arrow keys move the selection | ❌ → fixed. Arrow keys did nothing and both options were tab stops; network switch and all segmented controls now follow the WAI-ARIA radio pattern. |
+| Reload after choosing testnet | testnet segment painted before hydration, no hydration warning | ✅ |
+| `/changes` | 11 rule sets with version, verified date, sources, tools that use them, changelog; timeline sorted by date | ✅ |
+| 375px, both themes | no horizontal scroll on any page | ✅ (`scrollWidth − innerWidth = 0` measured on every page) |
 
 ## 1. Asset Resolver — `/tools/assets`
 
@@ -148,3 +174,37 @@ cd packages/hl-core && bunx vitest run
 | — | repeated probes within a minute | rate limiting surfaced | ❌ → fixed. Rate-limited checks showed "unsupported" (batch) or silently dropped the logs upper bound; now "inconclusive · rate limited". Regression test added. |
 | testnet | full probe | all checks resolve | ❌ → fixed. Large `eth_getLogs` ranges exhausted the public testnet limit for the checks after them; the logs check now runs last. |
 | — | 375px light | statuses visible | ❌ → fixed. Table hid the status column; stacked layout below `sm`. |
+
+## 7. Testnet Faucet Miner — `/faucet-miner`
+
+The only tool that signs. Exercised with the Rabby wallet in the DevTools-controlled Chrome; mining runs only under the existing MSW mock harness (`?mock=1`), so no real funds moved.
+
+| Input | Expected | Result |
+|---|---|---|
+| `/faucet-miner?mock=1`, Rabby connected | balances for mainnet and testnet, Auto/Manual mode cards, recovery banner for 3 leftover wallets, mock panel intercepting | ✅ |
+| Same, light theme | readable banners | ❌ → fixed. Recovery banner and abort notice used hard-coded `amber-200`/`red-200` text (illegible on light); now theme tokens. |
+| 375px | wallet buttons and mode cards fit | ❌ → fixed. "How it works" and the address wrapped onto two lines, "Auto Mode Recommended" broke mid-title, warning callout squeezed beside the buttons; now icon-only wallet buttons on small screens, stacked badge, full-width warning. |
+| Disconnected (isolated browser context) | one clear call to action | ❌ → fixed. Two "Connect Wallet" buttons (RainbowKit's in a different style); RainbowKit's button now appears only once connected. |
+| Connected (Rabby) after that change | account button visible, no Connect CTA | ✅ |
+| `/faucet-miner/how-to-use` | hub breadcrumb, accurate copy | ❌ → fixed. Old "Back / How to Use" header, "What is hl-tools?" (now the hub's name) and "click the wallet button in the top-right… stats appear on the home page"; rewritten, page has its own title. |
+| `/how-to-use` (old URL) | 301 to `/faucet-miner/how-to-use` | ✅ |
+
+## Final regression pass
+
+Every page, both themes, desktop 1440×900 and mobile 375×812, captured full-page from an isolated browser context (no wallet connected, fresh storage, so nothing personal is in the images). Tool pages were captured with their built-in sample loaded. Each image was reviewed; problems found during the pass are logged in the sections above and were fixed before the final capture.
+
+Also verified at the end: `bun --bun run test` (253 passing), `bun --bun run check` (clean), `bun --bun run build` (succeeds; the mock panel and MSW worker are not in the client bundle).
+
+| Page | Dark · desktop | Light · desktop | Dark · mobile | Light · mobile |
+|---|---|---|---|---|
+| Home `/` | [view](docs/screenshots/home-dark-desktop.jpeg) | [view](docs/screenshots/home-light-desktop.jpeg) | [view](docs/screenshots/home-dark-mobile.jpeg) | [view](docs/screenshots/home-light-mobile.jpeg) |
+| Rule changes `/changes` | [view](docs/screenshots/changes-dark-desktop.jpeg) | [view](docs/screenshots/changes-light-desktop.jpeg) | [view](docs/screenshots/changes-dark-mobile.jpeg) | [view](docs/screenshots/changes-light-mobile.jpeg) |
+| Asset Resolver | [view](docs/screenshots/assets-dark-desktop.jpeg) | [view](docs/screenshots/assets-light-desktop.jpeg) | [view](docs/screenshots/assets-dark-mobile.jpeg) | [view](docs/screenshots/assets-light-mobile.jpeg) |
+| Signing Inspector | [view](docs/screenshots/signing-dark-desktop.jpeg) | [view](docs/screenshots/signing-light-desktop.jpeg) | [view](docs/screenshots/signing-dark-mobile.jpeg) | [view](docs/screenshots/signing-light-mobile.jpeg) |
+| CoreWriter Workbench | [view](docs/screenshots/corewriter-dark-desktop.jpeg) | [view](docs/screenshots/corewriter-light-desktop.jpeg) | [view](docs/screenshots/corewriter-dark-mobile.jpeg) | [view](docs/screenshots/corewriter-light-mobile.jpeg) |
+| Cross-layer Trace | [view](docs/screenshots/trace-dark-desktop.jpeg) | [view](docs/screenshots/trace-light-desktop.jpeg) | [view](docs/screenshots/trace-dark-mobile.jpeg) | [view](docs/screenshots/trace-light-mobile.jpeg) |
+| Order Composer | [view](docs/screenshots/orders-dark-desktop.jpeg) | [view](docs/screenshots/orders-light-desktop.jpeg) | [view](docs/screenshots/orders-dark-mobile.jpeg) | [view](docs/screenshots/orders-light-mobile.jpeg) |
+| WebSocket Workbench | [view](docs/screenshots/websocket-dark-desktop.jpeg) | [view](docs/screenshots/websocket-light-desktop.jpeg) | [view](docs/screenshots/websocket-dark-mobile.jpeg) | [view](docs/screenshots/websocket-light-mobile.jpeg) |
+| RPC Capability Probe | [view](docs/screenshots/rpc-dark-desktop.jpeg) | [view](docs/screenshots/rpc-light-desktop.jpeg) | [view](docs/screenshots/rpc-dark-mobile.jpeg) | [view](docs/screenshots/rpc-light-mobile.jpeg) |
+| Faucet Miner | [view](docs/screenshots/faucet-dark-desktop.jpeg) | [view](docs/screenshots/faucet-light-desktop.jpeg) | [view](docs/screenshots/faucet-dark-mobile.jpeg) | [view](docs/screenshots/faucet-light-mobile.jpeg) |
+| Faucet Miner — how it works | [view](docs/screenshots/faucet-how-dark-desktop.jpeg) | [view](docs/screenshots/faucet-how-light-desktop.jpeg) | [view](docs/screenshots/faucet-how-dark-mobile.jpeg) | [view](docs/screenshots/faucet-how-light-mobile.jpeg) |
