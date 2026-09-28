@@ -1,5 +1,6 @@
 import { NETWORKS, type Network } from "@hl-tools/core";
 import { useEffect } from "react";
+import { radioGroupKeyDown } from "#/lib/radioGroup";
 import { cn } from "#/lib/utils";
 import { useNetworkStore } from "#/store/networkStore";
 
@@ -25,6 +26,7 @@ export default function NetworkSwitch({
 			role="radiogroup"
 			aria-label="Network"
 			className="inline-flex items-center rounded-md border border-border bg-surface-2 p-0.5"
+			onKeyDown={(e) => radioGroupKeyDown(e, NETWORKS, network, setNetwork)}
 		>
 			{NETWORKS.map((n: Network) => (
 				// biome-ignore lint/a11y/useSemanticElements: ARIA radio pattern on buttons keeps the segmented-control styling
@@ -33,6 +35,7 @@ export default function NetworkSwitch({
 					type="button"
 					role="radio"
 					aria-checked={network === n}
+					tabIndex={network === n ? 0 : -1}
 					data-net-seg={n}
 					onClick={() => setNetwork(n)}
 					className={cn(

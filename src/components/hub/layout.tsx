@@ -6,6 +6,7 @@ import {
 	ShieldCheck,
 } from "lucide-react";
 import { type ComponentProps, type ReactNode, useId } from "react";
+import { radioGroupKeyDown } from "#/lib/radioGroup";
 import { type ToolDef, toolRuleSets, toolVerifiedAt } from "#/lib/tools";
 import { cn } from "#/lib/utils";
 
@@ -330,6 +331,14 @@ export function Segmented<T extends string>({
 				"inline-flex max-w-full flex-wrap items-center rounded-md border border-border bg-surface-2 p-0.5",
 				className,
 			)}
+			onKeyDown={(e) =>
+				radioGroupKeyDown(
+					e,
+					options.map((o) => o.value),
+					value,
+					onChange,
+				)
+			}
 		>
 			{options.map((o) => (
 				// biome-ignore lint/a11y/useSemanticElements: ARIA radio pattern on buttons keeps the segmented-control styling
@@ -339,6 +348,7 @@ export function Segmented<T extends string>({
 					type="button"
 					role="radio"
 					aria-checked={o.value === value}
+					tabIndex={o.value === value ? 0 : -1}
 					title={o.title}
 					onClick={() => onChange(o.value)}
 					className={cn(
