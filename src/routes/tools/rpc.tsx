@@ -36,7 +36,7 @@ import { Button } from "#/components/ui/button";
 import { tool } from "#/lib/tools";
 import { cn } from "#/lib/utils";
 import { useHandoffStore } from "#/store/handoffStore";
-import { useNetwork } from "#/store/networkStore";
+import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 
 export const Route = createFileRoute("/tools/rpc")({
 	validateSearch: (s: Record<string, unknown>): { sample?: string } => ({
@@ -207,6 +207,27 @@ function RpcTool() {
 		} else setRunB(EMPTY);
 		await Promise.all(jobs);
 	};
+
+	// "Try with a sample" runs the public mainnet-vs-testnet comparison
+	// (bounded, read-only) once the stored network has been restored. The
+	// run fires on the render after the URLs are set so it probes them.
+	const hydrated = useNetworkHydrated();
+	const autoRan = useRef(false);
+	const [autoRun, setAutoRun] = useState(false);
+	useEffect(() => {
+		if (search.sample !== "public" || !hydrated || autoRan.current) return;
+		autoRan.current = true;
+		setUrlA(networkConfig(network).evmRpcUrl);
+		setUrlB(networkConfig(other).evmRpcUrl);
+		setAutoRun(true);
+	}, [search.sample, hydrated, network, other]);
+	const runRef = useRef(run);
+	runRef.current = run;
+	useEffect(() => {
+		if (!autoRun) return;
+		setAutoRun(false);
+		void runRef.current();
+	}, [autoRun]);
 
 	const compare = !!rb?.valid && (runB.checks.length > 0 || runB.running);
 	const ids = [

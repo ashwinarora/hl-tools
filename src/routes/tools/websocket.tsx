@@ -60,7 +60,7 @@ import {
 } from "#/lib/idb";
 import { tool } from "#/lib/tools";
 import { useHandoffStore } from "#/store/handoffStore";
-import { useNetwork } from "#/store/networkStore";
+import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 
 export const Route = createFileRoute("/tools/websocket")({
 	validateSearch: (s: Record<string, unknown>): { sample?: string } => ({
@@ -138,6 +138,17 @@ function WebSocketTool() {
 			// Not a subscription message; ignore.
 		}
 	}, [take]);
+
+	// "Try with a sample" connects straight away (a public market channel,
+	// nothing to send but the subscription) once the stored network is known.
+	const hydrated = useNetworkHydrated();
+	const autoStarted = useRef(false);
+	useEffect(() => {
+		if (!sample || !hydrated || autoStarted.current || !built?.subscription)
+			return;
+		autoStarted.current = true;
+		wb.connect(network, channelType, built.subscription);
+	}, [sample, hydrated, built, wb, network, channelType]);
 
 	const refreshSessions = useCallback(async () => {
 		try {
