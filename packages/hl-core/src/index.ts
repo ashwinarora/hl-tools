@@ -1,5 +1,7 @@
 export * from "./adapter/info.ts";
 export * from "./canonical.ts";
+export * from "./corewriter/codec.ts";
+export * from "./corewriter/precompiles.ts";
 export * from "./decimal.ts";
 export * from "./diff.ts";
 export * from "./identity.ts";
@@ -10,6 +12,8 @@ export * from "./network.ts";
 export * from "./resolver/metadata.ts";
 export * from "./resolver/resolve.ts";
 export * from "./resolver/snippets.ts";
+export * from "./rpc/client.ts";
 export * from "./rules/index.ts";
 export * from "./samples/signing.ts";
 export * from "./signing.ts";
+export * from "./trace/trace.ts";
