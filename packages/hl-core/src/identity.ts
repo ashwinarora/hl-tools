@@ -106,8 +106,12 @@ export type Venue<N extends Network = Network> =
 	| { readonly kind: "spot"; readonly network: N }
 	| { readonly kind: "outcome"; readonly network: N };
 
-/** How the market came to exist. */
-export type AssetOrigin = "native" | "hip1" | "hip3" | "hip4";
+/**
+ * How the market came to exist: the first perp dex and the spot order books
+ * are native HyperCore venues; HIP-3 perps are builder-deployed dexes; HIP-4
+ * outcomes are outcome markets.
+ */
+export type AssetOrigin = "native" | "hip3" | "hip4";
 
 export interface TokenRef<N extends Network = Network> {
 	readonly network: N;

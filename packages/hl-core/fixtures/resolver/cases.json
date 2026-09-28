@@ -1,0 +1,32 @@
+{
+	"description": "Asset Resolver cases. Each case resolves `query` against fixtures/metadata/<network>.json. `first` is the top match's coin (or token:<index>), `includes` must all appear, `excludes` must not, `ambiguous` is the expected flag. Add a case for every resolver bug.",
+	"cases": [
+		{ "network": "mainnet", "query": "BTC", "first": "BTC", "ambiguous": true, "includes": ["flx:BTC"], "note": "flx (HIP-3) also lists BTC, so a bare BTC is ambiguous", "expect": { "actionAssetId": 0, "szDecimals": 5, "pxDecimals": 1, "venue": "perp" } },
+		{ "network": "mainnet", "query": "btc-perp", "first": "BTC", "note": "suffix and case normalised" },
+		{ "network": "mainnet", "query": "HYPE", "ambiguous": true, "includes": ["HYPE", "@107", "@207", "@232", "@255", "token:150"], "firstOf": ["HYPE", "@107"] },
+		{ "network": "testnet", "query": "HYPE", "ambiguous": true, "includes": ["HYPE", "@1035", "@1339", "token:1105"] },
+		{ "network": "mainnet", "query": "@107", "first": "@107", "ambiguous": false, "expect": { "actionAssetId": 10107, "szDecimals": 2, "pxDecimals": 6, "venue": "spot", "base": "HYPE", "quote": "USDC" } },
+		{ "network": "testnet", "query": "@107", "matches": 0, "note": "spot indexes differ per network; @107 does not exist in the testnet fixture" },
+		{ "network": "testnet", "query": "@1035", "first": "@1035", "expect": { "actionAssetId": 11035, "base": "HYPE" } },
+		{ "network": "mainnet", "query": "HYPE/USDC", "first": "@107", "ambiguous": false },
+		{ "network": "mainnet", "query": "PURR/USDC", "first": "PURR/USDC", "expect": { "actionAssetId": 10000, "szDecimals": 0, "pxDecimals": 8 } },
+		{ "network": "mainnet", "query": "xyz:TSLA", "first": "xyz:TSLA", "ambiguous": false, "expect": { "actionAssetId": 110001, "venue": "hip3", "szDecimals": 3, "pxDecimals": 3 } },
+		{ "network": "mainnet", "query": "XYZ:tsla", "first": "xyz:TSLA", "note": "HIP-3 names are matched case-insensitively" },
+		{ "network": "testnet", "query": "test:ABC", "first": "test:ABC", "expect": { "actionAssetId": 110000, "szDecimals": 0 }, "note": "docs example: perp_dex_index 1, index 0 → 110000" },
+		{ "network": "mainnet", "query": "TSLA", "ambiguous": true, "includes": ["xyz:TSLA", "flx:TSLA"] },
+		{ "network": "mainnet", "query": "nope:ABC", "matches": 0, "noteIncludes": "No perp dex named" },
+		{ "network": "mainnet", "query": "110001", "first": "xyz:TSLA" },
+		{ "network": "mainnet", "query": "10107", "first": "@107" },
+		{ "network": "mainnet", "query": "150", "ambiguous": true, "includes": ["token:150", "@150"], "note": "bare numbers are ambiguous" },
+		{ "network": "mainnet", "query": "#12100", "first": "#12100", "expect": { "actionAssetId": 100012100, "venue": "outcome", "szDecimals": null } },
+		{ "network": "mainnet", "query": "+12101", "first": "#12101" },
+		{ "network": "mainnet", "query": "#12102", "matches": 0, "noteIncludes": "only sides 0 and 1" },
+		{ "network": "mainnet", "query": "100012100", "first": "#12100" },
+		{ "network": "mainnet", "query": "0x0d01dc56dcaaca66ad901c959b4011ec", "first": "token:150", "note": "HYPE tokenId" },
+		{ "network": "mainnet", "query": "USDC", "includes": ["token:0"] },
+		{ "network": "mainnet", "query": "", "matches": 0 },
+		{ "network": "mainnet", "query": "   ", "matches": 0 },
+		{ "network": "mainnet", "query": "@99999", "matches": 0, "noteIncludes": "No spot pair with index 99999" },
+		{ "network": "mainnet", "query": "MATIC", "first": "MATIC", "expect": { "isDelisted": true } }
+	]
+}

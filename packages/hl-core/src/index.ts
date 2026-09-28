@@ -1,3 +1,4 @@
+export * from "./adapter/info.ts";
 export * from "./canonical.ts";
 export * from "./decimal.ts";
 export * from "./diff.ts";
@@ -6,5 +7,8 @@ export * from "./issues.ts";
 export * from "./json.ts";
 export * from "./msgpack.ts";
 export * from "./network.ts";
+export * from "./resolver/metadata.ts";
+export * from "./resolver/resolve.ts";
+export * from "./resolver/snippets.ts";
 export * from "./rules/index.ts";
 export * from "./signing.ts";

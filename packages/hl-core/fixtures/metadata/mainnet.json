@@ -1,0 +1,3597 @@
+{
+ "network": "mainnet",
+ "observedAt": 1790593868258,
+ "perpDexs": [
+  null,
+  {
+   "name": "xyz",
+   "fullName": "XYZ",
+   "deployer": "0x88806a71d74ad0a510b350545c9ae490912f0888",
+   "oracleUpdater": null,
+   "feeRecipient": "0x83ffcfb1f2ad843c474b2e28df86c721cb869d3a",
+   "assetToStreamingOiCap": [
+    [
+     "xyz:AAOI",
+     "25000000.0"
+    ],
+    [
+     "xyz:AAPL",
+     "200000000.0"
+    ]
+   ],
+   "subDeployers": [
+    [
+     "registerAsset",
+     [
+      "0x7d16f116d252db609c56d27d6c9605eb03e16657",
+      "0x8c4190018486a2dbac2629d688136e8990170ff2",
+      "0xc0892b4f864807ec26dde6ad8dad6914e079059d"
+     ]
+    ],
+    [
+     "setOracle",
+     [
+      "0x1234567890545d1df9ee64b35fdd16966e08acec"
+     ]
+    ]
+   ],
+   "assetToFundingMultiplier": [
+    [
+     "xyz:AAOI",
+     "0.5"
+    ],
+    [
+     "xyz:AAPL",
+     "0.5"
+    ]
+   ],
+   "assetToFundingInterestRate": [
+    [
+     "xyz:EUR",
+     "0.0"
+    ],
+    [
+     "xyz:GBP",
+     "0.0"
+    ]
+   ],
+   "assetToFundingClamp": []
+  },
+  {
+   "name": "flx",
+   "fullName": "Felix Exchange",
+   "deployer": "0x2fab552502a6d45920d5741a2f3ebf4c35536352",
+   "oracleUpdater": "0x94757f8dcb4bf73b850195660e959d1105cfedd5",
+   "feeRecipient": "0xe2872b5ae7dcbba40cc4510d08c8bbea95b42d43",
+   "assetToStreamingOiCap": [
+    [
+     "flx:COIN",
+     "8000000.0"
+    ],
+    [
+     "flx:COPPER",
+     "5000000.0"
+    ]
+   ],
+   "subDeployers": [
+    [
+     "registerAsset",
+     [
+      "0xd0d4ef34424af3da883672b8cdeca751293655a5"
+     ]
+    ],
+    [
+     "setOracle",
+     [
+      "0x94757f8dcb4bf73b850195660e959d1105cfedd5",
+      "0xd0d4ef34424af3da883672b8cdeca751293655a5"
+     ]
+    ]
+   ],
+   "assetToFundingMultiplier": [
+    [
+     "flx:COIN",
+     "0.0"
+    ],
+    [
+     "flx:COPPER",
+     "0.0"
+    ]
+   ],
+   "assetToFundingInterestRate": [],
+   "assetToFundingClamp": []
+  }
+ ],
+ "allPerpMetas": [
+  {
+   "universe": [
+    {
+     "szDecimals": 5,
+     "name": "BTC",
+     "maxLeverage": 40,
+     "marginTableId": 56
+    },
+    {
+     "szDecimals": 4,
+     "name": "ETH",
+     "maxLeverage": 25,
+     "marginTableId": 55
+    },
+    {
+     "szDecimals": 2,
+     "name": "ATOM",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "MATIC",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "DYDX",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 2,
+     "name": "SOL",
+     "maxLeverage": 20,
+     "marginTableId": 54
+    },
+    {
+     "szDecimals": 2,
+     "name": "AVAX",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 3,
+     "name": "BNB",
+     "maxLeverage": 10,
+     "marginTableId": 51
+    },
+    {
+     "szDecimals": 1,
+     "name": "APE",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "OP",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 2,
+     "name": "LTC",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "ARB",
+     "maxLeverage": 10,
+     "marginTableId": 51
+    },
+    {
+     "szDecimals": 0,
+     "name": "DOGE",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "INJ",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "SUI",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 0,
+     "name": "kPEPE",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "CRV",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "LDO",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "LINK",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "STX",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "RNDR",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "CFX",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "FTM",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 2,
+     "name": "GMX",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "SNX",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "XRP",
+     "maxLeverage": 20,
+     "marginTableId": 53
+    },
+    {
+     "szDecimals": 3,
+     "name": "BCH",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 2,
+     "name": "APT",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 2,
+     "name": "AAVE",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 2,
+     "name": "COMP",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 4,
+     "name": "MKR",
+     "maxLeverage": 10,
+     "marginTableId": 51,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "WLD",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "FXS",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "HPOS",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated"
+    },
+    {
+     "szDecimals": 0,
+     "name": "RLB",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated"
+    },
+    {
+     "szDecimals": 3,
+     "name": "UNIBOT",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated"
+    },
+    {
+     "szDecimals": 0,
+     "name": "YGG",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "TRX",
+     "maxLeverage": 10,
+     "marginTableId": 51
+    },
+    {
+     "szDecimals": 0,
+     "name": "kSHIB",
+     "maxLeverage": 10,
+     "marginTableId": 51
+    },
+    {
+     "szDecimals": 1,
+     "name": "UNI",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 0,
+     "name": "SEI",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "RUNE",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "OX",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated"
+    },
+    {
+     "szDecimals": 1,
+     "name": "FRIEND",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated"
+    },
+    {
+     "szDecimals": 0,
+     "name": "SHIA",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated"
+    },
+    {
+     "szDecimals": 1,
+     "name": "CYBER",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "ZRO",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "BLZ",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "DOT",
+     "maxLeverage": 10,
+     "marginTableId": 51
+    },
+    {
+     "szDecimals": 1,
+     "name": "BANANA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 2,
+     "name": "TRB",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "FTT",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "LOOM",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "OGN",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "RDNT",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "ARK",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "BNT",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "CANTO",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "REQ",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "BIGTIME",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "KAS",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "ORBS",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "BLUR",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "TIA",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 2,
+     "name": "BSV",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "ADA",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "TON",
+     "maxLeverage": 10,
+     "marginTableId": 51,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "MINA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "POLYX",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "GAS",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "PENDLE",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "STG",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "FET",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "STRAX",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "NEAR",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 0,
+     "name": "MEME",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 2,
+     "name": "ORDI",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "BADGER",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 2,
+     "name": "NEO",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 2,
+     "name": "ZEN",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "FIL",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "PYTH",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "SUSHI",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 2,
+     "name": "ILV",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "IMX",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "kBONK",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 0,
+     "name": "GMT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "SUPER",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "USTC",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "NFTI",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated"
+    },
+    {
+     "szDecimals": 0,
+     "name": "JUP",
+     "maxLeverage": 10,
+     "marginTableId": 51
+    },
+    {
+     "szDecimals": 0,
+     "name": "kLUNC",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "RSR",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "GALA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "JTO",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "NTRN",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 2,
+     "name": "ACE",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "MAV",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "WIF",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "CAKE",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "PEOPLE",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 2,
+     "name": "ENS",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 2,
+     "name": "ETC",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "XAI",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "MANTA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "UMA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "ONDO",
+     "maxLeverage": 10,
+     "marginTableId": 51
+    },
+    {
+     "szDecimals": 0,
+     "name": "ALT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "ZETA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "DYM",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "MAVIA",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "W",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 5,
+     "name": "PANDORA",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated"
+    },
+    {
+     "szDecimals": 1,
+     "name": "STRK",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "PIXEL",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "AI",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 3,
+     "name": "TAO",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 2,
+     "name": "AR",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "MYRO",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "kFLOKI",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "BOME",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "ETHFI",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "ENA",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "MNT",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "TNSR",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "SAGA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "MERL",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "HBAR",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "POPCAT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 2,
+     "name": "OMNI",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 2,
+     "name": "EIGEN",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "REZ",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "NOT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "TURBO",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "BRETT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "IO",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "ZK",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "BLAST",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "LISTA",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "MEW",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "RENDER",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "kDOGS",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "POL",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "CATI",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "CELO",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "HMSTR",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "SCR",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "NEIROETH",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "kNEIRO",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "GOAT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "MOODENG",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "GRASS",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "PURR",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "PNUT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "XLM",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "CHILLGUY",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "SAND",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "IOTA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "ALGO",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 2,
+     "name": "HYPE",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "ME",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "MOVE",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "VIRTUAL",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "PENGU",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "USUAL",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "FARTCOIN",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "AI16Z",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "AIXBT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "ZEREBRO",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "BIO",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "GRIFFAIN",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "SPX",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "S",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "MORPHO",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "TRUMP",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 1,
+     "name": "MELANIA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "ANIME",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "VINE",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 2,
+     "name": "VVV",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "JELLY",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "BERA",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "TST",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "LAYER",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "IP",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 1,
+     "name": "OM",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "KAITO",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "NIL",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 3,
+     "name": "PAXG",
+     "maxLeverage": 10,
+     "marginTableId": 51
+    },
+    {
+     "szDecimals": 0,
+     "name": "PROMPT",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "BABY",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "WCT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "HYPER",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "ZORA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "INIT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "DOOD",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "LAUNCHCOIN",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "NXPC",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "SOPH",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "RESOLV",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "SYRUP",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "PUMP",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 0,
+     "name": "PROVE",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "YZY",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "isDelisted": true
+    },
+    {
+     "szDecimals": 0,
+     "name": "XPL",
+     "maxLeverage": 10,
+     "marginTableId": 51
+    },
+    {
+     "szDecimals": 0,
+     "name": "WLFI",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "LINEA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "SKY",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "ASTER",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "AVNT",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "STBL",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "0G",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "HEMI",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "APEX",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "2Z",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 2,
+     "name": "ZEC",
+     "maxLeverage": 10,
+     "marginTableId": 52
+    },
+    {
+     "szDecimals": 0,
+     "name": "MON",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "MET",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "MEGA",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "CC",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 1,
+     "name": "ICP",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "AERO",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "STABLE",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "FOGO",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "LIT",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 3,
+     "name": "XMR",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 1,
+     "name": "AXS",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 2,
+     "name": "DASH",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "SKR",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "AZTEC",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "CHIP",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "GRAM",
+     "maxLeverage": 5,
+     "marginTableId": 5
+    },
+    {
+     "szDecimals": 0,
+     "name": "CASHCAT",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "PONS",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    },
+    {
+     "szDecimals": 0,
+     "name": "USELESS",
+     "maxLeverage": 3,
+     "marginTableId": 3
+    }
+   ],
+   "marginTables": [
+    [
+     50,
+     {
+      "description": "",
+      "marginTiers": [
+       {
+        "lowerBound": "0.0",
+        "maxLeverage": 50
+       }
+      ]
+     }
+    ]
+   ],
+   "collateralToken": 0
+  },
+  {
+   "universe": [
+    {
+     "szDecimals": 4,
+     "name": "xyz:XYZ100",
+     "maxLeverage": 30,
+     "marginTableId": 30,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:TSLA",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:NVDA",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 4,
+     "name": "xyz:GOLD",
+     "maxLeverage": 25,
+     "marginTableId": 25,
+     "lastFeeScaleChangeTime": "1970-01-01T00:00:00",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:HOOD",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:INTC",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:PLTR",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:COIN",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:META",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:AAPL",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:MSFT",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:ORCL",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:GOOGL",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:AMZN",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:AMD",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:MU",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:SNDK",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-23T17:37:10.033211662",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:MSTR",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "lastFeeScaleChangeTime": "2026-01-14T16:05:30.519245305",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:CRCL",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-12-05T17:07:43.712558241",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:NFLX",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-12-05T17:07:43.712558241",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 4,
+     "name": "xyz:COST",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-12-05T17:07:43.712558241",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 4,
+     "name": "xyz:LLY",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-12-05T17:07:43.712558241",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:SKHX",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-12-19T16:55:24.230127845",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:TSM",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-12-19T16:55:24.230127845",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:JPY",
+     "maxLeverage": 50,
+     "marginTableId": 50,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-12-19T16:55:24.230127845",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:EUR",
+     "maxLeverage": 50,
+     "marginTableId": 50,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-12-19T16:55:24.230127845",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:SILVER",
+     "maxLeverage": 25,
+     "marginTableId": 25,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-12-27T14:46:13.933247634",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:RIVN",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-06T14:22:02.431616165",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:BABA",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-06T14:22:02.431616165",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:CL",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-06T14:22:02.431616165",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:COPPER",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-09T00:07:27.711071079",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:NATGAS",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-17T00:52:17.773623405",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:URANIUM",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-26T16:47:08.614356922",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 4,
+     "name": "xyz:ALUMINIUM",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-21T21:02:05.395415841",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:SMSN",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-26T16:47:08.614356922",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 4,
+     "name": "xyz:PLATINUM",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-26T16:47:08.614356922",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:USAR",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-26T16:47:08.614356922",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:CRWV",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-26T23:31:34.059495489",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:URNM",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-29T14:25:47.800206028",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 4,
+     "name": "xyz:PALLADIUM",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-31T00:37:41.755544137",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:DXY",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-02-01T17:33:54.214113650",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:GME",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-02-03T19:32:57.961597289",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 4,
+     "name": "xyz:KR200",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-02-05T03:32:50.957071742",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:SOFTBANK",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-02-10T19:10:39.792893920",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 5,
+     "name": "xyz:JP225",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-02-12T00:07:23.069735778",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:HYUNDAI",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-02-18T01:46:52.673000860",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:KIOXIA",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-02-25T01:02:01.358848807",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:EWY",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-02-28T21:59:11.850632195",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:EWJ",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-02T00:41:25.683109868",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:BRENTOIL",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-04T14:33:56.611209792",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:VIX",
+     "maxLeverage": 3,
+     "marginTableId": 3,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-09T19:53:24.389395191",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:HIMS",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-15T17:57:18.478880296",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:SP500",
+     "maxLeverage": 50,
+     "marginTableId": 50,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-18T11:38:49.335772800",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:DKNG",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-23T12:47:36.299219957",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:LITE",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-27T21:12:35.323224713",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 0,
+     "name": "xyz:CORN",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-29T19:28:21.135127220",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:XLE",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-31T19:51:50.241985327",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 0,
+     "name": "xyz:WHEAT",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-02T02:42:07.320427073",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:TTF",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-03T19:07:01.933950208",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:BX",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-06T15:39:22.032937119",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 0,
+     "name": "xyz:PURRDAT",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "lastFeeScaleChangeTime": "2026-05-09T05:06:30.219278272",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:MRVL",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-11T05:57:11.042604593",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:RKLB",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-13T15:14:54.385823035",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:BIRD",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-15T21:47:45.104299047",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:VOL",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-17T15:51:21.894541784",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:DRAM",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-22T14:35:27.161106929",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:CBRS",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-24T01:16:48.392583764",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:EWZ",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-27T15:13:21.741505858",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:KRW",
+     "maxLeverage": 50,
+     "marginTableId": 50,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-04-30T23:33:46.845378252",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:ZM",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-03T17:13:06.829773905",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:EBAY",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-05T14:22:12.576535126",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 0,
+     "name": "xyz:H100",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-07T00:49:40.291714731",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 4,
+     "name": "xyz:NIFTY",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-09T05:04:37.536668407",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:ARM",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-11T15:05:18.433457126",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:EWT",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-13T15:30:23.954993706",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 0,
+     "name": "xyz:GBP",
+     "maxLeverage": 50,
+     "marginTableId": 50,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-16T01:31:07.460142934",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:SPCX",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-17T14:46:21.424795458",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 5,
+     "name": "xyz:IBOV",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-20T00:21:19.388863967",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:ASML",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-21T17:10:42.165373019",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:MINIMAX",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-25T03:02:14.645754442",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:BB",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-26T11:58:14.597789923",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:QNT",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-27T18:45:40.981927871",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:DELL",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-05-29T14:13:26.025311074",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:IBM",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-01T01:54:01.428026772",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:AVGO",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-03T02:16:30.639600468",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:NOW",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-04T12:20:18.819600270",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:NBIS",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-05T18:52:56.692372884",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:WDC",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-07T23:35:34.038712300",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:NOK",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-10T17:30:46.846902410",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:SMH",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-12T01:31:23.485005655",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:BE",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-15T13:23:22.863731938",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:ZHIPU",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-18T19:36:57.128750613",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:QCOM",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-21T01:24:18.359451315",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:STRC",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "lastFeeScaleChangeTime": "1970-01-01T00:00:00",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:BOT",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-25T03:09:24.902520455",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:AMAT",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-26T17:58:24.444075483",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:IBIDEN",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-06-29T15:03:39.631650333",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:GIGADEV",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-07-02T17:26:59.213958008",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:SHAZ",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-07-06T15:56:01.551322287",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:SKHY",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-07-08T12:37:52.833102267",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:KSTR",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-07-12T22:55:25.293073960",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:CXMT",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-07-14T17:24:08.849924124",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "xyz:GEV",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-07-21T00:01:45.341962512",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:KORU",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-01T12:05:27.720981723",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:UNITREE",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-04T02:54:02.174660523",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:LYTE",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-06T15:04:52.701895486",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:NCLD",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-06T15:06:51.774018148",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:SOXL",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-06T15:08:37.265873926",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:MAGS",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-17T15:18:14.151578971",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:IREN",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-17T15:18:14.151578971",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:NET",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-17T15:18:14.151578971",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:CRWD",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-17T15:18:14.151578971",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:RDDT",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-17T15:16:24.784153846",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:AAOI",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-17T15:18:14.151578971",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:MRNA",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-19T15:33:50.971720329",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:XBI",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-26T23:20:58.810221364",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:SHEIN",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-08-26T23:21:36.689565431",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:YMTC",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:BMNR",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:SNXX",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-09-15T14:03:47.961434321",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:CVX",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-09-17T18:08:57.719590783",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:TLT",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-09-17T18:08:57.719590783",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 0,
+     "name": "xyz:HO",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:OURA",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "onlyIsolated": true,
+     "marginMode": "noCross",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-09-23T16:06:55.262172782",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "xyz:LRCX",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "noCross",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "xyz:UMC",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "noCross",
+     "deployerFeeScale": "1.0"
+    }
+   ],
+   "marginTables": [
+    [
+     50,
+     {
+      "description": "",
+      "marginTiers": [
+       {
+        "lowerBound": "0.0",
+        "maxLeverage": 50
+       }
+      ]
+     }
+    ]
+   ],
+   "collateralToken": 0
+  },
+  {
+   "universe": [
+    {
+     "szDecimals": 2,
+     "name": "flx:TSLA",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "isDelisted": true,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-24T21:19:25.980742012",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "flx:NVDA",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "isDelisted": true,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-08T03:42:24.011287219",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "flx:CRCL",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-24T21:19:25.980742012",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "flx:COIN",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2025-11-24T21:19:25.980742012",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "flx:XMR",
+     "maxLeverage": 10,
+     "marginTableId": 10,
+     "isDelisted": true,
+     "lastFeeScaleChangeTime": "1970-01-01T00:00:00",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "flx:GOLD",
+     "maxLeverage": 25,
+     "marginTableId": 25,
+     "isDelisted": true,
+     "lastFeeScaleChangeTime": "1970-01-01T00:00:00",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "flx:SILVER",
+     "maxLeverage": 25,
+     "marginTableId": 25,
+     "isDelisted": true,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-29T17:27:22.852183500",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "flx:OIL",
+     "maxLeverage": 15,
+     "marginTableId": 15,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-29T17:27:22.852183500",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "flx:GAS",
+     "maxLeverage": 5,
+     "marginTableId": 5,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-31T13:16:15.244487482",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 5,
+     "name": "flx:BTC",
+     "maxLeverage": 1,
+     "marginTableId": 1,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "lastFeeScaleChangeTime": "1970-01-01T00:00:00",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 2,
+     "name": "flx:COPPER",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-29T17:27:22.852183500",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "flx:PALLADIUM",
+     "maxLeverage": 25,
+     "marginTableId": 25,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-29T17:27:22.852183500",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 3,
+     "name": "flx:PLATINUM",
+     "maxLeverage": 25,
+     "marginTableId": 25,
+     "onlyIsolated": true,
+     "isDelisted": true,
+     "marginMode": "strictIsolated",
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-01-29T17:27:22.852183500",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 1,
+     "name": "flx:USDE",
+     "maxLeverage": 20,
+     "marginTableId": 20,
+     "isDelisted": true,
+     "lastFeeScaleChangeTime": "1970-01-01T00:00:00",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 4,
+     "name": "flx:USA500",
+     "maxLeverage": 30,
+     "marginTableId": 30,
+     "isDelisted": true,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-10T12:08:20.303477191",
+     "deployerFeeScale": "1.0"
+    },
+    {
+     "szDecimals": 5,
+     "name": "flx:USA100",
+     "maxLeverage": 30,
+     "marginTableId": 30,
+     "isDelisted": true,
+     "growthMode": "enabled",
+     "lastFeeScaleChangeTime": "2026-03-30T13:04:08.914953781",
+     "deployerFeeScale": "1.0"
+    }
+   ],
+   "marginTables": [
+    [
+     50,
+     {
+      "description": "",
+      "marginTiers": [
+       {
+        "lowerBound": "0.0",
+        "maxLeverage": 50
+       }
+      ]
+     }
+    ]
+   ],
+   "collateralToken": 360
+  }
+ ],
+ "spotMeta": {
+  "universe": [
+   {
+    "tokens": [
+     1,
+     0
+    ],
+    "name": "PURR/USDC",
+    "index": 0,
+    "isCanonical": true
+   },
+   {
+    "tokens": [
+     2,
+     0
+    ],
+    "name": "@1",
+    "index": 1,
+    "isCanonical": false
+   },
+   {
+    "tokens": [
+     3,
+     0
+    ],
+    "name": "@2",
+    "index": 2,
+    "isCanonical": false
+   },
+   {
+    "tokens": [
+     150,
+     0
+    ],
+    "name": "@107",
+    "index": 107,
+    "isCanonical": false
+   },
+   {
+    "tokens": [
+     197,
+     0
+    ],
+    "name": "@142",
+    "index": 142,
+    "isCanonical": false
+   },
+   {
+    "tokens": [
+     235,
+     0
+    ],
+    "name": "@150",
+    "index": 150,
+    "isCanonical": false
+   },
+   {
+    "tokens": [
+     268,
+     0
+    ],
+    "name": "@166",
+    "index": 166,
+    "isCanonical": false
+   },
+   {
+    "tokens": [
+     150,
+     268
+    ],
+    "name": "@207",
+    "index": 207,
+    "isCanonical": false
+   },
+   {
+    "tokens": [
+     360,
+     0
+    ],
+    "name": "@230",
+    "index": 230,
+    "isCanonical": false
+   },
+   {
+    "tokens": [
+     150,
+     360
+    ],
+    "name": "@232",
+    "index": 232,
+    "isCanonical": false
+   },
+   {
+    "tokens": [
+     197,
+     360
+    ],
+    "name": "@234",
+    "index": 234,
+    "isCanonical": false
+   },
+   {
+    "tokens": [
+     150,
+     235
+    ],
+    "name": "@255",
+    "index": 255,
+    "isCanonical": false
+   }
+  ],
+  "tokens": [
+   {
+    "name": "USDC",
+    "szDecimals": 8,
+    "weiDecimals": 8,
+    "index": 0,
+    "tokenId": "0x6d1e7cde53ba9467b783cb7c530ce054",
+    "isCanonical": true,
+    "evmContract": {
+     "address": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "evm_extra_wei_decimals": -2
+    },
+    "fullName": null,
+    "deployerTradingFeeShare": "0.0"
+   },
+   {
+    "name": "PURR",
+    "szDecimals": 0,
+    "weiDecimals": 5,
+    "index": 1,
+    "tokenId": "0xc1fb593aeffbeb02f85e0308e9956a90",
+    "isCanonical": true,
+    "evmContract": {
+     "address": "0x9b498c3c8a0b8cd8ba1d9851d40d186f1872b44e",
+     "evm_extra_wei_decimals": 13
+    },
+    "fullName": null,
+    "deployerTradingFeeShare": "0.0"
+   },
+   {
+    "name": "HFUN",
+    "szDecimals": 2,
+    "weiDecimals": 8,
+    "index": 2,
+    "tokenId": "0xbaf265ef389da684513d98d68edf4eae",
+    "isCanonical": false,
+    "evmContract": {
+     "address": "0xa320d9f65ec992eff38622c63627856382db726c",
+     "evm_extra_wei_decimals": 10
+    },
+    "fullName": null,
+    "deployerTradingFeeShare": "0.0"
+   },
+   {
+    "name": "LICK",
+    "szDecimals": 0,
+    "weiDecimals": 5,
+    "index": 3,
+    "tokenId": "0xba3aaf468f793d9b42fd3328e24f1de9",
+    "isCanonical": false,
+    "evmContract": null,
+    "fullName": null,
+    "deployerTradingFeeShare": "0.0"
+   },
+   {
+    "name": "HYPE",
+    "szDecimals": 2,
+    "weiDecimals": 8,
+    "index": 150,
+    "tokenId": "0x0d01dc56dcaaca66ad901c959b4011ec",
+    "isCanonical": false,
+    "evmContract": null,
+    "fullName": "Hyperliquid",
+    "deployerTradingFeeShare": "0.0"
+   },
+   {
+    "name": "UBTC",
+    "szDecimals": 5,
+    "weiDecimals": 10,
+    "index": 197,
+    "tokenId": "0x8f254b963e8468305d409b33aa137c67",
+    "isCanonical": false,
+    "evmContract": {
+     "address": "0x9fdbda0a5e284c32744d2f17ee5c74b284993463",
+     "evm_extra_wei_decimals": -2
+    },
+    "fullName": "Unit Bitcoin",
+    "deployerTradingFeeShare": "1.0"
+   },
+   {
+    "name": "USDE",
+    "szDecimals": 2,
+    "weiDecimals": 8,
+    "index": 235,
+    "tokenId": "0x2e6d84f2d7ca82e6581e03523e4389f7",
+    "isCanonical": false,
+    "evmContract": {
+     "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+     "evm_extra_wei_decimals": 10
+    },
+    "fullName": "USDe",
+    "deployerTradingFeeShare": "0.0"
+   },
+   {
+    "name": "USDT0",
+    "szDecimals": 2,
+    "weiDecimals": 8,
+    "index": 268,
+    "tokenId": "0x25faedc3f054130dbb4e4203aca63567",
+    "isCanonical": false,
+    "evmContract": {
+     "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+     "evm_extra_wei_decimals": -2
+    },
+    "fullName": "USDT0",
+    "deployerTradingFeeShare": "0.0"
+   },
+   {
+    "name": "USDH",
+    "szDecimals": 2,
+    "weiDecimals": 8,
+    "index": 360,
+    "tokenId": "0x54e00a5988577cb0b0c9ab0cb6ef7f4b",
+    "isCanonical": false,
+    "evmContract": {
+     "address": "0x111111a1a0667d36bd57c0a9f569b98057111111",
+     "evm_extra_wei_decimals": -2
+    },
+    "fullName": "USDH",
+    "deployerTradingFeeShare": "0.0"
+   }
+  ]
+ },
+ "outcomeMeta": {
+  "outcomes": [
+   {
+    "outcome": 1472,
+    "name": "template fallback",
+    "description": "other",
+    "sideSpecs": [
+     {
+      "name": "Yes"
+     },
+     {
+      "name": "No"
+     }
+    ],
+    "quoteToken": "USDC",
+    "venue": "out",
+    "deployerFeeScale": "1.0"
+   },
+   {
+    "outcome": 1473,
+    "name": "template:sportsTournamentParticipant",
+    "description": "participant:Arsenal",
+    "sideSpecs": [
+     {
+      "name": "Yes"
+     },
+     {
+      "name": "No"
+     }
+    ],
+    "quoteToken": "USDC",
+    "venue": "out",
+    "deployerFeeScale": "1.0"
+   },
+   {
+    "outcome": 1474,
+    "name": "template:sportsTournamentParticipant",
+    "description": "participant:Manchester City",
+    "sideSpecs": [
+     {
+      "name": "Yes"
+     },
+     {
+      "name": "No"
+     }
+    ],
+    "quoteToken": "USDC",
+    "venue": "out",
+    "deployerFeeScale": "1.0"
+   },
+   {
+    "outcome": 1475,
+    "name": "template:sportsTournamentParticipant",
+    "description": "participant:Liverpool",
+    "sideSpecs": [
+     {
+      "name": "Yes"
+     },
+     {
+      "name": "No"
+     }
+    ],
+    "quoteToken": "USDC",
+    "venue": "out",
+    "deployerFeeScale": "1.0"
+   },
+   {
+    "outcome": 1476,
+    "name": "template:sportsTournamentParticipant",
+    "description": "participant:Chelsea",
+    "sideSpecs": [
+     {
+      "name": "Yes"
+     },
+     {
+      "name": "No"
+     }
+    ],
+    "quoteToken": "USDC",
+    "venue": "out",
+    "deployerFeeScale": "1.0"
+   },
+   {
+    "outcome": 1477,
+    "name": "template:sportsTournamentParticipant",
+    "description": "participant:Manchester United",
+    "sideSpecs": [
+     {
+      "name": "Yes"
+     },
+     {
+      "name": "No"
+     }
+    ],
+    "quoteToken": "USDC",
+    "venue": "out",
+    "deployerFeeScale": "1.0"
+   },
+   {
+    "outcome": 1478,
+    "name": "template:sportsTournamentParticipant",
+    "description": "participant:Tottenham Hotspur",
+    "sideSpecs": [
+     {
+      "name": "Yes"
+     },
+     {
+      "name": "No"
+     }
+    ],
+    "quoteToken": "USDC",
+    "venue": "out",
+    "deployerFeeScale": "1.0"
+   },
+   {
+    "outcome": 1209,
+    "name": "template:priceTouch",
+    "description": "perp:HYPE|priceDescription:HYPE-USDC perp mark |seconds:1|target:100|time:20261001-0000",
+    "sideSpecs": [
+     {
+      "name": "template:Yes"
+     },
+     {
+      "name": "template:No"
+     }
+    ],
+    "quoteToken": "USDC",
+    "venue": "out",
+    "deployerFeeScale": "1.0"
+   },
+   {
+    "outcome": 1210,
+    "name": "template:binaryPrice",
+    "description": "perp:BTC|priceDescription:BTC-USDC mark|seconds:1|threshold:100000|time:20261001-0000",
+    "sideSpecs": [
+     {
+      "name": "template:Yes"
+     },
+     {
+      "name": "template:No"
+     }
+    ],
+    "quoteToken": "USDC",
+    "venue": "out",
+    "deployerFeeScale": "1.0"
+   }
+  ],
+  "questions": [
+   {
+    "question": 198,
+    "name": "template:sportsTournamentWinner",
+    "description": "competition:English Premier League|officialSource:English Premier League|resolutionDeadline:20270605-1200|season:2026/2027|sport:football/soccer",
+    "fallbackOutcome": 1472,
+    "namedOutcomes": [
+     1473,
+     1474,
+     1475,
+     1476,
+     1477,
+     1478
+    ],
+    "settledNamedOutcomes": []
+   }
+  ]
+ },
+ "allMids": {
+  "#12090": "0.05998",
+  "#12091": "0.94002",
+  "#12100": "0.005505",
+  "#12101": "0.994495",
+  "#14720": "0.5",
+  "#14721": "0.5",
+  "#14730": "0.570105",
+  "#14731": "0.429895",
+  "#14740": "0.226865",
+  "#14741": "0.773135",
+  "#14750": "0.073545",
+  "#14751": "0.926455",
+  "#14760": "0.034025",
+  "#14761": "0.965975",
+  "#14770": "0.013",
+  "#14771": "0.987",
+  "#14780": "0.0765",
+  "#14781": "0.9235",
+  "@1": "14.093",
+  "@107": "89.8535",
+  "@142": "82974.5",
+  "@150": "0.99975",
+  "@166": "0.99963",
+  "@2": "0.00006351",
+  "@207": "89.892",
+  "@230": "0.99687",
+  "@232": "63.129",
+  "@234": "76644.0",
+  "@255": "89.863",
+  "BTC": "82982.5",
+  "ETH": "2661.45",
+  "HYPE": "89.8145",
+  "PURR/USDC": "0.145505"
+ }
+}
