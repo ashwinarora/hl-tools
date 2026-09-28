@@ -27,6 +27,7 @@ export default function NetworkSwitch({
 			className="inline-flex items-center rounded-md border border-border bg-surface-2 p-0.5"
 		>
 			{NETWORKS.map((n: Network) => (
+				// biome-ignore lint/a11y/useSemanticElements: ARIA radio pattern on buttons keeps the segmented-control styling
 				<button
 					key={n}
 					type="button"

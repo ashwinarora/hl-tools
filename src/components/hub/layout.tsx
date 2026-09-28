@@ -332,6 +332,7 @@ export function Segmented<T extends string>({
 			)}
 		>
 			{options.map((o) => (
+				// biome-ignore lint/a11y/useSemanticElements: ARIA radio pattern on buttons keeps the segmented-control styling
 				<button
 					key={o.value}
 					id={`${id}-${o.value}`}

@@ -111,7 +111,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: constant pre-hydration theme script */}
 				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: constant pre-hydration network script */}
 				<script dangerouslySetInnerHTML={{ __html: NETWORK_INIT_SCRIPT }} />
 				<HeadContent />
 			</head>
