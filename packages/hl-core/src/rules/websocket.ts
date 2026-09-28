@@ -3,7 +3,7 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const WEBSOCKET_RULES = defineRuleSet({
 	id: "websocket",
 	title: "WebSocket channels & semantics",
-	version: "1.0.0",
+	version: "1.1.0",
 	verifiedAt: "2026-09-28",
 	summary:
 		"Subscribe with {method:'subscribe', subscription:{type,…}}; the server acks on channel 'subscriptionResponse'. No channel carries a sequence number or resume cursor: after a reconnect you re-subscribe and rebuild state from the next snapshot. Streaming user channels send a first message with isSnapshot: true. The server closes connections idle for 60 s; send {method:'ping'} to keep alive.",
@@ -23,6 +23,11 @@ export const WEBSOCKET_RULES = defineRuleSet({
 			version: "1.0.0",
 			date: "2026-09-28",
 			note: "Initial encoding of 20 channels.",
+		},
+		{
+			version: "1.1.0",
+			date: "2026-09-28",
+			note: "trades: the first message replays recent trades without an isSnapshot flag (observed on mainnet, not in the docs); modelled as snapshot-then-deltas.",
 		},
 	],
 });
@@ -142,9 +147,9 @@ export const WS_CHANNELS: readonly WsChannelSpec[] = [
 		channel: "trades",
 		label: "Trades",
 		params: [coin],
-		semantics: "events",
+		semantics: "snapshot-then-deltas",
 		identity: "tid",
-		ordering: `${NO_SEQ} Events only. \`tid\` is a 50-bit hash of the two oids; (time, coin, tid) is globally unique for dedupe.`,
+		ordering: `${NO_SEQ} The first message after subscribing replays recent trades (30 observed on mainnet) without an isSnapshot flag; later messages carry only new trades. \`tid\` is a 50-bit hash of the two oids; dedupe by (time, coin, tid).`,
 		userSpecific: false,
 		description: "Public trades on a coin.",
 	},
