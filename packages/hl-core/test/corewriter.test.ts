@@ -247,6 +247,20 @@ describe("trace replays (recorded from live networks)", () => {
 			t.actions[0]?.observed?.evidence,
 		);
 	});
+	it("mainnet sendAsset (Circle bridge): observed as a ledger send with matching dexes", async () => {
+		const { f, rpc, info } = replay("mainnet-send-asset");
+		const t = await traceTransaction(f.network, f.tx, {
+			rpc,
+			info,
+			universe: universes.mainnet,
+		});
+		if (t.kind !== "ok") throw new Error(t.kind);
+		const a = t.actions[0];
+		expect(a?.supported).toBe(true);
+		expect(a?.observed?.evidence).toBe("observed");
+		expect(a?.observed?.headline).toContain("143.8 USDC");
+		expect(a?.observed?.comparisons.every((c) => c.match)).toBe(true);
+	});
 	it("unsupported actions decode but are not traced", async () => {
 		const { f, rpc, info } = replay("testnet-cancel");
 		const t = await traceTransaction(f.network, f.tx, {

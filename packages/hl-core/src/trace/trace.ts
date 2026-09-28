@@ -331,6 +331,58 @@ export async function traceTransaction(
 					v.toPerp as boolean,
 					blockTimestamp,
 				);
+			} else if (
+				decode.spec.key === "sendAsset" ||
+				decode.spec.key === "spotSend"
+			) {
+				const tokenIdx = Number(v.token);
+				const token = deps.universe?.tokensByIndex.get(tokenIdx);
+				if (token) {
+					supported = true;
+					const amount = Decimal.fromScaled(v.wei as bigint, token.weiDecimals);
+					const dexName = (n: bigint | boolean | string | undefined) => {
+						if (n === undefined) return "spot";
+						const big = BigInt(n as bigint);
+						if (big === 4294967295n) return "spot";
+						if (big === 0n) return "";
+						return (
+							deps.universe?.dexes.find((d) => d.index === Number(big))?.name ??
+							String(big)
+						);
+					};
+					const isSendAsset = decode.spec.key === "sendAsset";
+					const src = isSendAsset ? dexName(v.sourceDex) : "spot";
+					const dst = isSendAsset ? dexName(v.destinationDex) : "spot";
+					const label = (d: string) =>
+						d === "" ? "perp" : d === "spot" ? "spot" : `dex ${d}`;
+					const sub = isSendAsset ? String(v.subAccount) : "";
+					expected = {
+						headline: `Send ${fmt(amount)} ${token.name} from ${label(src)} to ${String(v.destination)} (${label(dst)})`,
+						lines: [
+							`Debited from ${sender}${sub && sub !== "0x0000000000000000000000000000000000000000" ? ` (sub-account ${sub})` : ""}.`,
+							`Amount = wei ÷ 10^${token.weiDecimals} (${token.name} weiDecimals).`,
+							"Processed right after the EVM block; appears in both parties' ledger updates.",
+						],
+					};
+					observed = await observeSend(
+						info,
+						sender,
+						String(v.destination).toLowerCase(),
+						amount,
+						token.name,
+						src,
+						dst,
+						blockTimestamp,
+						decode.spec.key,
+					);
+				} else {
+					expected = {
+						headline: `${decode.spec.name} of token ${tokenIdx}`,
+						lines: [
+							`Token ${tokenIdx} is unknown on ${network}, so the amount can't be converted or matched.`,
+						],
+					};
+				}
 			} else {
 				expected = {
 					headline: `${decode.spec.name} (${decode.spec.coreActionType})`,
@@ -642,6 +694,108 @@ async function observeClassTransfer(
 				match: true,
 			},
 		],
+		delayMs: hit.time - blockMs,
+		coreTime: hit.time,
+		l1Hash: hit.hash,
+		data: hit,
+	};
+}
+
+async function observeSend(
+	info: (b: Record<string, unknown>) => Promise<InfoExchange>,
+	user: `0x${string}`,
+	destination: string,
+	amount: Decimal,
+	tokenName: string,
+	sourceDex: string,
+	destinationDex: string,
+	blockTs: number | null,
+	kind: string,
+): Promise<ObservedEffect> {
+	if (blockTs === null) {
+		return {
+			evidence: "unknown",
+			headline: "Block timestamp unavailable",
+			detail: "Cannot search the ledger without a time window.",
+			comparisons: [],
+			delayMs: null,
+			coreTime: null,
+			l1Hash: null,
+			data: null,
+		};
+	}
+	const blockMs = blockTs * 1000;
+	const r = await info({
+		type: "userNonFundingLedgerUpdates",
+		user,
+		startTime: blockMs - 5_000,
+		endTime: blockMs + 120_000,
+	});
+	const list = Array.isArray(r.response) ? (r.response as LedgerUpdate[]) : [];
+	const candidates = list.filter((u) => {
+		const d = u.delta as Record<string, unknown>;
+		if (d.type !== "send" && d.type !== "spotTransfer") return false;
+		if (String(d.destination ?? "").toLowerCase() !== destination) return false;
+		if (String(d.token ?? "") !== tokenName) return false;
+		return Decimal.tryParse(String(d.amount ?? ""))?.eq(amount) ?? false;
+	});
+	const hit = candidates.sort(
+		(a, b) => Math.abs(a.time - blockMs) - Math.abs(b.time - blockMs),
+	)[0];
+	if (!hit) {
+		return {
+			evidence: "unknown",
+			headline: `No matching ${kind === "sendAsset" ? "send" : "spotTransfer"} in the sender's ledger`,
+			detail: `Searched ${list.length} ledger update(s) between −5 s and +120 s of the EVM block for ${amount.toString()} ${tokenName} to ${destination}. Nothing recorded usually means the action was rejected (insufficient balance, unknown token or dex, or the sender didn't exist yet).`,
+			comparisons: [],
+			delayMs: null,
+			coreTime: null,
+			l1Hash: null,
+			data: list,
+		};
+	}
+	const d = hit.delta as Record<string, unknown>;
+	const comparisons: Comparison[] = [
+		{
+			field: "amount",
+			expected: amount.toString(),
+			observed: String(d.amount),
+			match: true,
+		},
+		{
+			field: "token",
+			expected: tokenName,
+			observed: String(d.token),
+			match: true,
+		},
+		{
+			field: "destination",
+			expected: destination,
+			observed: String(d.destination).toLowerCase(),
+			match: true,
+		},
+	];
+	if (d.type === "send") {
+		comparisons.push(
+			{
+				field: "source dex",
+				expected: sourceDex || '""',
+				observed: String(d.sourceDex) || '""',
+				match: String(d.sourceDex) === sourceDex,
+			},
+			{
+				field: "destination dex",
+				expected: destinationDex || '""',
+				observed: String(d.destinationDex) || '""',
+				match: String(d.destinationDex) === destinationDex,
+			},
+		);
+	}
+	return {
+		evidence: "observed",
+		headline: `${String(d.type)} of ${String(d.amount)} ${String(d.token)} to ${String(d.destination)}`,
+		detail: `Found in userNonFundingLedgerUpdates${d.fee && d.fee !== "0.0" ? ` (fee ${String(d.fee)} ${String(d.feeToken ?? "")})` : ""}.`,
+		comparisons,
 		delayMs: hit.time - blockMs,
 		coreTime: hit.time,
 		l1Hash: hit.hash,

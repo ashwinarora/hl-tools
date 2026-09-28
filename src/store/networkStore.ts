@@ -1,4 +1,5 @@
 import { isNetwork, type Network } from "@hl-tools/core";
+import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -40,6 +41,22 @@ export const useNetworkStore = create<NetworkState>()(
 
 export function useNetwork(): Network {
 	return useNetworkStore((s) => s.network);
+}
+
+/**
+ * True once the persisted network has been restored. Child effects run
+ * before the root's rehydration effect, so anything that *sets* the network
+ * on mount (e.g. a sample tied to a network) must wait for this.
+ */
+export function useNetworkHydrated(): boolean {
+	const [hydrated, setHydrated] = useState(() =>
+		useNetworkStore.persist.hasHydrated(),
+	);
+	useEffect(() => {
+		if (useNetworkStore.persist.hasHydrated()) setHydrated(true);
+		return useNetworkStore.persist.onFinishHydration(() => setHydrated(true));
+	}, []);
+	return hydrated;
 }
 
 /** Pre-hydration script: mirrors the stored network onto <html data-network>. */

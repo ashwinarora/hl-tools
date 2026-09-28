@@ -14,6 +14,7 @@ export * from "./resolver/resolve.ts";
 export * from "./resolver/snippets.ts";
 export * from "./rpc/client.ts";
 export * from "./rules/index.ts";
+export * from "./samples/corewriter.ts";
 export * from "./samples/signing.ts";
 export * from "./signing.ts";
 export * from "./trace/trace.ts";

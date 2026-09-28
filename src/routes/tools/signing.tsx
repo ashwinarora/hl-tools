@@ -1,4 +1,4 @@
-import { stringifyJson } from "@hl-tools/core";
+import { SIGNING_SAMPLES, stringifyJson } from "@hl-tools/core";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRightLeft, Copy, PenLine } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -30,7 +30,11 @@ import { Button } from "#/components/ui/button";
 import { clearShared, readShared } from "#/lib/share";
 import { tool } from "#/lib/tools";
 import { useHandoffStore } from "#/store/handoffStore";
-import { useNetwork, useNetworkStore } from "#/store/networkStore";
+import {
+	useNetwork,
+	useNetworkHydrated,
+	useNetworkStore,
+} from "#/store/networkStore";
 
 type Mode = "inspect" | "compare";
 
@@ -59,6 +63,16 @@ function SigningTool() {
 	);
 	const [b, setB] = useState<SigningInput>(EMPTY_INPUT);
 
+	// URL samples are tied to a network (usdSend is a testnet vector).
+	const hydrated = useNetworkHydrated();
+	const [sampleApplied, setSampleApplied] = useState(false);
+	useEffect(() => {
+		if (!hydrated || sampleApplied) return;
+		setSampleApplied(true);
+		const s = SIGNING_SAMPLES.find((x) => x.id === search.sample);
+		if (s && s.network !== network) setNetwork(s.network);
+	}, [hydrated, sampleApplied, search.sample, network, setNetwork]);
+
 	useEffect(() => {
 		const handed = take("signing");
 		if (handed) setA({ ...EMPTY_INPUT, text: handed });
@@ -78,8 +92,8 @@ function SigningTool() {
 		const s = sampleInput(id);
 		if (!s) return;
 		setA(s);
-		const net = id === "usdSend" ? "testnet" : "mainnet";
-		if (net !== network) setNetwork(net);
+		const net = SIGNING_SAMPLES.find((x) => x.id === id)?.network;
+		if (net && net !== network) setNetwork(net);
 	};
 
 	const parsedA = useMemo(() => parseInput(a), [a]);
