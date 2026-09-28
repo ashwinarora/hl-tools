@@ -18,6 +18,7 @@ import { Route as FaucetMinerIndexRouteImport } from './routes/faucet-miner/inde
 import { Route as ToolsWebsocketRouteImport } from './routes/tools/websocket'
 import { Route as ToolsTraceRouteImport } from './routes/tools/trace'
 import { Route as ToolsSigningRouteImport } from './routes/tools/signing'
+import { Route as ToolsRpcRouteImport } from './routes/tools/rpc'
 import { Route as ToolsOrdersRouteImport } from './routes/tools/orders'
 import { Route as ToolsCorewriterRouteImport } from './routes/tools/corewriter'
 import { Route as ToolsAssetsRouteImport } from './routes/tools/assets'
@@ -68,6 +69,11 @@ const ToolsSigningRoute = ToolsSigningRouteImport.update({
   path: '/tools/signing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolsRpcRoute = ToolsRpcRouteImport.update({
+  id: '/tools/rpc',
+  path: '/tools/rpc',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolsOrdersRoute = ToolsOrdersRouteImport.update({
   id: '/tools/orders',
   path: '/tools/orders',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
   '/tools/orders': typeof ToolsOrdersRoute
+  '/tools/rpc': typeof ToolsRpcRoute
   '/tools/signing': typeof ToolsSigningRoute
   '/tools/trace': typeof ToolsTraceRoute
   '/tools/websocket': typeof ToolsWebsocketRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
   '/tools/orders': typeof ToolsOrdersRoute
+  '/tools/rpc': typeof ToolsRpcRoute
   '/tools/signing': typeof ToolsSigningRoute
   '/tools/trace': typeof ToolsTraceRoute
   '/tools/websocket': typeof ToolsWebsocketRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
   '/tools/orders': typeof ToolsOrdersRoute
+  '/tools/rpc': typeof ToolsRpcRoute
   '/tools/signing': typeof ToolsSigningRoute
   '/tools/trace': typeof ToolsTraceRoute
   '/tools/websocket': typeof ToolsWebsocketRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/tools/assets'
     | '/tools/corewriter'
     | '/tools/orders'
+    | '/tools/rpc'
     | '/tools/signing'
     | '/tools/trace'
     | '/tools/websocket'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/tools/assets'
     | '/tools/corewriter'
     | '/tools/orders'
+    | '/tools/rpc'
     | '/tools/signing'
     | '/tools/trace'
     | '/tools/websocket'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/tools/assets'
     | '/tools/corewriter'
     | '/tools/orders'
+    | '/tools/rpc'
     | '/tools/signing'
     | '/tools/trace'
     | '/tools/websocket'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   ToolsAssetsRoute: typeof ToolsAssetsRoute
   ToolsCorewriterRoute: typeof ToolsCorewriterRoute
   ToolsOrdersRoute: typeof ToolsOrdersRoute
+  ToolsRpcRoute: typeof ToolsRpcRoute
   ToolsSigningRoute: typeof ToolsSigningRoute
   ToolsTraceRoute: typeof ToolsTraceRoute
   ToolsWebsocketRoute: typeof ToolsWebsocketRoute
@@ -260,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolsSigningRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tools/rpc': {
+      id: '/tools/rpc'
+      path: '/tools/rpc'
+      fullPath: '/tools/rpc'
+      preLoaderRoute: typeof ToolsRpcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tools/orders': {
       id: '/tools/orders'
       path: '/tools/orders'
@@ -313,6 +333,7 @@ const rootRouteChildren: RootRouteChildren = {
   ToolsAssetsRoute: ToolsAssetsRoute,
   ToolsCorewriterRoute: ToolsCorewriterRoute,
   ToolsOrdersRoute: ToolsOrdersRoute,
+  ToolsRpcRoute: ToolsRpcRoute,
   ToolsSigningRoute: ToolsSigningRoute,
   ToolsTraceRoute: ToolsTraceRoute,
   ToolsWebsocketRoute: ToolsWebsocketRoute,

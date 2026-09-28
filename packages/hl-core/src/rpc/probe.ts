@@ -143,7 +143,7 @@ export async function probeEndpoint(
 	const startedAt = Date.now();
 	const { display, sensitive } = redactUrl(url);
 	const checks: ProbeCheck[] = [];
-	const pacing = options.pacingMs ?? 150;
+	const pacing = options.pacingMs ?? 250;
 	const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 	const call = async (method: string, params: unknown[] = []) => {
 		if (options.signal?.aborted)
@@ -442,52 +442,7 @@ export async function probeEndpoint(
 			});
 	}
 
-	// 7. eth_getLogs range limit.
-	const ranges = [1n, 50n, 51n, 500n, 5000n];
-	const logsEx: RpcExchange[] = [];
-	const accepted: bigint[] = [];
-	const rejected: bigint[] = [];
-	for (const r of ranges) {
-		const to = head - 10n;
-		const from = to - r + 1n;
-		const ex = await call("eth_getLogs", [
-			{
-				fromBlock: toHexQuantity(from),
-				toBlock: toHexQuantity(to),
-				address: COREWRITER,
-			},
-		]);
-		logsEx.push(ex);
-		if (ex.failure) {
-			if (rateLimited(ex)) break;
-			rejected.push(r);
-		} else accepted.push(r);
-	}
-	const maxOk: bigint | null = accepted.at(-1) ?? null;
-	const doc = BigInt(DEFAULT_RPC_LIMITS.getLogsMaxBlocks);
-	add({
-		id: "getLogs",
-		title: "eth_getLogs range limit",
-		description: `CoreWriter logs over ranges of ${ranges.join(", ")} blocks.`,
-		status: accepted.length ? "supported" : "unsupported",
-		value:
-			maxOk !== null
-				? `≥ ${maxOk} blocks${rejected.length ? `, rejects ${rejected[0]}` : ""}`
-				: undefined,
-		detail: accepted.length
-			? `Accepted: ${accepted.join(", ")} blocks. ${rejected.length ? `Rejected: ${rejected.join(", ")}.` : "No tested range was rejected."}`
-			: `All ranges rejected: ${explainFailure(logsEx[0] as RpcExchange)}`,
-		flag:
-			maxOk !== null && network && maxOk > doc
-				? {
-						kind: "limit-differs",
-						message: `Accepts ranges above the documented ${doc}-block limit of the default RPC.`,
-					}
-				: undefined,
-		exchanges: logsEx,
-	});
-
-	// 8. HyperEVM-specific and misc methods.
+	// 7. HyperEVM-specific and misc methods.
 	const simple: [string, string, unknown[], string][] = [
 		[
 			"bigBlockGasPrice",
@@ -527,13 +482,21 @@ export async function probeEndpoint(
 					? "inconclusive"
 					: "unsupported"
 				: "supported",
-			value: ex.failure ? undefined : summarize(ex.result),
-			detail: ex.failure ? explainFailure(ex) : "Responded.",
+			value: ex.failure
+				? rateLimited(ex)
+					? "rate limited"
+					: undefined
+				: summarize(ex.result),
+			detail: ex.failure
+				? rateLimited(ex)
+					? `${explainFailure(ex)} — rate limited, so support is unknown. Wait a minute and re-run.`
+					: explainFailure(ex)
+				: "Responded.",
 			exchanges: [ex],
 		});
 	}
 
-	// 9. Batch requests.
+	// 8. Batch requests.
 	const batch = await rpcBatch(
 		url,
 		[
@@ -546,9 +509,72 @@ export async function probeEndpoint(
 		id: "batch",
 		title: "JSON-RPC batch",
 		description: "Two calls in one HTTP request.",
-		status: batch.ok ? "supported" : "unsupported",
+		status: batch.ok
+			? "supported"
+			: batch.limited
+				? "inconclusive"
+				: "unsupported",
+		value: batch.limited ? "rate limited" : undefined,
 		detail: batch.ok ? "Returned an array of results." : batch.detail,
 		exchanges: [batch.exchange],
+	});
+
+	// 9. eth_getLogs range limit — last: large ranges are expensive and can
+	// exhaust the rate limit, which then only truncates this check.
+	const ranges = [1n, 50n, 51n, 500n, 1000n, 5000n];
+	const logsEx: RpcExchange[] = [];
+	const accepted: bigint[] = [];
+	const rejected: bigint[] = [];
+	let limitedAt: bigint | null = null;
+	for (const r of ranges) {
+		const to = head - 10n;
+		const from = to - r + 1n;
+		const ex = await call("eth_getLogs", [
+			{
+				fromBlock: toHexQuantity(from),
+				toBlock: toHexQuantity(to),
+				address: COREWRITER,
+			},
+		]);
+		logsEx.push(ex);
+		if (ex.failure) {
+			if (rateLimited(ex)) {
+				limitedAt = r;
+				break;
+			}
+			rejected.push(r);
+		} else accepted.push(r);
+	}
+	const maxOk: bigint | null = accepted.at(-1) ?? null;
+	const doc = BigInt(DEFAULT_RPC_LIMITS.getLogsMaxBlocks);
+	add({
+		id: "getLogs",
+		title: "eth_getLogs range limit",
+		description: `CoreWriter logs over ranges of ${ranges.join(", ")} blocks.`,
+		status: accepted.length
+			? "supported"
+			: limitedAt !== null
+				? "inconclusive"
+				: "unsupported",
+		value:
+			maxOk !== null
+				? `≥ ${maxOk} blocks${rejected.length ? `, rejects ${rejected[0]}` : limitedAt !== null ? `; rate limited at ${limitedAt}` : ""}`
+				: limitedAt !== null
+					? "rate limited"
+					: undefined,
+		detail: accepted.length
+			? `Accepted: ${accepted.join(", ")} blocks. ${rejected.length ? `Rejected: ${rejected.join(", ")}.` : limitedAt !== null ? `Rate limited before testing ${limitedAt} blocks, so the upper bound is unknown.` : "No tested range was rejected."}`
+			: limitedAt !== null
+				? "Rate limited before any range could be tested."
+				: `All ranges rejected: ${explainFailure(logsEx[0] as RpcExchange)}`,
+		flag:
+			maxOk !== null && network && maxOk > doc
+				? {
+						kind: "limit-differs",
+						message: `Accepts ranges above the documented ${doc}-block limit of the default RPC.`,
+					}
+				: undefined,
+		exchanges: logsEx,
 	});
 
 	return finish(null, chainId);
@@ -566,7 +592,12 @@ async function rpcBatch(
 	url: string,
 	calls: [string, unknown[]][],
 	options: ProbeOptions,
-): Promise<{ ok: boolean; detail: string; exchange: RpcExchange }> {
+): Promise<{
+	ok: boolean;
+	limited?: boolean;
+	detail: string;
+	exchange: RpcExchange;
+}> {
 	const request = calls.map(([method, params], i) => ({
 		jsonrpc: "2.0" as const,
 		id: 1000 + i,
@@ -592,11 +623,21 @@ async function rpcBatch(
 			// keep text
 		}
 		const ok = Array.isArray(body) && body.length === calls.length;
+		const errObj = (Array.isArray(body) ? body[0] : body) as {
+			error?: { code?: number; message?: string };
+		} | null;
+		const limited =
+			res.status === 429 ||
+			errObj?.error?.code === -32005 ||
+			/rate/i.test(errObj?.error?.message ?? "");
 		return {
 			ok,
+			limited: !ok && limited,
 			detail: ok
 				? ""
-				: `Response was ${Array.isArray(body) ? `an array of ${body.length}` : typeof body === "object" ? "a single object" : "not JSON"} (HTTP ${res.status}).`,
+				: limited
+					? "Rate limited, so batch support is unknown. Wait a minute and re-run."
+					: `Response was ${Array.isArray(body) ? `an array of ${body.length}` : typeof body === "object" ? "a single object" : "not JSON"} (HTTP ${res.status}).`,
 			exchange: {
 				request: request[0] as never,
 				response: body,

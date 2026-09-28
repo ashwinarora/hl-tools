@@ -139,6 +139,36 @@ describe("probeEndpoint", () => {
 		});
 		expect(r.checks[0]?.flag?.kind).toBe("network-mismatch");
 	});
+	it("reports rate limiting instead of silently dropping results (browser bug 2026-09-28)", async () => {
+		const base = fakeRpc("archive", { logsMax: 5000 });
+		let logsCalls = 0;
+		const limited = (async (url: string, init: RequestInit) => {
+			const body = JSON.parse(String(init.body));
+			if (
+				!Array.isArray(body) &&
+				(body.method === "eth_feeHistory" ||
+					(body.method === "eth_getLogs" && ++logsCalls >= 5))
+			) {
+				return new Response(
+					JSON.stringify({
+						jsonrpc: "2.0",
+						id: body.id,
+						error: { code: -32005, message: "rate limited" },
+					}),
+					{ status: 200, headers: { "content-type": "application/json" } },
+				);
+			}
+			return base(url, init);
+		}) as typeof fetch;
+		const r = await probeEndpoint("https://busy.example/evm", {
+			fetch: limited,
+			pacingMs: 0,
+		});
+		const by = Object.fromEntries(r.checks.map((c) => [c.id, c]));
+		expect(by.getLogs?.value).toBe("≥ 500 blocks; rate limited at 1000");
+		expect(by.feeHistory?.status).toBe("inconclusive");
+		expect(by.feeHistory?.value).toBe("rate limited");
+	});
 	it("aborts with a CORS explanation when the browser can't reach the endpoint", async () => {
 		const failing = (async () => {
 			throw new TypeError("Failed to fetch");
