@@ -16,6 +16,7 @@
     "start": "node .output/server/index.mjs"
   },
   "dependencies": {
+    "@hl-tools/core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@nktkas/hyperliquid": "^0.32.1",
     "@rainbow-me/rainbowkit": "^2.2.10",
@@ -75,5 +76,8 @@
     "workerDirectory": [
       "public"
     ]
-  }
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }

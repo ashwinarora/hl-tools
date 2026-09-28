@@ -5,6 +5,7 @@
     "": {
       "name": "hl-tools",
       "dependencies": {
+        "@hl-tools/core": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.27.1",
         "@nktkas/hyperliquid": "^0.32.1",
         "@rainbow-me/rainbowkit": "^2.2.10",
@@ -52,6 +53,18 @@
         "typescript": "^5.7.2",
         "vite": "^7.3.1",
         "vite-tsconfig-paths": "^5.1.4",
+        "vitest": "^3.0.5",
+      },
+    },
+    "packages/hl-core": {
+      "name": "@hl-tools/core",
+      "version": "0.1.0",
+      "dependencies": {
+        "@nktkas/hyperliquid": "^0.32.1",
+        "viem": "2.x",
+      },
+      "devDependencies": {
+        "typescript": "^5.7.2",
         "vitest": "^3.0.5",
       },
     },
@@ -252,6 +265,8 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
     "@gemini-wallet/core": ["@gemini-wallet/core@0.3.2", "", { "dependencies": { "@metamask/rpc-errors": "7.0.2", "eventemitter3": "5.0.1" }, "peerDependencies": { "viem": ">=2.0.0" } }, "sha512-Z4aHi3ECFf5oWYWM3F1rW83GJfB9OvhBYPTmb5q+VyK3uvzvS48lwo+jwh2eOoCRWEuT/crpb9Vwp2QaS5JqgQ=="],
+
+    "@hl-tools/core": ["@hl-tools/core@workspace:packages/hl-core"],
 
     "@hono/node-server": ["@hono/node-server@1.19.11", "", { "peerDependencies": { "hono": "^4" } }, "sha512-dr8/3zEaB+p0D2n/IUrlPF1HZm586qgJNXK1a9fhg/PzdtkK7Ksd5l312tJX2yBuALqDYBlG20QEbayqPyxn+g=="],
 

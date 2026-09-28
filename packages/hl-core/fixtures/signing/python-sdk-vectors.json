@@ -1,0 +1,1438 @@
+{
+  "generator": "packages/hl-core/scripts/gen_signing_vectors.py",
+  "pythonSdkVersion": "0.24.0",
+  "signerAddress": "0x14791697260e4c9a71f18484c9f997b308e59325",
+  "vectors": [
+    {
+      "name": "dummy action",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "dummy",
+        "num": 100000000000
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065a564756d6d79a36e756dcf000000174876e800",
+      "connectionId": "0xf528daee6a0bd11407b483cfcd9a48c56884180b70ee86f124053e5fc1bf4d57",
+      "digest": "0xe0aabfac88a47d3e7028b6ba6a94b30c8afcfffac26cbce788cf362b1312eafa",
+      "signature": {
+        "r": "0x53749d5b30552aeb2fca34b530185976545bb22d0b3ce6f62e31be961a59298",
+        "s": "0x755c40ba9bf05223521753995abb2f73ab3229be8ec921f350cb447e384d8ed8",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "dummy action",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "dummy",
+        "num": 100000000000
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065a564756d6d79a36e756dcf000000174876e800",
+      "connectionId": "0xf528daee6a0bd11407b483cfcd9a48c56884180b70ee86f124053e5fc1bf4d57",
+      "digest": "0xc05ce2df9d9d18fab3570746cc27e1136a4020a28561171a24f60c2258989224",
+      "signature": {
+        "r": "0x542af61ef1f429707e3c76c5293c80d01f74ef853e34b76efffcb57e574f9510",
+        "s": "0x17b8b32f086e8cdede991f1e2c529f5dd5297cbe8128500e00cbaf766204a613",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "order ETH Gtc",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 1,
+            "b": true,
+            "p": "100",
+            "s": "100",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Gtc"
+              }
+            }
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739186a16101a162c3a170a3313030a173a3313030a172c2a17481a56c696d697481a3746966a3477463a867726f7570696e67a26e61",
+      "connectionId": "0x884f2c32bb6dbdd65f6033e32fb28c0cb6f5b345db0f6471fd3366d85c9252c1",
+      "digest": "0xa5cfed1f2d7948de30aecacc7fea3c5e05c1e759020e96239847879b906f801e",
+      "signature": {
+        "r": "0xd65369825a9df5d80099e513cce430311d7d26ddf477f5b3a33d2806b100d78e",
+        "s": "0x2b54116ff64054968aa237c20ca9ff68000f977c93289157748a3162b6ea940e",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "order ETH Gtc",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 1,
+            "b": true,
+            "p": "100",
+            "s": "100",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Gtc"
+              }
+            }
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739186a16101a162c3a170a3313030a173a3313030a172c2a17481a56c696d697481a3746966a3477463a867726f7570696e67a26e61",
+      "connectionId": "0x884f2c32bb6dbdd65f6033e32fb28c0cb6f5b345db0f6471fd3366d85c9252c1",
+      "digest": "0x606be2d25f68768f876dc04a2c3c86ceafd2d6a3c3cbb963454462d6734ebfa6",
+      "signature": {
+        "r": "0x82b2ba28e76b3d761093aaded1b1cdad4960b3af30212b343fb2e6cdfa4e3d54",
+        "s": "0x6b53878fc99d26047f4d7e8c90eb98955a109f44209163f52d8dc4278cbbd9f5",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "order with cloid",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 1,
+            "b": true,
+            "p": "100",
+            "s": "100",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Gtc"
+              }
+            },
+            "c": "0x00000000000000000000000000000001"
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739187a16101a162c3a170a3313030a173a3313030a172c2a17481a56c696d697481a3746966a3477463a163d92230783030303030303030303030303030303030303030303030303030303030303031a867726f7570696e67a26e61",
+      "connectionId": "0x0ba500cedd8f4ba6ded620a0b1cd04f124d9ba745e2e2893fcc763bcc1444af5",
+      "digest": "0x54a60f6e5107c3ebbd5600ce51c5c208b66c4acdaddf159d34f380f4985f4a3f",
+      "signature": {
+        "r": "0x41ae18e8239a56cacbc5dad94d45d0b747e5da11ad564077fcac71277a946e3",
+        "s": "0x3c61f667e747404fe7eea8f90ab0e76cc12ce60270438b2058324681a00116da",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "order with cloid",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 1,
+            "b": true,
+            "p": "100",
+            "s": "100",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Gtc"
+              }
+            },
+            "c": "0x00000000000000000000000000000001"
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739187a16101a162c3a170a3313030a173a3313030a172c2a17481a56c696d697481a3746966a3477463a163d92230783030303030303030303030303030303030303030303030303030303030303031a867726f7570696e67a26e61",
+      "connectionId": "0x0ba500cedd8f4ba6ded620a0b1cd04f124d9ba745e2e2893fcc763bcc1444af5",
+      "digest": "0x40529778f312dd898fe2e3b86a6f8ad38db2e4fb6e2d8012349b6021407c5328",
+      "signature": {
+        "r": "0xeba0664bed2676fc4e5a743bf89e5c7501aa6d870bdb9446e122c9466c5cd16d",
+        "s": "0x7f3e74825c9114bc59086f1eebea2928c190fdfbfde144827cb02b85bbe90988",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "dummy action with vault",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "dummy",
+        "num": 100000000000
+      },
+      "nonce": 0,
+      "vaultAddress": "0x1719884eb866cb12b2287399b15f7db5e7d775ea",
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065a564756d6d79a36e756dcf000000174876e800",
+      "connectionId": "0xde9e09a7a3da45cc694096d4bfdcd89bc1b892d05497c5ecc1f56c335945184c",
+      "digest": "0xfc2d745b97fc2d89fbca951d3665f56f14e8b2fa19d21dbd137ab115fcd5b4f1",
+      "signature": {
+        "r": "0x3c548db75e479f8012acf3000ca3a6b05606bc2ec0c29c50c515066a326239",
+        "s": "0x4d402be7396ce74fbba3795769cda45aec00dc3125a984f2a9f23177b190da2c",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "dummy action with vault",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "dummy",
+        "num": 100000000000
+      },
+      "nonce": 0,
+      "vaultAddress": "0x1719884eb866cb12b2287399b15f7db5e7d775ea",
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065a564756d6d79a36e756dcf000000174876e800",
+      "connectionId": "0xde9e09a7a3da45cc694096d4bfdcd89bc1b892d05497c5ecc1f56c335945184c",
+      "digest": "0xae91fb8ce73153ef15612f60dea044c325a342b9a8b0cbd0df8d3c8c66bef395",
+      "signature": {
+        "r": "0xe281d2fb5c6e25ca01601f878e4d69c965bb598b88fac58e475dd1f5e56c362b",
+        "s": "0x7ddad27e9a238d045c035bc606349d075d5c5cd00a6cd1da23ab5c39d4ef0f60",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "tpsl order",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 1,
+            "b": true,
+            "p": "100",
+            "s": "100",
+            "r": false,
+            "t": {
+              "trigger": {
+                "isMarket": true,
+                "triggerPx": "103",
+                "tpsl": "sl"
+              }
+            }
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739186a16101a162c3a170a3313030a173a3313030a172c2a17481a77472696767657283a869734d61726b6574c3a9747269676765725078a3313033a47470736ca2736ca867726f7570696e67a26e61",
+      "connectionId": "0x430a86fb9876e901920d931f5bb20c9d011f6389bd179f39a73c09e6219adcad",
+      "digest": "0x012ce9a26d8326e9de0e2e76709c076b94cec6b137031928ec7334c8f3c4028f",
+      "signature": {
+        "r": "0x98343f2b5ae8e26bb2587daad3863bc70d8792b09af1841b6fdd530a2065a3f9",
+        "s": "0x6b5bb6bb0633b710aa22b721dd9dee6d083646a5f8e581a20b545be6c1feb405",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "tpsl order",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 1,
+            "b": true,
+            "p": "100",
+            "s": "100",
+            "r": false,
+            "t": {
+              "trigger": {
+                "isMarket": true,
+                "triggerPx": "103",
+                "tpsl": "sl"
+              }
+            }
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739186a16101a162c3a170a3313030a173a3313030a172c2a17481a77472696767657283a869734d61726b6574c3a9747269676765725078a3313033a47470736ca2736ca867726f7570696e67a26e61",
+      "connectionId": "0x430a86fb9876e901920d931f5bb20c9d011f6389bd179f39a73c09e6219adcad",
+      "digest": "0x28f89042e8188e26f18fb164d9c705db8dcfd6a7e74e793d4917a318dd45f799",
+      "signature": {
+        "r": "0x971c554d917c44e0e1b6cc45d8f9404f32172a9d3b3566262347d0302896a2e4",
+        "s": "0x206257b104788f80450f8e786c329daa589aa0b32ba96948201ae556d5637eac",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "createSubAccount",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "createSubAccount",
+        "name": "example"
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065b06372656174655375624163636f756e74a46e616d65a76578616d706c65",
+      "connectionId": "0x9a7b5272baf65d28b0589bd50863a42ac35897553a6beb274e625b6faf7d6bb1",
+      "digest": "0x4423e9ec1018e626f959974e00f3715aa1d91ad58815ae8f11f8c7283e70973c",
+      "signature": {
+        "r": "0x51096fe3239421d16b671e192f574ae24ae14329099b6db28e479b86cdd6caa7",
+        "s": "0xb71f7d293af92d3772572afb8b102d167a7cef7473388286bc01f52a5c5b423",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "createSubAccount",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "createSubAccount",
+        "name": "example"
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065b06372656174655375624163636f756e74a46e616d65a76578616d706c65",
+      "connectionId": "0x9a7b5272baf65d28b0589bd50863a42ac35897553a6beb274e625b6faf7d6bb1",
+      "digest": "0x1467a6a95a4a57ea2b1cb7af29b52aa9922df169c5ee945f641d10ccee9d6c21",
+      "signature": {
+        "r": "0xa699e3ed5c2b89628c746d3298b5dc1cca604694c2c855da8bb8250ec8014a5b",
+        "s": "0x53f1b8153a301c72ecc655b1c315d64e1dcea3ee58921fd7507e35818fcc1584",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "subAccountTransfer",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "subAccountTransfer",
+        "subAccountUser": "0x1d9470d4b963f552e6f671a81619d395877bf409",
+        "isDeposit": true,
+        "usd": 10
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x84a474797065b27375624163636f756e745472616e73666572ae7375624163636f756e7455736572d92a307831643934373064346239363366353532653666363731613831363139643339353837376266343039a969734465706f736974c3a37573640a",
+      "connectionId": "0xd12f71eba9e3e792812bfdf01a6a92f4d4016bb0541e850b41f770891c0cc447",
+      "digest": "0x16d4f3be13b4dfbbe7015924637e6b2cbf8f63eb3c21538c3f5ad73a4b5022c4",
+      "signature": {
+        "r": "0x43592d7c6c7d816ece2e206f174be61249d651944932b13343f4d13f306ae602",
+        "s": "0x71a926cb5c9a7c01c3359ec4c4c34c16ff8107d610994d4de0e6430e5cc0f4c9",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "subAccountTransfer",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "subAccountTransfer",
+        "subAccountUser": "0x1d9470d4b963f552e6f671a81619d395877bf409",
+        "isDeposit": true,
+        "usd": 10
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x84a474797065b27375624163636f756e745472616e73666572ae7375624163636f756e7455736572d92a307831643934373064346239363366353532653666363731613831363139643339353837376266343039a969734465706f736974c3a37573640a",
+      "connectionId": "0xd12f71eba9e3e792812bfdf01a6a92f4d4016bb0541e850b41f770891c0cc447",
+      "digest": "0x16771266fdd99cee549b98d7e3aa30dcace521c450372abf12c3f804a3e96304",
+      "signature": {
+        "r": "0xe26574013395ad55ee2f4e0575310f003c5bb3351b5425482e2969fa51543927",
+        "s": "0xefb08999196366871f919fd0e138b3a7f30ee33e678df7cfaf203e25f0a4278",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "scheduleCancel (unset)",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "scheduleCancel"
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x81a474797065ae7363686564756c6543616e63656c",
+      "connectionId": "0xa2887a3147b6542306b61d311a056fd1753913d63cc904f30cba61712a98f4ae",
+      "digest": "0xb2501a589d58456ff3fcb01a4b5e82f70745856837c35dc88c9dc8eb0262cd4f",
+      "signature": {
+        "r": "0x6cdfb286702f5917e76cd9b3b8bf678fcc49aec194c02a73e6d4f16891195df9",
+        "s": "0x6557ac307fa05d25b8d61f21fb8a938e703b3d9bf575f6717ba21ec61261b2a0",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "scheduleCancel (unset)",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "scheduleCancel"
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x81a474797065ae7363686564756c6543616e63656c",
+      "connectionId": "0xa2887a3147b6542306b61d311a056fd1753913d63cc904f30cba61712a98f4ae",
+      "digest": "0x7ed5032a58c1a14bffb06942a63f6ea3cbc688352cb7cf0b76c26ec80c6a16ee",
+      "signature": {
+        "r": "0xc75bb195c3f6a4e06b7d395acc20bbb224f6d23ccff7c6a26d327304e6efaeed",
+        "s": "0x342f8ede109a29f2c0723bd5efb9e9100e3bbb493f8fb5164ee3d385908233df",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "scheduleCancel (time)",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "scheduleCancel",
+        "time": 123456789
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065ae7363686564756c6543616e63656ca474696d65ce075bcd15",
+      "connectionId": "0x4be18e445114437c5d1d9dd35a09f5601a3cc34ed4ac94a0281251b9bd8f6832",
+      "digest": "0x9393b4b91056b0153438d4e16380db88f41a0e56d8d9e508084748b19e475598",
+      "signature": {
+        "r": "0x609cb20c737945d070716dcc696ba030e9976fcf5edad87afa7d877493109d55",
+        "s": "0x16c685d63b5c7a04512d73f183b3d7a00da5406ff1f8aad33f8ae2163bab758b",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "scheduleCancel (time)",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "scheduleCancel",
+        "time": 123456789
+      },
+      "nonce": 0,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065ae7363686564756c6543616e63656ca474696d65ce075bcd15",
+      "connectionId": "0x4be18e445114437c5d1d9dd35a09f5601a3cc34ed4ac94a0281251b9bd8f6832",
+      "digest": "0x40daefeaa4ffca7e11aa99be35f1afc0a15ec5137f3240f778284d8bd6d42639",
+      "signature": {
+        "r": "0x4e4f2dbd4107c69783e251b7e1057d9f2b9d11cee213441ccfa2be63516dc5bc",
+        "s": "0x706c656b23428c8ba356d68db207e11139ede1670481a9e01ae2dfcdb0e1a678",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "phantom agent production order",
+      "source": "python-sdk tests",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 4,
+            "b": true,
+            "p": "1670.1",
+            "s": "0.0147",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Ioc"
+              }
+            }
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 1677777606040,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739186a16104a162c3a170a6313637302e31a173a6302e30313437a172c2a17481a56c696d697481a3746966a3496f63a867726f7570696e67a26e61",
+      "connectionId": "0x0fcbeda5ae3c4950a548021552a4fea2226858c4453571bf3f24ba017eac2908",
+      "digest": "0xbe5eb0697b77c2acfeaa07a3d4913ae5d06489c63bfd143c5d3d66540a196c43",
+      "signature": {
+        "r": "0xe302c107c0048633293299b066317048f69f685aa4f536fe56c050efaf04996c",
+        "s": "0x70e01d4d26e3d724fb8f8ab54b3f2544a37ea1b092f83532349405274f3f3962",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "usdSend testnet",
+      "source": "python-sdk tests",
+      "family": "user-signed",
+      "network": "testnet",
+      "action": {
+        "type": "usdSend",
+        "destination": "0x5e9ee1089755c3435139848e47e6635505d5a13a",
+        "amount": "1",
+        "time": 1687816341423,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Testnet"
+      },
+      "nonce": 1687816341423,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:UsdSend",
+      "digest": "0xcacf7585cc49ca60c6c5fb3001e226c0ca03c46252c893eea574c78907b7cebe",
+      "signature": {
+        "r": "0x637b37dd731507cdd24f46532ca8ba6eec616952c56218baeff04144e4a77073",
+        "s": "0x11a6a24900e6e314136d2592e2f8d502cd89b7c15b198e1bee043c9589f9fad7",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "withdraw3 testnet",
+      "source": "python-sdk tests",
+      "family": "user-signed",
+      "network": "testnet",
+      "action": {
+        "type": "withdraw3",
+        "destination": "0x5e9ee1089755c3435139848e47e6635505d5a13a",
+        "amount": "1",
+        "time": 1687816341423,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Testnet"
+      },
+      "nonce": 1687816341423,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:Withdraw",
+      "digest": "0x8080d06f566813165cec60d85300445133b3439e9c92e10b93ed510372608899",
+      "signature": {
+        "r": "0x8363524c799e90ce9bc41022f7c39b4e9bdba786e5f9c72b20e43e1462c37cf9",
+        "s": "0x58b1411a775938b83e29182e8ef74975f9054c8e97ebf5ec2dc8d51bfc893881",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "cancel",
+      "source": "generated",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "cancel",
+        "cancels": [
+          {
+            "a": 4,
+            "o": 123456789
+          }
+        ]
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065a663616e63656ca763616e63656c739182a16104a16fce075bcd15",
+      "connectionId": "0xf9ec0e3966141f4debbb7862b6eae7c38fdd489813e3a65498057e20965b0a26",
+      "digest": "0x9bd558bc3a921f694c42108f301e8421bed3fb097a603ca4f4f3cf717593b0d6",
+      "signature": {
+        "r": "0x570914140dbe88bd4ef6bfde33be7ff9d48c1b1dc0ad7b0537d1f5e1af83ca23",
+        "s": "0x2beaa4f441aec2022394f5ac39a308663830dd44b021ee9bcebe7e463ad7641b",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "cancel",
+      "source": "generated",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "cancel",
+        "cancels": [
+          {
+            "a": 4,
+            "o": 123456789
+          }
+        ]
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065a663616e63656ca763616e63656c739182a16104a16fce075bcd15",
+      "connectionId": "0xf9ec0e3966141f4debbb7862b6eae7c38fdd489813e3a65498057e20965b0a26",
+      "digest": "0x7529f3d5593ac028a22ecfbe9d05d1bc5b04a3538c74ff31240c8069d24592f3",
+      "signature": {
+        "r": "0x9e27580a0993a1aa1961aa8cec186052b2e3c6cc5d54201d2dcb5190a8c5f6de",
+        "s": "0x3f7930c404cbdc174bb23b589bc342dabe973a2052980fbbb43eac047ff23f62",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "cancelByCloid",
+      "source": "generated",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "cancelByCloid",
+        "cancels": [
+          {
+            "asset": 10107,
+            "cloid": "0x0000000000000000000000000000abcd"
+          }
+        ]
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065ad63616e63656c4279436c6f6964a763616e63656c739182a56173736574cd277ba5636c6f6964d92230783030303030303030303030303030303030303030303030303030303061626364",
+      "connectionId": "0x51c3d2db78c7719cd8a20ac728b56e74d0be22958ad3d5b35ffde1fd1d47580f",
+      "digest": "0x16a9b61438e0a3b06c58086130d6cf6bbfb7db0c8c9d8ee60d19fceea30087b3",
+      "signature": {
+        "r": "0x922b329fb5c0317a386cc47c5d3f32de0b574ba773f5c1e38fa026575a7e77e5",
+        "s": "0x75681e6a23dc487eac8b16b58b7f245ca44d45c32d3d54b0f0698f383099f254",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "cancelByCloid",
+      "source": "generated",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "cancelByCloid",
+        "cancels": [
+          {
+            "asset": 10107,
+            "cloid": "0x0000000000000000000000000000abcd"
+          }
+        ]
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x82a474797065ad63616e63656c4279436c6f6964a763616e63656c739182a56173736574cd277ba5636c6f6964d92230783030303030303030303030303030303030303030303030303030303061626364",
+      "connectionId": "0x51c3d2db78c7719cd8a20ac728b56e74d0be22958ad3d5b35ffde1fd1d47580f",
+      "digest": "0xcd9cfffe009d34f4b999cf9f43b7c1c865743bb595ea478b6f875411e21a7234",
+      "signature": {
+        "r": "0xc4e47c674662008d1de568c67a2eb41c6505e24fcf478023e0039887fb38d1b9",
+        "s": "0x6e6e93e078fc608cf6fc3edb460d6c1e577158434761ecb9ce71571b18741cfa",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "bracket order with builder + expiresAfter",
+      "source": "generated",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 0,
+            "b": true,
+            "p": "60000",
+            "s": "0.001",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Gtc"
+              }
+            }
+          },
+          {
+            "a": 0,
+            "b": false,
+            "p": "66000",
+            "s": "0.001",
+            "r": true,
+            "t": {
+              "trigger": {
+                "isMarket": true,
+                "triggerPx": "66000",
+                "tpsl": "tp"
+              }
+            }
+          },
+          {
+            "a": 0,
+            "b": false,
+            "p": "57000",
+            "s": "0.001",
+            "r": true,
+            "t": {
+              "trigger": {
+                "isMarket": true,
+                "triggerPx": "57000",
+                "tpsl": "sl"
+              }
+            }
+          }
+        ],
+        "grouping": "normalTpsl",
+        "builder": {
+          "b": "0x8c967e73e7b15087c42a10d344cff4c96d877f1d",
+          "f": 10
+        }
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": 1790000060000,
+      "msgpackHex": "0x84a474797065a56f72646572a66f72646572739386a16100a162c3a170a53630303030a173a5302e303031a172c2a17481a56c696d697481a3746966a347746386a16100a162c2a170a53636303030a173a5302e303031a172c3a17481a77472696767657283a869734d61726b6574c3a9747269676765725078a53636303030a47470736ca2747086a16100a162c2a170a53537303030a173a5302e303031a172c3a17481a77472696767657283a869734d61726b6574c3a9747269676765725078a53537303030a47470736ca2736ca867726f7570696e67aa6e6f726d616c5470736ca76275696c64657282a162d92a307838633936376537336537623135303837633432613130643334346366663463393664383737663164a1660a",
+      "connectionId": "0xcadfa9bdd3e4ac7d9c1e96bcc30d6fd922e0f6fa55c6878a3eacebaeb6182945",
+      "digest": "0x95dfaa6f9040e26815c634f0d8bf618f09360ebf3b29253cc31fbfa72cf446a8",
+      "signature": {
+        "r": "0xfeef5e9ba957b3e59da037da3b87832674267048bbe2f9d89a63e5b1d4b1218f",
+        "s": "0x39a885515818a1b37df606c1cb710bb192dffe332418ede73a5627bd3b3053b6",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "bracket order with builder + expiresAfter",
+      "source": "generated",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 0,
+            "b": true,
+            "p": "60000",
+            "s": "0.001",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Gtc"
+              }
+            }
+          },
+          {
+            "a": 0,
+            "b": false,
+            "p": "66000",
+            "s": "0.001",
+            "r": true,
+            "t": {
+              "trigger": {
+                "isMarket": true,
+                "triggerPx": "66000",
+                "tpsl": "tp"
+              }
+            }
+          },
+          {
+            "a": 0,
+            "b": false,
+            "p": "57000",
+            "s": "0.001",
+            "r": true,
+            "t": {
+              "trigger": {
+                "isMarket": true,
+                "triggerPx": "57000",
+                "tpsl": "sl"
+              }
+            }
+          }
+        ],
+        "grouping": "normalTpsl",
+        "builder": {
+          "b": "0x8c967e73e7b15087c42a10d344cff4c96d877f1d",
+          "f": 10
+        }
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": 1790000060000,
+      "msgpackHex": "0x84a474797065a56f72646572a66f72646572739386a16100a162c3a170a53630303030a173a5302e303031a172c2a17481a56c696d697481a3746966a347746386a16100a162c2a170a53636303030a173a5302e303031a172c3a17481a77472696767657283a869734d61726b6574c3a9747269676765725078a53636303030a47470736ca2747086a16100a162c2a170a53537303030a173a5302e303031a172c3a17481a77472696767657283a869734d61726b6574c3a9747269676765725078a53537303030a47470736ca2736ca867726f7570696e67aa6e6f726d616c5470736ca76275696c64657282a162d92a307838633936376537336537623135303837633432613130643334346366663463393664383737663164a1660a",
+      "connectionId": "0xcadfa9bdd3e4ac7d9c1e96bcc30d6fd922e0f6fa55c6878a3eacebaeb6182945",
+      "digest": "0x5c0e1a5d52afe1c65f049a74edd6e0994dfce4596003b1245779144724442be2",
+      "signature": {
+        "r": "0xaba69f9e55b128602c2a97d09e82c91a23b7db7b5805f3d1eb2de9f7c448c583",
+        "s": "0xed49237a85b3961bf3ae3cbcb831053920b4c7ada97dc679b392c9fe3bd4cb4",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "spot order HYPE/USDC post-only",
+      "source": "generated",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 10107,
+            "b": false,
+            "p": "42.123",
+            "s": "1.5",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Alo"
+              }
+            }
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739186a161cd277ba162c2a170a634322e313233a173a3312e35a172c2a17481a56c696d697481a3746966a3416c6fa867726f7570696e67a26e61",
+      "connectionId": "0x10b03b60a41840327254d27a2b823c536551d15682f1cc0527cb466495dc088d",
+      "digest": "0x7b9726c3aa832fac7fddcc1a0492e89382e183b7e8c71af48e10bbd94b676cd4",
+      "signature": {
+        "r": "0x5d5855c48196a5d1e3c39cd371b571ee039efdb9116ca2380c7d90b1f37ea44c",
+        "s": "0x3cca1633d54417dfedcc79cc5c1e6a7194cbfee3e7a17a7250d6a0e939a24ab",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "spot order HYPE/USDC post-only",
+      "source": "generated",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 10107,
+            "b": false,
+            "p": "42.123",
+            "s": "1.5",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Alo"
+              }
+            }
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739186a161cd277ba162c2a170a634322e313233a173a3312e35a172c2a17481a56c696d697481a3746966a3416c6fa867726f7570696e67a26e61",
+      "connectionId": "0x10b03b60a41840327254d27a2b823c536551d15682f1cc0527cb466495dc088d",
+      "digest": "0xa1b8cd52852ff0005cb16ddc7c38e2ada35650320819c996789598acdedb978d",
+      "signature": {
+        "r": "0x9336c886ee3c8614c4e91aaaea81af2ae82b8f0fc7d9e12bb2c4dc6709a0c95c",
+        "s": "0x1b786651493e7c5398530307d19f09191013edf154f892355c8c93a1ab85d7d2",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "updateLeverage",
+      "source": "generated",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "updateLeverage",
+        "asset": 0,
+        "isCross": true,
+        "leverage": 10
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x84a474797065ae7570646174654c65766572616765a5617373657400a7697343726f7373c3a86c657665726167650a",
+      "connectionId": "0x807fc9898d84ae6b6af036ed0e4dd6db9c80d69dc52500b9cb5206c42ed60de7",
+      "digest": "0xe0207d76d02f1064abc9f50a15cb5f6e0f9a91d45b291d192c15e9af3ce9d8fe",
+      "signature": {
+        "r": "0x1e60e147d8e7f00674eeea7edd71c46379a62bac15b727e95df546a8f7a22551",
+        "s": "0x3d1a333c7b338f73a914a2534ef50d33751d07ad9489419530866aa86513ed42",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "updateLeverage",
+      "source": "generated",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "updateLeverage",
+        "asset": 0,
+        "isCross": true,
+        "leverage": 10
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x84a474797065ae7570646174654c65766572616765a5617373657400a7697343726f7373c3a86c657665726167650a",
+      "connectionId": "0x807fc9898d84ae6b6af036ed0e4dd6db9c80d69dc52500b9cb5206c42ed60de7",
+      "digest": "0x2977e67f2ce46e2e32ddee712c7bcb71a94b017c3fdcf24a50d53fe63cdba15b",
+      "signature": {
+        "r": "0xb608967ef8002fd20c263f4b4911657297397518c0108975ff0d43315589bdfa",
+        "s": "0x64d7bda465cddee30108f2bc2c9bd9f87f3c5637271374f9e2f351b706dc83f1",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "modify",
+      "source": "generated",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "modify",
+        "oid": 12345,
+        "order": {
+          "a": 1,
+          "b": true,
+          "p": "2500.5",
+          "s": "0.5",
+          "r": false,
+          "t": {
+            "limit": {
+              "tif": "Gtc"
+            }
+          }
+        }
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a66d6f64696679a36f6964cd3039a56f7264657286a16101a162c3a170a6323530302e35a173a3302e35a172c2a17481a56c696d697481a3746966a3477463",
+      "connectionId": "0x5bb4083fe1b7040b80609a553c534231425711dbc143567e4eb76f3e6dcefd22",
+      "digest": "0xd5600295e2798a2cab4d5a5b09cafcfcd7a08bf36dc4598e7dc3e0608509a65d",
+      "signature": {
+        "r": "0xc8784230dbb0ec5286f1a3cf649baaca787ad5bb89b0feb40797cd712bdfced3",
+        "s": "0xa94a6b2ceccd882e75df20b8d865b23001a41c31fdefad80616f0e22ece99dc",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "modify",
+      "source": "generated",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "modify",
+        "oid": 12345,
+        "order": {
+          "a": 1,
+          "b": true,
+          "p": "2500.5",
+          "s": "0.5",
+          "r": false,
+          "t": {
+            "limit": {
+              "tif": "Gtc"
+            }
+          }
+        }
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a66d6f64696679a36f6964cd3039a56f7264657286a16101a162c3a170a6323530302e35a173a3302e35a172c2a17481a56c696d697481a3746966a3477463",
+      "connectionId": "0x5bb4083fe1b7040b80609a553c534231425711dbc143567e4eb76f3e6dcefd22",
+      "digest": "0x16f1b1d2d18d3b959b50b0b3b377689c2cb03636628d2000e603a50dc3d3144b",
+      "signature": {
+        "r": "0x14fa9e8e352674b6922e7d2c19561df1b361745a6ad7c3dafd08ec556c87a239",
+        "s": "0x28ea9479c3837da6785fe93a0bb83e6c7214e093dd6147562a922e7a7a9575ec",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "vault order",
+      "source": "generated",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 1,
+            "b": true,
+            "p": "100",
+            "s": "100",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Gtc"
+              }
+            }
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": "0xdfc24b077bc1425ad1dea75bcb6f8158e10df303",
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739186a16101a162c3a170a3313030a173a3313030a172c2a17481a56c696d697481a3746966a3477463a867726f7570696e67a26e61",
+      "connectionId": "0x46c4674b31f1b7d0db0fbae4c00e916cec8d06e8e5afcaf7f18d616d119de284",
+      "digest": "0x60d08d957fd929bec695b280c0d7cf3130d3d10da6d5cd6ffbff55cd7b15df43",
+      "signature": {
+        "r": "0xb7703b572d26231df31c173687d86fc089138274370691c6da605fa8b66f2a2",
+        "s": "0x168474272361e3704acd77b9108e5c1b524e855d6e8cba944e22ff0274a2bc98",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "vault order",
+      "source": "generated",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "order",
+        "orders": [
+          {
+            "a": 1,
+            "b": true,
+            "p": "100",
+            "s": "100",
+            "r": false,
+            "t": {
+              "limit": {
+                "tif": "Gtc"
+              }
+            }
+          }
+        ],
+        "grouping": "na"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": "0xdfc24b077bc1425ad1dea75bcb6f8158e10df303",
+      "expiresAfter": null,
+      "msgpackHex": "0x83a474797065a56f72646572a66f72646572739186a16101a162c3a170a3313030a173a3313030a172c2a17481a56c696d697481a3746966a3477463a867726f7570696e67a26e61",
+      "connectionId": "0x46c4674b31f1b7d0db0fbae4c00e916cec8d06e8e5afcaf7f18d616d119de284",
+      "digest": "0xaedcc0dc56e6a4ff575e9a0943c6707673de77de412c87208c5dc30ee2c9b288",
+      "signature": {
+        "r": "0xf5a6df76fba92559e78b3bbb01db4031b79cdaf128b4d17d4adb6c0a8892c31",
+        "s": "0xbcb05524dca1956646154d181a066153e8bfa7f0754193dd518fb13fd9ba1e8",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "negative int + big int",
+      "source": "generated",
+      "family": "l1",
+      "network": "mainnet",
+      "action": {
+        "type": "dummy",
+        "neg": -5,
+        "neg2": -300,
+        "big": 18446744073709551615
+      },
+      "nonce": 7,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x84a474797065a564756d6d79a36e6567fba46e656732d1fed4a3626967cfffffffffffffffff",
+      "connectionId": "0x55106e71e500299ae5439f71ac282b05867f1b95f03004c75b53a10759bfe95b",
+      "digest": "0x6f7fbd6a4cb1aac21fd90224d4421d2ed74d44d222f8b25c84834d8733ab134e",
+      "signature": {
+        "r": "0x83802fe68aaf8b9b8a5a088237645d80a9dce5f61677c244a9189917c91657da",
+        "s": "0x4f56eedde7be2bdc8dfca0a95e5d974a90525d65f6c7151019bb2e3fb14d37e7",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "negative int + big int",
+      "source": "generated",
+      "family": "l1",
+      "network": "testnet",
+      "action": {
+        "type": "dummy",
+        "neg": -5,
+        "neg2": -300,
+        "big": 18446744073709551615
+      },
+      "nonce": 7,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "msgpackHex": "0x84a474797065a564756d6d79a36e6567fba46e656732d1fed4a3626967cfffffffffffffffff",
+      "connectionId": "0x55106e71e500299ae5439f71ac282b05867f1b95f03004c75b53a10759bfe95b",
+      "digest": "0xde5186963d02289ed6c5828685866d4e102c4309bbd6c83d22df3dde5503ff56",
+      "signature": {
+        "r": "0x6e09b98ea8ae9bb8d7627b1875ccd1798d3a684da194c8abf5512947df6f3da0",
+        "s": "0x45b3908e8c28b440b3c11d6f00dfc6d253086a4e313776589fac6b4647c35aff",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "usdSend",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "mainnet",
+      "action": {
+        "type": "usdSend",
+        "destination": "0x5e9ee1089755c3435139848e47e6635505d5a13a",
+        "amount": "12.5",
+        "time": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Mainnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:UsdSend",
+      "digest": "0x225c5d5f69072627589f524022388caaa6bfb18f22ac70e54517065cb38bffc5",
+      "signature": {
+        "r": "0xe167fee46f8fcf655071b8592ecf867ba30ecc55296c4ddca74f1ec4e9f73b41",
+        "s": "0x17e410123e85e1825678e47687ebea335588dc22f7aa105757c245ac48829463",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "approveAgent named",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "mainnet",
+      "action": {
+        "type": "approveAgent",
+        "agentAddress": "0x9f5c1a0e1b40e1e7a8ab4f4c8b48d6c6b1ee3a0b",
+        "agentName": "bot-1",
+        "nonce": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Mainnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:ApproveAgent",
+      "digest": "0xe0b14373bfaa1cafe836c1b4749e657265f406ed63ffcc98ec073a52619b79e2",
+      "signature": {
+        "r": "0xb65bf1a641f94cef1580b464908c4e91f2b3257c969b76bf704664ae3b4ee85b",
+        "s": "0x84f776ad9b67a7f368f9b70912e652caaf3eea6fec044acfd637dfe95c1b0dc",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "approveBuilderFee",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "mainnet",
+      "action": {
+        "type": "approveBuilderFee",
+        "maxFeeRate": "0.01%",
+        "builder": "0x8c967e73e7b15087c42a10d344cff4c96d877f1d",
+        "nonce": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Mainnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:ApproveBuilderFee",
+      "digest": "0xaa95165b6e5fd2681c1a92e9dd4ad4627d4b0c628d9cb18a7d2318d3caabfbcb",
+      "signature": {
+        "r": "0xcbcd55ef54d6aadf0fc94b00c67343dd7b701f13072aab7c9b7f9ab5cc3f6cc7",
+        "s": "0x7a2bf7ba3545699086b4a83a64aea99c2dcc5cfe51293ad4673413bea36e6b90",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "usdClassTransfer",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "mainnet",
+      "action": {
+        "type": "usdClassTransfer",
+        "amount": "10",
+        "toPerp": true,
+        "nonce": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Mainnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:UsdClassTransfer",
+      "digest": "0x18a2aec7dd839020493f869934afda2c07baece047d92cffc52e363ca1e6807f",
+      "signature": {
+        "r": "0x6be6039e613ecfa83fb294dd0a1ca495a862782445d3d0551912bb66046e0f40",
+        "s": "0xc6352218c7e6b9d8cdbac8b0bf6c0816832137cb7bdfb0a5498027e6f1ee0d0",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "usdSend",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "testnet",
+      "action": {
+        "type": "usdSend",
+        "destination": "0x5e9ee1089755c3435139848e47e6635505d5a13a",
+        "amount": "12.5",
+        "time": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Testnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:UsdSend",
+      "digest": "0xf71563d4d2a3295b2ba19cda9083a1b345425d3352aeaf37528ea7ca26d8d000",
+      "signature": {
+        "r": "0x33affd74292e2a7d1e8e6d1644d01179e9d817569ec7160141d2bd2e2fd80d58",
+        "s": "0x335881f8621d14f6f6d44e5329e08f047606bed63681dc69193bcd1b28a6ef56",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "approveAgent named",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "testnet",
+      "action": {
+        "type": "approveAgent",
+        "agentAddress": "0x9f5c1a0e1b40e1e7a8ab4f4c8b48d6c6b1ee3a0b",
+        "agentName": "bot-1",
+        "nonce": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Testnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:ApproveAgent",
+      "digest": "0xc2ce41f62d982fd60a7a493b77bdfaf842d6e93c260281a2201f048b4bc4bf3f",
+      "signature": {
+        "r": "0x595b011bc68363dc47721a0eb4771dd5db1c7c6986093778fb099cdd88f3c25",
+        "s": "0x375cf0224aa4ba097031497966995d4176c83f848fc7396c0adda4f0da49dd50",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "approveBuilderFee",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "testnet",
+      "action": {
+        "type": "approveBuilderFee",
+        "maxFeeRate": "0.01%",
+        "builder": "0x8c967e73e7b15087c42a10d344cff4c96d877f1d",
+        "nonce": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Testnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:ApproveBuilderFee",
+      "digest": "0xa499b34a11a345111e86d1dff25eecc76732fd07e51663a5e13e89f6ad7afad8",
+      "signature": {
+        "r": "0x9e634663c15e246fb24d6adc38b9b3d3dc251eb19c26c3f72a1642a07b4756bd",
+        "s": "0x41414436672b855cfefc4872335e2c569b24945db4fc67628e6caa1837ae3172",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "usdClassTransfer",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "testnet",
+      "action": {
+        "type": "usdClassTransfer",
+        "amount": "10",
+        "toPerp": true,
+        "nonce": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Testnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:UsdClassTransfer",
+      "digest": "0x375fceec86fe503770bc94b5abed343ecb55f3f36e914a895bdb3db115addd0c",
+      "signature": {
+        "r": "0x843b8ca444a30232161a8b4c15e5f39220df7da01041be45c0d9662d52cb36c4",
+        "s": "0x62fce05e5cd0bfa4e5328192f64faadc6831567858debc94aa1762645d8702c4",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "approveAgent unnamed",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "mainnet",
+      "action": {
+        "type": "approveAgent",
+        "agentAddress": "0x9f5c1a0e1b40e1e7a8ab4f4c8b48d6c6b1ee3a0b",
+        "nonce": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Mainnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:ApproveAgent",
+      "digest": "0x598d57e43ee9f2704845e10261cb14c6159eab10a264923974b9d71468299536",
+      "signature": {
+        "r": "0x1ed7ad387266fa49bc157b53d50d874286bfcbb07d4c5b71a36ffb32d6bd1bac",
+        "s": "0x13d17c5ccc10e10940ba748af4dd65c547c4e079f0c46b9adad1f985c0da540d",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "sendAsset",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "mainnet",
+      "action": {
+        "type": "sendAsset",
+        "destination": "0x5e9ee1089755c3435139848e47e6635505d5a13a",
+        "sourceDex": "",
+        "destinationDex": "spot",
+        "token": "USDC:0x6d1e7cde53ba9467b783cb7c530ce054",
+        "amount": "5",
+        "fromSubAccount": "",
+        "nonce": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Mainnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:SendAsset",
+      "digest": "0x7f61015f58a87beeac11d3c401b95493de4f02b3989a42b1083ca975022864ec",
+      "signature": {
+        "r": "0x4b560a3c69c0f82ad84e6cea2770cbf0c266aed7879f5008e3e3b79b205c6e0e",
+        "s": "0x913ad7f183e639cabee69d070440e991f63ba16df84219b4b2a308ffe4ff194",
+        "v": 28
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "spotSend",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "mainnet",
+      "action": {
+        "type": "spotSend",
+        "destination": "0x5e9ee1089755c3435139848e47e6635505d5a13a",
+        "token": "PURR:0xc1fb593aeffbeb02f85e0308e9956a90",
+        "amount": "100",
+        "time": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Mainnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:SpotSend",
+      "digest": "0x4bfb47b9e02cf98fd272da81c06ce3244ffa974f08c21e27dc68cb28468b4707",
+      "signature": {
+        "r": "0x9aa9595f83ce738ed18ebf0f457f0c2af71697ffa85de2e98c08d89a3c0fbafa",
+        "s": "0xf83580d9fdcba4477c9ad7d6c5c40e9829e63a2eb666a36eb46ad219f4b7377",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    },
+    {
+      "name": "tokenDelegate",
+      "source": "generated",
+      "family": "user-signed",
+      "network": "mainnet",
+      "action": {
+        "type": "tokenDelegate",
+        "validator": "0x5ac99df645f3414876c816caa18b2d234024b487",
+        "wei": 100000000,
+        "isUndelegate": false,
+        "nonce": 1790000000000,
+        "signatureChainId": "0x66eee",
+        "hyperliquidChain": "Mainnet"
+      },
+      "nonce": 1790000000000,
+      "vaultAddress": null,
+      "expiresAfter": null,
+      "primaryType": "HyperliquidTransaction:TokenDelegate",
+      "digest": "0xdfbd596a8de771e9dea26fb3ef1e0ad789d675bcd31cef2d570f4e8219703b77",
+      "signature": {
+        "r": "0x181053d3eeae2a0f1f7b57b74bc50f83f00eb8431a3995d60e486cf1d9e90522",
+        "s": "0x4db5273d1416fb308684027869f66f915b4207cedcbfff92d9a1c96e3bfb14e8",
+        "v": 27
+      },
+      "signer": "0x14791697260e4c9a71f18484c9f997b308e59325"
+    }
+  ]
+}
