@@ -96,6 +96,18 @@ Non-obvious choices made while turning hl-tools into a developer tooling hub, an
 
 **The faucet miner is a regular directory card plus a header link.** It was in a separate "Also in the hub" section to mark it as the one tool that signs; the owner found that read as second-class. It now sits in the main grid with its "Signs & sends" badge and has a direct header link.
 
+**Similar names are suggestions, not candidates: they never make a query ambiguous.** After substring matching was added, "HYPE" reported 16 ambiguous identities, 9 of which were KHYPE, STHYPE and friends; the count alarmed more than it informed. The resolver now exposes `isSimilarMatch` and computes `ambiguous` over direct matches only. The UI lists direct matches first, then a "Similar names" section, and the market picker does the same; "BTC" is still ambiguous (the perp plus HIP-3 BTC markets), "ETH" plus its six look-alikes is not. A query with no direct match says so instead of pretending the look-alikes are matches.
+
+**"Use mid" writes a valid price, rounded towards the resting side.** Mids carry more significant figures than an order may (84654.5 on BTC), so inserting the mid verbatim produced an immediately blocked payload. The shortcut rounds to the market's tick, down for buys and up for sells, so the inserted price never crosses the mid just by rounding. This is the one place the composer rounds, and it is a button the user presses, not a typed value.
+
+**The signing verdict never promises a digest that doesn't exist.** A bare action without a nonce showed "the digest below is what a wallet would sign" above an empty pipeline. The verdict now says what is missing, and the nonce field offers "Use now" (the current millisecond timestamp, as a client would send) so a pasted action can be walked through without inventing a number.
+
+**Modes and public identifiers live in the URL; payloads never do.** CoreWriter and Orders keep their tab in `?tab=`, and a trace keeps its transaction hash in `?tx=`, so a reload or a shared link lands on the same view. Pasted bytes, responses and signatures still travel only through the in-memory handoff or an explicit Share link.
+
+**Index fields in the CoreWriter builder are searchable by name**, with the same resolver-backed search the precompile panel uses; it moved to `components/hub/IndexSearch` so both share one implementation.
+
+**Unknown paths get a real page.** TanStack's default not-found component rendered a bare "Not Found" inside the shell; the hub now renders its own page listing every tool.
+
 ## Testing
 
 **Browser testing uses the Chrome DevTools MCP.** Viewport emulation (`emulate`) gives exact desktop (1440×900) and mobile (375×812, DPR 2) sizes and light/dark `prefers-color-scheme`. The faucet miner is exercised with the Rabby wallet in that browser; mining itself is only run under the existing MSW mock harness so no real funds move.

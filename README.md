@@ -78,7 +78,7 @@ VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
 | `bun --bun run dev` | Dev server on port 3000 |
 | `bun --bun run build` | Production build into `.output/` |
 | `bun --bun run start` | Serve the production build (`node .output/server/index.mjs`) |
-| `bun --bun run test` | Vitest: protocol core (253 tests) |
+| `bun --bun run test` | Vitest: protocol core (259 tests) |
 | `bun --bun run check` | Biome lint + format check |
 
 Dev-only helpers: `?devtools=1` shows the TanStack devtools, and `/faucet-miner?mock=1` runs the faucet miner against an MSW mock of the Hyperliquid API, so no funds move.

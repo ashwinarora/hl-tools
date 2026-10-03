@@ -205,11 +205,33 @@ Changes from the first round of user feedback, each verified in the browser (des
 | same | Query live | "Decoded output" table with field / raw / human headers: markPx 892322 → 89.2322 (÷ 10^(6 − 2)); raw JSON-RPC collapsed by default | ✅ |
 | same | Spot balance → "Find token by name" `usdc`, `zzzz`, `hype` | "USDC → 0"; "No token matches “zzzz” on mainnet."; HYPE fills `150` | ✅ |
 
+## UX review round (2026-10-04)
+
+A full pass over every non-faucet page as a Hyperliquid developer would use it (Chrome DevTools MCP, desktop 1400×900 dark, 390×844 mobile, light theme spot-checked), typing real inputs and reading the output. The faucet miner was excluded from this round. Findings and the verified fix for each:
+
+| Page | Input | Found | Fix | Verified |
+|---|---|---|---|---|
+| `/` paste box | `wss://api.hyperliquid.xyz/ws` | routed to the RPC probe | WebSocket URLs open the WebSocket workbench; 20-byte addresses and 16-byte token IDs name the resolver explicitly | ✅ "WebSocket URL → WebSocket workbench", "EVM address → asset resolver (linked HyperCore token)" |
+| `/tools/assets` | `HYPE` | "Ambiguous — matches 16 identities", 9 of them similar names (KHYPE, STHYPE…) | ambiguity counts direct matches only; similar names listed in their own section | ✅ "7 matches · 9 similar names", warning says 7; `ETH` → 3 direct, 6 similar |
+| `/tools/assets` | `HYP` | 17 similar names presented as matches | "0 matches · 17 similar names" with a note that nothing is named exactly `HYP` | ✅ |
+| `/tools/assets` | `0x5555…5555`, `0x5555…5555` (16 bytes), `xyz:` | empty list, no explanation | resolver notes for an unlinked EVM address, an unknown token ID and a bare dex prefix (fixture cases added) | ✅ |
+| `/tools/orders` | BTC, "Use mid" | inserted `84654.5` → "6 significant figures" error, payload blocked | mid rounded to the tick towards the resting side | ✅ buy → `84668`, sell → `84669`, "just below/above the mid · would rest", payload emitted |
+| `/tools/orders` | Explain tab, reload | tab lost | `?tab=explain` kept in the URL (responses never are) | ✅ |
+| `/tools/signing` | bare `order` action, no nonce | "the digest below is what a wallet would sign" with no digest below | verdict says "enter the nonce to compute the digest"; "Use now" button fills `Date.now()` | ✅ button fills `1791062533661`, all six steps appear, button hides |
+| `/tools/signing` | `[1,2,3]` | same misleading sentence | "Nothing to sign — see the diagnostics." | ✅ |
+| `/tools/corewriter` → Build | `asset` field | integer only, no way to find an asset by name | resolver-backed name search under `asset`/`token` fields (shared `IndexSearch`) | ✅ `HYPE` → "HYPE-PERP → 159", picking fills `159`, hint "HYPE · HYPE-PERP on mainnet" |
+| `/tools/corewriter` | switch to Read precompiles, reload | tab lost | `?tab=` kept in the URL | ✅ `?tab=precompiles` |
+| `/tools/corewriter` → Build | `asset` = `abc` | "Fix the inputs below" (inputs are on the left) | "Fix the highlighted fields" | ✅ |
+| `/tools/trace` | sample "Limit order" | result not linkable | `?tx=<hash>` kept in the URL on submit (hash is public; network stays on the global switch) | ✅ `?tx=0x4b65…d949` |
+| `/tools/nope` | — | bare "Not Found" line inside the shell (TanStack default) | designed not-found page listing every tool | ✅ |
+
+Checked and found correct in this round (no change): paste detection for symbols, hashes, CoreWriter hex, action JSON, exchange responses and error strings; resolver notes for `@`, `@99999`, bare numbers; signing diagnostics for trailing zeros, nonce window, unknown action types and arrays; CoreWriter build linting (tick, lot, min notional, unknown asset, negative price, non-integer input); composer linting (sig figs, decimals, lot, min notional, TP on the wrong side, no TP/SL); every explainer sample plus bare errors, cancel batches, unrecognised text and `default` responses; the trace sample end to end; WebSocket connect, simulated disconnect, reconnect diff ("3 changed · 1 unchanged") and unsubscribe; the public mainnet-vs-testnet RPC comparison (14 checks each, historical state flagged on both); `/changes`; mobile layout of the home page and composer; light theme.
+
 ## Final regression pass
 
 Every page, both themes, desktop 1440×900 and mobile 375×812, captured full-page from an isolated browser context (home, orders, signing and CoreWriter re-captured after feedback round 1) (no wallet connected, fresh storage, so nothing personal is in the images). Tool pages were captured with their built-in sample loaded. Each image was reviewed; problems found during the pass are logged in the sections above and were fixed before the final capture.
 
-Also verified at the end: `bun --bun run test` (253 passing), `bun --bun run check` (clean), `bun --bun run build` (succeeds; the mock panel and MSW worker are not in the client bundle).
+Also verified at the end: `bun --bun run test` (259 passing after this round), `bun --bun run check` (clean), `bun --bun run build` (succeeds; the mock panel and MSW worker are not in the client bundle).
 
 | Page | Dark · desktop | Light · desktop | Dark · mobile | Light · mobile |
 |---|---|---|---|---|
