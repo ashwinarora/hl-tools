@@ -16,8 +16,6 @@ import { useHandoffStore } from "#/store/handoffStore";
 export const Route = createFileRoute("/")({ component: Directory });
 
 function Directory() {
-	const readOnly = TOOLS.filter((t) => !t.writes);
-	const writes = TOOLS.filter((t) => t.writes);
 	const newest = RULE_REGISTRY.map((r) => r.verifiedAt)
 		.sort()
 		.at(-1);
@@ -73,24 +71,9 @@ function Directory() {
 					</Link>
 				</div>
 				<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-					{readOnly.map((t) => (
+					{TOOLS.map((t) => (
 						<ToolCard key={t.id} tool={t} />
 					))}
-				</div>
-
-				<div className="mt-12">
-					<h2 className="mb-1 text-lg font-semibold tracking-tight">
-						Also in the hub
-					</h2>
-					<p className="mb-5 text-sm text-muted-foreground">
-						The original hl-tools utility. It is the only tool here that signs
-						and sends.
-					</p>
-					<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-						{writes.map((t) => (
-							<ToolCard key={t.id} tool={t} />
-						))}
-					</div>
 				</div>
 			</section>
 		</main>
