@@ -8,6 +8,7 @@ import {
 	type Intent,
 	type Network,
 	type OrderPlan,
+	roundPrice,
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import {
@@ -330,7 +331,21 @@ export function ComposeTab({
 															: "sell"
 														: state.side
 												}
-												onUseMid={() => set("price", mid)}
+												onUseMid={() =>
+													asset &&
+													set(
+														"price",
+														midAsLimitPrice(
+															mid,
+															asset,
+															tpsl
+																? state.intent === "long-tpsl"
+																	? "buy"
+																	: "sell"
+																: state.side,
+														),
+													)
+												}
 											/>
 										) : undefined
 									}
@@ -664,6 +679,27 @@ export function ComposeTab({
 }
 
 /**
+ * The mid as a valid limit price for this market. Mids often carry more
+ * significant figures than an order may (84654.5 on BTC), so it is rounded
+ * to the market's tick — towards the resting side, so the price never
+ * crosses the mid just by rounding.
+ */
+function midAsLimitPrice(
+	mid: string,
+	asset: Asset,
+	side: "buy" | "sell",
+): string {
+	const m = Decimal.tryParse(mid);
+	if (!m || asset.szDecimals === null) return mid;
+	return roundPrice(
+		m,
+		asset.venue.kind,
+		asset.szDecimals,
+		side === "buy" ? "down" : "up",
+	).value.toString();
+}
+
+/**
  * Where a limit price sits against the live mid. Whether an IOC fills or a
  * post-only is rejected depends on exactly this, so it is shown next to the
  * price rather than only in the observed line above.
@@ -687,9 +723,10 @@ function MidReference({
 		const diff = p.sub(m);
 		const pct = diff.div(m, 4, "half-even").mul(Decimal.parse("100"));
 		const abs = pct.isNegative() ? pct.neg() : pct;
+		const shown = abs.roundToDecimals(2, "half-even");
 		const where = diff.isZero()
 			? "at the mid"
-			: `${abs.roundToDecimals(2, "half-even").toString()}% ${diff.isNegative() ? "below" : "above"} the mid`;
+			: `${shown.isZero() ? "just" : `${shown.toString()}%`} ${diff.isNegative() ? "below" : "above"} the mid`;
 		crosses = side === "buy" ? !diff.isNegative() : !diff.isPositive();
 		relation = `${where} · would ${crosses ? "take" : "rest"}`;
 	}
