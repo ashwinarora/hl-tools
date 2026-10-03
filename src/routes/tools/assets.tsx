@@ -1,6 +1,7 @@
 import {
 	type Asset,
 	compareAcrossNetworks,
+	isSimilarMatch,
 	type Network,
 	type ResolvedMatch,
 	resolveAsset,
@@ -85,8 +86,11 @@ function AssetsTool() {
 	// Identities never carry across networks: drop a selection made on the other network.
 	const activeSelection =
 		selected && selected.network === network ? selected.key : null;
-	const onlyMatch =
-		resolution?.matches.length === 1 ? resolution.matches[0] : undefined;
+	// Similar names (UBTC for "BTC") are suggestions, listed apart from what
+	// the query directly means; a single direct identity is selected for you.
+	const direct = resolution?.matches.filter((m) => !isSimilarMatch(m)) ?? [];
+	const similar = resolution?.matches.filter(isSimilarMatch) ?? [];
+	const onlyMatch = direct.length === 1 ? direct[0] : undefined;
 	const selectedMatch: ResolvedMatch | undefined =
 		resolution?.matches.find((m) => matchKey(m) === activeSelection) ??
 		onlyMatch;
@@ -264,8 +268,11 @@ function AssetsTool() {
 						<Panel
 							title={
 								<span>
-									{resolution.matches.length} match
-									{resolution.matches.length === 1 ? "" : "es"}
+									{direct.length} match
+									{direct.length === 1 ? "" : "es"}
+									{similar.length
+										? ` · ${similar.length} similar name${similar.length === 1 ? "" : "s"}`
+										: ""}
 									{resolution.truncated
 										? ` (+${resolution.truncated} more)`
 										: ""}
@@ -284,8 +291,8 @@ function AssetsTool() {
 										tone="warning"
 										title="Ambiguous — pick the identity you mean"
 									>
-										This query matches {resolution.matches.length} identities.
-										Nothing is selected for you.
+										This query matches {direct.length} identities. Nothing is
+										selected for you.
 									</Callout>
 								</div>
 							)}
@@ -314,31 +321,68 @@ function AssetsTool() {
 									</Callout>
 								</div>
 							) : (
-								<ul
-									className="scrollbar-thin max-h-[36rem] overflow-y-auto"
-									aria-label="Matches"
-								>
-									{resolution.matches.map((m) => (
-										<li key={matchKey(m)}>
-											<MatchRow
-												match={m}
-												mid={
-													m.kind === "asset" && m.asset.venue.kind !== "hip3"
-														? (mids.data?.data[m.asset.coin] ?? null)
-														: null
-												}
-												selected={
-													selectedMatch
-														? matchKey(selectedMatch) === matchKey(m)
-														: false
-												}
-												onSelect={() =>
-													setSelected({ network, key: matchKey(m) })
-												}
-											/>
-										</li>
-									))}
-								</ul>
+								<div className="scrollbar-thin max-h-[36rem] overflow-y-auto">
+									{direct.length === 0 && (
+										<p className="border-b border-border px-4 py-3 text-xs text-muted-foreground">
+											Nothing is named exactly “{resolution.normalizedQuery}” on{" "}
+											{network}; these names contain it.
+										</p>
+									)}
+									<ul aria-label="Matches">
+										{direct.map((m) => (
+											<li key={matchKey(m)}>
+												<MatchRow
+													match={m}
+													mid={
+														m.kind === "asset" && m.asset.venue.kind !== "hip3"
+															? (mids.data?.data[m.asset.coin] ?? null)
+															: null
+													}
+													selected={
+														selectedMatch
+															? matchKey(selectedMatch) === matchKey(m)
+															: false
+													}
+													onSelect={() =>
+														setSelected({ network, key: matchKey(m) })
+													}
+												/>
+											</li>
+										))}
+									</ul>
+									{similar.length > 0 && (
+										<>
+											{direct.length > 0 && (
+												<div className="border-y border-border bg-surface-2/60 px-4 py-1.5 text-2xs font-medium uppercase tracking-wider text-subtle-foreground">
+													Similar names
+												</div>
+											)}
+											<ul aria-label="Similar names">
+												{similar.map((m) => (
+													<li key={matchKey(m)}>
+														<MatchRow
+															match={m}
+															mid={
+																m.kind === "asset" &&
+																m.asset.venue.kind !== "hip3"
+																	? (mids.data?.data[m.asset.coin] ?? null)
+																	: null
+															}
+															selected={
+																selectedMatch
+																	? matchKey(selectedMatch) === matchKey(m)
+																	: false
+															}
+															onSelect={() =>
+																setSelected({ network, key: matchKey(m) })
+															}
+														/>
+													</li>
+												))}
+											</ul>
+										</>
+									)}
+								</div>
 							)}
 						</Panel>
 						<Panel

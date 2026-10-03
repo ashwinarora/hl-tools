@@ -30,6 +30,11 @@
 		{ "network": "mainnet", "query": "@99999", "matches": 0, "noteIncludes": "No spot pair with index 99999" },
 		{ "network": "mainnet", "query": "@abc", "matches": 0, "noteIncludes": "must be followed only by digits", "bug": "Found in browser 2026-09-28: malformed @ prefix produced no explanation" },
 		{ "network": "mainnet", "query": "#12x", "matches": 0, "noteIncludes": "outcome encoding" },
-		{ "network": "mainnet", "query": "MATIC", "first": "MATIC", "expect": { "isDelisted": true } }
+		{ "network": "mainnet", "query": "MATIC", "first": "MATIC", "expect": { "isDelisted": true } },
+		{ "network": "mainnet", "query": "0x5555555555555555555555555555555555555555", "matches": 0, "noteIncludes": "No HyperCore token is linked", "bug": "Found in browser 2026-10-04: an unlinked EVM address gave an empty list with no explanation" },
+		{ "network": "mainnet", "query": "0x55555555555555555555555555555555", "matches": 0, "noteIncludes": "No token on mainnet has this 16-byte token ID" },
+		{ "network": "mainnet", "query": "xyz:", "matches": 0, "noteIncludes": "Add the market after the dex prefix" },
+		{ "network": "mainnet", "query": "nope:", "matches": 0, "noteIncludes": "No perp dex named" },
+		{ "network": "mainnet", "query": "ETH", "ambiguous": false, "first": "ETH", "note": "ETHFI etc. are similar names only; they must not make a plain ETH ambiguous (bug 2026-10-04: HYPE reported 16 ambiguous identities, 9 of them similar names)" }
 	]
 }

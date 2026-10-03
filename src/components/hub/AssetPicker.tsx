@@ -1,4 +1,9 @@
-import { type Asset, type Network, resolveAsset } from "@hl-tools/core";
+import {
+	type Asset,
+	isSimilarMatch,
+	type Network,
+	resolveAsset,
+} from "@hl-tools/core";
 import { Search, X } from "lucide-react";
 import { useDeferredValue, useId, useMemo, useState } from "react";
 import { useUniverse } from "#/hooks/useHyperliquid";
@@ -36,6 +41,9 @@ export function AssetPicker({
 			(m) => m.kind === "asset",
 		);
 	}, [universe.data, deferred]);
+	// What the query names directly vs. markets whose name merely contains it.
+	const direct = matches.filter((m) => !isSimilarMatch(m));
+	const similar = matches.filter(isSimilarMatch);
 
 	if (value && value.network === network) {
 		return (
@@ -86,11 +94,11 @@ export function AssetPicker({
 					onKeyDown={(e) => {
 						if (
 							e.key === "Enter" &&
-							matches.length === 1 &&
-							matches[0]?.kind === "asset"
+							direct.length === 1 &&
+							direct[0]?.kind === "asset"
 						) {
 							e.preventDefault();
-							onChange(matches[0].asset);
+							onChange(direct[0].asset);
 						}
 					}}
 				/>
@@ -114,13 +122,19 @@ export function AssetPicker({
 						</p>
 					) : (
 						<>
-							{matches.length > 1 && (
+							{direct.length > 1 && (
 								<p className="border-b border-border bg-warning-soft px-3 py-1.5 text-xs text-foreground">
-									{matches.length} markets match — pick one.
+									{direct.length} markets match — pick one.
+								</p>
+							)}
+							{direct.length === 1 && (
+								<p className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
+									Press Enter to pick{" "}
+									{direct[0]?.kind === "asset" ? direct[0].asset.coin : ""}.
 								</p>
 							)}
 							<ul aria-label="Matching markets">
-								{matches.map((m) =>
+								{direct.map((m) =>
 									m.kind === "asset" ? (
 										<li key={matchKey(m)}>
 											<MatchRow
@@ -132,6 +146,26 @@ export function AssetPicker({
 									) : null,
 								)}
 							</ul>
+							{similar.length > 0 && (
+								<>
+									<div className="border-y border-border bg-surface-2/60 px-3 py-1 text-2xs font-medium uppercase tracking-wider text-subtle-foreground">
+										Similar names
+									</div>
+									<ul aria-label="Similar markets">
+										{similar.map((m) =>
+											m.kind === "asset" ? (
+												<li key={matchKey(m)}>
+													<MatchRow
+														match={m}
+														selected={false}
+														onSelect={() => onChange(m.asset)}
+													/>
+												</li>
+											) : null,
+										)}
+									</ul>
+								</>
+							)}
 						</>
 					)}
 				</div>

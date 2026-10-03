@@ -210,6 +210,8 @@ export function resolveAsset<N extends Network>(
 			if (a.baseToken?.tokenId.toLowerCase() === lower)
 				addAsset(a, "token-id", 80);
 		}
+		if (!out.size)
+			notes.push(`No token on ${universe.network} has this 16-byte token ID.`);
 	} else if (/^0x[0-9a-fA-F]{40}$/.test(q)) {
 		const lower = q.toLowerCase();
 		for (const t of universe.tokens) {
@@ -220,6 +222,10 @@ export function resolveAsset<N extends Network>(
 			if (a.baseToken?.evmContract?.address.toLowerCase() === lower)
 				addAsset(a, "evm-contract", 80);
 		}
+		if (!out.size)
+			notes.push(
+				`No HyperCore token is linked to this EVM contract on ${universe.network}. Only tokens whose deployer linked an ERC-20 resolve by address.`,
+			);
 	} else if (q.includes("/")) {
 		const [b = "", qt = ""] = q.split("/").map((s) => s.trim().toUpperCase());
 		for (const a of universe.assets) {
@@ -229,6 +235,16 @@ export function resolveAsset<N extends Network>(
 				addAsset(a, "spot-pair-name", a.isCanonical ? 92 : 88);
 			}
 		}
+	} else if (/^[^:]+:$/.test(q)) {
+		const dex = q.slice(0, -1);
+		const known = universe.dexes.some(
+			(d) => d.name.toLowerCase() === dex.toLowerCase(),
+		);
+		notes.push(
+			known
+				? `Add the market after the dex prefix, e.g. "${dex}:TSLA".`
+				: `No perp dex named "${dex}" on ${universe.network}.`,
+		);
 	} else {
 		const hip3 = /^([^:]+):(.+)$/.exec(q);
 		for (const a of universe.assets) {
@@ -290,8 +306,10 @@ export function resolveAsset<N extends Network>(
 			label(a).localeCompare(label(b)),
 	);
 	const matches = all.slice(0, limit);
-	// Never auto-select: more than one identity means the caller must choose.
-	const ambiguous = all.length > 1;
+	// Never auto-select: more than one *direct* identity means the caller must
+	// choose. Similar-name matches (UBTC for "BTC") are suggestions, not
+	// candidates for what the query means, so they don't make it ambiguous.
+	const ambiguous = all.filter((m) => !isSimilarMatch(m)).length > 1;
 	return {
 		network: universe.network,
 		query,
@@ -302,6 +320,11 @@ export function resolveAsset<N extends Network>(
 		notes,
 		observedAt: universe.observedAt,
 	};
+}
+
+/** True for matches found only because their name contains the query. */
+export function isSimilarMatch(m: ResolvedMatch): boolean {
+	return m.reason === "name-contains";
 }
 
 function label(m: ResolvedMatch): string {
