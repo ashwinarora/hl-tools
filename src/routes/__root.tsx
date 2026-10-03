@@ -9,6 +9,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { useEffect } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import NotFound from "../components/NotFound";
 import { Toaster } from "../components/ui/sonner";
 import { NETWORK_INIT_SCRIPT, useNetworkStore } from "../store/networkStore";
 
@@ -73,6 +74,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 		],
 	}),
 	shellComponent: RootDocument,
+	notFoundComponent: NotFound,
 });
 
 /** Rehydrate the persisted network after mount (store uses skipHydration). */
