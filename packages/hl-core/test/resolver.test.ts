@@ -40,6 +40,8 @@ interface Case {
 	includes?: string[];
 	excludes?: string[];
 	matches?: number;
+	/** Pairs [x, y]: x must appear before y in the results. */
+	before?: [string, string][];
 	noteIncludes?: string;
 	expect?: Record<string, unknown>;
 }
@@ -56,6 +58,8 @@ describe("resolver fixtures", () => {
 			if (c.ambiguous !== undefined) expect(r.ambiguous).toBe(c.ambiguous);
 			for (const inc of c.includes ?? []) expect(ids).toContain(inc);
 			for (const exc of c.excludes ?? []) expect(ids).not.toContain(exc);
+			for (const [x, y] of c.before ?? [])
+				expect(ids.indexOf(x)).toBeLessThan(ids.indexOf(y));
 			if (c.noteIncludes) expect(r.notes.join(" ")).toContain(c.noteIncludes);
 			if (c.expect) {
 				const top = r.matches[0];

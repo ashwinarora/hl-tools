@@ -280,8 +280,14 @@ export function resolveAsset<N extends Network>(
 		}
 	}
 
+	// Delisted markets can't be traded, so they always sort after live ones.
+	const delisted = (m: ResolvedMatch): number =>
+		m.kind === "asset" && m.asset.isDelisted ? 1 : 0;
 	const all = [...out.values()].sort(
-		(a, b) => b.score - a.score || label(a).localeCompare(label(b)),
+		(a, b) =>
+			delisted(a) - delisted(b) ||
+			b.score - a.score ||
+			label(a).localeCompare(label(b)),
 	);
 	const matches = all.slice(0, limit);
 	// Never auto-select: more than one identity means the caller must choose.
