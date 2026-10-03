@@ -14,6 +14,7 @@ import { motion } from "motion/react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
+import { NO_CONTACT } from "#/lib/noContact";
 
 const fadeIn = (delay: number) => ({
 	initial: { opacity: 0, y: 8 },
@@ -60,7 +61,7 @@ const steps = [
 const trustPoints = [
 	{ icon: Lock, label: "Non-custodial" },
 	{ icon: ShieldCheck, label: "Runs in your browser" },
-	{ icon: Github, label: "Open source" },
+	...(NO_CONTACT ? [] : [{ icon: Github, label: "Open source" }]),
 ];
 
 export default function LandingHero() {
@@ -169,14 +170,16 @@ export default function LandingHero() {
 						{point.label}
 					</div>
 				))}
-				<a
-					href="https://github.com/ashwinarora/hl-tools"
-					target="_blank"
-					rel="noopener noreferrer"
-					className="text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
-				>
-					View source →
-				</a>
+				{!NO_CONTACT && (
+					<a
+						href="https://github.com/ashwinarora/hl-tools"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
+					>
+						View source →
+					</a>
+				)}
 			</motion.section>
 		</main>
 	);

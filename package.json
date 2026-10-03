@@ -13,7 +13,8 @@
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
-    "start": "node .output/server/index.mjs"
+    "start": "node .output/server/index.mjs",
+    "check:no-contact": "node scripts/check-no-contact.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
