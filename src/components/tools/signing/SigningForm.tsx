@@ -1,6 +1,7 @@
-import { SIGNING_SAMPLES } from "@hl-tools/core";
+import { SIGNING_SAMPLES, stringifyJson, tryParseJson } from "@hl-tools/core";
 import { useId } from "react";
 import { Field, Select, TextArea, TextInput } from "#/components/hub/layout";
+import { Button } from "#/components/ui/button";
 import type { Parsed, SigningInput } from "./model";
 
 export function sampleInput(id: string): SigningInput | null {
@@ -36,6 +37,11 @@ export function SigningForm({
 		onChange({ ...value, [k]: v });
 	const fromBody = parsed.kind === "ok" ? parsed.effective.fromBody : null;
 	const eff = parsed.kind === "ok" ? parsed.effective : null;
+	const formattable = tryParseJson(value.text).ok;
+	const reformat = (indent: number) => {
+		const r = tryParseJson(value.text);
+		if (r.ok) set("text", stringifyJson(r.node, indent));
+	};
 	const fieldErr = (k: keyof SigningInput) =>
 		parsed.kind === "field-error" && parsed.field === k
 			? parsed.message
@@ -69,6 +75,31 @@ export function SigningForm({
 			)}
 			<Field
 				label={label}
+				trailing={
+					<span className="flex gap-1">
+						{/* Both keep key order and number lexemes, so the bytes hashed never change. */}
+						<Button
+							type="button"
+							size="xs"
+							variant="outline"
+							disabled={!formattable}
+							onClick={() => reformat(2)}
+							title="Pretty-print the JSON (key order and number spelling are kept)"
+						>
+							Format
+						</Button>
+						<Button
+							type="button"
+							size="xs"
+							variant="outline"
+							disabled={!formattable}
+							onClick={() => reformat(0)}
+							title="Put the JSON on one line"
+						>
+							Minify
+						</Button>
+					</span>
+				}
 				htmlFor={`${id}-text`}
 				error={parsed.kind === "json-error" ? parsed.error.message : undefined}
 				hint={
