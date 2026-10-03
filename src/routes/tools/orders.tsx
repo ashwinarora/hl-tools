@@ -1,6 +1,6 @@
 import type { Asset } from "@hl-tools/core";
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
 import { Segmented, ToolPage } from "#/components/hub/layout";
 import { ShareButton } from "#/components/hub/ShareButton";
 import {
@@ -35,12 +35,24 @@ export const Route = createFileRoute("/tools/orders")({
 
 function OrdersTool() {
 	const search = Route.useSearch();
+	const navigate = useNavigate({ from: "/tools/orders" });
 	const network = useNetwork();
 	const hydrated = useNetworkHydrated();
 	const take = useHandoffStore((s) => s.take);
 	const explainSample = EXPLAIN_SAMPLES.find((s) => s.id === search.sample);
-	const [tab, setTab] = useState<Tab>(
+	const [tab, setTabState] = useState<Tab>(
 		search.tab ?? (explainSample ? "explain" : "compose"),
+	);
+	// Only the mode goes in the URL; pasted responses never do.
+	const setTab = useCallback(
+		(t: Tab) => {
+			setTabState(t);
+			void navigate({
+				search: (s) => ({ ...s, tab: t === "compose" ? undefined : t }),
+				replace: true,
+			});
+		},
+		[navigate],
 	);
 	const [asset, setAsset] = useState<Asset | null>(null);
 	const [compose, setCompose] = useState<ComposeState>(DEFAULT_COMPOSE);
@@ -74,7 +86,7 @@ function OrdersTool() {
 			setTab("explain");
 			clearShared();
 		}
-	}, [take]);
+	}, [take, setTab]);
 
 	return (
 		<ToolPage tool={tool("orders")}>

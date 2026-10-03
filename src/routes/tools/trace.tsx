@@ -9,7 +9,7 @@ import {
 	traceTransaction,
 } from "@hl-tools/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
 	ArrowUpRight,
 	GitCompareArrows,
@@ -100,6 +100,7 @@ function useTrace(target: { hash: string; network: Network } | null) {
 
 function TraceTool() {
 	const search = Route.useSearch();
+	const navigate = useNavigate({ from: "/tools/trace" });
 	const network = useNetwork();
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
 	const take = useHandoffStore((s) => s.take);
@@ -139,8 +140,12 @@ function TraceTool() {
 	const valid = isTxHash(input);
 	const submit = (hash: string, net: Network = network) => {
 		setInput(hash);
-		if (isTxHash(hash))
-			setTarget({ hash: hash.trim().toLowerCase(), network: net });
+		if (!isTxHash(hash)) return;
+		const h = hash.trim().toLowerCase();
+		setTarget({ hash: h, network: net });
+		// A transaction hash is a public identifier, so the trace is linkable;
+		// the network comes from the global switch, never from the URL.
+		void navigate({ search: { tx: h }, replace: true });
 	};
 	const t = trace.data;
 	const staleNetwork = target && target.network !== network;
