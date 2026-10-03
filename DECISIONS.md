@@ -82,6 +82,20 @@ Non-obvious choices made while turning hl-tools into a developer tooling hub, an
 
 **The probe is bounded, paced and runs `eth_getLogs` last.** Around 25 requests, 250 ms apart, for the public endpoint's 100 requests/minute limit. Large log ranges exhausted the public testnet limit for the checks after them, so the range probe now runs last. A rate-limited check is reported as "inconclusive · rate limited", never as unsupported. Endpoint URLs are shown redacted (`?apikey=•••`) and are never persisted or put in the page URL; a CORS-blocked endpoint aborts with an explanation.
 
+**The resolver surfaces wrapped assets by substring, below exact matches.** Spot BTC on Hyperliquid is the token `UBTC`, so an exact-name resolver showed no spot market for "BTC". Queries of three or more alphanumerics now also match perps, spot bases and tokens whose name *contains* the query, labelled "name contains the query" and ranked below every exact match. Pair queries (`UBTC/USDC`) and dex-prefixed queries never use it. Delisted markets always sort after live ones regardless of score.
+
+**Composer intents are listed simplest first and IOC is the default.** The TP/SL brackets were first because they are the richest demo, but a first-time user meets the most complex payload first. Order is now IOC → post-only → market → reduce-only close → long TP/SL → short TP/SL.
+
+**The limit price shows its relation to the live mid.** Whether an IOC fills or a post-only is rejected depends on where the price sits against the mid, so the price field's hint states the mid, the percentage distance and "would take" / "would rest" (amber when it would take), with a Use-mid shortcut. The mid is informational; the composer still never changes a typed price.
+
+**Format/Minify in the Signing Inspector go through the order-preserving parser.** `JSON.parse` + `JSON.stringify` would reorder integer-like keys and rewrite `1.0` as `1`, changing the bytes hashed. `parseJson` → `stringifyJson` keeps key order and number lexemes, so reformatting is guaranteed not to change the digest (verified: digest identical before and after).
+
+**Precompile index parameters can be filled by name.** Nobody knows HYPE is token 150 or perp 159. Each perp/spot/token/asset parameter has a name search backed by the resolver, filtered to the identities that parameter accepts, showing the index each option maps to. The numeric field stays editable and the "resolves to" line confirms the mapping.
+
+**Decoded precompile output is the headline; the raw JSON-RPC is collapsed.** A user read the hex `result` in the raw block and concluded the output wasn't human-readable, even though the decoded table sat above it. The table now has a title and field/raw/human headers, and the raw exchange is behind a disclosure.
+
+**The faucet miner is a regular directory card plus a header link.** It was in a separate "Also in the hub" section to mark it as the one tool that signs; the owner found that read as second-class. It now sits in the main grid with its "Signs & sends" badge and has a direct header link.
+
 ## Testing
 
 **Browser testing uses the Chrome DevTools MCP.** Viewport emulation (`emulate`) gives exact desktop (1440×900) and mobile (375×812, DPR 2) sizes and light/dark `prefers-color-scheme`. The faucet miner is exercised with the Rabby wallet in that browser; mining itself is only run under the existing MSW mock harness so no real funds move.

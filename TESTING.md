@@ -189,9 +189,25 @@ The only tool that signs. Exercised with the Rabby wallet in the DevTools-contro
 | `/faucet-miner/how-to-use` | hub breadcrumb, accurate copy | ❌ → fixed. Old "Back / How to Use" header, "What is hl-tools?" (now the hub's name) and "click the wallet button in the top-right… stats appear on the home page"; rewritten, page has its own title. |
 | `/how-to-use` (old URL) | 301 to `/faucet-miner/how-to-use` | ✅ |
 
+## Feedback round 1 (2026-10-04)
+
+Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
+
+| Page | Input | Expected | Result |
+|---|---|---|---|
+| `/` | directory grid | faucet miner is a regular card (8 cards, "Signs & sends" badge), "Faucet miner" link in the header | ✅ |
+| `/tools/orders` | market picker `BTC` | perp first, then live spot pairs `@142` UBTC/USDC and `@234` UBTC/USDH as "name contains the query", delisted HIP-3 markets last | ✅ (first pass ranked delisted HIP-3 above live spot → fixed, fixture ordering assertion added) |
+| `/tools/orders` | intent list | IOC limit first and selected by default; TP/SL brackets last; arrow keys move the selection | ✅ |
+| `/tools/orders` | pick BTC-PERP, prefilled price | "mid 84707.5 · 2% below the mid · would rest" under the price field, "Use mid" sets the price to the mid | ✅ |
+| `/tools/orders` | 375px | mid reference wraps under the field, no overflow | ✅ |
+| `/tools/signing` | sample `order` → Minify → Format | one line, then the identical 26-line text; digest `0xa5cf…801e` and recovered signer unchanged throughout | ✅ |
+| `/tools/corewriter` → Read precompiles | Mark price → "Find perp by name" `HYPE` | options "HYPE-PERP → 159", "HYPER-PERP → 191"; picking fills `159`, "resolves to: HYPE · szDecimals 2" | ✅ |
+| same | Query live | "Decoded output" table with field / raw / human headers: markPx 892322 → 89.2322 (÷ 10^(6 − 2)); raw JSON-RPC collapsed by default | ✅ |
+| same | Spot balance → "Find token by name" `usdc`, `zzzz`, `hype` | "USDC → 0"; "No token matches “zzzz” on mainnet."; HYPE fills `150` | ✅ |
+
 ## Final regression pass
 
-Every page, both themes, desktop 1440×900 and mobile 375×812, captured full-page from an isolated browser context (no wallet connected, fresh storage, so nothing personal is in the images). Tool pages were captured with their built-in sample loaded. Each image was reviewed; problems found during the pass are logged in the sections above and were fixed before the final capture.
+Every page, both themes, desktop 1440×900 and mobile 375×812, captured full-page from an isolated browser context (home, orders, signing and CoreWriter re-captured after feedback round 1) (no wallet connected, fresh storage, so nothing personal is in the images). Tool pages were captured with their built-in sample loaded. Each image was reviewed; problems found during the pass are logged in the sections above and were fixed before the final capture.
 
 Also verified at the end: `bun --bun run test` (253 passing), `bun --bun run check` (clean), `bun --bun run build` (succeeds; the mock panel and MSW worker are not in the client bundle).
 
