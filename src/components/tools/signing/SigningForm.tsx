@@ -130,6 +130,19 @@ export function SigningForm({
 							? `From request body: ${eff?.nonce}`
 							: "ms timestamp; L1 actions hash it"
 					}
+					trailing={
+						!value.nonce && !fromBody?.nonce ? (
+							<Button
+								type="button"
+								size="xs"
+								variant="outline"
+								onClick={() => set("nonce", String(Date.now()))}
+								title="Fill in the current time in milliseconds, as a client would"
+							>
+								Use now
+							</Button>
+						) : undefined
+					}
 				>
 					<TextInput
 						id={`${id}-nonce`}

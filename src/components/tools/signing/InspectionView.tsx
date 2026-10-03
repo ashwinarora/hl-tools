@@ -127,7 +127,11 @@ export function Verdict({
 					<div className="mt-1 text-sm text-muted-foreground">
 						{inspection.signature
 							? "Could not recover — see issues."
-							: "No signature given — the digest below is what a wallet would sign."}
+							: !inspection.hashes
+								? inspection.family === "l1"
+									? "Nothing to sign yet — enter the nonce to compute the digest."
+									: "Nothing to sign — see the diagnostics."
+								: "No signature given — the digest below is what a wallet would sign."}
 					</div>
 				)}
 				{match === true && (
