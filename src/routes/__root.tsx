@@ -10,6 +10,7 @@ import { lazy, Suspense } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { Toaster } from "../components/ui/sonner";
+import { NO_CONTACT } from "../lib/noContact";
 
 // Dev-only lazy import — Vite replaces `import.meta.env.DEV` with `false` at
 // build time. The ternary evaluates to `null`, the lazy() call is dead-code
@@ -58,6 +59,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			{
 				title: "hl-tools",
 			},
+			...(NO_CONTACT ? [{ name: "robots", content: "noindex, nofollow" }] : []),
 		],
 		links: [
 			{
