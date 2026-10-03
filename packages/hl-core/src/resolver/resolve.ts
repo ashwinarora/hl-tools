@@ -26,7 +26,8 @@ export type MatchReason =
 	| "token-full-name"
 	| "token-id"
 	| "evm-contract"
-	| "outcome-name";
+	| "outcome-name"
+	| "name-contains";
 
 export const MATCH_REASON_LABEL: Readonly<Record<MatchReason, string>> = {
 	coin: "exact coin name",
@@ -45,6 +46,7 @@ export const MATCH_REASON_LABEL: Readonly<Record<MatchReason, string>> = {
 	"token-id": "token ID",
 	"evm-contract": "linked EVM contract",
 	"outcome-name": "outcome name",
+	"name-contains": "name contains the query",
 };
 
 export type ResolvedMatch<N extends Network = Network> =
@@ -249,6 +251,21 @@ export function resolveAsset<N extends Network>(
 				if (t.name.toUpperCase() === upper) addToken(t, "token-name", 85);
 				else if (t.fullName && t.fullName.toUpperCase() === upper)
 					addToken(t, "token-full-name", 75);
+			}
+			// Wrapped and bridged assets carry a prefix (UBTC, UETH, USDT0): a
+			// plain "BTC" should still surface them, ranked below exact matches.
+			if (upper.length >= 3 && /^[A-Z0-9]+$/.test(upper)) {
+				for (const a of universe.assets) {
+					if (a.venue.kind !== "spot" && a.venue.kind !== "perp") continue;
+					const base = a.base.toUpperCase();
+					if (base !== upper && base.includes(upper))
+						addAsset(a, "name-contains", a.venue.kind === "spot" ? 40 : 42);
+				}
+				for (const t of universe.tokens) {
+					const name = t.name.toUpperCase();
+					if (name !== upper && name.includes(upper))
+						addToken(t, "name-contains", 38);
+				}
 			}
 		} else if (!out.size) {
 			const dex = hip3[1] ?? "";

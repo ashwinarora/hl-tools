@@ -1,7 +1,8 @@
 {
 	"description": "Asset Resolver cases. Each case resolves `query` against fixtures/metadata/<network>.json. `first` is the top match's coin (or token:<index>), `includes` must all appear, `excludes` must not, `ambiguous` is the expected flag. Add a case for every resolver bug.",
 	"cases": [
-		{ "network": "mainnet", "query": "BTC", "first": "BTC", "ambiguous": true, "includes": ["flx:BTC"], "note": "flx (HIP-3) also lists BTC, so a bare BTC is ambiguous", "expect": { "actionAssetId": 0, "szDecimals": 5, "pxDecimals": 1, "venue": "perp" } },
+		{ "network": "mainnet", "query": "BTC", "first": "BTC", "ambiguous": true, "includes": ["flx:BTC", "@142", "@234", "token:197"], "note": "flx (HIP-3) also lists BTC, so a bare BTC is ambiguous; spot BTC is the UBTC token, surfaced as a contains match (bug 2026-10-04: searching BTC showed no spot pair)", "expect": { "actionAssetId": 0, "szDecimals": 5, "pxDecimals": 1, "venue": "perp" } },
+		{ "network": "mainnet", "query": "UBTC/USDC", "first": "@142", "excludes": ["BTC"], "note": "pair queries never use contains matching" },
 		{ "network": "mainnet", "query": "btc-perp", "first": "BTC", "note": "suffix and case normalised" },
 		{ "network": "mainnet", "query": "HYPE", "ambiguous": true, "includes": ["HYPE", "@107", "@207", "@232", "@255", "token:150"], "firstOf": ["HYPE", "@107"] },
 		{ "network": "testnet", "query": "HYPE", "ambiguous": true, "includes": ["HYPE", "@1035", "@1339", "token:1105"] },
