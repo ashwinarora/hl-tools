@@ -37,6 +37,7 @@ import {
 	Pill,
 } from "#/components/hub/status";
 import { useMids, useUniverse } from "#/hooks/useHyperliquid";
+import { radioGroupKeyDown } from "#/lib/radioGroup";
 import { cn } from "#/lib/utils";
 import { useHandoffStore } from "#/store/handoffStore";
 
@@ -56,7 +57,7 @@ export interface ComposeState {
 }
 
 export const DEFAULT_COMPOSE: ComposeState = {
-	intent: "long-tpsl",
+	intent: "ioc",
 	side: "buy",
 	size: "",
 	price: "",
@@ -232,6 +233,14 @@ export function ComposeTab({
 								className="grid gap-1.5"
 								role="radiogroup"
 								aria-label="Intent"
+								onKeyDown={(e) =>
+									radioGroupKeyDown(
+										e,
+										INTENTS.map((i) => i.id),
+										state.intent,
+										(v) => set("intent", v),
+									)
+								}
 							>
 								{INTENTS.map((i) => (
 									// biome-ignore lint/a11y/useSemanticElements: ARIA radio pattern on buttons keeps the card styling
@@ -240,6 +249,7 @@ export function ComposeTab({
 										type="button"
 										role="radio"
 										aria-checked={state.intent === i.id}
+										tabIndex={state.intent === i.id ? 0 : -1}
 										onClick={() => set("intent", i.id)}
 										className={cn(
 											"rounded-md border px-3 py-2 text-left transition-colors",
@@ -308,6 +318,22 @@ export function ComposeTab({
 								<Field
 									label={`Limit price${asset ? ` (${asset.quote})` : ""}`}
 									htmlFor="c-price"
+									hint={
+										mid ? (
+											<MidReference
+												mid={mid}
+												price={state.price}
+												side={
+													tpsl
+														? state.intent === "long-tpsl"
+															? "buy"
+															: "sell"
+														: state.side
+												}
+												onUseMid={() => set("price", mid)}
+											/>
+										) : undefined
+									}
 								>
 									<TextInput
 										id="c-price"
@@ -634,5 +660,54 @@ export function ComposeTab({
 				) : null
 			}
 		/>
+	);
+}
+
+/**
+ * Where a limit price sits against the live mid. Whether an IOC fills or a
+ * post-only is rejected depends on exactly this, so it is shown next to the
+ * price rather than only in the observed line above.
+ */
+function MidReference({
+	mid,
+	price,
+	side,
+	onUseMid,
+}: {
+	mid: string;
+	price: string;
+	side: "buy" | "sell";
+	onUseMid: () => void;
+}) {
+	const m = Decimal.tryParse(mid);
+	const p = price.trim() ? Decimal.tryParse(price) : null;
+	let relation: string | null = null;
+	let crosses = false;
+	if (m?.isPositive() && p?.isPositive()) {
+		const diff = p.sub(m);
+		const pct = diff.div(m, 4, "half-even").mul(Decimal.parse("100"));
+		const abs = pct.isNegative() ? pct.neg() : pct;
+		const where = diff.isZero()
+			? "at the mid"
+			: `${abs.roundToDecimals(2, "half-even").toString()}% ${diff.isNegative() ? "below" : "above"} the mid`;
+		crosses = side === "buy" ? !diff.isNegative() : !diff.isPositive();
+		relation = `${where} · would ${crosses ? "take" : "rest"}`;
+	}
+	return (
+		<span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
+			<span>
+				mid <span className="font-mono text-foreground">{mid}</span>
+			</span>
+			{relation && (
+				<span className={crosses ? "text-warning" : undefined}>{relation}</span>
+			)}
+			<button
+				type="button"
+				onClick={onUseMid}
+				className="rounded border border-border-strong bg-surface px-1.5 py-px font-medium text-foreground hover:bg-surface-2"
+			>
+				Use mid
+			</button>
+		</span>
 	);
 }

@@ -20,6 +20,7 @@ import {
 	type SizeLint,
 } from "./lint.ts";
 
+// Listed in INTENTS from simplest to most complex.
 export type Intent =
 	| "long-tpsl"
 	| "short-tpsl"
@@ -34,6 +35,30 @@ export const INTENTS: readonly {
 	description: string;
 }[] = [
 	{
+		id: "ioc",
+		label: "IOC limit",
+		description:
+			"Immediate-or-cancel at your limit price: fills what it can now, cancels the rest.",
+	},
+	{
+		id: "post-only",
+		label: "Post-only limit",
+		description:
+			"Add-liquidity-only (Alo) limit order: rests on the book or is rejected, never takes.",
+	},
+	{
+		id: "market",
+		label: "Market (IOC with slippage)",
+		description:
+			"IOC priced at mid ± slippage — there is no native market order type.",
+	},
+	{
+		id: "reduce-only-close",
+		label: "Reduce-only close",
+		description:
+			"Close (part of) a position with an aggressive reduce-only IOC — how frontends implement market close.",
+	},
+	{
 		id: "long-tpsl",
 		label: "Open long with TP/SL",
 		description:
@@ -44,30 +69,6 @@ export const INTENTS: readonly {
 		label: "Open short with TP/SL",
 		description:
 			"Sell entry plus reduce-only take-profit and stop-loss children (grouping normalTpsl).",
-	},
-	{
-		id: "reduce-only-close",
-		label: "Reduce-only close",
-		description:
-			"Close (part of) a position with an aggressive reduce-only IOC — how frontends implement market close.",
-	},
-	{
-		id: "post-only",
-		label: "Post-only limit",
-		description:
-			"Add-liquidity-only (Alo) limit order: rests on the book or is rejected, never takes.",
-	},
-	{
-		id: "ioc",
-		label: "IOC limit",
-		description:
-			"Immediate-or-cancel at your limit price: fills what it can now, cancels the rest.",
-	},
-	{
-		id: "market",
-		label: "Market (IOC with slippage)",
-		description:
-			"IOC priced at mid ± slippage — there is no native market order type.",
 	},
 ];
 
