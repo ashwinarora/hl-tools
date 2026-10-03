@@ -29,8 +29,20 @@ export function detectInput(raw: string): Detection | null {
 			reason: "Starts with version byte 0x01 → CoreWriter action bytes",
 		};
 	}
-	if (/^https?:\/\//i.test(v) || /^wss?:\/\//i.test(v)) {
+	if (/^wss?:\/\//i.test(v)) {
+		return { tool: "websocket", reason: "WebSocket URL → WebSocket workbench" };
+	}
+	if (/^https?:\/\//i.test(v)) {
 		return { tool: "rpc", reason: "URL → RPC capability probe" };
+	}
+	if (/^0x[0-9a-fA-F]{40}$/.test(v)) {
+		return {
+			tool: "assets",
+			reason: "EVM address → asset resolver (linked HyperCore token)",
+		};
+	}
+	if (/^0x[0-9a-fA-F]{32}$/.test(v)) {
+		return { tool: "assets", reason: "Token ID → asset resolver" };
 	}
 	if (v.startsWith("{") || v.startsWith("[")) {
 		const parsed = tryParseJson(v);
