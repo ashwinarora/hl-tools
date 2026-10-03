@@ -7,6 +7,7 @@ import {
 	type Network,
 } from "@hl-tools/core";
 import { useId } from "react";
+import { IndexSearch } from "#/components/hub/IndexSearch";
 import { Field, Segmented, Select, TextInput } from "#/components/hub/layout";
 
 export const BUILD_DEFAULTS: Record<string, string> = {
@@ -169,6 +170,14 @@ export function BuildForm({
 								onChange={(e) => set(e.target.value)}
 							/>
 						)}
+						{(f.unit.kind === "asset" || f.unit.kind === "token") &&
+							universe && (
+								<IndexSearch
+									kind={f.unit.kind}
+									universe={universe}
+									onPick={(index) => set(String(index))}
+								/>
+							)}
 					</Field>
 				);
 			})}

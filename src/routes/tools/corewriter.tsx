@@ -4,9 +4,9 @@ import {
 	decodeCoreWriterAction,
 	encodeCoreWriterAction,
 } from "@hl-tools/core";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Workflow } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	EmptyState,
 	Field,
@@ -51,11 +51,24 @@ export const Route = createFileRoute("/tools/corewriter")({
 
 function CoreWriterTool() {
 	const search = Route.useSearch();
+	const navigate = useNavigate({ from: "/tools/corewriter" });
 	const network = useNetwork();
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
 	const take = useHandoffStore((s) => s.take);
 	const universe = useUniverse(network);
-	const [tab, setTab] = useState<Tab>(search.tab ?? "decode");
+	const [tab, setTabState] = useState<Tab>(search.tab ?? "decode");
+	// The mode is part of the page's address (not the pasted bytes), so a
+	// reload or a shared link lands on the same tab.
+	const setTab = useCallback(
+		(t: Tab) => {
+			setTabState(t);
+			void navigate({
+				search: (s) => ({ ...s, tab: t === "decode" ? undefined : t }),
+				replace: true,
+			});
+		},
+		[navigate],
+	);
 	const [hex, setHex] = useState(() =>
 		search.sample
 			? (COREWRITER_SAMPLES.find((s) => s.id === search.sample)?.hex ?? "")
@@ -81,7 +94,7 @@ function CoreWriterTool() {
 			setHex(handed);
 			setTab("decode");
 		}
-	}, [take]);
+	}, [take, setTab]);
 
 	const decode = useMemo(
 		() =>
@@ -238,7 +251,7 @@ function CoreWriterTool() {
 						) : (
 							<div className="space-y-3">
 								<Callout tone="danger" title="Can't encode yet">
-									Fix the inputs below to produce bytes.
+									Fix the highlighted fields to produce bytes.
 								</Callout>
 								<IssueList issues={built.issues} />
 							</div>
