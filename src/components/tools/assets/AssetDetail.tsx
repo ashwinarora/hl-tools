@@ -3,6 +3,7 @@ import {
 	assetSnippets,
 	MAX_DECIMALS,
 	parseOutcomeDescription,
+	type RelatedIdentity,
 	type ResolvedMatch,
 	type TokenRef,
 } from "@hl-tools/core";
@@ -18,6 +19,7 @@ import {
 	NetworkBadge,
 	Pill,
 } from "#/components/hub/status";
+import { RelatedRow, SpellingsTable } from "./Spellings";
 
 function pretty(v: unknown): string {
 	return JSON.stringify(v, null, 2);
@@ -36,31 +38,6 @@ function venueLabel(a: Asset): string {
 	}
 }
 
-function assetIdFormula(a: Asset): string {
-	switch (a.venue.kind) {
-		case "perp":
-			return `index in meta.universe = ${a.actionAssetId}`;
-		case "hip3":
-			return `100000 + dex ${a.venue.dexIndex} × 10000 + index ${a.perpIndex} = ${a.actionAssetId}`;
-		case "spot":
-			return `10000 + spot index ${a.spotPairIndex} = ${a.actionAssetId}`;
-		case "outcome":
-			return `100000000 + (10 × outcome ${a.outcome?.outcomeId} + side ${a.outcome?.side}) = ${a.actionAssetId}`;
-	}
-}
-
-function tokenLine(t: TokenRef) {
-	return (
-		<span>
-			<span className="text-foreground">{t.name}</span>{" "}
-			<span className="text-muted-foreground">
-				· index {t.index} · szDecimals {t.szDecimals} · weiDecimals{" "}
-				{t.weiDecimals}
-			</span>
-		</span>
-	);
-}
-
 function assetFields(a: Asset, mid: string | null): KV[] {
 	const items: KV[] = [
 		{ label: "Network", value: <NetworkBadge network={a.network} /> },
@@ -74,19 +51,6 @@ function assetFields(a: Asset, mid: string | null): KV[] {
 						? "HIP-3 (builder-deployed)"
 						: "HIP-4 (outcome market)",
 		},
-		{
-			label: "Info / WS coin",
-			value: a.coin,
-			mono: true,
-			hint: "Use this string in info requests and subscriptions.",
-		},
-		{
-			label: "Action asset ID (a)",
-			value: String(a.actionAssetId),
-			mono: true,
-			hint: assetIdFormula(a),
-		},
-		{ label: "Base / quote", value: `${a.base} / ${a.quote}`, mono: true },
 	];
 	if (a.szDecimals === null) {
 		items.push({
@@ -109,53 +73,13 @@ function assetFields(a: Asset, mid: string | null): KV[] {
 			hint: `${MAX_DECIMALS[venueKind]} (${venueKind === "spot" || venueKind === "outcome" ? "spot" : "perp"}) − szDecimals ${a.szDecimals}, and ≤ 5 significant figures`,
 		});
 	}
-	if (a.perpIndex !== undefined)
-		items.push({
-			label: "Perp index in dex universe",
-			value: String(a.perpIndex),
-			mono: true,
-		});
 	if (a.venue.kind === "hip3") {
-		items.push({
-			label: "Perp dex index",
-			value: String(a.venue.dexIndex),
-			mono: true,
-		});
 		if (a.venue.deployer)
 			items.push({
 				label: "Dex deployer",
 				value: a.venue.deployer,
 				mono: true,
 			});
-	}
-	if (a.spotPairIndex !== undefined) {
-		items.push({
-			label: "Spot pair index",
-			value: String(a.spotPairIndex),
-			mono: true,
-			hint: `coin "@${a.spotPairIndex}"${a.isCanonical ? " (canonical name also accepted)" : ""}`,
-		});
-	}
-	if (a.baseToken)
-		items.push({
-			label: "Base token",
-			value: tokenLine(a.baseToken),
-			mono: true,
-			hint: `tokenId ${a.baseToken.tokenId}`,
-		});
-	if (a.quoteToken)
-		items.push({
-			label: "Quote token",
-			value: tokenLine(a.quoteToken),
-			mono: true,
-		});
-	if (a.baseToken?.evmContract) {
-		items.push({
-			label: "Linked EVM contract",
-			value: a.baseToken.evmContract.address,
-			mono: true,
-			hint: `evmExtraWeiDecimals ${a.baseToken.evmContract.evmExtraWeiDecimals}`,
-		});
 	}
 	if (a.maxLeverage !== undefined)
 		items.push({
@@ -169,12 +93,6 @@ function assetFields(a: Asset, mid: string | null): KV[] {
 			value: <Pill tone="warning">delisted</Pill>,
 		});
 	if (a.outcome) {
-		items.push({
-			label: "Outcome",
-			value: `${a.outcome.outcomeId} · side ${a.outcome.side} (${a.outcome.sideName})`,
-			mono: true,
-			hint: `encoding ${a.outcome.encoding} · token ${a.outcome.tokenName}`,
-		});
 		if (a.outcome.questionName)
 			items.push({
 				label: "Question",
@@ -208,30 +126,18 @@ function assetFields(a: Asset, mid: string | null): KV[] {
 function tokenFields(t: TokenRef): KV[] {
 	return [
 		{ label: "Network", value: <NetworkBadge network={t.network} /> },
-		{
-			label: "Token index",
-			value: String(t.index),
-			mono: true,
-			hint: "Used by spotSend/sendAsset token strings and CoreWriter token fields.",
-		},
-		{ label: "Name", value: t.name, mono: true },
 		{ label: "Full name", value: t.fullName ?? "—" },
-		{ label: "szDecimals", value: String(t.szDecimals), mono: true },
-		{ label: "weiDecimals", value: String(t.weiDecimals), mono: true },
-		{ label: "tokenId", value: t.tokenId, mono: true },
 		{
-			label: "Token string",
-			value: `${t.name}:${t.tokenId}`,
+			label: "szDecimals",
+			value: String(t.szDecimals),
 			mono: true,
-			hint: "Format expected by spotSend / sendAsset.",
+			hint: "lot size of spot pairs quoting this token",
 		},
 		{
-			label: "Linked EVM contract",
-			value: t.evmContract ? t.evmContract.address : "not linked",
+			label: "weiDecimals",
+			value: String(t.weiDecimals),
 			mono: true,
-			hint: t.evmContract
-				? `evmExtraWeiDecimals ${t.evmContract.evmExtraWeiDecimals}`
-				: undefined,
+			hint: "raw amounts in transfers and CoreWriter are × 10^weiDecimals",
 		},
 		{ label: "Canonical", value: t.isCanonical ? "yes" : "no" },
 	];
@@ -242,11 +148,13 @@ type Tab = "identity" | "snippets" | "raw";
 export function AssetDetail({
 	match,
 	mid,
-	relatedPairs,
+	related,
+	onPick,
 }: {
 	match: ResolvedMatch;
 	mid: string | null;
-	relatedPairs?: Asset[];
+	related: readonly RelatedIdentity[];
+	onPick: (m: ResolvedMatch) => void;
 }) {
 	const [tab, setTab] = useState<Tab>("identity");
 	const a = match.kind === "asset" ? match.asset : null;
@@ -279,29 +187,21 @@ export function AssetDetail({
 			</div>
 			{tab === "identity" && (
 				<>
-					<KeyValueGrid
-						items={a ? assetFields(a, mid) : tokenFields(t as TokenRef)}
-					/>
-					{t && relatedPairs && relatedPairs.length > 0 && (
-						<div className="space-y-2 border-t border-border pt-4">
-							<div className="text-xs font-medium text-muted-foreground">
-								Spot pairs using {t.name} ({relatedPairs.length})
-							</div>
-							<div className="flex flex-wrap gap-1.5">
-								{relatedPairs.slice(0, 24).map((p) => (
-									<span
-										key={p.coin}
-										className="rounded border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-xs"
-									>
-										{p.coin}{" "}
-										<span className="text-muted-foreground">
-											{p.displaySymbol}
-										</span>
-									</span>
-								))}
-							</div>
+					<div className="space-y-1.5">
+						<div className="text-xs font-medium text-muted-foreground">
+							Every spelling of this {a ? a.venue.kind : "token"}
 						</div>
-					)}
+						<SpellingsTable match={match} />
+					</div>
+					<RelatedRow related={related} onPick={onPick} />
+					<div className="space-y-2 border-t border-border pt-4">
+						<div className="text-xs font-medium text-muted-foreground">
+							{a ? "Trading rules" : "Token"}
+						</div>
+						<KeyValueGrid
+							items={a ? assetFields(a, mid) : tokenFields(t as TokenRef)}
+						/>
+					</div>
 				</>
 			)}
 			{tab === "snippets" && snippets && a && (

@@ -1,11 +1,16 @@
 import {
 	type Asset,
+	classifyQuery,
 	compareAcrossNetworks,
+	infoClient,
 	isSimilarMatch,
 	type Network,
+	outcomeIdOfQuery,
 	type ResolvedMatch,
+	relatedIdentities,
 	resolveAsset,
 } from "@hl-tools/core";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Boxes, GitCompare, RefreshCw, Search } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
@@ -19,6 +24,11 @@ import {
 import { Callout, ObservedLine } from "#/components/hub/status";
 import { AssetDetail } from "#/components/tools/assets/AssetDetail";
 import { CompareTable } from "#/components/tools/assets/CompareTable";
+import {
+	IdentifierLegend,
+	QueryStrip,
+	SettledOutcomeCard,
+} from "#/components/tools/assets/Spellings";
 import { Button } from "#/components/ui/button";
 import { errorMessage, useMids, useUniverse } from "#/hooks/useHyperliquid";
 import { tool } from "#/lib/tools";
@@ -29,7 +39,14 @@ export const Route = createFileRoute("/tools/assets")({
 	validateSearch: (
 		s: Record<string, unknown>,
 	): { q?: string; sample?: string } => ({
-		q: typeof s.q === "string" ? s.q : undefined,
+		// The router parses numeric search values as numbers; "100083061"
+		// and "@107" must both survive as the typed string.
+		q:
+			typeof s.q === "string"
+				? s.q
+				: typeof s.q === "number"
+					? String(s.q)
+					: undefined,
 		sample: typeof s.sample === "string" ? s.sample : undefined,
 	}),
 	head: () => ({ meta: [{ title: "Asset Resolver — hl-tools" }] }),
@@ -50,6 +67,22 @@ const EXAMPLES: Record<Network, string[]> = {
 	testnet: ["HYPE", "@1035", "test:ABC", "110000", "xyz:TSLA", "BTC"],
 };
 
+const LEGEND_ID = "how-names-fit-together";
+
+/**
+ * A settled outcome is gone from outcomeMeta but its spec and result
+ * persist; fetched only when an outcome-shaped query has no live match.
+ */
+function useSettledOutcome(network: Network, outcomeId: number | null) {
+	return useQuery({
+		queryKey: ["settledOutcome", network, outcomeId],
+		queryFn: () => infoClient(network).settledOutcome(outcomeId as number),
+		enabled: outcomeId !== null,
+		staleTime: 24 * 60 * 60_000,
+		retry: 1,
+	});
+}
+
 function AssetsTool() {
 	const search = Route.useSearch();
 	const navigate = useNavigate({ from: "/tools/assets" });
@@ -59,9 +92,11 @@ function AssetsTool() {
 		() => search.q ?? (search.sample ? (SAMPLES[search.sample] ?? "") : ""),
 	);
 	const [compare, setCompare] = useState(false);
+	// The selection holds the match itself (not just a key) so a related
+	// identity that isn't in the result list can be shown in place.
 	const [selected, setSelected] = useState<{
 		network: Network;
-		key: string;
+		match: ResolvedMatch;
 	} | null>(null);
 	const deferred = useDeferredValue(query);
 
@@ -85,15 +120,14 @@ function AssetsTool() {
 
 	// Identities never carry across networks: drop a selection made on the other network.
 	const activeSelection =
-		selected && selected.network === network ? selected.key : null;
+		selected && selected.network === network ? selected.match : null;
 	// Similar names (UBTC for "BTC") are suggestions, listed apart from what
 	// the query directly means; a single direct identity is selected for you.
 	const direct = resolution?.matches.filter((m) => !isSimilarMatch(m)) ?? [];
 	const similar = resolution?.matches.filter(isSimilarMatch) ?? [];
 	const onlyMatch = direct.length === 1 ? direct[0] : undefined;
-	const selectedMatch: ResolvedMatch | undefined =
-		resolution?.matches.find((m) => matchKey(m) === activeSelection) ??
-		onlyMatch;
+	const selectedMatch: ResolvedMatch | undefined = activeSelection ?? onlyMatch;
+	const selectedKey = selectedMatch ? matchKey(selectedMatch) : null;
 
 	const hip3Dex =
 		selectedMatch?.kind === "asset" && selectedMatch.asset.venue.kind === "hip3"
@@ -105,6 +139,25 @@ function AssetsTool() {
 			? hip3Mids.data?.data[a.coin]
 			: mids.data?.data[a.coin]) ?? null;
 
+	const related = useMemo(
+		() =>
+			universe.data && selectedMatch
+				? relatedIdentities(universe.data, selectedMatch)
+				: [],
+		[universe.data, selectedMatch],
+	);
+
+	// Outcome-shaped query (#…, +…, 100000000+…) with no live match → settled?
+	const queryOutcome = useMemo(
+		() => classifyQuery(deferred).outcome,
+		[deferred],
+	);
+	const settledId =
+		resolution && resolution.matches.length === 0 && queryOutcome
+			? outcomeIdOfQuery(deferred)
+			: null;
+	const settled = useSettledOutcome(network, settledId);
+
 	const compareRows = useMemo(() => {
 		if (!compare || !universe.data || !otherUniverse.data || !deferred.trim())
 			return null;
@@ -115,20 +168,27 @@ function AssetsTool() {
 			: compareAcrossNetworks(b as never, a as never);
 	}, [compare, universe.data, otherUniverse.data, deferred, network]);
 
-	const relatedPairs =
-		selectedMatch?.kind === "token" && universe.data
-			? universe.data.assets.filter(
-					(x) =>
-						x.venue.kind === "spot" &&
-						(x.baseToken?.index === selectedMatch.token.index ||
-							x.quoteToken?.index === selectedMatch.token.index),
-				)
-			: undefined;
-
 	const commit = (q: string) => {
 		setQuery(q);
+		setSelected(null);
 		void navigate({ search: { q: q || undefined }, replace: true });
 	};
+	const pick = (m: ResolvedMatch) => setSelected({ network, match: m });
+
+	const matchRow = (m: ResolvedMatch) => (
+		<li key={matchKey(m)}>
+			<MatchRow
+				match={m}
+				mid={
+					m.kind === "asset" && m.asset.venue.kind !== "hip3"
+						? (mids.data?.data[m.asset.coin] ?? null)
+						: null
+				}
+				selected={selectedKey === matchKey(m)}
+				onSelect={() => pick(m)}
+			/>
+		</li>
+	);
 
 	return (
 		<ToolPage tool={tool("assets")}>
@@ -153,7 +213,10 @@ function AssetsTool() {
 								id="asset-query"
 								mono
 								value={query}
-								onChange={(e) => setQuery(e.target.value)}
+								onChange={(e) => {
+									setQuery(e.target.value);
+									setSelected(null);
+								}}
 								placeholder="HYPE · @107 · xyz:TSLA · #12090 · 110001"
 								className="h-10 pl-9"
 							/>
@@ -194,6 +257,8 @@ function AssetsTool() {
 						</button>
 					))}
 				</div>
+
+				<QueryStrip query={deferred} legendId={LEGEND_ID} />
 
 				{universe.isError ? (
 					<Callout
@@ -246,7 +311,7 @@ function AssetsTool() {
 					<EmptyState
 						icon={Boxes}
 						title="Resolve any Hyperliquid identifier"
-						description="Symbols map to different perp, spot, HIP-3 and HIP-4 identities, and every ID differs between mainnet and testnet. Enter one to see all of them."
+						description="One asset has several spellings — a coin string for info and WebSocket, an asset ID for orders, a token for balances, a display symbol for the app — and every ID differs between mainnet and testnet. Enter any of them to see all of them, and what each is used for."
 						sample="HYPE  →  HYPE perp (a=159) · @107 spot (a=10107) · token 150 …"
 						action={
 							<Button
@@ -305,20 +370,37 @@ function AssetsTool() {
 							)}
 							{resolution.matches.length === 0 ? (
 								<div className="p-4">
-									<Callout
-										tone="unknown"
-										title={`No identity matches on ${network}`}
-									>
-										Identifiers are network-specific: try{" "}
-										<button
-											type="button"
-											className="underline"
-											onClick={() => setCompare(true)}
+									{settledId !== null && settled.data?.data ? (
+										<Callout
+											tone="warning"
+											title={`Outcome ${settledId} is not live on ${network} — it has settled`}
 										>
-											comparing networks
-										</button>
-										, or check the spelling of a HIP-3 dex prefix.
-									</Callout>
+											Its spec and settlement result are shown on the right.
+										</Callout>
+									) : settledId !== null && settled.isLoading ? (
+										<Callout
+											tone="neutral"
+											title="Not live — checking whether it settled…"
+										/>
+									) : (
+										<Callout
+											tone="unknown"
+											title={`No identity matches on ${network}`}
+										>
+											{settledId !== null
+												? `Outcome ${settledId} is neither live nor settled on ${network}. `
+												: ""}
+											Identifiers are network-specific: try{" "}
+											<button
+												type="button"
+												className="underline"
+												onClick={() => setCompare(true)}
+											>
+												comparing networks
+											</button>
+											, or check the spelling of a HIP-3 dex prefix.
+										</Callout>
+									)}
 								</div>
 							) : (
 								<div className="scrollbar-thin max-h-[36rem] overflow-y-auto">
@@ -328,28 +410,7 @@ function AssetsTool() {
 											{network}; these names contain it.
 										</p>
 									)}
-									<ul aria-label="Matches">
-										{direct.map((m) => (
-											<li key={matchKey(m)}>
-												<MatchRow
-													match={m}
-													mid={
-														m.kind === "asset" && m.asset.venue.kind !== "hip3"
-															? (mids.data?.data[m.asset.coin] ?? null)
-															: null
-													}
-													selected={
-														selectedMatch
-															? matchKey(selectedMatch) === matchKey(m)
-															: false
-													}
-													onSelect={() =>
-														setSelected({ network, key: matchKey(m) })
-													}
-												/>
-											</li>
-										))}
-									</ul>
+									<ul aria-label="Matches">{direct.map(matchRow)}</ul>
 									{similar.length > 0 && (
 										<>
 											{direct.length > 0 && (
@@ -358,27 +419,7 @@ function AssetsTool() {
 												</div>
 											)}
 											<ul aria-label="Similar names">
-												{similar.map((m) => (
-													<li key={matchKey(m)}>
-														<MatchRow
-															match={m}
-															mid={
-																m.kind === "asset" &&
-																m.asset.venue.kind !== "hip3"
-																	? (mids.data?.data[m.asset.coin] ?? null)
-																	: null
-															}
-															selected={
-																selectedMatch
-																	? matchKey(selectedMatch) === matchKey(m)
-																	: false
-															}
-															onSelect={() =>
-																setSelected({ network, key: matchKey(m) })
-															}
-														/>
-													</li>
-												))}
+												{similar.map(matchRow)}
 											</ul>
 										</>
 									)}
@@ -388,9 +429,11 @@ function AssetsTool() {
 						<Panel
 							title="Identity"
 							description={
-								selectedMatch
-									? undefined
-									: "Select a match to see every identifier for it."
+								!selectedMatch
+									? "Select a match to see every spelling of it."
+									: resolution.matches.some((m) => matchKey(m) === selectedKey)
+										? undefined
+										: `Related to “${resolution.normalizedQuery}”, not one of its matches.`
 							}
 						>
 							{selectedMatch ? (
@@ -402,23 +445,40 @@ function AssetsTool() {
 											? midFor(selectedMatch.asset)
 											: null
 									}
-									relatedPairs={relatedPairs}
+									related={related}
+									onPick={pick}
 								/>
+							) : settledId !== null && settled.data?.data ? (
+								<SettledOutcomeCard
+									settled={settled.data.data}
+									observedAt={settled.data.observedAt}
+									side={queryOutcome?.side ?? null}
+								/>
+							) : settledId !== null && settled.isError ? (
+								<Callout tone="danger" title="Could not query settledOutcome">
+									{errorMessage(settled.error)}
+								</Callout>
 							) : (
 								<EmptyState
 									title={
 										resolution.matches.length ? "Nothing selected" : "No match"
 									}
 									description={
-										resolution.matches.length
+										direct.length
 											? "Choose one of the matches. The resolver never picks for you when a query is ambiguous."
-											: "Try another spelling, or compare networks."
+											: resolution.matches.length
+												? "Pick a similar name to see its spellings, or refine the query."
+												: "Try another spelling, or compare networks."
 									}
 								/>
 							)}
 						</Panel>
 					</div>
 				) : null}
+
+				<div className="pt-4">
+					<IdentifierLegend id={LEGEND_ID} />
+				</div>
 			</div>
 		</ToolPage>
 	);
