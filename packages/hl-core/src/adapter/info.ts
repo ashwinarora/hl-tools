@@ -11,6 +11,11 @@ import { HttpTransport } from "@nktkas/hyperliquid";
 import { type Observed, observed } from "../identity.ts";
 import { type Network, networkConfig } from "../network.ts";
 import {
+	normalizeSettledOutcome,
+	type RawSettledOutcome,
+	type SettledOutcome,
+} from "../resolver/identifiers.ts";
+import {
 	type AssetUniverse,
 	buildUniverse,
 	type RawMetadata,
@@ -27,6 +32,8 @@ export const DEFAULT_TTLS: Readonly<Record<string, number>> = {
 	outcomeMeta: 60_000,
 	allMids: 3_000,
 	l2Book: 1_000,
+	// A settled outcome never changes again.
+	settledOutcome: 24 * 60 * 60_000,
 };
 
 export class InfoRequestError extends Error {
@@ -179,6 +186,20 @@ export class InfoClient<N extends Network> {
 			value,
 		};
 		return value;
+	}
+
+	/**
+	 * A settled (no longer live) HIP-4 outcome. The API answers null for an
+	 * outcome that is still open or never existed, so `data` is null then.
+	 */
+	async settledOutcome(
+		outcome: number,
+	): Promise<Observed<SettledOutcome<N> | null, N>> {
+		const r = await this.info<RawSettledOutcome | null>({
+			type: "settledOutcome",
+			outcome,
+		});
+		return { ...r, data: normalizeSettledOutcome(this.network, r.data) };
 	}
 
 	allMids(dex?: string): Promise<Observed<Record<string, string>, N>> {

@@ -1,0 +1,28 @@
+{
+	"network": "mainnet",
+	"request": {
+		"type": "settledOutcome",
+		"outcome": 8306
+	},
+	"observedAt": 1791118951529,
+	"response": {
+		"spec": {
+			"outcome": 8306,
+			"name": "template:binaryPrice",
+			"description": "perp:BTC|priceDescription:BTC-USDC perp mark|seconds:60|threshold:85252|time:20261004-1115",
+			"sideSpecs": [
+				{
+					"name": "template:Yes"
+				},
+				{
+					"name": "template:No"
+				}
+			],
+			"quoteToken": "USDC",
+			"venue": "out",
+			"deployerFeeScale": "1.0"
+		},
+		"settleFraction": "0.0",
+		"details": "template"
+	}
+}

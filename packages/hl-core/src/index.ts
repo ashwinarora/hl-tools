@@ -12,6 +12,7 @@ export * from "./network.ts";
 export * from "./orders/compose.ts";
 export * from "./orders/explain.ts";
 export * from "./orders/lint.ts";
+export * from "./resolver/identifiers.ts";
 export * from "./resolver/metadata.ts";
 export * from "./resolver/resolve.ts";
 export * from "./resolver/snippets.ts";
