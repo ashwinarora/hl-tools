@@ -10,7 +10,7 @@ All tools share one typed, decimal-safe protocol core, [`@hl-tools/core`](packag
 
 | Tool | Answers | Route |
 |---|---|---|
-| **Asset Resolver** | *Why does `@107` mean HYPE on mainnet but nothing on testnet?* Every identity a symbol maps to (perp, spot, HIP-3, HIP-4), with asset IDs, token and pair indexes, decimals and copyable snippets, side by side across networks. Ambiguous queries are never auto-resolved. | `/tools/assets` |
+| **Asset Resolver** | *Why does `@107` mean HYPE on mainnet but nothing on testnet?* Says what you typed (`@` spot index, `#` outcome coin, `+` outcome token, `dex:` HIP-3, bare asset ID…), then every spelling of each identity with where it is used (info/WS coin, exchange `a`, token for balances and transfers, app-only display symbol), the same asset on other venues, and settled HIP-4 outcomes that have left `outcomeMeta`. Side by side across networks; ambiguous queries are never auto-resolved. | `/tools/assets` |
 | **Signing Inspector** | *`L1 error: User or API Wallet 0x… does not exist.`* Shows the signing family, canonical MsgPack bytes, action hash, EIP-712 typed data and the recovered signer. Compare mode names the first divergent byte between two payloads. No private-key field. | `/tools/signing` |
 | **CoreWriter Workbench** | *What does `0x01000001…` actually tell HyperCore to do?* Decodes or builds raw CoreWriter action bytes, with raw integers next to human units. Generates `cast` and Solidity, and queries all 19 read precompiles live. | `/tools/corewriter` |
 | **Cross-layer Trace** (flagship) | *My EVM transaction succeeded — why did nothing happen on HyperCore?* Follows a HyperEVM transaction through its receipt and decoded CoreWriter actions to the expected and the observed HyperCore effect. Each link is labelled observed, inferred or unknown. | `/tools/trace` |
@@ -78,7 +78,7 @@ VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
 | `bun --bun run dev` | Dev server on port 3000 |
 | `bun --bun run build` | Production build into `.output/` |
 | `bun --bun run start` | Serve the production build (`node .output/server/index.mjs`) |
-| `bun --bun run test` | Vitest: protocol core (259 tests) |
+| `bun --bun run test` | Vitest: protocol core (272 tests) |
 | `bun --bun run check` | Biome lint + format check |
 
 Dev-only helpers: `?devtools=1` shows the TanStack devtools, and `/faucet-miner?mock=1` runs the faucet miner against an MSW mock of the Hyperliquid API, so no funds move.

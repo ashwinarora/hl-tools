@@ -227,11 +227,27 @@ A full pass over every non-faucet page as a Hyperliquid developer would use it (
 
 Checked and found correct in this round (no change): paste detection for symbols, hashes, CoreWriter hex, action JSON, exchange responses and error strings; resolver notes for `@`, `@99999`, bare numbers; signing diagnostics for trailing zeros, nonce window, unknown action types and arrays; CoreWriter build linting (tick, lot, min notional, unknown asset, negative price, non-integer input); composer linting (sig figs, decimals, lot, min notional, TP on the wrong side, no TP/SL); every explainer sample plus bare errors, cancel batches, unrecognised text and `default` responses; the trace sample end to end; WebSocket connect, simulated disconnect, reconnect diff ("3 changed · 1 unchanged") and unsubscribe; the public mainnet-vs-testnet RPC comparison (14 checks each, historical state flagged on both); `/changes`; mobile layout of the home page and composer; light theme.
 
+## Identifier vocabulary and settled outcomes (2026-10-04)
+
+Built from the owner's question "I entered `100083061`, a 15-minute BTC outcome that has expired, and it says nothing found" and the follow-up that Hyperliquid's naming (`@`, `#`, `+`, `dex:`, bare numbers) is hard to keep straight. Verified in the Chrome DevTools browser on mainnet.
+
+| Page | Input | Expected | Result |
+|---|---|---|---|
+| `/tools/assets` | `100083061` | "You typed · number · ACTION ASSET ID", derived `100000000 + 83061 → outcome 8306, side 1 (No)`, coin `#83061`, token `+83061`; left: "Outcome 8306 is not live on mainnet — it has settled"; right: settled card with sides 0 · Yes `#83060` / `+83060` / `100083060` paid 0 USDC and 1 · No `#83061` / `+83061` / `100083061` paid 1 USDC (the asked-for side highlighted), settle fraction 0, spec `perp:BTC … threshold:85252 … time:20261004-1115`, observed line with `settledOutcome` | ✅ |
+| `/tools/assets` | `#83061`, `+83061` | same outcome decoded from the coin and token spellings; `classifyQuery` test covers all three | ✅ (unit) |
+| `/tools/assets` | `@107` | strip: "spot pair index · COIN STRING", derived spot pair index 107 · asset ID 10107; identity: spelling table coin `@107` (info, WebSocket) · display `HYPE/USDC` (app only) · asset ID `10107` (exchange a, CoreWriter) · spot pair index · base token name/index/ID/string · quote token; "Same asset elsewhere": HYPE perp, @207, @232, @255, HYPE token | ✅ |
+| same | click the "HYPE token" chip | identity switches to the token in place (token name/index/ID/string), panel says "Related to “@107”, not one of its matches", chips now include @107 | ✅ |
+| `/tools/assets` | `?q=100083061` in the URL | query survives a reload as typed | ✅ (first pass: router parsed it as a number and dropped it, then re-wrote it quoted → router codec fixed; `?tab=`, `?sample=`, `?tx=` on every other tool re-checked) |
+| `/tools/assets` | 390 px wide | strip wraps the explanation under the badge; legend renders as stacked cards instead of a 760 px table | ✅ |
+| `/tools/assets` | legend | five families with examples, "used in" chips (API word, plain words on hover) and derivation | ✅ |
+
+Unit coverage: `packages/hl-core/test/identifiers.test.ts` (13 tests): query classification for every shape, outcome side validation, spellings of a spot pair / perp / outcome / token, related identities for HYPE and for an outcome's other side, and `normalizeSettledOutcome` against the recorded mainnet response plus a partial `settleFraction`.
+
 ## Final regression pass
 
 Every page, both themes, desktop 1440×900 and mobile 375×812, captured full-page from an isolated browser context (home, orders, signing and CoreWriter re-captured after feedback round 1) (no wallet connected, fresh storage, so nothing personal is in the images). Tool pages were captured with their built-in sample loaded. Each image was reviewed; problems found during the pass are logged in the sections above and were fixed before the final capture.
 
-Also verified at the end: `bun --bun run test` (259 passing after this round), `bun --bun run check` (clean), `bun --bun run build` (succeeds; the mock panel and MSW worker are not in the client bundle).
+Also verified at the end: `bun --bun run test` (272 passing after this round), `bun --bun run check` (clean), `bun --bun run build` (succeeds; the mock panel and MSW worker are not in the client bundle).
 
 | Page | Dark · desktop | Light · desktop | Dark · mobile | Light · mobile |
 |---|---|---|---|---|
