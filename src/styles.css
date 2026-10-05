@@ -5,99 +5,160 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* @import './backgrounds/dot-grid.css';  */
-/* @import './backgrounds/animated-mesh.css';  */
-/* @import './backgrounds/dot-grid-glow.css';  */
-/* @import './backgrounds/grid-lines.css';  */
-/* @import './backgrounds/aurora.css';  */
-/* @import './backgrounds/circuit.css';  */
-/* @import './backgrounds/cyber-grid.css';  */
-/* @import './backgrounds/hex-grid.css';  */
-/* @import './backgrounds/radar-sweep.css';  */
-/* @import './backgrounds/matrix-rain.css';  */
-/* @import './backgrounds/topography.css';  */
-/* @import './backgrounds/pulse-rings.css';  */
-/* @import './backgrounds/diagonal-hatch.css';  */
-/* @import './backgrounds/warp-speed.css';  */
-/* @import './backgrounds/neon-mesh.css';  */
-/* @import './backgrounds/data-stream.css';  */
-@import './backgrounds/starfield.css';
+/*
+ * hl-tools design tokens
+ * ──────────────────────
+ * Colour: a cool neutral ramp, one brand accent (mint), and five semantic
+ * roles. "unknown" (violet) is deliberately distinct from "danger" (red):
+ * unsupported / unknown results are first-class, not errors.
+ * Radius: 4 / 6 / 10. Spacing: Tailwind's 4px scale. Type: Geist (UI) +
+ * Geist Mono (payloads), 12 / 13 / 14 / 16 / 20 / 28 / 40.
+ */
 
 :root {
-  --background: oklch(0.91 0.008 286);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(0.93 0.006 286);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(0.93 0.006 286);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.871 0.006 286.286);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.871 0.006 286.286);
+  /* neutrals (light) */
+  --background: oklch(0.985 0.002 250);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.967 0.004 250);
+  --surface-3: oklch(0.94 0.006 250);
+  --foreground: oklch(0.2 0.012 255);
+  --muted-foreground: oklch(0.47 0.015 255);
+  --subtle-foreground: oklch(0.58 0.012 255);
+  --border: oklch(0.905 0.006 250);
+  --border-strong: oklch(0.84 0.008 250);
+
+  /* brand + semantic (light) */
+  --brand: oklch(0.52 0.11 178);
+  --brand-foreground: oklch(0.99 0.01 178);
+  --brand-soft: oklch(0.95 0.035 178);
+  --success: oklch(0.52 0.13 150);
+  --success-soft: oklch(0.955 0.04 150);
+  --warning: oklch(0.58 0.13 70);
+  --warning-soft: oklch(0.96 0.05 80);
+  --danger: oklch(0.55 0.2 25);
+  --danger-soft: oklch(0.96 0.03 25);
+  --unknown: oklch(0.52 0.16 295);
+  --unknown-soft: oklch(0.955 0.03 295);
+  --info: oklch(0.53 0.13 245);
+  --info-soft: oklch(0.955 0.03 245);
+  --mainnet: oklch(0.5 0.12 165);
+  --testnet: oklch(0.58 0.14 60);
+
+  /* syntax */
+  --syn-key: oklch(0.45 0.13 250);
+  --syn-string: oklch(0.48 0.12 150);
+  --syn-number: oklch(0.52 0.15 45);
+  --syn-bool: oklch(0.5 0.16 300);
+  --syn-null: oklch(0.55 0.02 255);
+  --syn-punct: oklch(0.55 0.015 255);
+  --syn-comment: oklch(0.6 0.01 255);
+
+  /* shadcn compatibility */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: var(--surface);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  --accent: var(--surface-3);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger);
+  --input: var(--border-strong);
+  --ring: var(--brand);
+  --radius: 0.375rem;
+  --chart-1: var(--brand);
+  --chart-2: var(--info);
+  --chart-3: var(--warning);
+  --chart-4: var(--unknown);
+  --chart-5: var(--danger);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--brand);
+
+  --shadow-card: 0 1px 0 0 oklch(0 0 0 / 0.03), 0 1px 2px 0 oklch(0 0 0 / 0.04);
+  --grid-line: oklch(0.2 0.01 255 / 0.05);
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.141 0.005 285.823);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.141 0.005 285.823);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.274 0.006 286.033);
-  --input: oklch(0.274 0.006 286.033);
-  --ring: oklch(0.442 0.017 285.786);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.274 0.006 286.033);
-  --sidebar-ring: oklch(0.442 0.017 285.786);
+  --background: oklch(0.155 0.008 255);
+  --surface: oklch(0.185 0.009 255);
+  --surface-2: oklch(0.215 0.01 255);
+  --surface-3: oklch(0.25 0.011 255);
+  --foreground: oklch(0.955 0.004 255);
+  --muted-foreground: oklch(0.72 0.012 255);
+  --subtle-foreground: oklch(0.6 0.012 255);
+  --border: oklch(0.275 0.011 255);
+  --border-strong: oklch(0.34 0.012 255);
+
+  --brand: oklch(0.83 0.12 175);
+  --brand-foreground: oklch(0.2 0.03 175);
+  --brand-soft: oklch(0.3 0.05 175 / 0.45);
+  --success: oklch(0.78 0.14 150);
+  --success-soft: oklch(0.32 0.06 150 / 0.45);
+  --warning: oklch(0.83 0.13 80);
+  --warning-soft: oklch(0.34 0.06 75 / 0.45);
+  --danger: oklch(0.72 0.17 25);
+  --danger-soft: oklch(0.33 0.08 25 / 0.45);
+  --unknown: oklch(0.76 0.13 295);
+  --unknown-soft: oklch(0.32 0.07 295 / 0.45);
+  --info: oklch(0.76 0.11 245);
+  --info-soft: oklch(0.32 0.06 245 / 0.45);
+  --mainnet: oklch(0.8 0.13 165);
+  --testnet: oklch(0.82 0.14 70);
+
+  --syn-key: oklch(0.8 0.1 245);
+  --syn-string: oklch(0.8 0.12 150);
+  --syn-number: oklch(0.82 0.12 60);
+  --syn-bool: oklch(0.78 0.13 300);
+  --syn-null: oklch(0.65 0.02 255);
+  --syn-punct: oklch(0.62 0.015 255);
+  --syn-comment: oklch(0.58 0.01 255);
+
+  --shadow-card: 0 1px 0 0 oklch(1 0 0 / 0.02) inset;
+  --grid-line: oklch(1 0 0 / 0.035);
 }
 
 @theme inline {
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-border-strong: var(--border-strong);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-unknown: var(--unknown);
+  --color-unknown-soft: var(--unknown-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-mainnet: var(--mainnet);
+  --color-testnet: var(--testnet);
+  --color-syn-key: var(--syn-key);
+  --color-syn-string: var(--syn-string);
+  --color-syn-number: var(--syn-number);
+  --color-syn-bool: var(--syn-bool);
+  --color-syn-null: var(--syn-null);
+  --color-syn-punct: var(--syn-punct);
+  --color-syn-comment: var(--syn-comment);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -120,10 +181,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -132,6 +193,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
 }
 
 html,
@@ -140,9 +203,20 @@ body,
   min-height: 100%;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 .page-wrap {
-  width: min(1080px, calc(100% - 2rem));
+  width: min(1200px, 100%);
   margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .page-wrap {
+    padding-inline: 1.5rem;
+  }
 }
 
 @layer base {
@@ -152,9 +226,38 @@ body,
   body {
     background-color: var(--background);
     color: var(--foreground);
+    font-feature-settings: "ss01", "cv11";
+    overflow-x: hidden;
+  }
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--brand) 30%, transparent);
+  }
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
   }
 }
 
+/* Faint engineering grid used behind the directory hero. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Faucet miner: animated border while mining. */
 @keyframes border-rotate {
   from {
     --border-angle: 0deg;
@@ -170,22 +273,6 @@ body,
   initial-value: 0deg;
 }
 
-.mining-glow {
-  animation: border-rotate 4s linear infinite;
-  border-image: conic-gradient(
-      from var(--border-angle),
-      oklch(0.7 0.15 330),
-      oklch(0.7 0.15 270),
-      oklch(0.7 0.15 210),
-      oklch(0.7 0.15 150),
-      oklch(0.7 0.15 90),
-      oklch(0.7 0.15 30),
-      oklch(0.7 0.15 330)
-    )
-    1;
-  border-radius: 0;
-}
-
 .mining-glow-wrapper {
   animation: border-rotate 4s linear infinite;
   background: conic-gradient(
@@ -198,4 +285,27 @@ body,
     oklch(0.7 0.15 30),
     oklch(0.7 0.15 330)
   );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Network switch: active segment follows <html data-network> (set pre-hydration). */
+html[data-network="mainnet"] .net-seg[data-net-seg="mainnet"],
+html[data-network="testnet"] .net-seg[data-net-seg="testnet"],
+html:not([data-network]) .net-seg[data-net-seg="mainnet"] {
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 0 0 1px var(--border), 0 1px 2px 0 oklch(0 0 0 / 0.08);
+}
+
+/* RainbowKit (faucet miner only): use the design-system typeface. */
+[data-rk] {
+  --rk-fonts-body: "Geist", ui-sans-serif, system-ui, sans-serif;
 }

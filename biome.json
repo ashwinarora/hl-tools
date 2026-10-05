@@ -9,6 +9,9 @@
 		"ignoreUnknown": false,
 		"includes": [
 			"**/src/**/*",
+			"**/packages/*/vitest.config.ts",
+			"**/packages/*/test/**/*",
+			"**/packages/*/src/**/*",
 			"**/.vscode/**/*",
 			"**/index.html",
 			"**/vite.config.ts",
@@ -20,7 +23,13 @@
 		"enabled": true,
 		"indentStyle": "tab"
 	},
-	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {

@@ -1,0 +1,25 @@
+{
+	"name": "@hl-tools/core",
+	"version": "0.1.0",
+	"description": "Typed, decimal-safe Hyperliquid protocol core: identifiers, rules, signing, CoreWriter, resolver and adapters.",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts",
+		"./fixtures/*": "./fixtures/*"
+	},
+	"scripts": {
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@nktkas/hyperliquid": "^0.32.1",
+		"viem": "2.x"
+	},
+	"devDependencies": {
+		"typescript": "^5.7.2",
+		"vitest": "^3.0.5"
+	}
+}

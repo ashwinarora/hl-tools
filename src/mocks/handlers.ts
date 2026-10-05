@@ -313,7 +313,9 @@ function respondWebSocket(network: Network) {
 			? "wss://api.hyperliquid-testnet.xyz/ws"
 			: "wss://api.hyperliquid.xyz/ws";
 	const link = ws.link(url);
-	link.addEventListener("connection", ({ client }) => {
+	// addEventListener returns the request handler MSW needs; returning the
+	// link itself registered nothing.
+	return link.addEventListener("connection", ({ client }) => {
 		client.addEventListener("message", (event) => {
 			try {
 				const rawData = event.data;
@@ -383,7 +385,6 @@ function respondWebSocket(network: Network) {
 			}
 		});
 	});
-	return link;
 }
 
 export const handlers = [

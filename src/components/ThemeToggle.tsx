@@ -82,7 +82,12 @@ export default function ThemeToggle() {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" size="icon" aria-label="Toggle theme">
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					aria-label="Toggle theme"
+					className="text-muted-foreground"
+				>
 					{icon}
 				</Button>
 			</DropdownMenuTrigger>

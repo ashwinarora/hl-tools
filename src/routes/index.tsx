@@ -1,305 +1,205 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { MousePointerClick, Zap } from "lucide-react";
+import { RULE_REGISTRY } from "@hl-tools/core";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-	AnimatePresence,
-	motion,
-	useAnimate,
-	useMotionValue,
-	useMotionValueEvent,
-	useSpring,
-} from "motion/react";
-import { useEffect, useRef, useState } from "react";
-import AutoMode from "#/components/AutoMode";
-import DisclaimerGate from "#/components/DisclaimerGate";
-import LandingHero from "#/components/LandingHero";
-import { Badge } from "#/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
-import WalletTable from "#/components/WalletTable";
-import { useAutoChain } from "#/hooks/useAutoChain";
-import { useWebData, type WebDataSnapshot } from "#/hooks/useWebData";
-import { type AbstractionMode, isUnifiedLike } from "#/lib/hlActions";
+	ArrowRight,
+	CornerDownLeft,
+	FlaskConical,
+	ShieldCheck,
+	Sparkles,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { detectInput } from "#/lib/detect";
+import { TOOLS, type ToolDef, tool } from "#/lib/tools";
 import { cn } from "#/lib/utils";
+import { useHandoffStore } from "#/store/handoffStore";
 
-const ABSTRACTION_LABEL: Record<AbstractionMode, string> = {
-	unifiedAccount: "Unified",
-	portfolioMargin: "Portfolio margin",
-	disabled: "Standard",
-};
+export const Route = createFileRoute("/")({ component: Directory });
 
-export const Route = createFileRoute("/")({ component: App });
-
-function fmt(value: string | number): string {
-	const num = typeof value === "string" ? Number.parseFloat(value) : value;
-	return `$${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-/* ── Animated number row for mining mode ── */
-function AnimatedRow({ label, value }: { label: string; value: number }) {
-	const mv = useMotionValue(value);
-	const spring = useSpring(mv, { stiffness: 40, damping: 15 });
-	const [display, setDisplay] = useState(value);
-	const [scope, animateZoom] = useAnimate();
-	const prevRef = useRef(value);
-
-	useEffect(() => {
-		mv.set(value);
-		if (prevRef.current !== value) {
-			animateZoom(
-				scope.current,
-				{ scale: [1, 1.08, 1] },
-				{ duration: 0.4, ease: "easeOut" },
-			);
-			prevRef.current = value;
-		}
-	}, [value, mv, animateZoom, scope]);
-
-	useMotionValueEvent(spring, "change", (latest) => {
-		setDisplay(latest);
-	});
-
+function Directory() {
+	const newest = RULE_REGISTRY.map((r) => r.verifiedAt)
+		.sort()
+		.at(-1);
 	return (
-		<div className="flex items-center justify-between">
-			<span className="text-xs text-muted-foreground">{label}</span>
-			<span ref={scope} className="text-sm font-semibold tabular-nums">
-				{fmt(display)}
-			</span>
-		</div>
-	);
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-	return (
-		<div className="flex items-center justify-between">
-			<span className="text-xs text-muted-foreground">{label}</span>
-			<span className="text-sm font-semibold tabular-nums">{value}</span>
-		</div>
-	);
-}
-
-function StatsColumn({
-	title,
-	data,
-	isLoading,
-	delay,
-	isMining,
-}: {
-	title: string;
-	data: WebDataSnapshot | null;
-	isLoading: boolean;
-	delay: number;
-	isMining?: boolean;
-}) {
-	if (isLoading || !data) {
-		return (
-			<Card className="gap-2">
-				<CardHeader className="pb-0">
-					<div className="flex items-center justify-between">
-						<CardTitle className="text-sm">{title}</CardTitle>
-						{data && (
-							<Badge variant="secondary" className="text-[10px]">
-								{ABSTRACTION_LABEL[data.abstraction]}
-							</Badge>
-						)}
+		<main>
+			<section className="relative overflow-hidden border-b border-border">
+				<div
+					className="bg-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]"
+					aria-hidden
+				/>
+				<div className="page-wrap relative pb-12 pt-12 sm:pb-16 sm:pt-20">
+					<div className="max-w-3xl space-y-5">
+						<div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted-foreground">
+							<ShieldCheck className="size-3.5 text-brand" aria-hidden />
+							Read-only · no wallet required · runs in your browser
+						</div>
+						<h1 className="text-balance text-[2rem] font-semibold leading-[1.1] tracking-tight sm:text-5xl">
+							Understand and verify any Hyperliquid action
+						</h1>
+						<p className="max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
+							Diagnostic tools for developers building on HyperCore and HyperEVM
+							— built on one typed, decimal-safe protocol core whose signing is
+							checked against the official Python SDK.
+						</p>
 					</div>
-				</CardHeader>
-				<CardContent className="space-y-2">
-					{["a", "b", "c", "d"].map((id) => (
-						<div key={id} className="flex items-center justify-between">
-							<div className="h-3 w-24 animate-pulse rounded bg-muted" />
-							<div className="h-3.5 w-16 animate-pulse rounded bg-muted" />
-						</div>
-					))}
-				</CardContent>
-			</Card>
-		);
-	}
-
-	const { marginSummary } = data.clearinghouseState;
-	const withdrawable = Number.parseFloat(data.clearinghouseState.withdrawable);
-	const accountValue = Number.parseFloat(marginSummary.accountValue);
-
-	const usdc = data.spotState?.balances.find((b) => b.coin === "USDC");
-	const spotTotal = usdc ? Number.parseFloat(usdc.total) : 0;
-	const spotHold = usdc ? Number.parseFloat(usdc.hold) : 0;
-
-	// In Unified / Portfolio Margin mode, perps and spot share a single balance
-	// that Hyperliquid surfaces via spotClearinghouseState. The perps endpoint
-	// returns $0 for `withdrawable` and `accountValue`, so showing those rows
-	// makes it look like the account is empty when it isn't. Collapse to three
-	// clean rows in that case; keep the four-row breakdown for Standard.
-	const unified = isUnifiedLike(data.abstraction);
-	const unifiedAvailable = spotTotal - spotHold;
-
-	const rows: { label: string; value: number }[] = unified
-		? [
-				{ label: "Total Balance", value: spotTotal },
-				{ label: "Available", value: unifiedAvailable },
-				{ label: "On Hold", value: spotHold },
-			]
-		: [
-				{ label: "Perps Withdrawable", value: withdrawable },
-				{ label: "Account Value", value: accountValue },
-				{ label: "Spot Balance", value: spotTotal },
-				{ label: "Spot On Hold", value: spotHold },
-			];
-
-	const card = (
-		<Card className="gap-2">
-			<CardHeader className="pb-0">
-				<div className="flex items-center justify-between">
-					<CardTitle className="text-sm">{title}</CardTitle>
-					<Badge variant="secondary" className="text-[10px]">
-						{ABSTRACTION_LABEL[data.abstraction]}
-					</Badge>
+					<PasteBox />
 				</div>
-				{unified && (
-					<p className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
-						One balance funds both spot and perps trading.
-					</p>
-				)}
-			</CardHeader>
-			<CardContent className="space-y-1.5">
-				{isMining
-					? rows.map((r) => (
-							<AnimatedRow key={r.label} label={r.label} value={r.value} />
-						))
-					: rows.map((r) => (
-							<Row key={r.label} label={r.label} value={fmt(r.value)} />
-						))}
-			</CardContent>
-		</Card>
-	);
+			</section>
 
-	if (isMining) {
-		return (
-			<motion.div
-				initial={{ opacity: 0, y: 8 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ duration: 0.3, ease: "easeOut", delay }}
+			<section
+				className="page-wrap py-10 sm:py-14"
+				aria-labelledby="tools-heading"
 			>
-				<div className="mining-glow-wrapper rounded-xl p-[2px]">{card}</div>
-			</motion.div>
-		);
-	}
-
-	return (
-		<motion.div
-			initial={{ opacity: 0, y: 8 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.3, ease: "easeOut", delay }}
-		>
-			{card}
-		</motion.div>
+				<div className="mb-5 flex flex-wrap items-end justify-between gap-2">
+					<div>
+						<h2
+							id="tools-heading"
+							className="text-lg font-semibold tracking-tight"
+						>
+							Tools
+						</h2>
+						<p className="text-sm text-muted-foreground">
+							Each one answers a specific question or error.
+						</p>
+					</div>
+					<Link
+						to="/changes"
+						className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+					>
+						<ShieldCheck className="size-3.5 text-success" aria-hidden />
+						{RULE_REGISTRY.length} rule sets · verified {newest}
+						<ArrowRight className="size-3" aria-hidden />
+					</Link>
+				</div>
+				<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+					{TOOLS.map((t) => (
+						<ToolCard key={t.id} tool={t} />
+					))}
+				</div>
+			</section>
+		</main>
 	);
 }
 
-type Mode = "auto" | "manual";
-
-const triggerBase =
-	"flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border px-6 py-5 transition-all";
-const triggerActive = "border-primary bg-card shadow-md";
-const triggerInactive =
-	"border-border bg-transparent hover:border-muted-foreground/30 hover:shadow-sm";
-
-function App() {
-	const mainnet = useWebData("mainnet");
-	const testnet = useWebData("testnet");
-	const [mode, setMode] = useState<Mode>("auto");
-	const chain = useAutoChain();
-	const isMining =
-		chain.state.status === "seeding" || chain.state.status === "running";
-
-	if (!mainnet.isConnected) {
-		return <LandingHero />;
-	}
-
+function ToolCard({ tool: t }: { tool: ToolDef }) {
 	return (
-		<main className="page-wrap px-4 py-8 space-y-8">
-			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-				<StatsColumn
-					title="Mainnet"
-					data={mainnet.data}
-					isLoading={mainnet.isLoading}
-					delay={0}
-				/>
-				<StatsColumn
-					title="Testnet"
-					data={testnet.data}
-					isLoading={testnet.isLoading}
-					delay={0.075}
-					isMining={isMining}
-				/>
+		<article
+			className={cn(
+				"group relative flex min-w-0 flex-col rounded-lg border border-border bg-surface p-5 shadow-[var(--shadow-card)] transition-colors hover:border-border-strong",
+				t.flagship && "md:col-span-2 xl:col-span-1 xl:row-span-1",
+			)}
+		>
+			<div className="mb-3 flex items-center justify-between gap-2">
+				<span
+					className={cn(
+						"flex size-9 items-center justify-center rounded-md border border-border bg-surface-2",
+						t.writes ? "text-muted-foreground" : "text-brand",
+					)}
+				>
+					<t.icon className="size-4.5" aria-hidden />
+				</span>
+				{t.flagship && (
+					<span className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand-soft px-2 py-0.5 text-2xs font-medium text-brand">
+						<Sparkles className="size-3" aria-hidden /> Flagship
+					</span>
+				)}
+				{t.writes && (
+					<span className="rounded-full border border-warning/40 bg-warning-soft px-2 py-0.5 text-2xs font-medium text-warning">
+						Signs &amp; sends
+					</span>
+				)}
 			</div>
-
-			<div className="space-y-6">
-				{/* Mode selector */}
-				<div className="grid grid-cols-2 gap-4">
-					<motion.button
-						type="button"
-						onClick={() => setMode("auto")}
-						whileTap={{ scale: 0.98 }}
-						transition={{ duration: 0.1 }}
-						className={cn(
-							triggerBase,
-							mode === "auto" ? triggerActive : triggerInactive,
-						)}
+			<h3 className="text-base font-semibold tracking-tight">
+				<Link
+					to={t.path}
+					className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none"
+				>
+					{t.title}
+				</Link>
+			</h3>
+			<p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+				{t.description}
+			</p>
+			<blockquote className="mt-4 rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-xs leading-relaxed text-foreground/90">
+				{t.answers}
+			</blockquote>
+			<div className="relative z-10 mt-auto flex flex-wrap items-center gap-2 pt-5">
+				<Link
+					to={t.path}
+					className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground px-3 text-xs font-medium text-background transition-opacity hover:opacity-90"
+				>
+					Open <ArrowRight className="size-3.5" aria-hidden />
+				</Link>
+				{t.sample && (
+					<Link
+						to={t.path}
+						search={{ sample: t.sample.id } as never}
+						className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3 text-xs font-medium text-foreground transition-colors hover:bg-surface-2"
+						title={`Open pre-filled with: ${t.sample.label}`}
 					>
-						<Zap className="h-6 w-6" />
-						<div className="flex items-center gap-2">
-							<span className="text-lg font-semibold">Auto Mode</span>
-							<Badge variant="secondary" className="text-[10px]">
-								Recommended
-							</Badge>
-						</div>
-						<span className="text-xs font-normal text-muted-foreground">
-							Automated chain mining
-						</span>
-					</motion.button>
-					<motion.button
-						type="button"
-						onClick={() => setMode("manual")}
-						whileTap={{ scale: 0.98 }}
-						transition={{ duration: 0.1 }}
-						className={cn(
-							triggerBase,
-							mode === "manual" ? triggerActive : triggerInactive,
-						)}
-					>
-						<MousePointerClick className="h-6 w-6" />
-						<span className="text-lg font-semibold">Manual Mode</span>
-						<span className="text-xs font-normal text-muted-foreground">
-							Step-by-step control
-						</span>
-					</motion.button>
-				</div>
-
-				{/* Content */}
-				<DisclaimerGate>
-					<AnimatePresence mode="wait">
-						<motion.div
-							key={mode}
-							initial={{ opacity: 0, y: 6 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: -6 }}
-							transition={{ duration: 0.15, ease: "easeOut" }}
-						>
-							{mode === "auto" ? (
-								<AutoMode
-									state={chain.state}
-									start={chain.start}
-									abort={chain.abort}
-									reset={chain.reset}
-									computeWalletsAtRisk={chain.computeWalletsAtRisk}
-									forceReset={chain.forceReset}
-									onSwitchToManual={() => setMode("manual")}
-								/>
-							) : (
-								<WalletTable />
-							)}
-						</motion.div>
-					</AnimatePresence>
-				</DisclaimerGate>
+						<FlaskConical className="size-3.5" aria-hidden />
+						Try with a sample
+					</Link>
+				)}
 			</div>
-		</main>
+		</article>
+	);
+}
+
+function PasteBox() {
+	const [value, setValue] = useState("");
+	const detection = useMemo(() => detectInput(value), [value]);
+	const navigate = useNavigate();
+	const send = useHandoffStore((s) => s.send);
+	const go = () => {
+		if (!detection) return;
+		send(detection.tool, value.trim());
+		void navigate({ to: tool(detection.tool).path });
+	};
+	return (
+		<form
+			className="mt-8 max-w-3xl"
+			onSubmit={(e) => {
+				e.preventDefault();
+				go();
+			}}
+		>
+			<label
+				htmlFor="paste"
+				className="mb-2 block text-xs font-medium text-muted-foreground"
+			>
+				Paste anything — a symbol, tx hash, CoreWriter bytes, signed payload,
+				exchange response or RPC URL
+			</label>
+			<div className="flex flex-col gap-2 rounded-lg border border-border-strong bg-surface p-1.5 shadow-sm focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 sm:flex-row sm:items-center">
+				<input
+					id="paste"
+					value={value}
+					onChange={(e) => setValue(e.target.value)}
+					placeholder="e.g. HYPE · 0x4b65b9ab…d949 · {&quot;type&quot;:&quot;order&quot;,…}"
+					className="h-10 min-w-0 flex-1 bg-transparent px-2.5 font-mono text-sm outline-none placeholder:text-subtle-foreground focus-visible:outline-none"
+					spellCheck={false}
+					autoComplete="off"
+					data-private
+				/>
+				<button
+					type="submit"
+					disabled={!detection}
+					className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-brand px-4 text-sm font-medium text-brand-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+				>
+					{detection ? `Open ${tool(detection.tool).short}` : "Open"}
+					<CornerDownLeft className="size-3.5" aria-hidden />
+				</button>
+			</div>
+			<p
+				className="mt-2 min-h-5 text-xs text-muted-foreground"
+				aria-live="polite"
+			>
+				{value.trim()
+					? detection
+						? detection.reason
+						: "Not recognised — open a tool below."
+					: "Detected locally; nothing is sent or added to the URL."}
+			</p>
+		</form>
 	);
 }

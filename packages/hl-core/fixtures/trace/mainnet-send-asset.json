@@ -1,0 +1,900 @@
+{
+ "network": "mainnet",
+ "tx": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+ "recordedAt": "2026-09-28T12:03:51.874Z",
+ "rpc": {
+  "[\"eth_getTransactionReceipt\",[\"0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f\"]]": {
+   "type": "0x2",
+   "status": "0x1",
+   "cumulativeGasUsed": "0x42414",
+   "logs": [
+    {
+     "address": "0xb88339cb7199b77e23db6e890353e22632ba630f",
+     "topics": [
+      "0xab8530f87dc9b59234c4623bf917212bb2536d647574c8e7e5da92c2ede0c9f8",
+      "0x000000000000000000000000fd78ee919681417d192449715b2594ab58f5d002",
+      "0x000000000000000000000000b21d281dedb17ae5b501f6aa8256fe38c4e45757"
+     ],
+     "data": "0x00000000000000000000000000000000000000000000000000000000089236c0",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0x0",
+     "removed": false
+    },
+    {
+     "address": "0xb88339cb7199b77e23db6e890353e22632ba630f",
+     "topics": [
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x000000000000000000000000b21d281dedb17ae5b501f6aa8256fe38c4e45757"
+     ],
+     "data": "0x00000000000000000000000000000000000000000000000000000000089236c0",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0x1",
+     "removed": false
+    },
+    {
+     "address": "0xb88339cb7199b77e23db6e890353e22632ba630f",
+     "topics": [
+      "0xab8530f87dc9b59234c4623bf917212bb2536d647574c8e7e5da92c2ede0c9f8",
+      "0x000000000000000000000000fd78ee919681417d192449715b2594ab58f5d002",
+      "0x000000000000000000000000fc1bdd1ff58200761d56ccbce73f6f42ebe56379"
+     ],
+     "data": "0x0000000000000000000000000000000000000000000000000000000000030d40",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0x2",
+     "removed": false
+    },
+    {
+     "address": "0xb88339cb7199b77e23db6e890353e22632ba630f",
+     "topics": [
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x000000000000000000000000fc1bdd1ff58200761d56ccbce73f6f42ebe56379"
+     ],
+     "data": "0x0000000000000000000000000000000000000000000000000000000000030d40",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0x3",
+     "removed": false
+    },
+    {
+     "address": "0x28b5a0e9c621a5badaa536219b3a228c8168cf5d",
+     "topics": [
+      "0x50c55e915134d457debfa58eb6f4342956f8b0616d51a89a3659360178e1ab63",
+      "0x000000000000000000000000b21d281dedb17ae5b501f6aa8256fe38c4e45757",
+      "0x000000000000000000000000b88339cb7199b77e23db6e890353e22632ba630f"
+     ],
+     "data": "0x00000000000000000000000000000000000000000000000000000000089236c00000000000000000000000000000000000000000000000000000000000030d40",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0x4",
+     "removed": false
+    },
+    {
+     "address": "0x81d40f21f12a8f0e3252bccb954d722d4c464b64",
+     "topics": [
+      "0xff48c13eda96b1cceacc6b9edeedc9e9db9d6226afbc30146b720c19d3addb1c",
+      "0x000000000000000000000000b21d281dedb17ae5b501f6aa8256fe38c4e45757",
+      "0x67051d14cce60762e727b9889d935ae4990754542b0905271213e66c9f922b40",
+      "0x00000000000000000000000000000000000000000000000000000000000003e8"
+     ],
+     "data": "0x000000000000000000000000000000000000000000000000000000000000000300000000000000000000000028b5a0e9c621a5badaa536219b3a228c8168cf5d0000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000011c00000001000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e5831000000000000000000000000b21d281dedb17ae5b501f6aa8256fe38c4e457570000000000000000000000000000000000000000000000000000000008954400000000000000000000000000d3ef7eb6dedb7f4f1a570cd64f3780f23aa849eb0000000000000000000000000000000000000000000000000000000000030d400000000000000000000000000000000000000000000000000000000000030d400000000000000000000000000000000000000000000000000000000002d021c4636374702d666f72776172640000000000000000000000000000000000000018d3ef7eb6dedb7f4f1a570cd64f3780f23aa849eb0000000000000000",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0x5",
+     "removed": false
+    },
+    {
+     "address": "0xb88339cb7199b77e23db6e890353e22632ba630f",
+     "topics": [
+      "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
+      "0x000000000000000000000000b21d281dedb17ae5b501f6aa8256fe38c4e45757",
+      "0x0000000000000000000000006b9e773128f453f5c2c60935ee2de2cbc5390a24"
+     ],
+     "data": "0x00000000000000000000000000000000000000000000000000000000089236c0",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0x6",
+     "removed": false
+    },
+    {
+     "address": "0xb88339cb7199b77e23db6e890353e22632ba630f",
+     "topics": [
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "0x000000000000000000000000b21d281dedb17ae5b501f6aa8256fe38c4e45757",
+      "0x0000000000000000000000006b9e773128f453f5c2c60935ee2de2cbc5390a24"
+     ],
+     "data": "0x00000000000000000000000000000000000000000000000000000000089236c0",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0x7",
+     "removed": false
+    },
+    {
+     "address": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "topics": [
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "0x0000000000000000000000006b9e773128f453f5c2c60935ee2de2cbc5390a24",
+      "0x0000000000000000000000002000000000000000000000000000000000000000"
+     ],
+     "data": "0x00000000000000000000000000000000000000000000000000000000089236c0",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0x8",
+     "removed": false
+    },
+    {
+     "address": "0x3333333333333333333333333333333333333333",
+     "topics": [
+      "0x8c7f585fb295f7eb1e6aeb8fba61b23a4fe60beda405f0045073b185c74412e3",
+      "0x0000000000000000000000006b9e773128f453f5c2c60935ee2de2cbc5390a24"
+     ],
+     "data": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000c40100000d000000000000000000000000d3ef7eb6dedb7f4f1a570cd64f3780f23aa849eb000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ffffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003591d630000000000000000000000000000000000000000000000000000000000",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0x9",
+     "removed": false
+    },
+    {
+     "address": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "topics": [
+      "0xf5e9b71b7a0ec5f112c549671463ab7b4f788764e329c97a9605296866a4a99d",
+      "0x000000000000000000000000d3ef7eb6dedb7f4f1a570cd64f3780f23aa849eb"
+     ],
+     "data": "0x00000000000000000000000000000000000000000000000000000003591d63000000000000000000000000000000000000000000000000000000000000000000",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0xa",
+     "removed": false
+    },
+    {
+     "address": "0xb21d281dedb17ae5b501f6aa8256fe38c4e45757",
+     "topics": [
+      "0x7c77c294abdf00fb72b21272f440e7f664b15929dfe5e3689c33fb1456be0583",
+      "0x000000000000000000000000d3ef7eb6dedb7f4f1a570cd64f3780f23aa849eb",
+      "0x0000000000000000000000006b9e773128f453f5c2c60935ee2de2cbc5390a24",
+      "0x000000000000000000000000b88339cb7199b77e23db6e890353e22632ba630f"
+     ],
+     "data": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000089236c0",
+     "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+     "blockNumber": "0x2ced04b",
+     "blockTimestamp": "0x6aba45ac",
+     "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+     "transactionIndex": "0x0",
+     "logIndex": "0xb",
+     "removed": false
+    }
+   ],
+   "logsBloom": "0x00000000022000000000000020000000000000000000000010000100400000000000000000000000008044020000000000000000000000200000004000200400020002000400000000000028000080000000040000000000100088100000000000020000020000001000000002100800000000020000000080000010000000200010002200080000000000000004000000440000000040001000080000000000020010000000000000000000000000000000000040000000000402400000000000000002020000050000000000000000110004010000000000000010000020200011000000021000000000000000000000004000000800000000000002000060",
+   "transactionHash": "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+   "transactionIndex": "0x0",
+   "blockHash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+   "blockNumber": "0x2ced04b",
+   "gasUsed": "0x42414",
+   "effectiveGasPrice": "0x5fea020a",
+   "from": "0xdc9e760f56ec0bbeb9a332e7fbd578e32b8ef043",
+   "to": "0xb21d281dedb17ae5b501f6aa8256fe38c4e45757",
+   "contractAddress": null
+  },
+  "[\"eth_getBlockByNumber\",[\"0x2ced04b\",false]]": {
+   "hash": "0x9e133b8fcb9d9b180e1e39747b6dcd612a7bbf3d4783ba9353a6e2912a3ba6f1",
+   "parentHash": "0xfb39d81fcc8c2aead2f5209f024025d56d1d25cf02ccd51c5e6a840ee00e7df0",
+   "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+   "miner": "0x0000000000000000000000000000000000000000",
+   "stateRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "transactionsRoot": "0xa1c95bcb8d53cd09c728bd7ea21dd9b9d29c036812d97240bc490a873a36e057",
+   "receiptsRoot": "0xa64fd8b5f66857863b60829d4c77919c37ddd99e0685f124aac47578bf04d4a7",
+   "logsBloom": "0x40000000022000000000000020000000040000000000000010000100400000000000000000000000008044060200000000002000000020200000004000200400020002080400000800000028000080000800040000000000100088100000000000020000020000001400000002100800000000020001000080000010800802620010002200080000000000000004000000440000000040001000080000000000020010000000000000000000000000000100040040000000000402400000000000100002020000050000000000003030110004010000000000000210000020202011000000021000000000000000000000004000000800000000000202000060",
+   "difficulty": "0x0",
+   "number": "0x2ced04b",
+   "gasLimit": "0x2dc6c0",
+   "gasUsed": "0xa02b6",
+   "timestamp": "0x6aba45ac",
+   "extraData": "0x",
+   "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "nonce": "0x0000000000000000",
+   "baseFeePerGas": "0x6821344",
+   "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+   "blobGasUsed": "0x0",
+   "excessBlobGas": "0x0",
+   "parentBeaconBlockRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "size": "0xa1c",
+   "uncles": [],
+   "transactions": [
+    "0x619a2634e7f30f5ccf313b1ca476b397d342e31cc8925cc0faaf62e9398b124f",
+    "0x2a8845e7787b6381969dc0f6527c88d68d08b4e7d04929ea47d2276036feea9b",
+    "0xb3a6d19f8eaa6ab7d0159b9fc7974c813993ff2f1201f01d0f1535e64fc06b88"
+   ],
+   "withdrawals": []
+  }
+ },
+ "info": {
+  "{\"type\":\"userNonFundingLedgerUpdates\",\"user\":\"0x6b9e773128f453f5c2c60935ee2de2cbc5390a24\",\"startTime\":1790592423000,\"endTime\":1790592548000}": [
+   {
+    "time": 1790592428012,
+    "hash": "0xa81aa5be9e32794ba994044562c54002047300a43935981d4be351115d365336",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "143.8",
+     "usdcValue": "143.8",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646803,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592428350,
+    "hash": "0x65598d718d92f74a66d3044562c545000094a5572896161c092238c44c96d135",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0xd3ef7eb6dedb7f4f1a570cd64f3780f23aa849eb",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "143.8",
+     "usdcValue": "143.8",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646805,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592434004,
+    "hash": "0xb17dbc517f100b9ab2f7044562c58f0203e600371a132a6c554667a43e13e585",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "59.746867",
+     "usdcValue": "59.746867",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646806,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592434363,
+    "hash": "0xed34f77182c227baeeae044562c5940000700f571dc5468c90fda2c441c601a5",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0x57be3b0f21a1c7a10dcb3bae4d9263d254a773c7",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "59.746867",
+     "usdcValue": "59.746867",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646807,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592436060,
+    "hash": "0x5809528f4911a06d5983044562c5ad0204700074e414bf3ffbd1fde208157a57",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "42333.8",
+     "usdcValue": "42333.8",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646808,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592436395,
+    "hash": "0x2dc29e138525e5df2f3c044562c5b20000fdb5f9202904b1d18b49664429bfc9",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0x446a99430f123246e3352ca8e6711018dbbb19b2",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "42333.8",
+     "usdcValue": "42333.8",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646809,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592442078,
+    "hash": "0xe623edcc45b3a2a4e79d044562c60202066100b1e0b6c17689ec991f04b77c8f",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "39.8",
+     "usdcValue": "39.8",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646810,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592442472,
+    "hash": "0x08f2488e9d0b4b360a6c044562c60800002d6074380e6a08acbaf3e15c0f2520",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0xef3fdaf697dbc7d30a9645642cb516cdde964351",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "39.8",
+     "usdcValue": "39.8",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646811,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592444005,
+    "hash": "0xa8ff2550964a16efaa78044562c61f0101003d36314d35c14cc7d0a3554df0da",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "4998.8",
+     "usdcValue": "4998.8",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646812,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592444365,
+    "hash": "0x56434a7b27c41ecf57bd044562c62400007e6260c2c73da1fa0bf5cde6c7f8b9",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0x505f21430e54d4fac9fa456ead8c35cac0b3b70d",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "4998.8",
+     "usdcValue": "4998.8",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646813,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592446033,
+    "hash": "0x1f047078269ac8f8207e044562c63c0202fd005dc19de7cac2cd1bcae59ea2e2",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "499.8",
+     "usdcValue": "499.8",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646814,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592446422,
+    "hash": "0x96d0f11d2a27dcf3984a044562c64200000c0902c52afbc53a999c6fe92bb6de",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0xfa41e63b1cba0b42bed3995b5a696411b5bf820a",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "499.8",
+     "usdcValue": "499.8",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646815,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592472037,
+    "hash": "0xf3335a55a53f0bc3f4ad044562c7b8010b00723b40322a9696fc05a86432e5ae",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "44999.8",
+     "usdcValue": "44999.8",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646818,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592472377,
+    "hash": "0xa434dd71371c7acea5ae044562c7bd00006ff556d21f99a047fd88c3f61054b9",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0xb4790aeb4dfe94a3884036e3bae730568b440cea",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "44999.8",
+     "usdcValue": "44999.8",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646819,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592478032,
+    "hash": "0x367b74f56334027437f5044562c81102016e00dafe372146da4420482237dc5e",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "342.576624",
+     "usdcValue": "342.576624",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646820,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592478380,
+    "hash": "0xec3f7efc82623ff5edb9044562c81600007a96e21d655ec790082a4f416619e0",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0xf9e7f9b1c04e5be62c32e6c738096ce76e052dff",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "342.576624",
+     "usdcValue": "342.576624",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646821,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592481020,
+    "hash": "0xfec1840b1b0b89c0003b044562c83d02031700f0b60ea893a28a2f5dda0f63ab",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "99999.8",
+     "usdcValue": "99999.8",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646822,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592481354,
+    "hash": "0xd375a694ca2267e6d4ef044562c8420000b0be7a652586b8773e51e7892641d1",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0x9836e286fbf4f71998827d4bd6ea3b470c26457e",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "99999.8",
+     "usdcValue": "99999.8",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646823,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592482022,
+    "hash": "0x022290cea62f96c7039c044562c84c02020e00b44122b599a5eb3c21652370b1",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "1499.71",
+     "usdcValue": "1499.71",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646824,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592482439,
+    "hash": "0x6d5acc408729bc3e6ed4044562c852000095e426222cdb1011237793462d9629",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0xa12123727e21e6a35c5567ed74e2d39f55d58bda",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "1499.71",
+     "usdcValue": "1499.71",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646825,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592492053,
+    "hash": "0x1b9a014e28dec0201d13044562c8d50202040033c3d1def2bf62aca0e7d29a0a",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "8.86368",
+     "usdcValue": "8.86368",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646826,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592492406,
+    "hash": "0x8fd83a1991da93e19151044562c8d900001351ff2cddb2b333a0e56c50de6dcc",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0xbde2dfa191b704542e567593f9f020eede41c2ea",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "8.86368",
+     "usdcValue": "8.86368",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646827,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592497013,
+    "hash": "0x5e18c52f767c5f5c5f92044562c91902019a0015117f7e2e01e1708235703947",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "556.208746",
+     "usdcValue": "556.208746",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646830,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592497352,
+    "hash": "0x57846c8e30e32f9b58fe044562c91e0000bf8473cbe64e6dfb4d17e0efe70985",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0xdf812ede7068e13b461d4071a85c316c65c6dffe",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "556.208746",
+     "usdcValue": "556.208746",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646831,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592529050,
+    "hash": "0xceee727fa4d22b36d068044562cadc02016100653fd54a0872b71dd263d60521",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "16.75",
+     "usdcValue": "16.75",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646835,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592529401,
+    "hash": "0x996f82671050c9009ae9044562cae10000aa9a4cab53e7d23d382db9cf54a2eb",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0x26ee3e551d48a5ee4ff23088430d405ba2f40ec1",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "16.75",
+     "usdcValue": "16.75",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646836,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592547028,
+    "hash": "0x6969f8588378493c6ae3044562cbd202018d003e1e7b680e0d32a3ab427c2327",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "69.963398",
+     "usdcValue": "69.963398",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646842,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1790592547372,
+    "hash": "0x7792a5978a3f79c3790c044562cbd70000cdbd7d253298951b5b50ea493353ae",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0xc0e330226eac3d1a47c91f1d9bae525e5fb28da0",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "69.963398",
+     "usdcValue": "69.963398",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 3646843,
+     "feeToken": ""
+    }
+   }
+  ],
+  "{\"type\":\"userNonFundingLedgerUpdates\",\"user\":\"0x6b9e773128f453f5c2c60935ee2de2cbc5390a24\",\"startTime\":0}": [
+   {
+    "time": 1763819919431,
+    "hash": "0x77422c65c09ff38578bb042ff984ef0202de004b5b9312571b0ad7b87f93cd70",
+    "delta": {
+     "type": "send",
+     "user": "0x9433a711a619f3fdbea77598597349011f8cf0f6",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "sourceDex": "",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "1.0",
+     "usdcValue": "1.0",
+     "fee": "1.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 1763819820079,
+     "feeToken": "USDC"
+    }
+   },
+   {
+    "time": 1765009263040,
+    "hash": "0x8d2f010a991a2dfd8ea80430d9548e02054b00f0341d4ccf30f7ac5d581e07e8",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "5.0",
+     "usdcValue": "5.0",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 41225,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1765009263040,
+    "hash": "0x400277a5b2ab7079417c0430d9548e02054c008b4dae8f4be3cb22f871af4a63",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0x4ca142d86026de8134c4c3d6a424ab30c17221e5",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "4.0",
+     "usdcValue": "4.0",
+     "fee": "1.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 41226,
+     "feeToken": "USDC"
+    }
+   },
+   {
+    "time": 1765009366078,
+    "hash": "0x91cbcfbe731728f993450430d95970010100e7a40e1a47cb35947b11321b02e4",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "11.8",
+     "usdcValue": "11.8",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 41229,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1765009366078,
+    "hash": "0x449f46598ca86b7546190430d959700102005e3f27ab8a47e867f1ac4bac455f",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0x5867ef988d72f1266b96400ea74f57373d42ddd3",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "11.8",
+     "usdcValue": "11.8",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 41230,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1765010319016,
+    "hash": "0x211ef87e06a7ac5222980430d9862f0202a70063a1aacb24c4e7a3d0c5ab863c",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "4.8",
+     "usdcValue": "4.8",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 41272,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1765010319016,
+    "hash": "0xd3f26f192038eecdd56c0430d9862f0202a800febb3c0d9f77bb1a6bdf3cc8b8",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0x4ca142d86026de8134c4c3d6a424ab30c17221e5",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "4.8",
+     "usdcValue": "4.8",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 41273,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1765011765039,
+    "hash": "0x4f5e49aec613561e50d80430d9ca9d0110006194611674f0f326f50185173008",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "13848.522441",
+     "usdcValue": "13848.522441",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 41322,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1765011765039,
+    "hash": "0x0231c049dfa4989a03ab0430d9ca9d011100d82f7aa7b76ca5fa6b9c9ea87284",
+    "delta": {
+     "type": "send",
+     "user": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "destination": "0xda436db56e7d5d7ceeb20003fc63acd4d8b465ba",
+     "sourceDex": "spot",
+     "destinationDex": "",
+     "token": "USDC",
+     "amount": "13848.522441",
+     "usdcValue": "13848.522441",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 41323,
+     "feeToken": ""
+    }
+   },
+   {
+    "time": 1765017476085,
+    "hash": "0x32a508b074c36a4a341e0430dad92702010100960fc6891cd66db40333c74434",
+    "delta": {
+     "type": "spotTransfer",
+     "token": "USDC",
+     "amount": "42.42852",
+     "usdcValue": "42.42852",
+     "user": "0x2000000000000000000000000000000000000000",
+     "destination": "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24",
+     "fee": "0.0",
+     "nativeTokenFee": "0.0",
+     "nonce": 41475,
+     "feeToken": ""
+    }
+   }
+  ]
+ },
+ "universeAssets": []
+}

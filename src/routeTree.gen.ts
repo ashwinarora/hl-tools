@@ -9,18 +9,33 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as McpRouteImport } from './routes/mcp'
 import { Route as HowToUseRouteImport } from './routes/how-to-use'
+import { Route as ChangesRouteImport } from './routes/changes'
+import { Route as FaucetMinerRouteRouteImport } from './routes/faucet-miner/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FaucetMinerIndexRouteImport } from './routes/faucet-miner/index'
+import { Route as ToolsWebsocketRouteImport } from './routes/tools/websocket'
+import { Route as ToolsTraceRouteImport } from './routes/tools/trace'
+import { Route as ToolsSigningRouteImport } from './routes/tools/signing'
+import { Route as ToolsRpcRouteImport } from './routes/tools/rpc'
+import { Route as ToolsOrdersRouteImport } from './routes/tools/orders'
+import { Route as ToolsCorewriterRouteImport } from './routes/tools/corewriter'
+import { Route as ToolsAssetsRouteImport } from './routes/tools/assets'
+import { Route as FaucetMinerHowToUseRouteImport } from './routes/faucet-miner/how-to-use'
 
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const HowToUseRoute = HowToUseRouteImport.update({
   id: '/how-to-use',
   path: '/how-to-use',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangesRoute = ChangesRouteImport.update({
+  id: '/changes',
+  path: '/changes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaucetMinerRouteRoute = FaucetMinerRouteRouteImport.update({
+  id: '/faucet-miner',
+  path: '/faucet-miner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -28,51 +43,179 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FaucetMinerIndexRoute = FaucetMinerIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FaucetMinerRouteRoute,
+} as any)
+const ToolsWebsocketRoute = ToolsWebsocketRouteImport.update({
+  id: '/tools/websocket',
+  path: '/tools/websocket',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsTraceRoute = ToolsTraceRouteImport.update({
+  id: '/tools/trace',
+  path: '/tools/trace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsSigningRoute = ToolsSigningRouteImport.update({
+  id: '/tools/signing',
+  path: '/tools/signing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsRpcRoute = ToolsRpcRouteImport.update({
+  id: '/tools/rpc',
+  path: '/tools/rpc',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsOrdersRoute = ToolsOrdersRouteImport.update({
+  id: '/tools/orders',
+  path: '/tools/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsCorewriterRoute = ToolsCorewriterRouteImport.update({
+  id: '/tools/corewriter',
+  path: '/tools/corewriter',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsAssetsRoute = ToolsAssetsRouteImport.update({
+  id: '/tools/assets',
+  path: '/tools/assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaucetMinerHowToUseRoute = FaucetMinerHowToUseRouteImport.update({
+  id: '/how-to-use',
+  path: '/how-to-use',
+  getParentRoute: () => FaucetMinerRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/faucet-miner': typeof FaucetMinerRouteRouteWithChildren
+  '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
-  '/mcp': typeof McpRoute
+  '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/tools/assets': typeof ToolsAssetsRoute
+  '/tools/corewriter': typeof ToolsCorewriterRoute
+  '/tools/orders': typeof ToolsOrdersRoute
+  '/tools/rpc': typeof ToolsRpcRoute
+  '/tools/signing': typeof ToolsSigningRoute
+  '/tools/trace': typeof ToolsTraceRoute
+  '/tools/websocket': typeof ToolsWebsocketRoute
+  '/faucet-miner/': typeof FaucetMinerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
-  '/mcp': typeof McpRoute
+  '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/tools/assets': typeof ToolsAssetsRoute
+  '/tools/corewriter': typeof ToolsCorewriterRoute
+  '/tools/orders': typeof ToolsOrdersRoute
+  '/tools/rpc': typeof ToolsRpcRoute
+  '/tools/signing': typeof ToolsSigningRoute
+  '/tools/trace': typeof ToolsTraceRoute
+  '/tools/websocket': typeof ToolsWebsocketRoute
+  '/faucet-miner': typeof FaucetMinerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/faucet-miner': typeof FaucetMinerRouteRouteWithChildren
+  '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
-  '/mcp': typeof McpRoute
+  '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/tools/assets': typeof ToolsAssetsRoute
+  '/tools/corewriter': typeof ToolsCorewriterRoute
+  '/tools/orders': typeof ToolsOrdersRoute
+  '/tools/rpc': typeof ToolsRpcRoute
+  '/tools/signing': typeof ToolsSigningRoute
+  '/tools/trace': typeof ToolsTraceRoute
+  '/tools/websocket': typeof ToolsWebsocketRoute
+  '/faucet-miner/': typeof FaucetMinerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/how-to-use' | '/mcp'
+  fullPaths:
+    | '/'
+    | '/faucet-miner'
+    | '/changes'
+    | '/how-to-use'
+    | '/faucet-miner/how-to-use'
+    | '/tools/assets'
+    | '/tools/corewriter'
+    | '/tools/orders'
+    | '/tools/rpc'
+    | '/tools/signing'
+    | '/tools/trace'
+    | '/tools/websocket'
+    | '/faucet-miner/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/how-to-use' | '/mcp'
-  id: '__root__' | '/' | '/how-to-use' | '/mcp'
+  to:
+    | '/'
+    | '/changes'
+    | '/how-to-use'
+    | '/faucet-miner/how-to-use'
+    | '/tools/assets'
+    | '/tools/corewriter'
+    | '/tools/orders'
+    | '/tools/rpc'
+    | '/tools/signing'
+    | '/tools/trace'
+    | '/tools/websocket'
+    | '/faucet-miner'
+  id:
+    | '__root__'
+    | '/'
+    | '/faucet-miner'
+    | '/changes'
+    | '/how-to-use'
+    | '/faucet-miner/how-to-use'
+    | '/tools/assets'
+    | '/tools/corewriter'
+    | '/tools/orders'
+    | '/tools/rpc'
+    | '/tools/signing'
+    | '/tools/trace'
+    | '/tools/websocket'
+    | '/faucet-miner/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FaucetMinerRouteRoute: typeof FaucetMinerRouteRouteWithChildren
+  ChangesRoute: typeof ChangesRoute
   HowToUseRoute: typeof HowToUseRoute
-  McpRoute: typeof McpRoute
+  ToolsAssetsRoute: typeof ToolsAssetsRoute
+  ToolsCorewriterRoute: typeof ToolsCorewriterRoute
+  ToolsOrdersRoute: typeof ToolsOrdersRoute
+  ToolsRpcRoute: typeof ToolsRpcRoute
+  ToolsSigningRoute: typeof ToolsSigningRoute
+  ToolsTraceRoute: typeof ToolsTraceRoute
+  ToolsWebsocketRoute: typeof ToolsWebsocketRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/how-to-use': {
       id: '/how-to-use'
       path: '/how-to-use'
       fullPath: '/how-to-use'
       preLoaderRoute: typeof HowToUseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changes': {
+      id: '/changes'
+      path: '/changes'
+      fullPath: '/changes'
+      preLoaderRoute: typeof ChangesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faucet-miner': {
+      id: '/faucet-miner'
+      path: '/faucet-miner'
+      fullPath: '/faucet-miner'
+      preLoaderRoute: typeof FaucetMinerRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -82,13 +225,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/faucet-miner/': {
+      id: '/faucet-miner/'
+      path: '/'
+      fullPath: '/faucet-miner/'
+      preLoaderRoute: typeof FaucetMinerIndexRouteImport
+      parentRoute: typeof FaucetMinerRouteRoute
+    }
+    '/tools/websocket': {
+      id: '/tools/websocket'
+      path: '/tools/websocket'
+      fullPath: '/tools/websocket'
+      preLoaderRoute: typeof ToolsWebsocketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/trace': {
+      id: '/tools/trace'
+      path: '/tools/trace'
+      fullPath: '/tools/trace'
+      preLoaderRoute: typeof ToolsTraceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/signing': {
+      id: '/tools/signing'
+      path: '/tools/signing'
+      fullPath: '/tools/signing'
+      preLoaderRoute: typeof ToolsSigningRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/rpc': {
+      id: '/tools/rpc'
+      path: '/tools/rpc'
+      fullPath: '/tools/rpc'
+      preLoaderRoute: typeof ToolsRpcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/orders': {
+      id: '/tools/orders'
+      path: '/tools/orders'
+      fullPath: '/tools/orders'
+      preLoaderRoute: typeof ToolsOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/corewriter': {
+      id: '/tools/corewriter'
+      path: '/tools/corewriter'
+      fullPath: '/tools/corewriter'
+      preLoaderRoute: typeof ToolsCorewriterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tools/assets': {
+      id: '/tools/assets'
+      path: '/tools/assets'
+      fullPath: '/tools/assets'
+      preLoaderRoute: typeof ToolsAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faucet-miner/how-to-use': {
+      id: '/faucet-miner/how-to-use'
+      path: '/how-to-use'
+      fullPath: '/faucet-miner/how-to-use'
+      preLoaderRoute: typeof FaucetMinerHowToUseRouteImport
+      parentRoute: typeof FaucetMinerRouteRoute
+    }
   }
 }
 
+interface FaucetMinerRouteRouteChildren {
+  FaucetMinerHowToUseRoute: typeof FaucetMinerHowToUseRoute
+  FaucetMinerIndexRoute: typeof FaucetMinerIndexRoute
+}
+
+const FaucetMinerRouteRouteChildren: FaucetMinerRouteRouteChildren = {
+  FaucetMinerHowToUseRoute: FaucetMinerHowToUseRoute,
+  FaucetMinerIndexRoute: FaucetMinerIndexRoute,
+}
+
+const FaucetMinerRouteRouteWithChildren =
+  FaucetMinerRouteRoute._addFileChildren(FaucetMinerRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FaucetMinerRouteRoute: FaucetMinerRouteRouteWithChildren,
+  ChangesRoute: ChangesRoute,
   HowToUseRoute: HowToUseRoute,
-  McpRoute: McpRoute,
+  ToolsAssetsRoute: ToolsAssetsRoute,
+  ToolsCorewriterRoute: ToolsCorewriterRoute,
+  ToolsOrdersRoute: ToolsOrdersRoute,
+  ToolsRpcRoute: ToolsRpcRoute,
+  ToolsSigningRoute: ToolsSigningRoute,
+  ToolsTraceRoute: ToolsTraceRoute,
+  ToolsWebsocketRoute: ToolsWebsocketRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
