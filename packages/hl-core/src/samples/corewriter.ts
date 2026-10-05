@@ -62,6 +62,26 @@ export const COREWRITER_SAMPLES: readonly CoreWriterSample[] = [
 		description: "Decodes, but tracing cancels isn't supported yet.",
 	},
 	{
+		id: "testnet-deposit-credited",
+		label: "EVM → Core deposit, credited (testnet tx)",
+		network: "testnet",
+		hex: null,
+		txHash:
+			"0x9eb9d39ebf3c2cd92589be867417f9ad64c567736df64ac54c04a3d326cd7fc4",
+		description:
+			"No CoreWriter action: a contract pays 8 USDC to a player through Circle's CoreDepositWallet; HyperCore credits it 1 ms after the block.",
+	},
+	{
+		id: "testnet-deposit-dropped",
+		label: "EVM → Core deposit, not credited (testnet tx)",
+		network: "testnet",
+		hex: null,
+		txHash:
+			"0x2628bf11693a1dddf4fe7b9c91899975c8b85a7b464ed8603966260ee6db95f9",
+		description:
+			"The same payout path, 2 USDC, but HyperCore never credited it: the EVM receipt says success and nothing reports the drop.",
+	},
+	{
 		id: "unknown-version",
 		label: "Unknown encoding version",
 		network: "mainnet",

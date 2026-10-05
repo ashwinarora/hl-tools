@@ -112,7 +112,7 @@ export const TOOLS: readonly ToolDef[] = [
 		answers:
 			"My EVM transaction succeeded — why did nothing happen on HyperCore?",
 		icon: GitCompareArrows,
-		ruleSets: ["corewriter", "hyperevm-rpc"],
+		ruleSets: ["corewriter", "hyperevm-rpc", "evm-core-transfers"],
 		primarySource: {
 			label: "Interaction timings",
 			url: `${DOCS}/for-developers/hyperevm/interaction-timings`,

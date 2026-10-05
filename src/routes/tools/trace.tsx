@@ -36,7 +36,8 @@ import {
 } from "#/components/hub/status";
 import { ActionDetail } from "#/components/tools/trace/ActionDetail";
 import { TimingRules } from "#/components/tools/trace/TimingRules";
-import { TraceFlow } from "#/components/tools/trace/TraceFlow";
+import { TraceFlow, TransferFlow } from "#/components/tools/trace/TraceFlow";
+import { TransferDetail } from "#/components/tools/trace/TransferDetail";
 import { Button } from "#/components/ui/button";
 import { errorMessage } from "#/hooks/useHyperliquid";
 import { tool } from "#/lib/tools";
@@ -356,7 +357,7 @@ function TraceTool() {
 							<ObservedLine
 								network={t.network}
 								observedAt={t.observedAt}
-								source={`${t.receipt.coreWriterLogCount} CoreWriter action${t.receipt.coreWriterLogCount === 1 ? "" : "s"} · ${t.receipt.logCount} logs`}
+								source={`${t.receipt.coreWriterLogCount} CoreWriter action${t.receipt.coreWriterLogCount === 1 ? "" : "s"} · ${t.transfers.length} EVM → Core transfer${t.transfers.length === 1 ? "" : "s"} · ${t.receipt.logCount} logs`}
 							/>
 						</div>
 						<a
@@ -371,14 +372,18 @@ function TraceTool() {
 
 					{t.actions.length === 0 ? (
 						<Callout
-							tone="unknown"
-							title="This transaction emitted no CoreWriter actions"
+							tone={t.transfers.length > 0 ? "info" : "unknown"}
+							title={
+								t.transfers.length > 0
+									? `No CoreWriter action; ${t.transfers.length} EVM → Core token transfer${t.transfers.length === 1 ? "" : "s"} traced below`
+									: "This transaction emitted no CoreWriter actions"
+							}
 						>
 							No RawAction log from 0x3333…3333 in the receipt, so nothing was
 							sent to HyperCore through CoreWriter.
-							{t.receipt.evmToCoreTransfers.length > 0
-								? ` It does include ${t.receipt.evmToCoreTransfers.length} EVM → Core token transfer(s).`
-								: ""}
+							{t.transfers.length > 0
+								? " Tokens sent to a system address cross on their own; each transfer is checked against the recipient's HyperCore ledger below."
+								: " No ERC-20 Transfer to a system address either, so nothing crossed to HyperCore."}
 						</Callout>
 					) : (
 						t.actions.map((a, i) => (
@@ -402,7 +407,48 @@ function TraceTool() {
 						))
 					)}
 
-					<TimingRules highlight={accountProblem ? "account" : null} />
+					{t.transfers.map((x, i) => (
+						<section
+							key={x.transfer.logIndex}
+							className="space-y-4"
+							aria-labelledby={`transfer-${i}`}
+						>
+							<div className="flex flex-wrap items-center gap-2">
+								<h2 id={`transfer-${i}`} className="text-base font-semibold">
+									EVM → Core transfer {i + 1} of {t.transfers.length}
+								</h2>
+								<NetworkBadge network={t.network} />
+								<Pill>
+									{x.transfer.humanAmount
+										? `${x.transfer.humanAmount} ${x.transfer.token?.name ?? ""}`.trim()
+										: "unknown token"}
+								</Pill>
+								{x.observed.evidence === "observed" ? (
+									<Pill tone="success">credited</Pill>
+								) : x.observed.evidence === "inferred" ? (
+									<Pill tone="danger">no credit observed</Pill>
+								) : (
+									<Pill tone="unknown">not verified</Pill>
+								)}
+							</div>
+							<TransferFlow receipt={t.receipt} trace={x} />
+							<TransferDetail trace={x} network={t.network} />
+						</section>
+					))}
+
+					{t.actions.length > 0 ? (
+						<TimingRules highlight={accountProblem ? "account" : null} />
+					) : (
+						<details className="group rounded-lg border border-border bg-surface">
+							<summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+								Reference: how CoreWriter actions can fail silently (not
+								relevant here — this transaction has no CoreWriter action)
+							</summary>
+							<div className="border-t border-border p-4">
+								<TimingRules />
+							</div>
+						</details>
+					)}
 
 					<Panel title="Receipt">
 						<KeyValueGrid
@@ -440,7 +486,10 @@ function TraceTool() {
 									label: "Gas used",
 									value: t.receipt.gasUsed.toLocaleString(),
 									mono: true,
-									hint: "CoreWriter burns ~25,000 gas before emitting its log.",
+									hint:
+										t.receipt.coreWriterLogCount > 0
+											? "CoreWriter burns ~25,000 gas before emitting its log."
+											: undefined,
 								},
 								{
 									label: "Logs",
@@ -456,10 +505,17 @@ function TraceTool() {
 									label: "EVM → Core transfers",
 									value: t.receipt.evmToCoreTransfers.length
 										? t.receipt.evmToCoreTransfers
-												.map((x) => `${x.amount} → ${x.to.slice(0, 10)}…`)
-												.join(", ")
+												.map((x) =>
+													x.humanAmount
+														? `${x.humanAmount} ${x.token?.name ?? ""} → HyperCore spot of ${x.from.slice(0, 6)}…${x.from.slice(-4)}`
+														: `${x.amount.toString()} raw units from ${x.contract.slice(0, 10)}… → ${x.to.slice(0, 10)}…`,
+												)
+												.join(" · ")
 										: "none",
 									mono: true,
+									hint: t.receipt.evmToCoreTransfers.length
+										? "Raw values are in each transfer's section above."
+										: undefined,
 								},
 							]}
 						/>

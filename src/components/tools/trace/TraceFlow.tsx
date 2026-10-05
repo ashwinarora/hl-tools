@@ -1,4 +1,9 @@
-import type { ActionTrace, Evidence, ReceiptSummary } from "@hl-tools/core";
+import type {
+	ActionTrace,
+	Evidence,
+	ReceiptSummary,
+	TransferTrace,
+} from "@hl-tools/core";
 import { ArrowDown, ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { EvidenceBadge, formatTimestamp } from "#/components/hub/status";
@@ -83,6 +88,122 @@ function Link({ evidence, label }: { evidence: Evidence; label?: string }) {
 				className="size-3.5 text-subtle-foreground lg:hidden"
 				aria-hidden
 			/>
+		</div>
+	);
+}
+
+/** The same four stages for an EVM → Core token transfer. */
+export function TransferFlow({
+	receipt,
+	trace,
+}: {
+	receipt: ReceiptSummary;
+	trace: TransferTrace;
+}) {
+	const t = trace.transfer;
+	const effect = trace.observed.evidence;
+	const amount = t.humanAmount
+		? `${t.humanAmount} ${t.token?.name ?? ""}`.trim()
+		: `${t.amount.toString()} raw units`;
+	return (
+		<div className="flex min-w-0 flex-col items-stretch lg:flex-row lg:items-stretch">
+			<Stage
+				n={1}
+				title="HyperEVM tx"
+				evidence="observed"
+				primary={
+					<span
+						className={
+							receipt.status === "success" ? "text-success" : "text-danger"
+						}
+					>
+						{receipt.status === "success" ? "Succeeded" : "Reverted"} in block{" "}
+						{receipt.blockNumber.toString()}
+					</span>
+				}
+			>
+				<div>
+					{receipt.blockTimestamp !== null
+						? formatTimestamp(receipt.blockTimestamp * 1000)
+						: "time unknown"}
+				</div>
+				<div className="font-mono">
+					{short(receipt.from)} → {receipt.to ? short(receipt.to) : "create"}
+				</div>
+			</Stage>
+			<Link evidence="observed" label="receipt log" />
+			<Stage
+				n={2}
+				title="Transfer log"
+				evidence="observed"
+				primary={<span className="font-mono">log #{t.logIndex}</span>}
+			>
+				<div>
+					emitter{" "}
+					<span className="font-mono text-foreground">{short(t.contract)}</span>
+					{t.token ? ` (${t.token.name} linked contract)` : ""}
+				</div>
+				<div className="font-mono">
+					{short(t.from)} → {short(t.to)}
+				</div>
+			</Stage>
+			<Link
+				evidence={t.token ? "inferred" : "unknown"}
+				label={t.token ? "system address" : "unlinked"}
+			/>
+			<Stage
+				n={3}
+				title="Expected credit"
+				evidence={t.token ? "inferred" : "unknown"}
+				primary={
+					t.token ? (
+						`${amount} → spot of ${short(t.from)}`
+					) : (
+						<span className="text-unknown">Token not in spotMeta</span>
+					)
+				}
+			>
+				{t.token && (
+					<div className="font-mono">
+						{t.amount.toString()} ÷ 10^{t.token.evmDecimals}
+					</div>
+				)}
+			</Stage>
+			<Link
+				evidence={effect}
+				label={effect === "unknown" ? "not checked" : "ledger"}
+			/>
+			<Stage
+				n={4}
+				title="HyperCore credit"
+				evidence={effect}
+				primary={
+					<span
+						className={
+							effect === "observed"
+								? "text-success"
+								: effect === "inferred"
+									? "text-danger"
+									: "text-unknown"
+						}
+					>
+						{trace.observed.headline}
+					</span>
+				}
+			>
+				{trace.observed.delayMs !== null && (
+					<div>
+						+{(trace.observed.delayMs / 1000).toFixed(3)} s after the EVM block
+						<span className="text-subtle-foreground">
+							{" "}
+							(block time has 1 s resolution)
+						</span>
+					</div>
+				)}
+				{trace.observed.coreTime ? (
+					<div>{formatTimestamp(trace.observed.coreTime)}</div>
+				) : null}
+			</Stage>
 		</div>
 	);
 }
