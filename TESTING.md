@@ -243,11 +243,32 @@ Built from the owner's question "I entered `100083061`, a 15-minute BTC outcome 
 
 Unit coverage: `packages/hl-core/test/identifiers.test.ts` (13 tests): query classification for every shape, outcome side validation, spellings of a spot pair / perp / outcome / token, related identities for HYPE and for an outcome's other side, and `normalizeSettledOutcome` against the recorded mainnet response plus a partial `settleFraction`.
 
+## EVM → Core transfers in the trace (2026-10-05)
+
+From a brief written against the deployed trace page by the author of a staked tic-tac-toe contract on testnet: its payouts go through Circle's `CoreDepositWallet.depositFor`, not CoreWriter, and the page both misled (the "fail silently" explainer under a successful payout) and had a gap (transfers were counted, never verified). Each transaction below was run through `/tools/trace` on testnet in Chrome after the fix; the four marked fixture were also recorded with `record_trace.ts` and replay in `test/corewriter.test.ts`.
+
+| Tx | Expected (from the brief) | Page showed | Fixture |
+|---|---|---|---|
+| `0x9eb9d39e…7fc4` | 8 USDC to `0x7b67…496e`, credited 10:26:50.001 | "No CoreWriter action; 1 EVM → Core token transfer traced below" · transfer 1 of 1 · `8 USDC` · **credited** · stage 2 "emitter 0x0b80…c206 (USDC linked contract), 0x7b67…496e → 0x2000…0000" · stage 3 "8 USDC → spot of 0x7b67…496e, 8000000 ÷ 10^6" · stage 4 "8 USDC credited to 0x7b67…496e on HyperCore, +0.001 s after the EVM block, 2026-10-05 10:26:50.001 UTC" · comparisons token/amount/account all ✓ · L1 tx link · finding "Credited 0.001 s after the EVM block" · Info API (1) | ✅ `testnet-deposit-credited` |
+| `0xa24a07af…7750` | 4 USDC, credited 0.038 s after | `4 USDC` · **credited** | ✅ |
+| `0x04366fad…4746` | 2 USDC, credited 0.141 s after | `2 USDC` · **credited** · "+0.141 s after the EVM block" | ✅ |
+| `0xd53c9d25…40dd` | two transfers, both credited | "2 EVM → Core token transfers traced below" · "transfer 1 of 2 · 1 USDC · credited" (0xfe13…65ec, +0.067 s) · "transfer 2 of 2 · 1 USDC · credited" (0x7b67…496e) · Info API (2): one ledger query per account | ✅ `testnet-deposit-multi` |
+| `0x2628bf11…95f9` | **not credited** | `2 USDC` · **no credit observed** · stage 4 "No HyperCore credit observed" · observed panel "Searched 0 ledger update(s) for 0x7b67…496e between −5 s and +120 s of the EVM block" with expected token/amount/account and observed "—" · finding "HyperCore did not credit this transfer" (bad, inferred) · callout "Why a transfer can be dropped: the protocol does not state a cause" | ✅ `testnet-deposit-dropped` |
+| `0xdcceca12…b99a` | **not credited** (`0xe45e…7826`) | `1 USDC` · **no credit observed** | ✅ |
+| `0xee9386cc…326a` | **not credited** (`0xfe13…65ec`) | `6 USDC` · **no credit observed** | ✅ |
+| `0x3a9db223…cc4f` | no transfer, no CoreWriter action | "This transaction emitted no CoreWriter actions … No ERC-20 Transfer to a system address either, so nothing crossed to HyperCore" · collapsed "Reference: how CoreWriter actions can fail silently (not relevant here …)" · gas used 37,901 with no CoreWriter note · EVM → Core transfers "none" · Info API (0) | ✅ `testnet-no-crossing` |
+| `?tx=0x9eb9…` while on mainnet | — | "No transaction … on mainnet. It exists on testnet" with a "Switch to testnet and trace" button; the trace never switches on its own | ✅ |
+| `?sample=limit-order` (mainnet CoreWriter order) | unchanged | Action 1 of 1 with the full flow, "Why CoreWriter actions fail silently" shown in full as before, gas note present | ✅ regression |
+
+Unit coverage (5 new replay tests): credited transfer resolves USDC via the emitting contract with evmDecimals 6, credited account = log `from`, observed at +1 ms, exactly one `userNonFundingLedgerUpdates` call; dropped transfer is `inferred` "No HyperCore credit observed" with a bad "did not credit" finding, or a warn "Not credited yet" when `now` is 5 s after the block; two transfers to two accounts are reported separately with two ledger queries; a transaction with no crossing has no transfers and makes no info call.
+
+What the brief got right: everything about the on-chain path, the log order, the ledger entry and the timing. One point to correct: the receipt table's "CoreWriter actions 0" and "EVM → Core transfers" rows were already computed from the receipt, so no RPC change was needed; only the Info API side was missing.
+
 ## Final regression pass
 
 Every page, both themes, desktop 1440×900 and mobile 375×812, captured full-page from an isolated browser context (home, orders, signing and CoreWriter re-captured after feedback round 1) (no wallet connected, fresh storage, so nothing personal is in the images). Tool pages were captured with their built-in sample loaded. Each image was reviewed; problems found during the pass are logged in the sections above and were fixed before the final capture.
 
-Also verified at the end: `bun --bun run test` (272 passing after this round), `bun --bun run check` (clean), `bun --bun run build` (succeeds; the mock panel and MSW worker are not in the client bundle).
+Also verified at the end: `bun --bun run test` (277 passing after this round), `bun --bun run check` (clean), `bun --bun run build` (succeeds; the mock panel and MSW worker are not in the client bundle).
 
 | Page | Dark · desktop | Light · desktop | Dark · mobile | Light · mobile |
 |---|---|---|---|---|
