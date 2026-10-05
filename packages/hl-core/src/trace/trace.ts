@@ -25,6 +25,7 @@ import {
 	RAW_ACTION_TOPIC,
 	TIF_ENCODING,
 } from "../rules/corewriter.ts";
+import { SYSTEM_ADDRESSES, tokenSystemAddress } from "../rules/hyperevm.ts";
 import { ORDER_STATUSES } from "../rules/orders.ts";
 
 export type Evidence = "observed" | "inferred" | "unknown";
@@ -87,6 +88,44 @@ export interface ActionTrace {
 	readonly findings: readonly Finding[];
 }
 
+/**
+ * An ERC-20 `Transfer` from a linked contract to a system address: HyperCore
+ * credits `from` (not the EVM sender, not the calling contract) with the
+ * amount scaled by the token's EVM decimals.
+ */
+export interface EvmToCoreTransfer {
+	readonly logIndex: number;
+	/** Emitting contract (the token's linked EVM contract). */
+	readonly contract: string;
+	/** The HyperCore account that gets credited. */
+	readonly from: `0x${string}`;
+	/** System address the tokens were sent to. */
+	readonly to: `0x${string}`;
+	/** Raw EVM units from the log. */
+	readonly amount: bigint;
+	/** Token resolved from spotMeta by the emitting contract, if linked. */
+	readonly token: {
+		readonly index: number;
+		readonly name: string;
+		readonly weiDecimals: number;
+		readonly evmDecimals: number;
+	} | null;
+	/** Amount in token units (only when the token is known). */
+	readonly humanAmount: string | null;
+	/** True when `to` is the system address of the resolved token. */
+	readonly systemAddressMatches: boolean | null;
+}
+
+export interface TransferTrace {
+	readonly transfer: EvmToCoreTransfer;
+	readonly expected: {
+		readonly headline: string;
+		readonly lines: readonly string[];
+	};
+	readonly observed: ObservedEffect;
+	readonly findings: readonly Finding[];
+}
+
 export interface ReceiptSummary {
 	readonly status: "success" | "reverted";
 	readonly blockNumber: bigint;
@@ -98,12 +137,7 @@ export interface ReceiptSummary {
 	readonly effectiveGasPrice: bigint | null;
 	readonly logCount: number;
 	readonly coreWriterLogCount: number;
-	readonly evmToCoreTransfers: readonly {
-		token: string;
-		to: string;
-		amount: bigint;
-		logIndex: number;
-	}[];
+	readonly evmToCoreTransfers: readonly EvmToCoreTransfer[];
 	readonly bigBlock: boolean | null;
 }
 
@@ -115,6 +149,8 @@ export type TxTrace =
 			readonly observedAt: number;
 			readonly receipt: ReceiptSummary;
 			readonly actions: readonly ActionTrace[];
+			/** EVM → Core token transfers, each checked against the recipient's ledger. */
+			readonly transfers: readonly TransferTrace[];
 			readonly rpcLog: readonly RpcExchange[];
 			readonly infoLog: readonly InfoExchange[];
 	  }
@@ -242,19 +278,47 @@ export async function traceTransaction(
 			l.address.toLowerCase() === COREWRITER_ADDRESS &&
 			l.topics[0]?.toLowerCase() === RAW_ACTION_TOPIC,
 	);
-	const transfers = logs
+	const transfers: EvmToCoreTransfer[] = logs
 		.filter(
 			(l) =>
 				l.topics[0]?.toLowerCase() === TRANSFER_TOPIC &&
 				l.topics.length === 3 &&
 				isSystemAddress(topicAddress(l.topics[2])),
 		)
-		.map((l) => ({
-			token: l.address.toLowerCase(),
-			to: topicAddress(l.topics[2]),
-			amount: hexToBigInt(l.data) ?? 0n,
-			logIndex: Number(hexToBigInt(l.logIndex) ?? 0n),
-		}));
+		.map((l) => {
+			const contract = l.address.toLowerCase();
+			const to = topicAddress(l.topics[2]);
+			const amount = hexToBigInt(l.data) ?? 0n;
+			const ref = deps.universe?.tokens.find(
+				(t) => t.evmContract?.address.toLowerCase() === contract,
+			);
+			const token =
+				ref?.evmContract != null
+					? {
+							index: Number(ref.index),
+							name: ref.name,
+							weiDecimals: ref.weiDecimals,
+							evmDecimals:
+								ref.weiDecimals + ref.evmContract.evmExtraWeiDecimals,
+						}
+					: null;
+			return {
+				logIndex: Number(hexToBigInt(l.logIndex) ?? 0n),
+				contract,
+				from: topicAddress(l.topics[1]),
+				to,
+				amount,
+				token,
+				humanAmount:
+					token && token.evmDecimals >= 0
+						? fmt(Decimal.fromScaled(amount, token.evmDecimals))
+						: null,
+				systemAddressMatches: token
+					? to === tokenSystemAddress(token.index) ||
+						(to === SYSTEM_ADDRESSES.hype && token.name === "HYPE")
+					: null,
+			};
+		});
 	const summary: ReceiptSummary = {
 		status: receipt.status === "0x1" ? "success" : "reverted",
 		blockNumber: hexToBigInt(receipt.blockNumber) ?? 0n,
@@ -418,6 +482,14 @@ export async function traceTransaction(
 			findings,
 		});
 	}
+	const transferTraces = await traceTransfers(
+		info,
+		network,
+		transfers,
+		blockTimestamp,
+		summary.status,
+		now(),
+	);
 	return {
 		kind: "ok",
 		network,
@@ -425,9 +497,231 @@ export async function traceTransaction(
 		observedAt: now(),
 		receipt: summary,
 		actions,
+		transfers: transferTraces,
 		rpcLog,
 		infoLog,
 	};
+}
+
+/**
+ * Check each EVM → Core transfer against the credited account's ledger: a
+ * `spotTransfer` from the token's system address to that account with the
+ * same token and amount, at or just after the EVM block. One ledger query
+ * per credited account per trace; the public API rate-limits this call.
+ */
+async function traceTransfers(
+	info: (b: Record<string, unknown>) => Promise<InfoExchange>,
+	network: Network,
+	transfers: readonly EvmToCoreTransfer[],
+	blockTs: number | null,
+	status: ReceiptSummary["status"],
+	nowMs: number,
+): Promise<TransferTrace[]> {
+	const out: TransferTrace[] = [];
+	if (transfers.length === 0) return out;
+	const blockMs = blockTs !== null ? blockTs * 1000 : null;
+	const ledgers = new Map<string, Promise<InfoExchange>>();
+	const ledgerFor = (user: string) => {
+		const cached = ledgers.get(user);
+		if (cached) return cached;
+		const p =
+			blockMs === null
+				? Promise.resolve<InfoExchange>({
+						body: {},
+						response: null,
+						error: "block timestamp unavailable",
+					})
+				: info({
+						type: "userNonFundingLedgerUpdates",
+						user,
+						startTime: blockMs - 5_000,
+						endTime: blockMs + 120_000,
+					});
+		ledgers.set(user, p);
+		return p;
+	};
+	// Two transfers of the same amount to one account must match two entries.
+	const consumed = new Set<string>();
+	for (const t of transfers) {
+		const who = `${t.from.slice(0, 6)}…${t.from.slice(-4)}`;
+		const amountText = t.humanAmount
+			? `${t.humanAmount} ${t.token?.name ?? ""}`.trim()
+			: `${t.amount.toString()} raw units`;
+		const expected = {
+			headline: `Credit ${amountText} to the HyperCore spot balance of ${t.from}`,
+			lines: [
+				`The linked contract ${t.contract} emitted Transfer(from, to, value) with to = system address ${t.to}; HyperCore credits the from address, not the EVM sender.`,
+				t.token
+					? `Amount = value ÷ 10^${t.token.evmDecimals} (${t.token.name} weiDecimals ${t.token.weiDecimals} + evmExtraWeiDecimals ${t.token.evmDecimals - t.token.weiDecimals}).`
+					: `The emitter is not a linked contract in ${network} spotMeta, so the token and amount can't be resolved.`,
+				"Credited in the same L1 block, right after the EVM block is built (not delayed). Appears as a spotTransfer from the system address in the recipient's userNonFundingLedgerUpdates.",
+			],
+		};
+		const findings: Finding[] = [];
+		let observed: ObservedEffect;
+		const unknown = (headline: string, detail: string): ObservedEffect => ({
+			evidence: "unknown",
+			headline,
+			detail,
+			comparisons: [],
+			delayMs: null,
+			coreTime: null,
+			l1Hash: null,
+			data: null,
+		});
+		if (status === "reverted") {
+			observed = unknown(
+				"EVM transaction reverted",
+				"A reverted transaction's logs are discarded, so HyperCore never saw this transfer.",
+			);
+			findings.push({
+				title: "EVM transaction reverted",
+				evidence: "observed",
+				detail: "Nothing crossed to HyperCore.",
+				tone: "bad",
+			});
+		} else if (!t.token || !t.humanAmount) {
+			observed = unknown(
+				"Token not linked in metadata",
+				`${t.contract} is not the evmContract of any ${network} token in spotMeta, so there is nothing to match in the ledger.`,
+			);
+		} else if (t.systemAddressMatches === false) {
+			observed = unknown(
+				"Sent to another token's system address",
+				`${t.token.name}'s system address is ${tokenSystemAddress(t.token.index)} but the tokens went to ${t.to}. HyperCore only credits transfers to the token's own system address.`,
+			);
+			findings.push({
+				title: "Wrong system address for this token",
+				evidence: "inferred",
+				detail: `Expected ${tokenSystemAddress(t.token.index)}.`,
+				tone: "bad",
+			});
+		} else if (blockMs === null) {
+			observed = unknown(
+				"Block timestamp unavailable",
+				"Cannot search the ledger without a time window.",
+			);
+		} else {
+			const r = await ledgerFor(t.from);
+			if (r.error) {
+				observed = unknown(
+					"Could not read the recipient's ledger",
+					`userNonFundingLedgerUpdates failed: ${r.error}.`,
+				);
+			} else {
+				const list = Array.isArray(r.response)
+					? (r.response as LedgerUpdate[])
+					: [];
+				const token = t.token;
+				const amount = Decimal.parse(t.humanAmount);
+				const candidates = list.filter(
+					(u, i) =>
+						!consumed.has(`${t.from}:${i}`) &&
+						u.delta.type === "spotTransfer" &&
+						String(u.delta.user ?? "").toLowerCase() === t.to &&
+						String(u.delta.destination ?? "").toLowerCase() === t.from &&
+						u.delta.token === token.name &&
+						(Decimal.tryParse(String(u.delta.amount ?? ""))?.eq(amount) ??
+							false) &&
+						u.time >= blockMs - 1_000,
+				);
+				const hit = candidates.sort(
+					(a, b) => Math.abs(a.time - blockMs) - Math.abs(b.time - blockMs),
+				)[0];
+				if (hit) {
+					consumed.add(`${t.from}:${list.indexOf(hit)}`);
+					const delayMs = hit.time - blockMs;
+					observed = {
+						evidence: "observed",
+						headline: `${t.humanAmount} ${token.name} credited to ${who} on HyperCore`,
+						detail: `spotTransfer from ${t.to} to ${t.from} in the recipient's ledger, ${(delayMs / 1000).toFixed(3)} s after the EVM block.`,
+						comparisons: [
+							{
+								field: "token",
+								expected: token.name,
+								observed: String(hit.delta.token),
+								match: true,
+							},
+							{
+								field: "amount",
+								expected: t.humanAmount,
+								observed: String(hit.delta.amount),
+								match: true,
+							},
+							{
+								field: "credited account",
+								expected: t.from,
+								observed: String(hit.delta.destination),
+								match: true,
+							},
+						],
+						delayMs,
+						coreTime: hit.time,
+						l1Hash: hit.hash,
+						data: hit,
+					};
+					findings.push({
+						title: `Credited ${(delayMs / 1000).toFixed(3)} s after the EVM block`,
+						evidence: "observed",
+						detail: `Ledger time ${new Date(hit.time).toISOString()}.`,
+						tone: "ok",
+					});
+				} else {
+					const ageMs = nowMs - blockMs;
+					const recent = ageMs < 60_000;
+					const spotTransfers = list.filter(
+						(u) => u.delta.type === "spotTransfer",
+					).length;
+					observed = {
+						evidence: "inferred",
+						headline: "No HyperCore credit observed",
+						detail: `Searched ${list.length} ledger update(s) for ${t.from} between −5 s and +120 s of the EVM block${spotTransfers ? ` (${spotTransfers} spotTransfer(s) with a different token, amount or source)` : ""}. A dropped EVM → Core transfer leaves no record on either side.`,
+						comparisons: [
+							{
+								field: "token",
+								expected: token.name,
+								observed: null,
+								match: null,
+							},
+							{
+								field: "amount",
+								expected: t.humanAmount,
+								observed: null,
+								match: null,
+							},
+							{
+								field: "credited account",
+								expected: t.from,
+								observed: null,
+								match: null,
+							},
+						],
+						delayMs: null,
+						coreTime: null,
+						l1Hash: null,
+						data: list,
+					};
+					findings.push(
+						recent
+							? {
+									title: "Not credited yet",
+									evidence: "inferred",
+									detail: `The block is ${Math.round(ageMs / 1000)} s old; credits normally land within a second, but the ledger can lag. Trace again in a minute before concluding it was dropped.`,
+									tone: "warn",
+								}
+							: {
+									title: "HyperCore did not credit this transfer",
+									evidence: "inferred",
+									detail: `No matching spotTransfer within 120 s of a block that is ${Math.round(ageMs / 60_000)} min old. The EVM side succeeded, so nothing reports the failure; the cause is not stated by the protocol.`,
+									tone: "bad",
+								},
+					);
+				}
+			}
+		}
+		out.push({ transfer: t, expected, observed, findings });
+	}
+	return out;
 }
 
 interface HistoricalOrder {

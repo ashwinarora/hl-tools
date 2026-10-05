@@ -75,3 +75,34 @@ export const PUBLIC_RPC_ENDPOINTS = [
 		network: "testnet",
 	},
 ] as const;
+
+/**
+ * How tokens cross between HyperEVM and HyperCore, and how a crossing shows
+ * up (or doesn't) on the Core side.
+ */
+export const EVM_CORE_TRANSFER_RULES = defineRuleSet({
+	id: "evm-core-transfers",
+	title: "HyperEVM ↔ HyperCore transfers",
+	version: "1.0.0",
+	verifiedAt: "2026-10-05",
+	summary:
+		"EVM → Core: an ERC-20 Transfer(from, to, value) emitted by a token's linked contract with to = the token's system address (0x20…<token index>; HYPE is native, sent to 0x2222…2222) credits the from address on HyperCore with value ÷ 10^(weiDecimals + evmExtraWeiDecimals). The credit lands in the same L1 block, right after the EVM block, and appears in the recipient's userNonFundingLedgerUpdates as a spotTransfer whose user is the system address. A transfer HyperCore does not credit leaves no record on either side: the EVM receipt still says success. Core → EVM: sendAsset to the system address; a system transaction mints on the EVM in the next EVM block.",
+	sources: [
+		docs(
+			"for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers",
+			"HyperCore <> HyperEVM transfers",
+		),
+		docs("for-developers/hyperevm/interaction-timings", "Interaction timings"),
+		docs(
+			"for-developers/api/info-endpoint",
+			"Info endpoint (userNonFundingLedgerUpdates)",
+		),
+	],
+	changelog: [
+		{
+			version: "1.0.0",
+			date: "2026-10-05",
+			note: "Initial encoding, from tracing CoreDepositWallet.depositFor payouts on testnet: credited transfers appear 0.001–0.141 s after the block; dropped ones leave no ledger entry. Native HYPE sent to 0x2222…2222 emits no Transfer log and is not detected.",
+		},
+	],
+});

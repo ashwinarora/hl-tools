@@ -288,6 +288,108 @@ describe("trace replays (recorded from live networks)", () => {
 			),
 		).toBe(true);
 	});
+	it("testnet CoreDepositWallet payout: EVM → Core transfer credited to the depositFor recipient", async () => {
+		const { f, rpc, info } = replay("testnet-deposit-credited");
+		const t = await traceTransaction(f.network, f.tx, {
+			rpc,
+			info,
+			universe: universes.testnet,
+			now: () => 1791196010000 + 3_600_000,
+		});
+		if (t.kind !== "ok") throw new Error(t.kind);
+		expect(t.actions).toHaveLength(0);
+		expect(t.receipt.coreWriterLogCount).toBe(0);
+		expect(t.transfers).toHaveLength(1);
+		const x = t.transfers[0];
+		if (!x) throw new Error("no transfer");
+		// The log is emitted by CoreDepositWallet (USDC's linked contract), and
+		// the credited account is its `from`, not the tx sender or the game contract.
+		expect(x.transfer.contract).toBe(
+			"0x0b80659a4076e9e93c7dbe0f10675a16a3e5c206",
+		);
+		expect(x.transfer.from).toBe("0x7b676e8794d69c2e92656daa0c6b4b4bd9c3496e");
+		expect(x.transfer.to).toBe("0x2000000000000000000000000000000000000000");
+		expect(x.transfer.token?.name).toBe("USDC");
+		expect(x.transfer.token?.evmDecimals).toBe(6);
+		expect(x.transfer.humanAmount).toBe("8");
+		expect(x.transfer.systemAddressMatches).toBe(true);
+		expect(x.observed.evidence).toBe("observed");
+		expect(x.observed.headline).toContain("8 USDC credited");
+		expect(x.observed.coreTime).toBe(1791196010001);
+		expect(x.observed.delayMs).toBe(1);
+		expect(x.findings[0]?.tone).toBe("ok");
+		// One ledger query for the one credited account, nothing else.
+		expect(t.infoLog.map((i) => i.body.type)).toEqual([
+			"userNonFundingLedgerUpdates",
+		]);
+	});
+	it("testnet dropped deposit: no HyperCore credit observed", async () => {
+		const { f, rpc, info } = replay("testnet-deposit-dropped");
+		const t = await traceTransaction(f.network, f.tx, {
+			rpc,
+			info,
+			universe: universes.testnet,
+			now: () => Date.now(),
+		});
+		if (t.kind !== "ok") throw new Error(t.kind);
+		expect(t.receipt.status).toBe("success");
+		const x = t.transfers[0];
+		if (!x) throw new Error("no transfer");
+		expect(x.transfer.humanAmount).toBe("2");
+		expect(x.observed.evidence).toBe("inferred");
+		expect(x.observed.headline).toBe("No HyperCore credit observed");
+		expect(
+			x.findings.some(
+				(y) => y.tone === "bad" && /did not credit/.test(y.title),
+			),
+		).toBe(true);
+	});
+	it("a dropped deposit in a block seconds old is 'not yet', not 'failed'", async () => {
+		const { f, rpc, info } = replay("testnet-deposit-dropped");
+		const t = await traceTransaction(f.network, f.tx, {
+			rpc,
+			info,
+			universe: universes.testnet,
+			now: () => 1791190743000 + 5_000,
+		});
+		if (t.kind !== "ok") throw new Error(t.kind);
+		expect(t.transfers[0]?.findings[0]?.tone).toBe("warn");
+		expect(t.transfers[0]?.findings[0]?.title).toBe("Not credited yet");
+	});
+	it("two EVM → Core transfers in one transaction are reported separately", async () => {
+		const { f, rpc, info } = replay("testnet-deposit-multi");
+		const t = await traceTransaction(f.network, f.tx, {
+			rpc,
+			info,
+			universe: universes.testnet,
+			now: () => Date.now(),
+		});
+		if (t.kind !== "ok") throw new Error(t.kind);
+		expect(t.transfers).toHaveLength(2);
+		const recipients = t.transfers.map((x) => x.transfer.from).sort();
+		expect(recipients).toEqual([
+			"0x7b676e8794d69c2e92656daa0c6b4b4bd9c3496e",
+			"0xfe13fb72f6f2be89095e36237b8af014d55665ec",
+		]);
+		for (const x of t.transfers) {
+			expect(x.transfer.humanAmount).toBe("1");
+			expect(x.observed.evidence).toBe("observed");
+		}
+		// One ledger query per credited account.
+		expect(t.infoLog).toHaveLength(2);
+	});
+	it("a transaction with no crossing has no transfers and makes no info call", async () => {
+		const { f, rpc, info } = replay("testnet-no-crossing");
+		const t = await traceTransaction(f.network, f.tx, {
+			rpc,
+			info,
+			universe: universes.testnet,
+		});
+		if (t.kind !== "ok") throw new Error(t.kind);
+		expect(t.actions).toHaveLength(0);
+		expect(t.transfers).toHaveLength(0);
+		expect(t.infoLog).toHaveLength(0);
+	});
 	it("reports not-found and checks the other network without switching", async () => {
 		const t = await traceTransaction("testnet", `0x${"ab".repeat(32)}`, {
 			rpc: async (m, p) => ({

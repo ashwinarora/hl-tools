@@ -2,7 +2,7 @@ import { ASSET_ID_RULES } from "./assetIds.ts";
 import { COREWRITER_RULES } from "./corewriter.ts";
 import { ERROR_RULES } from "./errors.ts";
 import { FAUCET_RULES } from "./faucet.ts";
-import { HYPEREVM_RULES } from "./hyperevm.ts";
+import { EVM_CORE_TRANSFER_RULES, HYPEREVM_RULES } from "./hyperevm.ts";
 import type { RuleSetMeta } from "./meta.ts";
 import { ORDER_RULES } from "./orders.ts";
 import { PRECISION_RULES } from "./precision.ts";
@@ -35,6 +35,7 @@ export const RULE_REGISTRY: readonly RuleSetMeta[] = [
 	COREWRITER_RULES,
 	PRECOMPILE_RULES,
 	HYPEREVM_RULES,
+	EVM_CORE_TRANSFER_RULES,
 	WEBSOCKET_RULES,
 	FAUCET_RULES,
 ];
