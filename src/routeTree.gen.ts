@@ -19,6 +19,7 @@ import { Route as ToolsTraceRouteImport } from './routes/tools/trace'
 import { Route as ToolsSigningRouteImport } from './routes/tools/signing'
 import { Route as ToolsRpcRouteImport } from './routes/tools/rpc'
 import { Route as ToolsOrdersRouteImport } from './routes/tools/orders'
+import { Route as ToolsMultisigRouteImport } from './routes/tools/multisig'
 import { Route as ToolsCorewriterRouteImport } from './routes/tools/corewriter'
 import { Route as ToolsAssetsRouteImport } from './routes/tools/assets'
 import { Route as FaucetMinerHowToUseRouteImport } from './routes/faucet-miner/how-to-use'
@@ -73,6 +74,11 @@ const ToolsOrdersRoute = ToolsOrdersRouteImport.update({
   path: '/tools/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolsMultisigRoute = ToolsMultisigRouteImport.update({
+  id: '/tools/multisig',
+  path: '/tools/multisig',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolsCorewriterRoute = ToolsCorewriterRouteImport.update({
   id: '/tools/corewriter',
   path: '/tools/corewriter',
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
+  '/tools/multisig': typeof ToolsMultisigRoute
   '/tools/orders': typeof ToolsOrdersRoute
   '/tools/rpc': typeof ToolsRpcRoute
   '/tools/signing': typeof ToolsSigningRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
+  '/tools/multisig': typeof ToolsMultisigRoute
   '/tools/orders': typeof ToolsOrdersRoute
   '/tools/rpc': typeof ToolsRpcRoute
   '/tools/signing': typeof ToolsSigningRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
+  '/tools/multisig': typeof ToolsMultisigRoute
   '/tools/orders': typeof ToolsOrdersRoute
   '/tools/rpc': typeof ToolsRpcRoute
   '/tools/signing': typeof ToolsSigningRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/faucet-miner/how-to-use'
     | '/tools/assets'
     | '/tools/corewriter'
+    | '/tools/multisig'
     | '/tools/orders'
     | '/tools/rpc'
     | '/tools/signing'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/faucet-miner/how-to-use'
     | '/tools/assets'
     | '/tools/corewriter'
+    | '/tools/multisig'
     | '/tools/orders'
     | '/tools/rpc'
     | '/tools/signing'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/faucet-miner/how-to-use'
     | '/tools/assets'
     | '/tools/corewriter'
+    | '/tools/multisig'
     | '/tools/orders'
     | '/tools/rpc'
     | '/tools/signing'
@@ -188,6 +200,7 @@ export interface RootRouteChildren {
   HowToUseRoute: typeof HowToUseRoute
   ToolsAssetsRoute: typeof ToolsAssetsRoute
   ToolsCorewriterRoute: typeof ToolsCorewriterRoute
+  ToolsMultisigRoute: typeof ToolsMultisigRoute
   ToolsOrdersRoute: typeof ToolsOrdersRoute
   ToolsRpcRoute: typeof ToolsRpcRoute
   ToolsSigningRoute: typeof ToolsSigningRoute
@@ -267,6 +280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolsOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tools/multisig': {
+      id: '/tools/multisig'
+      path: '/tools/multisig'
+      fullPath: '/tools/multisig'
+      preLoaderRoute: typeof ToolsMultisigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tools/corewriter': {
       id: '/tools/corewriter'
       path: '/tools/corewriter'
@@ -311,6 +331,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowToUseRoute: HowToUseRoute,
   ToolsAssetsRoute: ToolsAssetsRoute,
   ToolsCorewriterRoute: ToolsCorewriterRoute,
+  ToolsMultisigRoute: ToolsMultisigRoute,
   ToolsOrdersRoute: ToolsOrdersRoute,
   ToolsRpcRoute: ToolsRpcRoute,
   ToolsSigningRoute: ToolsSigningRoute,

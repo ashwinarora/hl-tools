@@ -1,4 +1,9 @@
-import { tryParseJson } from "@hl-tools/core";
+import {
+	getEntry,
+	getString,
+	type JsonNode,
+	tryParseJson,
+} from "@hl-tools/core";
 import type { ToolId } from "./tools";
 
 export interface Detection {
@@ -37,8 +42,8 @@ export function detectInput(raw: string): Detection | null {
 	}
 	if (/^0x[0-9a-fA-F]{40}$/.test(v)) {
 		return {
-			tool: "assets",
-			reason: "EVM address → asset resolver (linked HyperCore token)",
+			tool: "multisig",
+			reason: "Address → Multisig Inspector (signers, agents, balances)",
 		};
 	}
 	if (/^0x[0-9a-fA-F]{32}$/.test(v)) {
@@ -55,6 +60,18 @@ export function detectInput(raw: string): Detection | null {
 				return {
 					tool: "orders",
 					reason: "Exchange response → failure explainer",
+				};
+			}
+			if (isMultiSigBody(parsed.node)) {
+				return {
+					tool: "multisig",
+					reason: "Multi-sig envelope → Multisig Inspector",
+				};
+			}
+			if (isProposalDocument(parsed.node)) {
+				return {
+					tool: "multisig",
+					reason: "Multi-sig proposal document → Multisig Inspector",
 				};
 			}
 			if (keys.has("method") && keys.has("subscription")) {
@@ -83,4 +100,31 @@ export function detectInput(raw: string): Detection | null {
 		return { tool: "assets", reason: "Symbol or ID → asset resolver" };
 	}
 	return null;
+}
+
+/** `{ action: { type: "multiSig", … } }` or a bare `{ type: "multiSig", … }`. */
+function isMultiSigBody(node: JsonNode): boolean {
+	if (node.kind !== "object") return false;
+	if (getString(node, "type") === "multiSig") return true;
+	const action = getEntry(node, "action");
+	return (
+		!!action &&
+		action.kind === "object" &&
+		getString(action, "type") === "multiSig"
+	);
+}
+
+/** A Phase 0 proposal document: `{ v: 1, payload: { multiSigUser, … } }`. */
+function isProposalDocument(node: JsonNode): boolean {
+	if (node.kind !== "object") return false;
+	const v = getEntry(node, "v");
+	const payload = getEntry(node, "payload");
+	return (
+		!!v &&
+		v.kind === "number" &&
+		v.raw === "1" &&
+		!!payload &&
+		payload.kind === "object" &&
+		getEntry(payload, "multiSigUser") !== undefined
+	);
 }

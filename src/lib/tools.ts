@@ -8,6 +8,7 @@ import {
 	Network,
 	PenLine,
 	Radio,
+	UsersRound,
 	Workflow,
 } from "lucide-react";
 
@@ -19,6 +20,7 @@ export type ToolId =
 	| "orders"
 	| "websocket"
 	| "rpc"
+	| "multisig"
 	| "faucet";
 
 export interface ToolSample {
@@ -36,6 +38,7 @@ export interface ToolDef {
 		| "/tools/orders"
 		| "/tools/websocket"
 		| "/tools/rpc"
+		| "/tools/multisig"
 		| "/faucet-miner";
 	readonly title: string;
 	readonly short: string;
@@ -168,6 +171,22 @@ export const TOOLS: readonly ToolDef[] = [
 			url: `${DOCS}/for-developers/hyperevm/json-rpc`,
 		},
 		sample: { id: "public", label: "Public mainnet vs testnet" },
+	},
+	{
+		id: "multisig",
+		path: "/tools/multisig",
+		title: "Multisig Inspector",
+		short: "Multisig",
+		description:
+			"Inspect a native multi-sig account — signers, threshold, approved API wallets, balances, health flags and recent actions — or decode a multi-sig request: the action in plain words, every signature attributed, readiness against the live signer set, and why a signature fails.",
+		answers: 'Why does the chain say "Invalid multi-sig inner signer"?',
+		icon: UsersRound,
+		ruleSets: ["multisig", "signing", "errors", "rate-limits"],
+		primarySource: {
+			label: "Multi-sig",
+			url: `${DOCS}/hypercore/multi-sig`,
+		},
+		sample: { id: "lab-treasury", label: "Lab treasury (testnet 2-of-3)" },
 	},
 	{
 		id: "faucet",
