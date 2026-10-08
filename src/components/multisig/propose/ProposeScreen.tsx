@@ -406,7 +406,7 @@ export function ProposeScreen({
 							{action ? (
 								<div className="space-y-4">
 									<div>
-										<p className="text-base font-medium">
+										<p className="text-base font-medium [overflow-wrap:anywhere]">
 											{describeAction(action).headline}
 										</p>
 										<div className="mt-2 flex flex-wrap gap-2">

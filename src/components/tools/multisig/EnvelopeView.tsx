@@ -317,9 +317,11 @@ export function ProposalResult({
 						: "From a multiSig envelope."
 				}
 			>
-				<p className="text-base font-medium">{description.headline}</p>
+				<p className="text-base font-medium [overflow-wrap:anywhere]">
+					{description.headline}
+				</p>
 				{description.lines.length > 0 && (
-					<ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
+					<ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-muted-foreground [overflow-wrap:anywhere]">
 						{description.lines.map((l) => (
 							<li key={l}>{l}</li>
 						))}
@@ -388,7 +390,7 @@ export function ProposalResult({
 					]}
 				/>
 				{proposal.meta.title && (
-					<p className="mt-3 text-sm">
+					<p className="mt-3 text-sm [overflow-wrap:anywhere]">
 						<span className="text-muted-foreground">Title (unsigned): </span>
 						{proposal.meta.title}
 					</p>
