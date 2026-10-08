@@ -169,7 +169,7 @@ function PasteBox() {
 				className="mb-2 block text-xs font-medium text-muted-foreground"
 			>
 				Paste anything — a symbol, address, tx hash, CoreWriter bytes, signed
-				payload, multi-sig envelope, exchange response or RPC URL
+				payload, multi-sig envelope or proposal, exchange response or RPC URL
 			</label>
 			<div className="flex flex-col gap-2 rounded-lg border border-border-strong bg-surface p-1.5 shadow-sm focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 sm:flex-row sm:items-center">
 				<input

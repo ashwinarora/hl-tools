@@ -2,7 +2,7 @@ import type { Issue } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Field, Panel, TextArea } from "#/components/hub/layout";
 import { Callout, IssueList } from "#/components/hub/status";
 import { Button } from "#/components/ui/button";
@@ -15,11 +15,16 @@ import { openText } from "./model/transport";
  * file. It is decoded strictly, merged into this browser's history and shown
  * on the proposal page; nothing is sent anywhere.
  */
-export function OpenProposal({ initial = "" }: { initial?: string }) {
+export function OpenProposal({
+	handed = null,
+}: {
+	/** Text handed over from the paste box or the inspector: opened on arrival. */
+	handed?: string | null;
+}) {
 	const navigate = useNavigate();
 	const client = useQueryClient();
 	const fileRef = useRef<HTMLInputElement>(null);
-	const [text, setText] = useState(initial);
+	const [text, setText] = useState("");
 	const [issues, setIssues] = useState<readonly Issue[]>([]);
 	const [failure, setFailure] = useState<string | null>(null);
 
@@ -49,6 +54,14 @@ export function OpenProposal({ initial = "" }: { initial?: string }) {
 			setFailure(errorMessage(e));
 		}
 	};
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a hand-off is opened once, when it arrives
+	useEffect(() => {
+		if (!handed) return;
+		// kept in the box so a document that does not open can be seen and corrected
+		setText(handed);
+		void open(handed);
+	}, [handed]);
 
 	return (
 		<Panel

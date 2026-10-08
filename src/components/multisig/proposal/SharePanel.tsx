@@ -5,7 +5,7 @@ import {
 	type Proposal,
 } from "@hl-tools/core";
 import { useNavigate } from "@tanstack/react-router";
-import { Download, Link2, ShieldAlert, Upload } from "lucide-react";
+import { Download, Link2, Search, ShieldAlert, Upload } from "lucide-react";
 import { useId, useMemo, useRef, useState } from "react";
 import { CopyButton } from "#/components/hub/CopyButton";
 import { Field, Panel, TextArea } from "#/components/hub/layout";
@@ -21,6 +21,7 @@ import {
 	DialogTrigger,
 } from "#/components/ui/dialog";
 import { download } from "#/lib/download";
+import { useHandoffStore } from "#/store/handoffStore";
 import {
 	fileTransport,
 	linkTransport,
@@ -122,6 +123,7 @@ export function SharePanel({
 	store: (p: Proposal) => Promise<StoreResult>;
 }) {
 	const navigate = useNavigate();
+	const send = useHandoffStore((s) => s.send);
 	const fileRef = useRef<HTMLInputElement>(null);
 	const [text, setText] = useState("");
 	const [result, setResult] = useState<
@@ -179,6 +181,17 @@ export function SharePanel({
 						<Download className="size-3.5" aria-hidden /> Download file
 					</Button>
 					<CopyButton value={pretty} label="Copy JSON" />
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => {
+							// handed over in memory, like every pasted payload in the hub
+							send("multisig", pretty);
+							void navigate({ to: "/tools/multisig" });
+						}}
+					>
+						<Search className="size-3.5" aria-hidden /> Inspect
+					</Button>
 				</div>
 				<Field
 					label="Merge a returned copy"

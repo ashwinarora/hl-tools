@@ -4,6 +4,7 @@ import {
 	type JsonNode,
 	tryParseJson,
 } from "@hl-tools/core";
+import { documentFromFragment } from "#/components/multisig/model/transport";
 import type { ToolId } from "./tools";
 
 export interface Detection {
@@ -38,6 +39,16 @@ export function detectInput(raw: string): Detection | null {
 		return { tool: "websocket", reason: "WebSocket URL → WebSocket workbench" };
 	}
 	if (/^https?:\/\//i.test(v)) {
+		// A link made by the Multisig Signer carries a proposal in its fragment. It is decoded
+		// here, locally; the URL itself is never fetched.
+		const hashAt = v.indexOf("#share=");
+		if (hashAt >= 0 && documentFromFragment(v.slice(hashAt)) !== null) {
+			return {
+				tool: "multisig-sign",
+				reason:
+					"Multi-sig proposal link → Multisig Signer (review, sign, submit)",
+			};
+		}
 		return { tool: "rpc", reason: "URL → RPC capability probe" };
 	}
 	if (/^0x[0-9a-fA-F]{40}$/.test(v)) {
@@ -68,10 +79,13 @@ export function detectInput(raw: string): Detection | null {
 					reason: "Multi-sig envelope → Multisig Inspector",
 				};
 			}
+			// A document is something to act on (it names its signers and can take more
+			// signatures); a request body is something to diagnose. Each page offers the other.
 			if (isProposalDocument(parsed.node)) {
 				return {
-					tool: "multisig",
-					reason: "Multi-sig proposal document → Multisig Inspector",
+					tool: "multisig-sign",
+					reason:
+						"Multi-sig proposal document → Multisig Signer (review, sign, submit)",
 				};
 			}
 			if (keys.has("method") && keys.has("subscription")) {

@@ -152,6 +152,10 @@ function MultisigTool() {
 						send("signing", envelopeText);
 						void navigate({ to: "/tools/signing" });
 					}}
+					onOpenInSigner={() => {
+						send("multisig-sign", envelopeText);
+						void navigate({ to: "/multisig" });
+					}}
 				/>
 			)}
 		</ToolPage>

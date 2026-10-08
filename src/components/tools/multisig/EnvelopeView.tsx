@@ -64,6 +64,7 @@ export function EnvelopeView({
 	network,
 	onSample,
 	onHandOff,
+	onOpenInSigner,
 }: {
 	text: string;
 	onChange: (v: string) => void;
@@ -71,6 +72,8 @@ export function EnvelopeView({
 	onSample: (id: string) => void;
 	/** Send a plain (non-multi-sig) action to the Signing Inspector. */
 	onHandOff: () => void;
+	/** Send a proposal document to the Multisig Signer, where it can be signed and submitted. */
+	onOpenInSigner: () => void;
 }) {
 	const parsed = useMemo(
 		() => parseEnvelopeText(text, network),
@@ -136,6 +139,7 @@ export function EnvelopeView({
 					toggle={network}
 					onSample={onSample}
 					onHandOff={onHandOff}
+					onOpenInSigner={onOpenInSigner}
 				/>
 			}
 		/>
@@ -147,11 +151,13 @@ function EnvelopeOutput({
 	toggle,
 	onSample,
 	onHandOff,
+	onOpenInSigner,
 }: {
 	parsed: ParsedEnvelopeInput;
 	toggle: Network;
 	onSample: (id: string) => void;
 	onHandOff: () => void;
+	onOpenInSigner: () => void;
 }) {
 	if (parsed.kind === "empty") {
 		return (
@@ -198,7 +204,25 @@ function EnvelopeOutput({
 			</Callout>
 		);
 	}
-	return <JudgedProposal parsed={parsed} toggle={toggle} />;
+	return (
+		<div className="space-y-4">
+			{parsed.source === "document" && (
+				<Callout
+					tone="info"
+					title="This is a proposal document"
+					action={
+						<Button size="sm" variant="outline" onClick={onOpenInSigner}>
+							Open in Multisig Signer
+						</Button>
+					}
+				>
+					The inspector only reads it. To add a signature or submit it, open it
+					in the Multisig Signer.
+				</Callout>
+			)}
+			<JudgedProposal parsed={parsed} toggle={toggle} />
+		</div>
+	);
 }
 
 /** The inspector's own wiring: judge the pasted proposal against the live signer set. */
