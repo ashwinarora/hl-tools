@@ -1,4 +1,5 @@
 import type { Issue, Proposal } from "@hl-tools/core";
+import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Workspace } from "#/components/hub/layout";
 import { Callout, Pill, type Tone } from "#/components/hub/status";
@@ -14,10 +15,14 @@ import { SignerPage } from "../SignerPage";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { REFRESH_MS, useTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
+import { ExecutePanel } from "./ExecutePanel";
 import { SharePanel } from "./SharePanel";
 import { SignPanel } from "./SignPanel";
 import { StageCallout } from "./StageCallout";
 import type { ProposalDoc } from "./useProposalDoc";
+
+const actionLink =
+	"inline-flex h-8 items-center whitespace-nowrap rounded-md border border-border-strong bg-surface px-3 text-sm hover:bg-surface-2";
 
 const ROLE: Record<WalletRole, { label: string; tone: Tone } | null> = {
 	disconnected: null,
@@ -69,7 +74,31 @@ export function ProposalView({
 	return (
 		<SignerPage wallet={role && <Pill tone={role.tone}>{role.label}</Pill>}>
 			<div className="space-y-4">
-				<StageCallout stage={stage} />
+				<StageCallout
+					stage={stage}
+					action={
+						stage.phase === "submitted" ? (
+							<Link
+								to="/tools/multisig"
+								search={{ view: "account", address: target.address }}
+								className={actionLink}
+							>
+								Check the ledger in the inspector
+							</Link>
+						) : stage.phase === "expired" ? (
+							<Link
+								to="/multisig/propose"
+								search={{
+									treasury: target.address,
+									supersedes: proposal.digest,
+								}}
+								className={actionLink}
+							>
+								Re-propose
+							</Link>
+						) : undefined
+					}
+				/>
 				{stage.failedAttempt && (
 					<Callout
 						tone="danger"
@@ -98,12 +127,20 @@ export function ProposalView({
 						<>
 							<TreasuryStrip state={treasury} wallet={address} />
 							{stage.phase !== "submitted" && stage.phase !== "unsupported" && (
-								<SignPanel
-									proposal={proposal}
-									stage={stage}
-									wallet={wallet}
-									store={doc.store}
-								/>
+								<>
+									<SignPanel
+										proposal={proposal}
+										stage={stage}
+										wallet={wallet}
+										store={doc.store}
+									/>
+									<ExecutePanel
+										proposal={proposal}
+										stage={stage}
+										wallet={wallet}
+										store={doc.store}
+									/>
+								</>
 							)}
 							<SharePanel proposal={proposal} store={doc.store} />
 						</>
