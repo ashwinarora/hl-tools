@@ -18,3 +18,6 @@ labs/
 
 # private working notes (roadmaps, brainstorms) — never pushed
 notes/
+
+# vitest --coverage output
+coverage/

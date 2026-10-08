@@ -118,6 +118,20 @@ Non-obvious choices made while turning hl-tools into a developer tooling hub, an
 
 **Reference material is not a finding.** "Why CoreWriter actions fail silently" sat under the verdict of a transaction with no CoreWriter action, and the owner of the game contract read it as a diagnosis of a payout that had in fact succeeded. On such transactions it is now a collapsed reference block that says so in its title, the CoreWriter gas note is only shown when a CoreWriter action exists, and the transfer line in the receipt reads "8 USDC → HyperCore spot of 0x7b67…496e" instead of raw units and the system address.
 
+**Bare addresses route to the Multisig Inspector.** The paste box used to send a 40-hex address to the asset resolver, where it matched nothing. An address is an account, and the inspector answers for every account: a multi-sig gets its signers, a normal user, agent, vault or sub-account gets its role explained. 32-hex token IDs still go to the resolver.
+
+**The Multisig Inspector stores nothing.** Every number is fetched from Hyperliquid when the user looks and stamped with its network and observation time; the only cache is TanStack Query's 10 s. There is no table to drift from the chain, and later phases add storage only for what the chain cannot answer (proposals and signatures that have not been submitted yet).
+
+**One account lookup costs 64 of the 1200 weight per minute; the rest is conditional or on demand.** `userToMultiSigSigners` 20, `extraAgents` 20, `clearinghouseState` 2, `spotClearinghouseState` 2, `openOrders` 20, in one `Promise.allSettled` so a failed section never blanks the others. `userRole` (60) runs only when the address is not a multi-sig, because then the role is the explanation. Per-signer nesting checks (20 each, at most 10), the HyperEVM balance and explorer history (40) are buttons, and the raw-requests panel lists every call with its weight. There is no auto-refresh.
+
+**Explorer history is capped and attributed with a caveat.** `userDetails` on `rpc.hyperliquid(-testnet).xyz/explorer` is CORS-open and returns the newest ~101 entries with no paging, so the panel says "showing the most recent N". The explorer records envelope actions against the multi-sig user without the leader or the signatures, so history can show *what* the account did but never *who* signed; the panel says that too.
+
+**The envelope view takes the network from the payload when the payload carries one.** User-signed inner actions name it in `hyperliquidChain`, so the view pins that network, warns when the header disagrees and fetches the signer set there. L1 payloads carry no network: the header decides, the page says so, and when the multi-sig user does not exist there the view probes the other network and offers a one-click switch instead of reporting "unknown".
+
+**A raw envelope has no claimed signers, so recovery decides.** Proposal documents name each signer; exchange request bodies carry only `{r, s, v}`. The core treats a zero-address claim as "unclaimed": the signature is attributed to whoever it recovers to, and the diagnosis accepts a variant when it recovers to any current authorized user. Found in the browser (every signature of a pasted envelope showed as invalid) and fixed in core with tests, per the hub rule.
+
+**Signatures render as stacked rows, not a table.** Index, recovered address, status and the reason do not fit four columns in a half-width workspace: the address either wrapped one hex pair per line or pushed the reason behind a horizontal scroll. One row per signature with the reason underneath reads at every width.
+
 ## Testing
 
 **Browser testing uses the Chrome DevTools MCP.** Viewport emulation (`emulate`) gives exact desktop (1440×900) and mobile (375×812, DPR 2) sizes and light/dark `prefers-color-scheme`. The faucet miner is exercised with the Rabby wallet in that browser; mining itself is only run under the existing MSW mock harness so no real funds move.

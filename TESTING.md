@@ -16,7 +16,7 @@ cd packages/hl-core && bunx vitest run
 | Suite | What it covers |
 |---|---|
 | `decimal.test.ts` | Parsing (valid/invalid lexemes, exponents), exact add/sub/mul, divide with each rounding mode, decimal-place and significant-figure rounding, 1e8/1e6 scaling round trips, wire formatting |
-| `signing.test.ts` | 49 Python SDK vectors (MsgPack bytes, action hash, EIP-712 digest, recovered signer) on both networks; MsgPack int/float formats vs Python; decoder strictness; order-preserving JSON; inspector diagnostics (key order, trailing zeros, uppercase addresses, `f:false`, network mismatch, multisig out of scope, request-body splitting, short r/s padding) |
+| `signing.test.ts` | 49 Python SDK vectors (MsgPack bytes, action hash, EIP-712 digest, recovered signer) on both networks; MsgPack int/float formats vs Python; decoder strictness; order-preserving JSON; inspector diagnostics (key order, trailing zeros, uppercase addresses, `f:false`, network mismatch, multisig hand-off, request-body splitting, short r/s padding) |
 | `resolver.test.ts` | Cases in `fixtures/resolver/cases.json` against metadata snapshots of both networks; explicit-index normalisation; HIP-3 dex/meta mismatch rejection; cross-network pairing; snippet pricing |
 | `corewriter.test.ts` | Decode fixtures (`fixtures/corewriter/cases.json`: every action id, unknown version, unknown action, malformed bytes); encoding reproduces the real mainnet limit-order bytes; inexact fixed-point input refused; cast/Solidity snippets; precompile input/output codec incl. a dynamic struct; trace replays of five recorded transactions (cloid match, ledger match, inference without cloid, unsupported action, sender with no HyperCore history, not-found with other-network check) |
 | `orders.test.ts` | Precision linter fixtures (`fixtures/orders/lint-cases.json`: perp/spot/HIP-3 tick and lot rules, sizes that round to zero); composer (normalTpsl bracket, blocking instead of rounding, explicit rounding options, TP/SL side checks, conservative market price, reduce-only close, minimum notional, builder fee caps, post-only crossing); explainer fixtures (`fixtures/orders/explain-cases.json`) |
@@ -37,8 +37,11 @@ cd packages/hl-core && bunx vitest run
 | `multisig/property.test.ts` | fast-check: codec round trip, merge idempotent/commutative, trim/pad, `validateProposal`/`prepareInnerAction`/`parseEnvelope`/`explainExchangeError` total over arbitrary input, tampered payloads never validate |
 | `multisig/lab.test.ts` | The 124 recorded testnet requests replayed offline: parse, recover every signer, predict the chain's verdict from the policy in force, explain every error, diagnose every injected divergence |
 | `multisig/vectors.test.ts` | 44 multi-sig vectors from `hyperliquid-python-sdk` 0.24.0: msgpack bytes, action hash, digest and every signature for inner L1, inner user-signed and envelope |
+| `multisig/account.test.ts` | `assessAccount`: the role sentence for every non-multi-sig (user, agent of X, vault, sub-account of X, never seen), threshold 1 / all keys required / 10 signers, nested signers checked and unchecked, agents present / expired / unloadable, HyperEVM unchecked / zero / funds under the dead key (multi-sigs only) |
+| `multisig/describe.test.ts` | `describeAction` over every L1 shape and user-signed spec: orders (side, size, price, tif, reduce-only, trigger, builder, cloid, grouping), cancels by oid and cloid, modify, leverage, scheduled cancel, vault and sub-account transfers, sends and withdrawals, agent approval, convert and revert, staking, bigint amounts, unknown types "hashed exactly as written" |
+| `explorer.test.ts` | Explorer `userDetails` adapter: a recorded 101-entry response and the truncation flag, non-JSON body, HTTP 429, abort, the default `fetch` |
 
-694 tests, all passing; the multisig module is held to 100 % line and branch coverage (`bunx vitest run --coverage` in `packages/hl-core`). `bun --bun run test` runs the workspace projects through a root `vitest.config.ts`.
+765 tests, all passing; the multisig module, its rule set and the explorer adapter are held to 100 % line and branch coverage (`bunx vitest run --coverage` in `packages/hl-core`). `bun --bun run test` runs the workspace projects through a root `vitest.config.ts`.
 
 ## 0. Homepage, shell and `/changes`
 
@@ -51,13 +54,16 @@ cd packages/hl-core && bunx vitest run
 | Paste box: exchange response `{"status":"ok","response":{…tick size…}}`, Enter | "Exchange response → failure explainer"; explainer opens with "1 rejected · tick size" | ✅ |
 | Paste box: `{"action":{"type":"cancel",…},"nonce":…}` | "Action payload → signing inspector" | ✅ |
 | Paste box: `{"method":"subscribe",…}` | "Subscription message → WebSocket workbench" | ✅ |
+| Paste box: multi-sig request body `{"action":{"type":"multiSig",…},"nonce":…}`, Open | "Multi-sig envelope → Multisig Inspector"; the envelope view opens with the body decoded, nothing in the URL | ✅ (2026-10-09) |
+| Paste box: proposal document `{"v":1,"payload":{"multiSigUser":…},…}`, Open | "Multi-sig proposal document → Multisig Inspector"; envelope view | ✅ (2026-10-09) |
+| Paste box: bare address `0xf836…d148`, Open | "Address → Multisig Inspector (signers, agents, balances)"; account view with `?address=` (an address is a public identifier) | ✅ (2026-10-09; previously routed to the asset resolver, where it matched nothing) |
 | Paste box: `Order must have minimum value of $10.` | "Error message → failure explainer" | ✅ |
 | Paste box: a long English question | "Not recognised — open a tool below.", Open disabled | ✅ |
 | Every "Try with a sample" link (7) | tool opens with a result, not an empty state | ❌ → fixed. RPC and WebSocket samples only prefilled; they now run/connect on arrival. The trace sample could render an empty page (SSR crash in `useNetworkHydrated`) or fill the hash without tracing (hydration event never delivered); both fixed. |
 | Server-rendered HTML of all 11 pages (`curl`) | full page content, no "switched to client rendering" | ❌ → fixed (same SSR crash on Signing, CoreWriter, Trace, Composer) |
 | Network switch with the keyboard | arrow keys move the selection | ❌ → fixed. Arrow keys did nothing and both options were tab stops; network switch and all segmented controls now follow the WAI-ARIA radio pattern. |
 | Reload after choosing testnet | testnet segment painted before hydration, no hydration warning | ✅ |
-| `/changes` | 11 rule sets with version, verified date, sources, tools that use them, changelog; timeline sorted by date | ✅ |
+| `/changes` | 13 rule sets (11 at the time; multisig and evm-core-transfers were added later) with version, verified date, sources, tools that use them, changelog; timeline sorted by date | ✅ |
 | 375px, both themes | no horizontal scroll on any page | ✅ (`scrollWidth − innerWidth = 0` measured on every page) |
 
 ## 1. Asset Resolver — `/tools/assets`
@@ -204,6 +210,40 @@ The only tool that signs. Exercised with the Rabby wallet in the DevTools-contro
 | `/faucet-miner/how-to-use` | hub breadcrumb, accurate copy | ❌ → fixed. Old "Back / How to Use" header, "What is hl-tools?" (now the hub's name) and "click the wallet button in the top-right… stats appear on the home page"; rewritten, page has its own title. |
 | `/how-to-use` (old URL) | 301 to `/faucet-miner/how-to-use` | ✅ |
 
+## 8. Multisig Inspector — `/tools/multisig`
+
+Verified 2026-10-09 in the user's own Brave instance through the Chrome DevTools MCP (port 9222), on Hyperliquid testnet against the lab treasury `0xf836…d148` (2-of-3: signers A `0x5e7c…7216`, B `0xb70c…36ee`, C `0x41e8…55b9`; agent `lab`). Nothing is stored; every number on the page is fetched when the user looks. Screenshots: [account](docs/screenshots/multisig-dark-desktop.jpeg) and [envelope](docs/screenshots/multisig-envelope-dark-desktop.jpeg) (all four variants in the table at the end).
+
+| Network | Input | Expected | Result |
+|---|---|---|---|
+| testnet | sample `lab-treasury` (`?sample=lab-treasury`, flips the header to testnet after hydration) | "multi-sig user · 2 of 3 authorized users must sign every action", signers A/B/C, agent `lab` (valid until 2027-01-05) with the bypass warning, perps value and spot balances, no open orders, raw panel listing 5 requests · weight 64 | ✅ |
+| testnet | "Check signers for nesting" | one `userToMultiSigSigners` per signer (3 × 20), none nested, its own observed line | ✅ |
+| testnet | "Check HyperEVM" | `eth_getBalance` on the testnet EVM RPC, result in HYPE with its own observed line | ✅ |
+| testnet | "Load recent actions" | explorer `userDetails` (weight 40) only on request; newest first with the action described in plain words, failures marked, "showing the most recent N" footer | ✅ |
+| testnet | normal user `0x51d3…7fd9` | "not a multi-sig · A normal user: its own key signs every action…"; 6 requests · weight 124 (`userRole` is fetched only when the address is not a multi-sig) | ✅ |
+| testnet | agent address `0xed60…368b` (lab agentA) | "An API wallet (agent) of 0x5e7c…7216. Agents sign L1 actions for their master and cannot be multi-sig users or inner signers." | ✅ |
+| testnet | reverted signer D `0xb037…db15` | "A normal user… It may have been a multi-sig user before (load recent actions to see conversions)." | ✅ |
+| testnet | never-seen address `0x7f9a…2b3c` | "Never seen on Hyperliquid: no deposit has ever reached this address…" | ✅ (`0x…dEaD` was tried first and turned out to be a real testnet user) |
+| testnet → mainnet | header switch after a lookup | "This lookup ran on testnet; you are now on mainnet" with "Look up the same address on mainnet"; the result keeps its testnet badge | ✅ |
+| — | wording for accounts that are not multi-sigs | the role sentence once (header), no HyperEVM "dead key" flag, API wallets "None." | ❌ → fixed. The sentence appeared twice, the Health list warned about the original key keeping HyperEVM for accounts that have no converted key, and the empty API-wallet panel said "only the multi-sig can act". `assessAccount` now emits the HyperEVM flags for multi-sigs only (test updated). |
+| testnet | envelope sample `lab-envelope` (lab recording `ms-order-resting`) | "Limit buy 0.001 BTC at 50000 (Gtc)"; both signatures `valid-authorized` and attributed to A and B; readiness `ready` 2 of 2, leader authorized, envelope signature recovers to the leader; inner digest, action hash, envelope digest; canonical envelope | ✅ |
+| testnet | broken sample `lab-broken-envelope` (`neg-B-signed-different-nonce`) | signature 2 `signed different bytes`: "0xb70c…36ee signed with nonce 1791399875145 (−1)"; readiness `not-ready` 1 of 2; "Still able to sign: …" | ✅ |
+| — | raw envelope signatures | attributed by recovery | ❌ → fixed in core. A request body has no claimed signers, so every signature was compared with the zero address and shown as `invalid`. `classifySignatures` and `diagnoseSignature` now treat an unclaimed signature as matching whoever it recovers to, and a variant counts when it recovers to any current authorized user (`cls.unclaimed`, `diag.unclaimed`). |
+| mainnet | the same L1 body with the header on mainnet | "Checked on mainnet (from the header switch)" plus "0xf8365a35… is not a multi-sig user on mainnet, but it is on testnet · Switch to testnet" | ✅ after fix: a missing policy first rendered as "unknown"; it is now normalised to not-multisig and the other network is probed |
+| mainnet | proposal document with a receipt (lab `16-inspector-check.ts`: a testnet `noop` signed by A and B, submitted, `status: ok`) | "This payload is for testnet; the header says mainnet"; "No-op (consumes a nonce, does nothing)" from a proposal document; "Title (unsigned)"; readiness `ready` 2 of 2 with "Submitted 2026-10-08T18:33:22.694Z → ok · The chain accepted this proposal."; no countdown | ✅ |
+| mainnet | user-signed envelope `ms-usdSend-5` (`hyperliquidChain: "Testnet"`) | network warning; "Send 5 USDC (perps) to 0x51d3…" flagged "moves funds out"; signer set fetched on testnet; both signatures authorized, leader authorized | ✅ |
+| — | `{"action": {"type": "multiSig", "signatures": [` | "The text is not valid JSON — Unexpected end of input at line 1, column 48" | ✅ |
+| — | a plain `order` request body | "Not a multi-sig envelope or proposal · action.type must be \"multiSig\"" with "Open in Signing Inspector", which hands the body over | ✅ (the hand-off button was added during this pass) |
+| — | Signing Inspector with a multi-sig body | "Multi-sig envelope detected" → "Open in Multisig Inspector" lands on the envelope view with the body | ✅ |
+| — | Share | no link until "content is public" is ticked; `#share=` fragment; opening the link restores the envelope view and text and strips the fragment | ✅ |
+| — | 1440px signature table | readable | ❌ → fixed. The recovered address wrapped one hex pair per line; with `whitespace-nowrap` the Why column hid behind a horizontal scroll instead. Signatures are now stacked rows (index · recovers to · status pill, then the reason) and fit any width. |
+| — | readiness line for a user that is not a multi-sig | says so | ❌ → fixed ("0 valid signatures; signer set unknown" → "no signer set on mainnet; nothing can count") |
+| — | 375px, both themes | no page overflow; signer and agent tables scroll inside their wrappers; addresses in the short form below `sm` | ✅ (`scrollWidth = clientWidth = 375`) |
+| — | network requests | only `api.hyperliquid(-testnet).xyz/info`, plus the explorer and the EVM RPC on demand; never a server of ours | ✅ (the resolver universe — `meta`, `spotMeta`, `perpDexs`, `outcomeMeta` — is fetched once per network for coin names and cached 5 min) |
+| — | console | no errors beyond the known extension noise (MetaMask provider, ObjectMultiplex, MaxListeners) | ✅ |
+
+Tooling note: the DevTools MCP `fill` tool sets a controlled textarea's DOM value without firing React's `onChange`; inputs were therefore set through `evaluate_script` with the prototype value setter plus an `input` event, which is what a real paste produces.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
@@ -298,3 +338,5 @@ Also verified at the end: `bun --bun run test` (277 passing after this round), `
 | RPC Capability Probe | [view](docs/screenshots/rpc-dark-desktop.jpeg) | [view](docs/screenshots/rpc-light-desktop.jpeg) | [view](docs/screenshots/rpc-dark-mobile.jpeg) | [view](docs/screenshots/rpc-light-mobile.jpeg) |
 | Faucet Miner | [view](docs/screenshots/faucet-dark-desktop.jpeg) | [view](docs/screenshots/faucet-light-desktop.jpeg) | [view](docs/screenshots/faucet-dark-mobile.jpeg) | [view](docs/screenshots/faucet-light-mobile.jpeg) |
 | Faucet Miner — how it works | [view](docs/screenshots/faucet-how-dark-desktop.jpeg) | [view](docs/screenshots/faucet-how-light-desktop.jpeg) | [view](docs/screenshots/faucet-how-dark-mobile.jpeg) | [view](docs/screenshots/faucet-how-light-mobile.jpeg) |
+| Multisig Inspector — account (2026-10-09) | [view](docs/screenshots/multisig-dark-desktop.jpeg) | [view](docs/screenshots/multisig-light-desktop.jpeg) | [view](docs/screenshots/multisig-dark-mobile.jpeg) | [view](docs/screenshots/multisig-light-mobile.jpeg) |
+| Multisig Inspector — envelope (2026-10-09) | [view](docs/screenshots/multisig-envelope-dark-desktop.jpeg) | [view](docs/screenshots/multisig-envelope-light-desktop.jpeg) | [view](docs/screenshots/multisig-envelope-dark-mobile.jpeg) | [view](docs/screenshots/multisig-envelope-light-mobile.jpeg) |
