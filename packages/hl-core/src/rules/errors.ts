@@ -222,7 +222,8 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 	{
 		id: "signer-missing",
 		pattern: /user or api wallet 0x[0-9a-f]+ does not exist/i,
-		example: "L1 error: User or API Wallet 0x0123… does not exist.",
+		example:
+			"L1 error: User or API Wallet 0x0123456789012345678901234567890123456789 does not exist.",
 		category: "signing",
 		cause:
 			"The recovered signer is not a known user or approved agent. Almost always the signature was computed over different bytes than the server hashes (field order, trailing zeros, uppercase address, wrong scheme or network), so a different address was recovered.",

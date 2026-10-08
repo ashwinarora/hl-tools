@@ -210,11 +210,10 @@ export type DiagnosisCause =
 	| "other-network"
 	| "other-leader"
 	| "other-nonce"
-	| "inner-nonce-field"
 	| "vault-omitted"
 	| "expires-omitted"
-	| "hyperliquid-chain-swapped"
 	| "other-signature-chain-id"
+	| "non-canonical-action"
 	| "unknown";
 
 export interface Diagnosis {
