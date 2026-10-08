@@ -3,10 +3,10 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const RATE_LIMIT_RULES = defineRuleSet({
 	id: "rate-limits",
 	title: "Rate-limit classes",
-	version: "1.0.0",
-	verifiedAt: "2026-09-28",
+	version: "1.1.0",
+	verifiedAt: "2026-10-08",
 	summary:
-		"Per-IP REST weight budget of 1200/min (exchange weight 1 + floor(batch/40); info weight 2, 20 or 60 plus per-item surcharges), WebSocket connection/subscription caps, 100 req/min on the public HyperEVM RPC, and per-address action budgets tied to traded volume.",
+		"Per-IP REST weight budget of 1200/min (exchange weight 1 + floor(batch/40); info weight 2, 20 or 60 plus per-item surcharges; explorer requests 40), WebSocket connection/subscription caps, 100 req/min on the public HyperEVM RPC, and per-address action budgets tied to traded volume.",
 	sources: [
 		docs(
 			"for-developers/api/rate-limits-and-user-limits",
@@ -15,10 +15,17 @@ export const RATE_LIMIT_RULES = defineRuleSet({
 	],
 	changelog: [
 		{ version: "1.0.0", date: "2026-09-28", note: "Initial encoding." },
+		{
+			version: "1.1.0",
+			date: "2026-10-08",
+			note: "Explorer API requests (userDetails, txDetails, blockDetails) weigh 40 each; blockList adds 1 per block.",
+		},
 	],
 });
 
 export const REST_WEIGHT_PER_MINUTE = 1200;
+/** Every explorer API request (userDetails, txDetails, blockDetails, blockList) costs this much of the per-IP budget. */
+export const EXPLORER_REQUEST_WEIGHT = 40;
 
 export type InfoWeightClass = "light" | "standard" | "heavy";
 

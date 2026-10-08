@@ -6,7 +6,11 @@ export default defineConfig({
 		environment: "node",
 		coverage: {
 			provider: "v8",
-			include: ["src/multisig/**", "src/rules/multisig.ts"],
+			include: [
+				"src/multisig/**",
+				"src/rules/multisig.ts",
+				"src/adapter/explorer.ts",
+			],
 			// types-only module: nothing to execute
 			exclude: ["src/multisig/types.ts"],
 			thresholds: {
