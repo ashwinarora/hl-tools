@@ -94,6 +94,8 @@ Every bug found in a browser should become a fixture, so the core never regresse
 | `orders/explain-cases.json` | an exchange response or error is explained wrongly | `{ name, input, request?, kind, outcomes, bug? }` |
 | `corewriter/cases.json` | CoreWriter bytes decode wrongly | `{ name, network, hex, kind, action, fields, issueCodes }` (real payloads preferred) |
 | `signing/python-sdk-vectors.json` | a signing case isn't covered | regenerate with `scripts/gen_signing_vectors.py` from a checkout of `hyperliquid-python-sdk`; never hand-edit |
+| `signing/python-sdk-multisig-vectors.json` | a multi-sig signing case isn't covered | `uv run --with hyperliquid-python-sdk python packages/hl-core/scripts/gen_multisig_vectors.py > …`; never hand-edit |
+| `multisig/lab-envelopes.json` | a real multi-sig request behaves unexpectedly | record it with the lab harness (`labs/multisig`, gitignored), then `bun packages/hl-core/scripts/extract_lab_envelopes.ts`; public data only |
 | `trace/<name>.json` | a transaction traces wrongly | `bun packages/hl-core/scripts/record_trace.ts <name> <network> <txHash>`, then add an assertion in `test/corewriter.test.ts` |
 | `ws/<name>.json` | WebSocket state handling is wrong | `bun packages/hl-core/scripts/record_ws.ts <name> <network> <seconds> '<subscription json>'` |
 | `metadata/<network>.json` | the resolver needs newer metadata | `python3 packages/hl-core/scripts/snapshot_metadata.py` (then re-run the tests; update cases that legitimately changed) |
