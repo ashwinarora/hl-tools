@@ -1,6 +1,6 @@
 # Testing
 
-Browser verification is the acceptance gate. Every tool was exercised end to end in Chrome via the Chrome DevTools MCP against the dev server (`bun --bun run dev`, port 3000): real inputs typed into the real controls, rendered output read back from the DOM, screenshots reviewed. Unit tests (`packages/hl-core`, Vitest) cover the protocol core.
+Browser verification is the acceptance gate. Every tool was exercised end to end in Chrome via the Chrome DevTools MCP against the dev server (`bun --bun run dev`, port 3000): real inputs typed into the real controls, rendered output read back from the DOM, screenshots reviewed. Unit tests (Vitest) cover the protocol core (`packages/hl-core`) and the app's pure logic (`src/**/*.test.ts`); components are verified in the browser.
 
 Viewports: desktop 1440×900 (DPR 1) and mobile 375×812 (touch; DPR 2 while testing, DPR 1 for the committed full-page screenshots to keep them small), each in dark and light themes (`prefers-color-scheme` emulation plus the in-app theme setting).
 
@@ -41,7 +41,26 @@ cd packages/hl-core && bunx vitest run
 | `multisig/describe.test.ts` | `describeAction` over every L1 shape and user-signed spec: orders (side, size, price, tif, reduce-only, trigger, builder, cloid, grouping), cancels by oid and cloid, modify, leverage, scheduled cancel, vault and sub-account transfers, sends and withdrawals, agent approval, convert and revert, staking, bigint amounts, unknown types "hashed exactly as written" |
 | `explorer.test.ts` | Explorer `userDetails` adapter: a recorded 101-entry response and the truncation flag, non-JSON body, HTTP 429, abort, the default `fetch` |
 
-765 tests, all passing; the multisig module, its rule set and the explorer adapter are held to 100 % line and branch coverage (`bunx vitest run --coverage` in `packages/hl-core`). `bun --bun run test` runs the workspace projects through a root `vitest.config.ts`.
+766 core tests, all passing; the multisig module, its rule set and the explorer adapter are held to 100 % line and branch coverage (`bunx vitest run --coverage` in `packages/hl-core`). `bun --bun run test` runs the workspace projects through a root `vitest.config.ts`.
+
+The app project (`src/**/*.test.ts`, node environment, `fake-indexeddb` where storage is involved, deterministic keys in `src/test/keys.ts`) covers the logic the Multisig Signer decides without React:
+
+| Suite | What it covers |
+|---|---|
+| `src/lib/idb.test.ts` | Fresh database gets both stores; a version-1 database upgrades and keeps its WebSocket sessions; sessions list newest first, stay bounded to 20, delete; a failed request and a missing IndexedDB reject with a reason |
+| `src/lib/signerWallets.test.ts` | The signer's wallet list never contains RainbowKit's generic WalletConnect entry, whose modal reports the page URL to a third party |
+| `src/lib/detect.test.ts` | Proposal documents and signer links route to the Multisig Signer; envelopes and addresses stay with the inspector; other share links and URLs are not mistaken for proposals; every earlier rule still holds |
+| `multisig/model/actions.test.ts` | Each of the six kinds builds an action `createProposal` accepts; title, note, proposer and superseded digest carried; amounts canonical and never rounded (`1.0` → `1`, precision errors); address checks and the self-send warning; spot token against the network's list and its decimals; balance excess warns and never blocks; raw JSON limited to user-signed types (L1 and `convertToMultiSigUser` refused, overridden fields noted); finaliser required and from the current signer set; `formFromAction` rebuilds the same action; issue paths map to form fields |
+| `multisig/model/chains.test.ts` | Hex id ↔ number ↔ viem chain for the four offered ids; malformed ids refused; labels for known and unknown chains; a stored id mapped back to the offered choice on its network |
+| `multisig/model/nonce.test.ts` | Nonce now or 23 hours ahead; two days and almost three, both submittable at once; closed and not-yet-open windows in words |
+| `multisig/model/transport.test.ts` | Link carries the whole document in the fragment of `/multisig/proposal` and round-trips; oversize warning above 16 KiB; only fragments made for proposals are read; fragment parser accepts v1 with or without `#`; file name states network, digest and signature count, body is pretty JSON; `openText` accepts a document, a pretty document and a pasted link, and explains what it cannot open |
+| `multisig/model/history.test.ts` | Save and load unchanged; list summary; a returned copy merges by signer instead of appending; a signature that does not recover to its claimed signer is dropped; same digest with a different payload refused; the better receipt kept; newest first, network filter, delete |
+| `multisig/model/submit.test.ts` | One POST with the canonical envelope (trimmed inner signatures) to the network's exchange endpoint; a chain rejection becomes an explained receipt; a non-JSON body is kept verbatim and an HTTP error never throws; only a request with no answer rejects; a receipt attaches without touching the rest of the document |
+| `multisig/model/stage.test.ts` | Phase, wallet role and the sign / finish gates with their reasons: collecting, the one-sitting finish when the finaliser's signature completes the threshold, ready, a leader outside the signer set, the required chain, pending judgement, expired / not yet valid / no signer set, accepted and rejected receipts, refusal of L1 documents and of documents that set a vault address or expiry, a changed signer set |
+| `multisig/model/walletErrors.test.ts` | A rejection recognised by code, name, message and nested cause; the chain named when a switch is impossible; fallbacks |
+| `multisig/model/roundtrip.test.ts` | The browser milestone offline: A proposes and signs, the link is opened in a fresh history, B signs inner and envelope, a fake exchange asserts the canonical body under `0x3e6`, the receipt is stored and the document re-encodes identically; an outsider's signature never counts and only the finaliser's key can sign the envelope |
+
+77 app tests; 843 tests in total (2026-10-09).
 
 ## 0. Homepage, shell and `/changes`
 
@@ -55,7 +74,8 @@ cd packages/hl-core && bunx vitest run
 | Paste box: `{"action":{"type":"cancel",…},"nonce":…}` | "Action payload → signing inspector" | ✅ |
 | Paste box: `{"method":"subscribe",…}` | "Subscription message → WebSocket workbench" | ✅ |
 | Paste box: multi-sig request body `{"action":{"type":"multiSig",…},"nonce":…}`, Open | "Multi-sig envelope → Multisig Inspector"; the envelope view opens with the body decoded, nothing in the URL | ✅ (2026-10-09) |
-| Paste box: proposal document `{"v":1,"payload":{"multiSigUser":…},…}`, Open | "Multi-sig proposal document → Multisig Inspector"; envelope view | ✅ (2026-10-09) |
+| Paste box: proposal document `{"v":1,"payload":{"multiSigUser":…},…}`, Open | "Multi-sig proposal document → Multisig Signer (review, sign, submit)", button "Open Multisig signer"; lands on the proposal page under `?digest=` with nothing else in the URL | ✅ (2026-10-09; first routed to the inspector's envelope view, moved when the signer shipped. The inspector still opens documents and offers "Open in Multisig Signer") |
+| Paste box: a link made by the signer (`…/multisig/proposal#share=…`) | "Multi-sig proposal link → Multisig Signer (review, sign, submit)"; the fragment is decoded locally, the URL is never fetched | ❌ → fixed (2026-10-09). The link was taken for an RPC URL. |
 | Paste box: bare address `0xf836…d148`, Open | "Address → Multisig Inspector (signers, agents, balances)"; account view with `?address=` (an address is a public identifier) | ✅ (2026-10-09; previously routed to the asset resolver, where it matched nothing) |
 | Paste box: `Order must have minimum value of $10.` | "Error message → failure explainer" | ✅ |
 | Paste box: a long English question | "Not recognised — open a tool below.", Open disabled | ✅ |
@@ -198,7 +218,7 @@ cd packages/hl-core && bunx vitest run
 
 ## 7. Testnet Faucet Miner — `/faucet-miner`
 
-The only tool that signs. Exercised with the Rabby wallet in the DevTools-controlled Chrome; mining runs only under the existing MSW mock harness (`?mock=1`), so no real funds moved.
+One of the two sections that sign (the other is the Multisig Signer, §9). Exercised with the Rabby wallet in the DevTools-controlled Chrome; mining runs only under the existing MSW mock harness (`?mock=1`), so no real funds moved.
 
 | Input | Expected | Result |
 |---|---|---|
@@ -243,6 +263,116 @@ Verified 2026-10-09 in the user's own Brave instance through the Chrome DevTools
 | — | console | no errors beyond the known extension noise (MetaMask provider, ObjectMultiplex, MaxListeners) | ✅ |
 
 Tooling note: the DevTools MCP `fill` tool sets a controlled textarea's DOM value without firing React's `onChange`; inputs were therefore set through `evaluate_script` with the prototype value setter plus an `input` event, which is what a real paste produces.
+
+## 9. Multisig Signer — `/multisig`
+
+Verified 2026-10-09 in the user's own Brave instance through the Chrome DevTools MCP (port 9222), on Hyperliquid testnet, with the Rabby wallet in that browser. The test multi-sig is a 2-of-3 built from Rabby's own accounts: a treasury **T** and signers **S1**, **S2**, **S3**, created from the wallet's seed, funded with testnet USDC and converted through Hyperliquid's official testnet UI. Every wallet prompt was approved or declined through the extension page (Rabby asks twice: Sign, then Confirm). No private key was read, typed or stored at any point, and the accounts' addresses are kept out of the repository like everything else personal. The lab treasury `0xf836…d148` is used for read-only checks and for the committed screenshots: [start](docs/screenshots/multisig-sign-dark-desktop.jpeg), [propose](docs/screenshots/multisig-propose-dark-desktop.jpeg), [proposal](docs/screenshots/multisig-proposal-dark-desktop.jpeg) (all variants in the table at the end).
+
+### Shell, wallet and storage
+
+| Input | Expected | Result |
+|---|---|---|
+| `/multisig`, dark and light | tool header with rule sets, "This section signs and sends real transactions" banner, one "Connect wallet" button | ✅ |
+| Connect wallet → Rabby | the page shows the account and the chain the wallet is on; switching the account in Rabby reaches the page | ✅ |
+| same | wallet line readable | ❌ → fixed. It read a checksummed address and "on chain 1"; now a lowercase short address and "Ethereum (1)" / "HyperEVM testnet (998)". |
+| network requests on load | no repeated third-party lookups | ❌ → fixed. RainbowKit's stock button resolved ENS over `ethereum-rpc.publicnode.com` on every render (11 failed requests on one page). The signer has its own button. |
+| network requests on any signer page, wallet connected | Hyperliquid only | ❌ → fixed. Each page load sent `POST pulse.walletconnect.org/e` with a body containing `"url":"http://…/multisig/proposal?digest=0x2f36…"` (the page URL, so the proposal digest or the treasury address), plus `api.web3modal.org/appkit/v1/config`; after connecting, one ENS lookup for the signer's address went to a public Ethereum RPC. Both came from the wallet configuration shared with the faucet miner. The signer now has its own: no generic WalletConnect wallet (the entry that starts the reporting modal) and an Ethereum transport that answers locally. |
+| the same after the fix: start, propose, proposal, and a fresh load of a proposal link, wallet connected | only `api.hyperliquid-testnet.xyz/info` and the font files | ✅ in development and from the production build (`bun .output/server/index.mjs`). The faucet miner still makes its two WalletConnect requests, as before. |
+| wallet picker on the signer | installed wallets first, no generic WalletConnect entry | ✅ "Installed: Rabby Wallet, MetaMask · Popular: Rainbow, Base Account" |
+| connect while the wallet is on Ethereum | the wallet stays on Ethereum; the page says so | ✅ "0x… on Ethereum (1)" |
+| `/`, header, `/faucet-miner` | home card "Multisig Signer" with the "Signs & sends" badge (two such cards), pill "read-only unless a card says “Signs & sends”", header links for both sections that sign; the faucet miner renders and its picker is unchanged (Rabby, MetaMask, Rainbow, Base Account, WalletConnect) | ✅ (the two sections keep separate wallet connections) |
+| a browser that already had the version-1 `hl-tools` database, `/tools/websocket?sample=l2book` | database upgrades to version 2 with `proposals` and `wsSessions`; a session records and lists; no storage warning | ✅ |
+| inspector after the judgement refactor | valid sample "ready 2 of 2", broken sample "signed with nonce … (−1)", receipt document "Submitted … → ok", other-network probe: all as in §8 | ✅ (an effect loop found on the way: the "not a multi-sig" policy object was rebuilt on every render; memoised) |
+
+### Start page
+
+| Input | Expected | Result |
+|---|---|---|
+| Open: truncated JSON | "Not a proposal this page can open · Not a JSON document: Unexpected end of input at line 1, column 20" (`proposal.parse`); the text stays in the box | ✅ |
+| Open: a foreign JSON file (a recorded WebSocket session) | "Unsupported proposal version undefined; this build understands v1." (`proposal.version`) | ✅ |
+| Open: a share link made for another tool | "This link does not carry a multi-sig proposal." (`transport.link`) | ✅ |
+| Open: the lab receipt document (a testnet `noop` signed by A and B, submitted) | stored and opened: "Submitted · accepted by the chain", lab treasury strip (2 of 3 must sign, API wallet `lab` until 2027-01-05 under "trade without the multi-sig", perps and spot balances, "5 info requests · weight 64 · refreshed every 30 s while open"), wallet role "not in the signer set" | ✅ |
+| Recent in this browser | rows newest first: title, action in words, network badge, treasury, signature count, "submitted" / "rejected", time; "all networks" checkbox; the note that this is browser storage and the chain knows nothing of a proposal until it is submitted | ✅ |
+| Start a proposal: T's address, Check | "2 of 3 must sign" with the connected signer marked "(you)"; continue to `/multisig/propose?treasury=…` | ✅ |
+| first load after the start page's code changed (its chunk hydrates after the root) | buttons usable | ❌ → fixed. React logged a hydration mismatch on `disabled` and left "Lab treasury (testnet)" disabled in the DOM; the panel now starts from the server's answer and enables after mount. |
+
+### Propose
+
+| Input | Expected | Result |
+|---|---|---|
+| empty form | six kinds (Send USDC, Send spot token, Perps ↔ spot, Withdraw, Approve API wallet, Raw JSON); preview "Fill in the action to see what will be signed." | ✅ |
+| a malformed destination, amount `1.0000001` | "Destination must be a 20-byte hex address: 0x followed by 40 hex digits." and "USDC has 6 decimal places; 1.0000001 has 7." | ✅ |
+| "Who finalises this?" | "Choose a signer…" then the three current signers, the connected one marked "(you)"; nothing preselected | ✅ |
+| Send USDC 1 to S3, finaliser S2 | preview "Send 1 USDC (perps) to 0x…" · "moves funds out", From (multi-sig user), Finaliser (leader), "Signers sign under HyperEVM testnet · 0x3e6", "submittable until … (48 h left)", canonical inner action with `"amount": "1"` | ✅ |
+| amount 30 with 25 USDC withdrawable | warning "30 is more than the withdrawable perps balance observed just now (25). The chain will reject it unless funds arrive first."; creating stays possible | ✅ |
+| Approve API wallet | "Trading becomes single-key" callout and the risk flag in the preview | ❌ → fixed. Risk flags and the canonical action appeared only once a finaliser was chosen; the preview now canonicalises the action on its own. |
+| Raw JSON: an `order` action | ""order" is an L1 action (orders, cancels, leverage, vault and sub-account moves). Those are not proposals here." | ✅ |
+| Raw JSON: `approveBuilderFee` carrying its own nonce | accepted; "nonce is set by this page (signing chain, network and nonce) and replaced what you pasted."; inner action in canonical key order | ✅ |
+| Send spot token on testnet | a usable token list | ❌ → fixed. 1,668 tokens in one flat list; now "Held by this account" first, then "All spot tokens". |
+| signing chain Arbitrum Sepolia, window "Give signers 3 days" | "EIP-712 chain 0x66eee (421614)"; "submittable until … (71 h left)" | ✅ |
+| preview with a connected wallet | no spurious warnings | ❌ → fixed. "meta.createdBy was mixed case" appeared because the wallet reports a checksummed address; lowercased before it reaches the core. |
+| "Create and sign as S1", wallet on Ethereum (repeated after the wallet configuration change) | Rabby moves to chain 998 and shows `HyperliquidTransaction:UsdSend` with `payloadMultiSigUser` = T, `outerSigner` = S2, `destination` = S3, `amount` 1 and `time`; after Sign and Confirm the proposal page reads "Collecting signatures · 1 of 2", "#1 recovers to S1 · valid-authorized", role "signer", "Title (unsigned): Phase 2 milestone" | ✅ |
+| wallet outside the signer set (T's own key) | "… is not in the signer set, so it can draft a proposal but not sign it."; "Create and sign" disabled, "Create without signing" works and lands on "Collecting signatures · 0 of 2" | ✅ |
+
+### Proposal page: sign, pass on, merge
+
+| Input | Expected | Result |
+|---|---|---|
+| Get link | no link until the acknowledgement is ticked; then `…/multisig/proposal#share=…`, "1750 characters." | ✅ |
+| the link opened by S2 with an empty history | lands on `?digest=…` with the fragment stripped, document stored, role "signer · finaliser" | ✅ |
+| Merge: malformed JSON | "Not a proposal this page can merge · Not a JSON document: Expected ',' or '}' at line 1, column 7" (`proposal.parse`) | ✅ |
+| Merge: the same copy again | "Nothing new: still 1 signature" | ✅ |
+| Merge: uploaded file whose `r` was altered | "claims S1 but recovers to 0xc49e…91d2; dropped." (`merge.signature_dropped`); still one signature | ✅ |
+| Merge: S1's signature relabelled as S3's | "claims S3 but recovers to S1; dropped." (`merge.signature_dropped`) | ✅ |
+| Merge: same digest with an `expiresAfter` added | "This copy has the same digest as a stored proposal but a different payload (vault address or expiry). It was not merged." (`history.payload_conflict`) | ❌ → fixed. The refusal was displayed as "Nothing new"; it is now an error with the fix. |
+| Digests and canonical envelope before submission | the envelope under the chain the finaliser will sign (`0x3e6`), marked as an assumption until a receipt exists | ❌ → fixed. The panel showed the hash for the default chain `0x66eee`. |
+| Sign, then decline in Rabby | "Not signed: You declined in the wallet."; the button returns; the document is unchanged | ✅ |
+| three rapid clicks on Sign | one wallet popup | ✅ |
+| Download file | `multisig-testnet-<digest8>-2sig.json`: pretty JSON, both signatures, the receipt with its envelope chain | ✅ (the Blob and file name were captured in the page; no file was written) |
+| Copy JSON | the same text on the clipboard | ✅ |
+| Inspect, then "Open in Multisig Signer" in the inspector | the document round-trips between the two pages through the in-memory hand-off; neither URL carries it | ✅ |
+
+### Finalise: the milestone
+
+| Input | Expected | Result |
+|---|---|---|
+| S2 (the finaliser) on the proposal with 1 of 2 | one button for what is left; steps "Your inner signature (completes the threshold)", "Envelope signature (wraps the verified signatures)", "Submit to Hyperliquid testnet" | ✅ |
+| press it | prompt 1 `HyperliquidTransaction:UsdSend` (S2's inner signature), prompt 2 `HyperliquidTransaction:SendMultiSig`, both under chain 998; then one request to `api.hyperliquid-testnet.xyz/exchange` | ✅ |
+| the answer | `{"status":"ok"}`; stage "Submitted · accepted by the chain"; receipt stored in the document; history row "2 signatures · submitted" | ✅ |
+| the chain afterwards | T's perps balance 25 → 24 USDC, S3 0 → 1 USDC, an `internalTransfer` in T's ledger (inspector, "Load recent actions") | ✅ |
+
+### Failure paths and edge cases
+
+| Input | Expected | Result |
+|---|---|---|
+| a document whose nonce is older than the window | "Expired"; "Re-propose" opens the form pre-filled (destination, amount, finaliser, title) under "Re-proposing · … This is a new proposal with a new nonce: signatures do not carry over."; the new document records the old digest in `meta.supersedes` | ✅ |
+| same | no dead controls | ❌ → fixed. "Your signature" and "Finalise" each repeated "Expired"; they now render only in phases where they can act. |
+| 100 USDC with 24 withdrawable: S2 proposes and signs, S1 (finaliser) signs and submits | the chain answers HTTP 200 `{"status":"err","response":"Insufficient balance for withdrawal."}`; the page shows "The last submission was rejected: …" with cause and fix, steps done · done · failed, the button still enabled, the receipt kept, history "rejected", stage still "Ready · 2 of 2 signatures" | ✅ |
+| same | the message is explained | ❌ → fixed in core. It was "Not in the error catalogue"; errors 1.2.0 adds `transfer-balance` with a test. |
+| proposal page with a wallet outside the signer set | role "not in the signer set"; "Only the finaliser 0x… can submit."; no sign or submit button | ✅ |
+| `approveAgent` with a 17,000-character name (17,905 bytes) | input note `proposal.large`; link dialog "24108 characters." with `transport.oversize`: "The document is 17905 bytes; chat apps and browsers may cut links over 16384." Fix: "Send the file instead of the link." | ✅ |
+| same | page layout holds | ❌ → fixed. The headline did not wrap and the page was 154,229 px wide; headline, detail lines and title now wrap anywhere, here and in the inspector. |
+| disconnect while a proposal is open | "Connect wallet" returns, no role, "Connect a wallet to sign.", the stage and the document unchanged | ✅ |
+| a copy whose recorded signer set differs from the live one | "The signer set changed since this was proposed · Readiness below is judged against the signer set the chain reports now, not the one recorded in the document."; readiness still from the live set | ✅ |
+
+### Layout, network, console, build
+
+| Check | Expected | Result |
+|---|---|---|
+| 375 px, start, propose and proposal | `scrollWidth = clientWidth = 375`, no element wider than the viewport | ✅ |
+| network | `api.hyperliquid-testnet.xyz/info`, and `/exchange` only when the finaliser submits; the font files; nothing else, and never a server of ours (see "Shell, wallet and storage" for what was removed) | ✅ |
+| console | no errors beyond the known extension noise (MetaMask provider, MaxListeners, ObjectMultiplex) and "Lit is in dev mode" from the wallet picker in development | ✅ |
+| `bun --bun run build` | succeeds; wagmi and RainbowKit live in a `WalletProviders-*` chunk that neither the entry chunk nor the inspector's chunk references | ✅ |
+
+### Not run in the browser
+
+- Only `usdSend` went on chain through the signer. The other kinds were built and previewed in the form and are accepted by the core in `actions.test.ts`. Withdrawals do not exist on testnet. Nothing was signed on mainnet.
+- The Arbitrum signing chain was selected in the form but not signed under. The chain's acceptance of consistent ids (998, 999, 1, 42161) and its "Invalid multi-sig inner signer" for a mismatch were recorded by the lab; the receipt path is covered by `submit.test.ts`.
+- An envelope signed by an account other than the finaliser (`envelope.signer_mismatch`) is covered by `roundtrip.test.ts`. The page offers finalising only to the finaliser's wallet.
+- A wallet that refuses or cannot switch chains: `walletErrors.test.ts`. Rabby switches without a prompt.
+- The in-memory fallback when IndexedDB is unavailable.
+
+Tooling notes: a client-side navigation started inside `evaluate_script` destroys the script's execution context, so navigations were done with `navigate_page` or scheduled with `setTimeout` and read in a second call. Rabby keeps one current account for every site; it was switched on the extension's own page.
 
 ## Feedback round 1 (2026-10-04)
 
@@ -340,3 +470,6 @@ Also verified at the end: `bun --bun run test` (277 passing after this round), `
 | Faucet Miner — how it works | [view](docs/screenshots/faucet-how-dark-desktop.jpeg) | [view](docs/screenshots/faucet-how-light-desktop.jpeg) | [view](docs/screenshots/faucet-how-dark-mobile.jpeg) | [view](docs/screenshots/faucet-how-light-mobile.jpeg) |
 | Multisig Inspector — account (2026-10-09) | [view](docs/screenshots/multisig-dark-desktop.jpeg) | [view](docs/screenshots/multisig-light-desktop.jpeg) | [view](docs/screenshots/multisig-dark-mobile.jpeg) | [view](docs/screenshots/multisig-light-mobile.jpeg) |
 | Multisig Inspector — envelope (2026-10-09) | [view](docs/screenshots/multisig-envelope-dark-desktop.jpeg) | [view](docs/screenshots/multisig-envelope-light-desktop.jpeg) | [view](docs/screenshots/multisig-envelope-dark-mobile.jpeg) | [view](docs/screenshots/multisig-envelope-light-mobile.jpeg) |
+| Multisig Signer — start (2026-10-09) | [view](docs/screenshots/multisig-sign-dark-desktop.jpeg) | [view](docs/screenshots/multisig-sign-light-desktop.jpeg) | [view](docs/screenshots/multisig-sign-dark-mobile.jpeg) | [view](docs/screenshots/multisig-sign-light-mobile.jpeg) |
+| Multisig Signer — propose (2026-10-09) | [view](docs/screenshots/multisig-propose-dark-desktop.jpeg) | [view](docs/screenshots/multisig-propose-light-desktop.jpeg) | [view](docs/screenshots/multisig-propose-dark-mobile.jpeg) | [view](docs/screenshots/multisig-propose-light-mobile.jpeg) |
+| Multisig Signer — proposal (2026-10-09) | [view](docs/screenshots/multisig-proposal-dark-desktop.jpeg) | [view](docs/screenshots/multisig-proposal-light-desktop.jpeg) | [view](docs/screenshots/multisig-proposal-dark-mobile.jpeg) | [view](docs/screenshots/multisig-proposal-light-mobile.jpeg) |

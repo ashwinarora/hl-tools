@@ -2,7 +2,7 @@
 
 **Understand and verify any Hyperliquid action.** Diagnostic tools for developers building on HyperCore and HyperEVM, live at [hltools.tech](https://hltools.tech).
 
-Every tool is read-only, works without a wallet and runs in your browser. Pasted payloads and signatures are processed client-side and never put into a URL unless you explicitly share them. Every fetched result shows the network it came from and when it was observed, and identifiers never silently cross between mainnet and testnet.
+Every diagnostic tool is read-only, works without a wallet and runs in your browser. Two sections sign with your own wallet and say so on their card: the Multisig Signer and the faucet miner. Pasted payloads and signatures are processed client-side and never put into a URL unless you explicitly share them. Every fetched result shows the network it came from and when it was observed, and identifiers never silently cross between mainnet and testnet.
 
 All tools share one typed, decimal-safe protocol core, [`@hl-tools/core`](packages/hl-core). Its signing is checked byte for byte against the official Python SDK.
 
@@ -18,7 +18,8 @@ All tools share one typed, decimal-safe protocol core, [`@hl-tools/core`](packag
 | **WebSocket Workbench** | *Did I miss messages while my socket was down?* Shows the subscription ack, snapshot and live stream with freshness. Simulates a disconnect and diffs state across the reconnect. Records bounded, sanitised sessions and replays them. | `/tools/websocket` |
 | **RPC Capability Probe** | *Does this RPC return historical state or silently give me latest?* Checks chain ID, head freshness and historical state (with exact controls), plus `eth_getLogs` range limits and HyperEVM-specific methods, with a two-endpoint comparison. | `/tools/rpc` |
 | **Multisig Inspector** | *Why does the chain say `Invalid multi-sig inner signer`?* Inspects a native multi-sig account — signers, threshold, approved API wallets (which trade without the multi-sig), balances, open orders, health flags, recent actions on demand — or decodes a multi-sig request body or proposal document: the action in plain words, every signature recovered and attributed, readiness against the live signer set, and the divergence that breaks a signature. Read-only; nothing is stored. | `/tools/multisig` |
-| **Testnet Faucet Miner** | *How do I get more than one faucet drip of testnet USDC?* The original hl-tools utility, and the only tool that signs and sends: it chains generated wallets through the testnet faucet using your connected wallet. [How it works](https://hltools.tech/faucet-miner/how-to-use). | `/faucet-miner` |
+| **Multisig Signer** | *How do two of three signers get one `usdSend` onto the chain without a server?* Propose a native multi-sig action for a treasury (USDC and spot sends, perps ↔ spot transfers, withdrawals, API-wallet approvals, or any other user-signed action as JSON), sign it with your wallet, pass it on as a link or a file, merge what comes back, and let the chosen finaliser sign the envelope and submit. Signatures are verified locally before anything is sent, readiness is judged against the live signer set, and the chain's answer is explained. No backend, no keys in the page; the only host it contacts is Hyperliquid. Signs & sends. | `/multisig` |
+| **Testnet Faucet Miner** | *How do I get more than one faucet drip of testnet USDC?* The original hl-tools utility. It signs and sends: it chains generated wallets through the testnet faucet using your connected wallet. [How it works](https://hltools.tech/faucet-miner/how-to-use). | `/faucet-miner` |
 
 Each tool page shows the date its rules were last verified against the protocol docs and links its primary source. [`/changes`](https://hltools.tech/changes) lists every versioned rule set with its sources and changelog.
 
@@ -29,15 +30,17 @@ flowchart TB
     subgraph App["App (in your browser)"]
         direction LR
         Shell["Shell<br/>network switch · theme · paste box · /changes"]
-        Tools["7 read-only tools<br/>Assets · Signing · CoreWriter · Trace<br/>Orders · WebSocket · RPC probe"]
-        FM["Faucet Miner<br/>the only tool that signs<br/>wagmi · RainbowKit"]
-        IDB[("IndexedDB<br/>recorded WS sessions")]
+        Tools["8 read-only tools<br/>Assets · Signing · CoreWriter · Trace<br/>Orders · WebSocket · RPC probe · Multisig Inspector"]
+        Sign["Sections that sign with your wallet<br/>Multisig Signer · Faucet Miner<br/>wagmi · RainbowKit, loaded only here"]
+        IDB[("IndexedDB<br/>recorded WS sessions<br/>multi-sig proposals")]
         Shell --> Tools
+        Shell --> Sign
         Tools --- IDB
+        Sign --- IDB
     end
     subgraph Core["@hl-tools/core"]
         direction LR
-        Domain["Domain modules<br/>signing · resolver · CoreWriter codec<br/>orders · trace · WS state · RPC probe"]
+        Domain["Domain modules<br/>signing · resolver · CoreWriter codec<br/>orders · trace · WS state · RPC probe · multisig"]
         Found["Foundations<br/>branded identifiers · Decimal (no floats)<br/>order-preserving JSON · MsgPack spans"]
         Rules["Versioned rules<br/>version · verifiedAt · sources"]
         Adapter["Info adapter<br/>@nktkas/hyperliquid · cached · explicit network"]
@@ -46,15 +49,17 @@ flowchart TB
         Domain --> Adapter
     end
     Tools --> Domain
+    Sign --> Domain
     Adapter -->|info API| HLAPI["Hyperliquid API<br/>mainnet · testnet"]
-    FM -->|exchange + info| HLAPI
+    Sign -->|exchange + info| HLAPI
     Tools -->|wss| HLWS["Hyperliquid WebSocket"]
     Domain -->|JSON-RPC| EVM["HyperEVM RPC<br/>public or yours"]
     Fixtures[("fixtures/<br/>metadata · SDK vectors · traces · sessions")] -. "Vitest replay" .-> Domain
 ```
 
 - **`packages/hl-core`** holds the protocol logic, with no React and no DOM. Its versioned rules also drive the "last verified" dates on tool pages and the `/changes` page. Network access is injected, so traces, probes and sessions replay from recorded fixtures in tests.
-- **`src/`** is the app: file-based routes in `src/routes/`, tool UIs in `src/components/tools/`, and the shared design system in `src/components/hub/`.
+- **`src/`** is the app: file-based routes in `src/routes/`, tool UIs in `src/components/tools/`, the Multisig Signer in `src/components/multisig/` (screens over a pure, tested model), and the shared design system in `src/components/hub/`.
+- **Browser storage.** IndexedDB holds recorded WebSocket sessions and the multi-sig proposals you made or opened. It is this browser's memory, not chain data: a proposal exists for the chain only once it is submitted, and the document (link or file) is the whole proposal.
 - Why things are built the way they are: [DECISIONS.md](DECISIONS.md). What was tested, with which inputs, plus screenshots of every page: [TESTING.md](TESTING.md).
 
 ## Run it
@@ -68,7 +73,7 @@ bun install
 bun --bun run dev        # http://localhost:3000
 ```
 
-The diagnostic tools need no configuration. The faucet miner's WalletConnect option needs a project ID in `.env` (from [cloud.walletconnect.com](https://cloud.walletconnect.com/)):
+The diagnostic tools need no configuration. The WalletConnect-based wallets in the faucet miner's and the Multisig Signer's wallet picker need a project ID in `.env` (from [cloud.walletconnect.com](https://cloud.walletconnect.com/)):
 
 ```
 VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
@@ -79,7 +84,7 @@ VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
 | `bun --bun run dev` | Dev server on port 3000 |
 | `bun --bun run build` | Production build into `.output/` |
 | `bun --bun run start` | Serve the production build (`node .output/server/index.mjs`) |
-| `bun --bun run test` | Vitest: protocol core (277 tests) |
+| `bun --bun run test` | Vitest: protocol core and the app's pure logic (843 tests) |
 | `bun --bun run check` | Biome lint + format check |
 
 Dev-only helpers: `?devtools=1` shows the TanStack devtools, and `/faucet-miner?mock=1` runs the faucet miner against an MSW mock of the Hyperliquid API, so no funds move.
@@ -106,11 +111,11 @@ Then run `bun --bun run test` and `bun --bun run check`. If a rule changed (a li
 
 ## Stack
 
-TanStack Start (React 19, SSR, Nitro) · TanStack Router and Query · Zustand · Tailwind CSS v4 with shadcn/ui primitives · viem · `@nktkas/hyperliquid` · wagmi and RainbowKit (faucet miner only) · Vitest · Biome · TypeScript strict.
+TanStack Start (React 19, SSR, Nitro) · TanStack Router and Query · Zustand · Tailwind CSS v4 with shadcn/ui primitives · viem · `@nktkas/hyperliquid` · wagmi and RainbowKit (Multisig Signer and faucet miner only) · Vitest · Biome · TypeScript strict.
 
 ## Disclaimer
 
-Independent open-source project, not affiliated with Hyperliquid. The diagnostic tools are read-only. The faucet miner sends funds directly to Hyperliquid on your behalf from your own wallet; use it at your own discretion.
+Independent open-source project, not affiliated with Hyperliquid. The diagnostic tools are read-only. The Multisig Signer submits to Hyperliquid, from your browser, exactly what you and your co-signers sign with your own wallets: read every action in the wallet prompt before approving it, and rehearse on testnet first. The faucet miner sends funds directly to Hyperliquid on your behalf from your own wallet. Use both at your own discretion.
 
 ## License
 
