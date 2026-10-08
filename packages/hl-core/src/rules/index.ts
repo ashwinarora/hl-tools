@@ -4,6 +4,7 @@ import { ERROR_RULES } from "./errors.ts";
 import { FAUCET_RULES } from "./faucet.ts";
 import { EVM_CORE_TRANSFER_RULES, HYPEREVM_RULES } from "./hyperevm.ts";
 import type { RuleSetMeta } from "./meta.ts";
+import { MULTISIG_RULES } from "./multisig.ts";
 import { ORDER_RULES } from "./orders.ts";
 import { PRECISION_RULES } from "./precision.ts";
 import { PRECOMPILE_RULES } from "./precompiles.ts";
@@ -17,6 +18,7 @@ export * from "./errors.ts";
 export * from "./faucet.ts";
 export * from "./hyperevm.ts";
 export * from "./meta.ts";
+export * from "./multisig.ts";
 export * from "./orders.ts";
 export * from "./precision.ts";
 export * from "./precompiles.ts";
@@ -30,6 +32,7 @@ export const RULE_REGISTRY: readonly RuleSetMeta[] = [
 	PRECISION_RULES,
 	ORDER_RULES,
 	SIGNING_RULES,
+	MULTISIG_RULES,
 	RATE_LIMIT_RULES,
 	ERROR_RULES,
 	COREWRITER_RULES,
