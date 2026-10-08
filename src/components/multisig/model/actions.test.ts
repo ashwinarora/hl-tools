@@ -182,7 +182,10 @@ describe("buildAction / buildProposalInput", () => {
 		const digest = `0x${"ab".repeat(32)}` as const;
 		const draft = buildProposalInput(
 			form({ ...VALID.usdSend?.form, title: " rent ", note: "" }),
-			ctx({ createdBy: A, supersedes: digest }),
+			ctx({
+				createdBy: A.toUpperCase().replace("0X", "0x"),
+				supersedes: digest,
+			}),
 		);
 		expect(draft.input).toMatchObject({
 			title: "rent",

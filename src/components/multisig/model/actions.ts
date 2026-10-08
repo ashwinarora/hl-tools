@@ -564,7 +564,8 @@ export function buildProposalInput(form: ActionForm, ctx: BuildContext): Draft {
 			expiresAfter: null,
 			title: form.title.trim() || null,
 			note: form.note.trim() || null,
-			createdBy: ctx.createdBy ?? null,
+			// wallets report checksummed addresses; documents carry lowercase
+			createdBy: ctx.createdBy ? ctx.createdBy.toLowerCase() : null,
 			supersedes: ctx.supersedes ?? null,
 			policyAtCreation: ctx.policyAtCreation ?? null,
 		},

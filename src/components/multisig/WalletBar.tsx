@@ -43,7 +43,9 @@ export function WalletBar({ children }: { children?: ReactNode }) {
 				title={`${address}${connector ? ` · ${connector.name}` : ""}`}
 			>
 				<Wallet className="size-3.5 text-muted-foreground" aria-hidden />
-				<span className="font-mono text-[13px]">{short(address)}</span>
+				<span className="font-mono text-[13px]">
+					{short(address.toLowerCase())}
+				</span>
 				{chainId !== undefined && (
 					<span className="text-xs text-muted-foreground">
 						on {chainLabel(chainId)}
