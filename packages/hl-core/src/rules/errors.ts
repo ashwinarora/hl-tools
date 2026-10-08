@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.1.0",
-	verifiedAt: "2026-10-07",
+	version: "1.2.0",
+	verifiedAt: "2026-10-09",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
 	sources: [
@@ -25,6 +25,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.1.0",
 			date: "2026-10-07",
 			note: "Multi-sig errors (threshold, inner/outer signer, leader, signer-set rules, revert shape), nonce window messages with extracted bounds, network signature mismatch and unregistered vault — all recorded on testnet.",
+		},
+		{
+			version: "1.2.0",
+			date: "2026-10-09",
+			note: '"Insufficient balance for withdrawal." — the answer to a usdSend larger than the withdrawable perps balance (recorded on testnet through a multi-sig envelope; the chain uses the withdrawal wording for sends too).',
 		},
 	],
 });
@@ -195,6 +200,16 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 			"Not enough of the token being sold (or the quote token for a buy) in the spot balance.",
 		fix: "Transfer funds into spot (usdClassTransfer toPerp: false) or reduce size.",
 		documented: true,
+	},
+	{
+		id: "transfer-balance",
+		pattern: /insufficient balance for withdrawal/i,
+		example: "Insufficient balance for withdrawal.",
+		category: "margin",
+		cause:
+			"The amount is larger than the account's withdrawable perps balance. The chain answers with this wording for a USDC send (usdSend) as well as for a bridge withdrawal (withdraw3).",
+		fix: "Lower the amount, or bring funds into the perps balance first (usdClassTransfer toPerp: true). Margin held by open positions is not withdrawable.",
+		documented: false,
 	},
 	{
 		id: "oracle",

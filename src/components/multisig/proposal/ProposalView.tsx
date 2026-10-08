@@ -10,7 +10,7 @@ import {
 } from "#/components/tools/multisig/model";
 import { useJudgement } from "#/components/tools/multisig/useJudgement";
 import { useNetwork } from "#/store/networkStore";
-import { deriveStage, type WalletRole } from "../model/stage";
+import { deriveStage, type Phase, type WalletRole } from "../model/stage";
 import { SignerPage } from "../SignerPage";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { REFRESH_MS, useTreasuryState } from "../useTreasuryState";
@@ -23,6 +23,15 @@ import type { ProposalDoc } from "./useProposalDoc";
 
 const actionLink =
 	"inline-flex h-8 items-center whitespace-nowrap rounded-md border border-border-strong bg-surface px-3 text-sm hover:bg-surface-2";
+
+/** Phases in which signing or finalising can still happen; elsewhere the stage line says it all. */
+const ACTIONABLE: ReadonlySet<Phase> = new Set([
+	"judging",
+	"unknown",
+	"collecting",
+	"ready",
+	"not-yet-valid",
+]);
 
 const ROLE: Record<WalletRole, { label: string; tone: Tone } | null> = {
 	disconnected: null,
@@ -126,7 +135,7 @@ export function ProposalView({
 					input={
 						<>
 							<TreasuryStrip state={treasury} wallet={address} />
-							{stage.phase !== "submitted" && stage.phase !== "unsupported" && (
+							{ACTIONABLE.has(stage.phase) && (
 								<>
 									<SignPanel
 										proposal={proposal}

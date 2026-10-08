@@ -61,6 +61,8 @@ describe("explainExchangeError: every recorded string", () => {
 			"vault-unregistered",
 			{ vault: "0x1111111111111111111111111111111111111111" },
 		],
+		// recorded 2026-10-09: a multi-sig usdSend of 100 USDC with 24 USDC withdrawable
+		["Insufficient balance for withdrawal.", "transfer-balance", {}],
 		[
 			"Cannot set scheduled cancel time until enough volume traded. Required: $1000000. Traded: $167.22.",
 			"unknown",
