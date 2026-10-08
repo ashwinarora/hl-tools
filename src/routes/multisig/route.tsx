@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import WalletProviders from "#/integrations/wallet/WalletProviders";
+import { signerConfig } from "#/lib/signerWagmiConfig";
 
 export const Route = createFileRoute("/multisig")({
 	head: () => ({ meta: [{ title: "Multisig Signer — hl-tools" }] }),
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/multisig")({
  */
 function SignerLayout() {
 	return (
-		<WalletProviders>
+		<WalletProviders config={signerConfig}>
 			<Outlet />
 		</WalletProviders>
 	);
