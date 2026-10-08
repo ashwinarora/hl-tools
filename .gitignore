@@ -12,3 +12,6 @@ dist-ssr
 __unconfig*
 todos.json
 demo-shots.scratch
+
+# testnet labs (throwaway keys, run logs, findings) — not part of the app for now
+labs/
