@@ -1,6 +1,5 @@
 import type { Issue, Proposal } from "@hl-tools/core";
 import { useMemo } from "react";
-import { useAccount as useWagmiAccount } from "wagmi";
 import { Workspace } from "#/components/hub/layout";
 import { Callout, Pill, type Tone } from "#/components/hub/status";
 import { ProposalResult } from "#/components/tools/multisig/EnvelopeView";
@@ -14,6 +13,9 @@ import { deriveStage, type WalletRole } from "../model/stage";
 import { SignerPage } from "../SignerPage";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { REFRESH_MS, useTreasuryState } from "../useTreasuryState";
+import { useWalletSigner } from "../useWalletSigner";
+import { SharePanel } from "./SharePanel";
+import { SignPanel } from "./SignPanel";
 import { StageCallout } from "./StageCallout";
 import type { ProposalDoc } from "./useProposalDoc";
 
@@ -40,7 +42,8 @@ export function ProposalView({
 	doc: ProposalDoc;
 }) {
 	const header = useNetwork();
-	const { address, chainId } = useWagmiAccount();
+	const wallet = useWalletSigner();
+	const address = wallet.address;
 	const parsed = useMemo(
 		() => documentToParsed(proposal, issues),
 		[proposal, issues],
@@ -58,8 +61,8 @@ export function ProposalView({
 		proposal,
 		readiness: state.judgement?.ready ?? null,
 		policy: state.policy,
-		wallet: address ?? null,
-		walletChainId: chainId ?? null,
+		wallet: address,
+		walletChainId: wallet.chainId,
 	});
 	const role = ROLE[stage.role];
 
@@ -91,9 +94,30 @@ export function ProposalView({
 					</Callout>
 				)}
 				<Workspace
-					input={<TreasuryStrip state={treasury} wallet={address} />}
+					input={
+						<>
+							<TreasuryStrip state={treasury} wallet={address} />
+							{stage.phase !== "submitted" && stage.phase !== "unsupported" && (
+								<SignPanel
+									proposal={proposal}
+									stage={stage}
+									wallet={wallet}
+									store={doc.store}
+								/>
+							)}
+							<SharePanel proposal={proposal} store={doc.store} />
+						</>
+					}
 					output={
-						<ProposalResult parsed={parsed} toggle={header} state={state} />
+						<ProposalResult
+							parsed={parsed}
+							toggle={header}
+							state={state}
+							// the finaliser signs the envelope under the same chain as the inner action
+							envelopeChainId={
+								proposal.receipt?.signatureChainId ?? stage.requiredChain?.hex
+							}
+						/>
 					}
 				/>
 			</div>

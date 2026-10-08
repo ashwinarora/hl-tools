@@ -223,11 +223,18 @@ export function ProposalResult({
 	parsed,
 	toggle,
 	state,
+	envelopeChainId,
 }: {
 	parsed: ProposalParsed;
 	/** The header network; a warning shows when the payload names another one. */
 	toggle: Network;
 	state: JudgementState;
+	/**
+	 * The EIP-712 chain the leader signs the envelope under, when the caller
+	 * knows it. It is the leader's choice at submission and part of the envelope
+	 * hash; without it the document's receipt decides, then the network default.
+	 */
+	envelopeChainId?: `0x${string}`;
 }) {
 	const { proposal, network } = parsed;
 	const { judgement, policyQuery, other, otherQuery } = state;
@@ -236,7 +243,12 @@ export function ProposalResult({
 	const coins = useCoinNames(network);
 	const description = describeAction(proposal.payload.action, coins);
 	const flags = proposalFlags(proposal);
-	const request = parsed.request ?? buildEnvelope(proposal).request;
+	const chosenChainId = envelopeChainId ?? proposal.receipt?.signatureChainId;
+	const request =
+		parsed.request ??
+		buildEnvelope(proposal, { signatureChainId: chosenChainId }).request;
+	// a document that was never submitted does not say which chain its envelope will be signed under
+	const envelopeAssumed = !parsed.request && !chosenChainId;
 	const outer = envelopeDigest(request, network);
 	const window = nonceWindow(proposal.payload.nonce);
 	const receipt = proposal.receipt;
@@ -482,7 +494,11 @@ export function ProposalResult({
 
 			<Panel
 				title="Digests"
-				description="What signers sign (inner) and what the leader signs (envelope)."
+				description={
+					envelopeAssumed
+						? `What signers sign (inner) and what the leader signs (envelope). The envelope values assume signatureChainId ${request.action.signatureChainId}; the leader may sign under another chain, which changes them.`
+						: "What signers sign (inner) and what the leader signs (envelope)."
+				}
 			>
 				<KeyValueGrid
 					columns={1}
