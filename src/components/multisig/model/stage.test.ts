@@ -164,9 +164,9 @@ describe("deriveStage", () => {
 			(await stage(p, { wallet: A, walletChainId: 998 })).onRequiredChain,
 		).toBe(true);
 		const odd = await stage(
-			makeProposal({ action: usdSend({ signatureChainId: "0x1" }) }),
+			makeProposal({ action: usdSend({ signatureChainId: "0x5" }) }),
 		);
-		expect(odd.requiredChain?.label).toBe("chain 1");
+		expect(odd.requiredChain?.label).toBe("chain 5");
 	});
 
 	it("waits while the judgement is pending", async () => {

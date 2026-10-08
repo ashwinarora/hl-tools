@@ -34,7 +34,8 @@ describe("chains", () => {
 	it("labels known and unknown chains", () => {
 		expect(chainLabel(998)).toBe("HyperEVM testnet (998)");
 		expect(chainLabel(42161)).toBe("Arbitrum One (42161)");
-		expect(chainLabel(1)).toBe("chain 1");
+		expect(chainLabel(1)).toBe("Ethereum (1)");
+		expect(chainLabel(5)).toBe("chain 5");
 		expect(knownChain(999)?.label).toBe("HyperEVM");
 		expect(knownChain(1)).toBeNull();
 	});

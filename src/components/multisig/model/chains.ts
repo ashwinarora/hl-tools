@@ -85,9 +85,12 @@ export function knownChain(id: number): ChainChoice | null {
 	return SIGNER_CHAINS.find((c) => c.id === id) ?? null;
 }
 
+/** Chains a wallet is often on that no proposal here asks for; named only for display. */
+const OTHER_NAMES: Readonly<Record<number, string>> = { 1: "Ethereum" };
+
 export function chainLabel(id: number): string {
-	const known = knownChain(id);
-	return known ? `${known.label} (${id})` : `chain ${id}`;
+	const name = knownChain(id)?.label ?? OTHER_NAMES[id];
+	return name ? `${name} (${id})` : `chain ${id}`;
 }
 
 /** Which of the two offered choices a stored chain id is, on that network. */
