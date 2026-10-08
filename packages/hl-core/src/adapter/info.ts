@@ -8,7 +8,8 @@
  */
 
 import { HttpTransport } from "@nktkas/hyperliquid";
-import { type Observed, observed } from "../identity.ts";
+import { type Observed, observed, toAddress } from "../identity.ts";
+import type { Policy } from "../multisig/types.ts";
 import { type Network, networkConfig } from "../network.ts";
 import {
 	normalizeSettledOutcome,
@@ -34,7 +35,23 @@ export const DEFAULT_TTLS: Readonly<Record<string, number>> = {
 	l2Book: 1_000,
 	// A settled outcome never changes again.
 	settledOutcome: 24 * 60 * 60_000,
+	// Multi-sig policy and account role: short, so a rotation shows up quickly.
+	userToMultiSigSigners: 10_000,
+	userRole: 10_000,
 };
+
+/** `userRole` info response. A multi-sig user still reports `user`. */
+export type UserRole =
+	| { readonly role: "user" }
+	| { readonly role: "agent"; readonly data: { readonly user: string } }
+	| { readonly role: "vault" }
+	| { readonly role: "subAccount"; readonly data: { readonly master: string } }
+	| { readonly role: "missing" };
+
+interface RawMultiSigSigners {
+	readonly authorizedUsers: readonly string[];
+	readonly threshold: number;
+}
 
 export class InfoRequestError extends Error {
 	readonly network: Network;
@@ -200,6 +217,32 @@ export class InfoClient<N extends Network> {
 			outcome,
 		});
 		return { ...r, data: normalizeSettledOutcome(this.network, r.data) };
+	}
+
+	/**
+	 * The multi-sig signer set of a user, or null when the user is not a
+	 * multi-sig user. This is the only info request that reveals multi-sig
+	 * status (`userRole` keeps answering `user`).
+	 */
+	async multiSigSigners(user: string): Promise<Observed<Policy | null, N>> {
+		const r = await this.info<RawMultiSigSigners | null>({
+			type: "userToMultiSigSigners",
+			user: user.toLowerCase(),
+		});
+		const data: Policy | null = r.data
+			? {
+					authorizedUsers: [...r.data.authorizedUsers]
+						.map((a) => toAddress(a))
+						.sort(),
+					threshold: r.data.threshold,
+					observedAt: r.observedAt,
+				}
+			: null;
+		return { ...r, data };
+	}
+
+	userRole(user: string): Promise<Observed<UserRole, N>> {
+		return this.info<UserRole>({ type: "userRole", user: user.toLowerCase() });
 	}
 
 	allMids(dex?: string): Promise<Observed<Record<string, string>, N>> {

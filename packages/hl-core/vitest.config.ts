@@ -4,5 +4,15 @@ export default defineConfig({
 	test: {
 		include: ["test/**/*.test.ts"],
 		environment: "node",
+		coverage: {
+			provider: "v8",
+			include: ["src/multisig/**", "src/rules/multisig.ts"],
+			thresholds: {
+				lines: 100,
+				branches: 100,
+				functions: 100,
+				statements: 100,
+			},
+		},
 	},
 });
