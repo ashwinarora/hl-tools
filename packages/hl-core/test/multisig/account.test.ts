@@ -178,7 +178,7 @@ describe("assessAccount: not a multi-sig", () => {
 			expect(r.flags[0]?.message).toContain(text);
 		});
 	}
-	it("a reverted policy (empty set) counts as not multi-sig; agents and EVM flags still apply", () => {
+	it("a reverted policy (empty set) counts as not multi-sig; agent flags still apply, EVM flags do not", () => {
 		const r = assessAccount(
 			base({
 				policy: { authorizedUsers: [], threshold: 0, observedAt: NOW },
@@ -191,8 +191,19 @@ describe("assessAccount: not a multi-sig", () => {
 		expect(codes(r.flags)).toEqual([
 			"account.not_multisig",
 			"account.agents_bypass",
-			"evm.unchecked",
 		]);
+		// a balance under a normal user's key is that user's own business
+		expect(
+			codes(
+				assessAccount(
+					base({
+						policy: null,
+						role: { role: "user" },
+						evmBalanceWei: 1_000_000_000_000_000_000n,
+					}),
+				).flags,
+			),
+		).toEqual(["account.not_multisig"]);
 	});
 });
 

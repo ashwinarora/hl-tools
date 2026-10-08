@@ -105,27 +105,6 @@ export function assessAccount(input: AccountInput): AccountAssessment {
 			),
 		);
 	}
-	if (input.evmBalanceWei === null) {
-		flags.push(
-			issue(
-				"evm.unchecked",
-				"info",
-				"HyperEVM balance not checked. The original key keeps full control of this address on HyperEVM even after conversion, and CoreWriter does not work for multi-sig users.",
-			),
-		);
-	} else if (input.evmBalanceWei > 0n) {
-		flags.push(
-			issue(
-				"account.evm_funds_under_dead_key",
-				"warning",
-				`This address holds ${formatHype(input.evmBalanceWei)} HYPE on HyperEVM. Multi-sig does not protect it: the original private key still controls the HyperEVM side.`,
-				{
-					fix: "Move HyperEVM funds to an address whose key is still safely held, or to Core.",
-				},
-			),
-		);
-	}
-
 	const policy = input.policy;
 	if (!policy || policy.authorizedUsers.length === 0 || policy.threshold < 1) {
 		flags.unshift(
@@ -154,6 +133,28 @@ export function assessAccount(input: AccountInput): AccountAssessment {
 	const n = signers.length;
 	const t = policy.threshold;
 	const summary = `${t} of ${n} authorized user${n > 1 ? "s" : ""} must sign every action.`;
+	// HyperEVM flags only make sense once the account is a multi-sig: they are about
+	// the original key keeping control of the EVM side after conversion.
+	if (input.evmBalanceWei === null) {
+		flags.push(
+			issue(
+				"evm.unchecked",
+				"info",
+				"HyperEVM balance not checked. The original key keeps full control of this address on HyperEVM even after conversion, and CoreWriter does not work for multi-sig users.",
+			),
+		);
+	} else if (input.evmBalanceWei > 0n) {
+		flags.push(
+			issue(
+				"account.evm_funds_under_dead_key",
+				"warning",
+				`This address holds ${formatHype(input.evmBalanceWei)} HYPE on HyperEVM. Multi-sig does not protect it: the original private key still controls the HyperEVM side.`,
+				{
+					fix: "Move HyperEVM funds to an address whose key is still safely held, or to Core.",
+				},
+			),
+		);
+	}
 	if (n > 1 && t === n) {
 		flags.push(
 			issue(

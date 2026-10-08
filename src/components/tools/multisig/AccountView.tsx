@@ -287,8 +287,19 @@ function AccountResult({
 				description="Flags the chain will not raise for you."
 			>
 				<IssueList
-					issues={assessment.flags}
-					empty="No flags: a plain multi-sig with no agents and no lock-out risk."
+					issues={
+						assessment.isMultiSig
+							? assessment.flags
+							: // the header already states the role; do not say it twice
+								assessment.flags.filter(
+									(f) => f.code !== "account.not_multisig",
+								)
+					}
+					empty={
+						assessment.isMultiSig
+							? "No flags: a plain multi-sig with no agents and no lock-out risk."
+							: "Nothing to flag: this address is not a multi-sig."
+					}
 				/>
 			</Panel>
 
@@ -376,7 +387,9 @@ function AccountResult({
 					<SectionError what="API wallets" error={data.agents.error} />
 				) : assessment.agents.length === 0 ? (
 					<p className="text-sm text-muted-foreground">
-						None. Only the multi-sig can act for this account.
+						{assessment.isMultiSig
+							? "None. Only the multi-sig can act for this account."
+							: "None."}
 					</p>
 				) : (
 					<div className={TABLE}>
@@ -425,6 +438,7 @@ function AccountResult({
 				evm={evm}
 				onCheckEvm={() => setCheckEvm(true)}
 				checked={checkEvm}
+				multiSig={assessment.isMultiSig}
 			/>
 
 			<Panel title="Open orders">
@@ -545,11 +559,13 @@ function BalancesPanel({
 	evm,
 	onCheckEvm,
 	checked,
+	multiSig,
 }: {
 	data: AccountData;
 	evm: ReturnType<typeof useEvmBalance>;
 	onCheckEvm: () => void;
 	checked: boolean;
+	multiSig: boolean;
 }) {
 	const perp = data.perp.ok ? data.perp.observed.data : null;
 	const spot = data.spot.ok ? data.spot.observed.data : null;
@@ -588,7 +604,9 @@ function BalancesPanel({
 						? "…"
 						: "not checked",
 			mono: true,
-			hint: "The original key still controls the HyperEVM side after conversion.",
+			hint: multiSig
+				? "The original key still controls the HyperEVM side after conversion."
+				: undefined,
 		},
 	];
 	return (
