@@ -7,6 +7,8 @@ export default defineConfig({
 		coverage: {
 			provider: "v8",
 			include: ["src/multisig/**", "src/rules/multisig.ts"],
+			// types-only module: nothing to execute
+			exclude: ["src/multisig/types.ts"],
 			thresholds: {
 				lines: 100,
 				branches: 100,

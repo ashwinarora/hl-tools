@@ -8,6 +8,7 @@ export * from "./identity.ts";
 export * from "./issues.ts";
 export * from "./json.ts";
 export * from "./msgpack.ts";
+export * from "./multisig/index.ts";
 export * from "./network.ts";
 export * from "./orders/compose.ts";
 export * from "./orders/explain.ts";

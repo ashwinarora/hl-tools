@@ -234,7 +234,7 @@ export interface SignerSet {
 }
 
 /** A chain error explained. */
-export interface Explanation {
+export interface ErrorExplanation {
 	/** Catalogue id, or "unknown" / "ok". */
 	readonly id: string;
 	readonly message: string;
