@@ -1,6 +1,6 @@
 import { LAB_TREASURY } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Field, Panel, TextInput } from "#/components/hub/layout";
 import {
 	type AccountTarget,
@@ -19,6 +19,13 @@ import { useTreasuryState } from "./useTreasuryState";
 export function StartProposal({ wallet }: { wallet?: string | null }) {
 	const network = useNetwork();
 	const hydrated = useNetworkHydrated();
+	// This chunk can hydrate after the root has already restored the stored
+	// network, so `hydrated` may be true on the first client render while the
+	// server rendered false. React does not repair a mismatched attribute, and
+	// the sample button would stay disabled; start from the server's answer.
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => setMounted(true), []);
+	const ready = mounted && hydrated;
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
 	const [input, setInput] = useState("");
 	const [checked, setChecked] = useState<AccountTarget | null>(null);
@@ -71,7 +78,7 @@ export function StartProposal({ wallet }: { wallet?: string | null }) {
 							type="submit"
 							size="sm"
 							variant="brand"
-							disabled={!valid || !hydrated}
+							disabled={!valid || !ready}
 						>
 							Check on {network}
 						</Button>
@@ -79,7 +86,7 @@ export function StartProposal({ wallet }: { wallet?: string | null }) {
 							type="button"
 							size="sm"
 							variant="ghost"
-							disabled={!hydrated}
+							disabled={!ready}
 							onClick={() => {
 								setNetwork("testnet");
 								check(LAB_TREASURY, "testnet");
