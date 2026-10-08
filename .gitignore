@@ -15,3 +15,6 @@ demo-shots.scratch
 
 # testnet labs (throwaway keys, run logs, findings) — not part of the app for now
 labs/
+
+# private working notes (roadmaps, brainstorms) — never pushed
+notes/
