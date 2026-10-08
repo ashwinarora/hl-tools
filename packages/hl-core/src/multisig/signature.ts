@@ -9,6 +9,7 @@
 import type { Address } from "../identity.ts";
 import { type Issue, issue } from "../issues.ts";
 import { parseSignature, recoverSigner } from "../signing.ts";
+import { ZERO_ADDRESS } from "./address.ts";
 import { innerDigest } from "./digest.ts";
 import type {
 	ClassifiedSignature,
@@ -131,6 +132,8 @@ export async function classifySignatures(
 			if (parsed.sig) {
 				recovered = await recoverInnerSigner(digest, parsed.sig);
 				const claimed = signature.signer.toLowerCase();
+				// A raw envelope carries no claimed signer (zero address): judge the recovered address alone.
+				const unclaimed = claimed === ZERO_ADDRESS;
 				if (!recovered) {
 					issues.push(
 						issue(
@@ -140,7 +143,7 @@ export async function classifySignatures(
 							{ path },
 						),
 					);
-				} else if (recovered !== claimed) {
+				} else if (!unclaimed && recovered !== claimed) {
 					issues.push(
 						issue(
 							"signature.signer_mismatch",
@@ -167,7 +170,9 @@ export async function classifySignatures(
 						issue(
 							"signature.unauthorized",
 							"warning",
-							`${recovered} is not in the signer set (as of ${new Date(policy.observedAt).toISOString()}). API wallets of signers cannot sign inner actions either.`,
+							unclaimed
+								? `${recovered} is not in the signer set (as of ${new Date(policy.observedAt).toISOString()}): either an outsider signed, or an authorized user signed different bytes (diagnoseSignature can tell).`
+								: `${recovered} is not in the signer set (as of ${new Date(policy.observedAt).toISOString()}). API wallets of signers cannot sign inner actions either.`,
 							{
 								path,
 								fix: "Collect a signature from an authorized user's own key.",

@@ -7,6 +7,7 @@
 import type { Address } from "../identity.ts";
 import { DIAGNOSE_MAX_ATTEMPTS } from "../rules/multisig.ts";
 import { SIGNATURE_CHAIN_IDS } from "../rules/signing.ts";
+import { ZERO_ADDRESS } from "./address.ts";
 import { innerDigest } from "./digest.ts";
 import { recoverInnerSigner } from "./signature.ts";
 import type {
@@ -142,6 +143,14 @@ export async function diagnoseSignature(
 	const budget = opts.maxAttempts ?? DIAGNOSE_MAX_ATTEMPTS;
 	let attempts = 0;
 	const claimed = sig.signer;
+	// Without a claimed signer (zero address, as in a raw envelope) a variant counts as a
+	// match when it recovers to any current authorized user.
+	const unclaimed = claimed === ZERO_ADDRESS;
+	const matches = (recovered: Address | null): boolean =>
+		recovered !== null &&
+		(unclaimed
+			? (policy?.authorizedUsers.includes(recovered) ?? false)
+			: recovered === claimed);
 	const tryPayload = async (
 		payload: ProposalPayload,
 	): Promise<Address | null> => {
@@ -150,7 +159,7 @@ export async function diagnoseSignature(
 		return d ? recoverInnerSigner(d, sig) : null;
 	};
 	const baseline = await tryPayload(p.payload);
-	if (baseline === claimed) {
+	if (matches(baseline)) {
 		return {
 			cause: "matches",
 			recovered: baseline,
@@ -158,14 +167,23 @@ export async function diagnoseSignature(
 			attempts,
 		};
 	}
+	if (unclaimed && !policy) {
+		return {
+			cause: "unknown",
+			recovered: baseline,
+			detail:
+				"No claimed signer and no signer set: nothing to match variants against.",
+			attempts,
+		};
+	}
 	for (const v of variants(p, policy, opts)) {
 		if (attempts >= budget) break;
 		const recovered = await tryPayload(v.payload);
-		if (recovered === claimed) {
+		if (matches(recovered)) {
 			return {
 				cause: v.cause,
 				recovered,
-				detail: `${claimed} ${v.detail}.`,
+				detail: `${recovered} ${v.detail}.`,
 				attempts,
 			};
 		}

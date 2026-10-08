@@ -289,6 +289,28 @@ describe("classifySignatures", () => {
 		expect(r[0]?.status).toBe("valid-authorized");
 		expect(r[0]?.recovered).toBe(C);
 	});
+	it("cls.unclaimed: a zero-address claimed signer (raw envelope) is judged by recovery alone", async () => {
+		const sA = { ...(await signatureBy(p, 1)), signer: ZERO_ADDRESS };
+		const sOut = { ...(await signatureBy(p, 4)), signer: ZERO_ADDRESS };
+		const sWrong = {
+			...(await signatureBy(payload({ nonce: NONCE - 1 }), 2)),
+			signer: ZERO_ADDRESS,
+		};
+		const r = await classifySignatures(
+			proposalOf(p, [sA, sOut, sWrong, sA]),
+			POLICY,
+		);
+		expect(r.map((c) => c.status)).toEqual([
+			"valid-authorized",
+			"valid-unauthorized",
+			"valid-unauthorized",
+			"duplicate",
+		]);
+		expect(r[1]?.issues[0]?.message).toContain("diagnoseSignature");
+		expect(
+			(await classifySignatures(proposalOf(p, [sA]), null))[0]?.status,
+		).toBe("valid-unknown");
+	});
 	it("cls.index-and-signature-echoed", async () => {
 		const sA = await signatureBy(p, 1);
 		const r = await classifySignatures(proposalOf(p, [sA]), POLICY);

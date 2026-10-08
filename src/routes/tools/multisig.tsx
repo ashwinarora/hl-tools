@@ -40,6 +40,7 @@ function MultisigTool() {
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
 	const hydrated = useNetworkHydrated();
 	const take = useHandoffStore((s) => s.take);
+	const send = useHandoffStore((s) => s.send);
 	const [view, setView] = useState<View>(search.view ?? "account");
 	const [addressInput, setAddressInput] = useState(search.address ?? "");
 	const [target, setTarget] = useState<AccountTarget | null>(null);
@@ -73,15 +74,16 @@ function MultisigTool() {
 	// Samples and the ?address= target are applied once the persisted network is known,
 	// so a testnet sample cannot be overridden by the stored preference a moment later.
 	const [applied, setApplied] = useState(false);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs once, after hydration
 	useEffect(() => {
 		if (!hydrated || applied) return;
 		setApplied(true);
 		if (search.sample) loadSample(search.sample);
 		else if (search.address && isAddress(search.address))
 			lookup(search.address, network);
-		// eslint-disable-next-line react-hooks/exhaustive-deps -- run once after hydration
 	}, [hydrated, applied]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a hand-off is taken once, on mount
 	useEffect(() => {
 		const handed = take("multisig");
 		if (handed) {
@@ -148,6 +150,10 @@ function MultisigTool() {
 					onChange={setEnvelopeText}
 					network={network}
 					onSample={loadSample}
+					onHandOff={() => {
+						send("signing", envelopeText);
+						void navigate({ to: "/tools/signing" });
+					}}
 				/>
 			)}
 		</ToolPage>

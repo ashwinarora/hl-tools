@@ -5,6 +5,7 @@ import {
 	diagnoseSignature,
 	type ProposalPayload,
 	SECP256K1_N,
+	ZERO_ADDRESS,
 } from "../../src/multisig/index.ts";
 import { DIAGNOSE_MAX_ATTEMPTS } from "../../src/rules/multisig.ts";
 import {
@@ -209,6 +210,42 @@ describe("diagnoseSignature (L1)", () => {
 		);
 		expect(d.cause).toBe("unknown");
 		expect(d.attempts).toBeGreaterThan(5);
+	});
+	it("diag.unclaimed: with a zero-address claimed signer, a variant matches when it recovers to any authorized user", async () => {
+		const unclaimed = async (variant: typeof base) => ({
+			...(await signatureBy(variant, 2)),
+			signer: ZERO_ADDRESS,
+		});
+		expect(
+			(await diagnoseSignature(await unclaimed(base), proposalOf(base), POLICY))
+				.cause,
+		).toBe("matches");
+		const d = await diagnoseSignature(
+			await unclaimed({ ...base, nonce: NONCE - 1 }),
+			proposalOf(base),
+			POLICY,
+		);
+		expect(d.cause).toBe("other-nonce");
+		expect(d.detail).toContain(B);
+		// an outsider's signature matches no variant
+		expect(
+			(
+				await diagnoseSignature(
+					{ ...(await signatureBy(base, 4)), signer: ZERO_ADDRESS },
+					proposalOf(base),
+					POLICY,
+				)
+			).cause,
+		).toBe("unknown");
+		// without a policy there is nothing to match against
+		const np = await diagnoseSignature(
+			await unclaimed({ ...base, nonce: NONCE - 1 }),
+			proposalOf(base),
+			null,
+		);
+		expect(np.cause).toBe("unknown");
+		expect(np.detail).toContain("no signer set");
+		expect(np.attempts).toBe(1);
 	});
 	it("diag.claimed-signer-is-the-key: a signature by A claimed as B never 'matches'", async () => {
 		const sig = { ...(await signatureBy(base, 1)), signer: B };
