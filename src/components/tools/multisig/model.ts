@@ -148,3 +148,26 @@ export function parseEnvelopeText(
 }
 
 export const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+
+/** An account lookup pinned to the network it ran on. */
+export interface AccountTarget {
+	readonly address: `0x${string}`;
+	readonly network: Network;
+}
+
+/** A proposal document already in hand, in the shape the result panel and `useJudgement` take. */
+export function documentToParsed(
+	proposal: Proposal,
+	issues: readonly Issue[] = [],
+): Extract<ParsedEnvelopeInput, { kind: "proposal"; source: "document" }> {
+	return {
+		kind: "proposal",
+		source: "document",
+		proposal,
+		network: proposal.payload.network,
+		networkFromInput: true,
+		outerSignature: null,
+		request: null,
+		issues,
+	};
+}

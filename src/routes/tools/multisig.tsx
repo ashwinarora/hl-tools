@@ -5,7 +5,10 @@ import { Segmented, ToolPage } from "#/components/hub/layout";
 import { ShareButton } from "#/components/hub/ShareButton";
 import { AccountView } from "#/components/tools/multisig/AccountView";
 import { EnvelopeView } from "#/components/tools/multisig/EnvelopeView";
-import { ADDRESS_RE } from "#/components/tools/multisig/model";
+import {
+	type AccountTarget,
+	ADDRESS_RE,
+} from "#/components/tools/multisig/model";
 import { clearShared, readShared } from "#/lib/share";
 import { tool } from "#/lib/tools";
 import { useHandoffStore } from "#/store/handoffStore";
@@ -16,11 +19,6 @@ import {
 } from "#/store/networkStore";
 
 type View = "account" | "envelope";
-export interface AccountTarget {
-	readonly address: `0x${string}`;
-	readonly network: Network;
-}
-
 export const Route = createFileRoute("/tools/multisig")({
 	validateSearch: (
 		s: Record<string, unknown>,

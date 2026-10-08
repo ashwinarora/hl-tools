@@ -1,29 +1,19 @@
 import {
 	buildEnvelope,
-	type ClassifiedSignature,
 	canonicalEnvelopeAction,
-	classifySignatures,
-	type Diagnosis,
 	describeAction,
-	diagnoseSignature,
 	envelopeDigest,
 	explainExchangeError,
 	fromPlain,
-	infoClient,
 	MULTISIG_SAMPLES,
 	type Network,
 	nonceWindow,
-	type Policy,
 	type Proposal,
 	proposalFlags,
-	type Readiness,
-	readiness,
-	recoverInnerSigner,
 	stringifyJson,
 } from "@hl-tools/core";
-import { useQuery } from "@tanstack/react-query";
 import { FileSignature, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { CodeBlock } from "#/components/hub/CodeBlock";
 import { CopyButton } from "#/components/hub/CopyButton";
 import {
@@ -46,8 +36,15 @@ import { useNetworkStore } from "#/store/networkStore";
 import { AddressLine } from "./AddressLine";
 import { type ParsedEnvelopeInput, parseEnvelopeText } from "./model";
 import { useCoinNames } from "./useCoinNames";
+import {
+	type Judgement,
+	type JudgementState,
+	type PolicyQuery,
+	type ProposalParsed,
+	useJudgement,
+} from "./useJudgement";
 
-const FLAG_TEXT: Record<
+export const FLAG_TEXT: Record<
 	string,
 	{ label: string; tone: "warning" | "danger" | "info" }
 > = {
@@ -201,97 +198,40 @@ function EnvelopeOutput({
 			</Callout>
 		);
 	}
-	return <ProposalResult parsed={parsed} toggle={toggle} />;
+	return <JudgedProposal parsed={parsed} toggle={toggle} />;
 }
 
-interface Judgement {
-	readonly policy: Policy | null;
-	readonly classified: readonly ClassifiedSignature[];
-	readonly ready: Readiness;
-	readonly diagnoses: Readonly<Record<number, Diagnosis>>;
-	readonly outerRecovered: `0x${string}` | null;
-}
-
-function ProposalResult({
+/** The inspector's own wiring: judge the pasted proposal against the live signer set. */
+function JudgedProposal({
 	parsed,
 	toggle,
 }: {
-	parsed: Extract<ParsedEnvelopeInput, { kind: "proposal" }>;
+	parsed: ProposalParsed;
 	toggle: Network;
 }) {
+	const state = useJudgement(parsed);
+	return <ProposalResult parsed={parsed} toggle={toggle} state={state} />;
+}
+
+/**
+ * Everything known about one proposal: action, readiness, signatures, digests
+ * and the canonical envelope. Presentational: the caller supplies the
+ * judgement (`useJudgement`), so the Multisig Signer can gate its buttons on
+ * the very result this panel displays.
+ */
+export function ProposalResult({
+	parsed,
+	toggle,
+	state,
+}: {
+	parsed: ProposalParsed;
+	/** The header network; a warning shows when the payload names another one. */
+	toggle: Network;
+	state: JudgementState;
+}) {
 	const { proposal, network } = parsed;
-	const user = proposal.payload.multiSigUser;
-	const policyQuery = useQuery({
-		queryKey: ["multisig-policy", network, user],
-		queryFn: () => infoClient(network).multiSigSigners(user),
-		staleTime: 10_000,
-		retry: 1,
-	});
-	// When this network's lookup succeeded but the address is not a multi-sig user, that is
-	// a known (empty) policy, not an unknown one.
-	const policy: Policy | null = policyQuery.data
-		? (policyQuery.data.data ?? {
-				authorizedUsers: [],
-				threshold: 0,
-				observedAt: policyQuery.data.observedAt,
-			})
-		: null;
-	// L1 payloads do not name their network; if the toggle's network says "not a multi-sig"
-	// but the other network does, say so.
-	const other: Network = network === "mainnet" ? "testnet" : "mainnet";
-	const otherQuery = useQuery({
-		queryKey: ["multisig-policy", other, user],
-		queryFn: () => infoClient(other).multiSigSigners(user),
-		staleTime: 10_000,
-		retry: 1,
-		enabled:
-			!parsed.networkFromInput && policy !== null && policy.threshold === 0,
-	});
+	const { judgement, policyQuery, other, otherQuery } = state;
 	const setNetwork = useNetworkStore((st) => st.setNetwork);
-	const [judgement, setJudgement] = useState<Judgement | null>(null);
-	useEffect(() => {
-		let cancelled = false;
-		(async () => {
-			const classified = await classifySignatures(proposal, policy);
-			const ready = readiness(proposal, policy, classified);
-			const diagnoses: Record<number, Diagnosis> = {};
-			for (const c of classified) {
-				// A raw envelope carries no claimed signer, so an unauthorized recovery may be an
-				// authorized user who signed different bytes: diagnose those too.
-				if (
-					c.status === "invalid" ||
-					(c.status === "valid-unauthorized" && parsed.source === "envelope")
-				) {
-					diagnoses[c.index] = await diagnoseSignature(
-						c.signature,
-						proposal,
-						policy,
-					);
-				}
-			}
-			let outerRecovered: `0x${string}` | null = null;
-			if (parsed.outerSignature && parsed.request) {
-				const d = envelopeDigest(parsed.request, network);
-				if (d.digest)
-					outerRecovered = await recoverInnerSigner(
-						d.digest,
-						parsed.outerSignature,
-					);
-			}
-			if (!cancelled)
-				setJudgement({ policy, classified, ready, diagnoses, outerRecovered });
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, [
-		proposal,
-		parsed.outerSignature,
-		parsed.request,
-		parsed.source,
-		network,
-		policy,
-	]);
 
 	const coins = useCoinNames(network);
 	const description = describeAction(proposal.payload.action, coins);
@@ -604,14 +544,7 @@ function ReadinessPanel({
 	receipt,
 }: {
 	judgement: Judgement | null;
-	policyQuery: ReturnType<
-		typeof useQuery<{
-			data: Policy | null;
-			observedAt: number;
-			network: Network;
-			source: string;
-		}>
-	>;
+	policyQuery: PolicyQuery;
 	network: Network;
 	proposal: Proposal;
 	receipt: { id: string; cause: string; message: string; at: number } | null;

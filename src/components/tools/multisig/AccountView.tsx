@@ -29,9 +29,8 @@ import {
 	Pill,
 } from "#/components/hub/status";
 import { Button } from "#/components/ui/button";
-import type { AccountTarget } from "#/routes/tools/multisig";
 import { AddressLine } from "./AddressLine";
-import { ADDRESS_RE } from "./model";
+import { type AccountTarget, ADDRESS_RE } from "./model";
 import {
 	type AccountData,
 	type Section,

@@ -18,7 +18,7 @@ import {
 } from "@hl-tools/core";
 import { useQuery } from "@tanstack/react-query";
 import { errorMessage } from "#/hooks/useHyperliquid";
-import type { AccountTarget } from "#/routes/tools/multisig";
+import type { AccountTarget } from "./model";
 
 /** One info call's outcome: the observed answer or the reason it failed. */
 export type Section<T> =
@@ -54,12 +54,16 @@ async function section<T>(
  * Everything the account view shows, in one query so the page has one
  * observation time and one stale-network banner. Sections fail independently.
  */
-export function useAccount(target: AccountTarget | null) {
+export function useAccount(
+	target: AccountTarget | null,
+	opts: { refetchInterval?: number } = {},
+) {
 	return useQuery<AccountData>({
 		queryKey: ["multisig-account", target?.network, target?.address],
 		enabled: !!target,
 		staleTime: 10_000,
 		retry: 1,
+		refetchInterval: opts.refetchInterval,
 		queryFn: async () => {
 			if (!target) throw new Error("no target");
 			const { address, network } = target;
