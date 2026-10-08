@@ -3,6 +3,7 @@ import {
 	Boxes,
 	Droplets,
 	FileSearch,
+	FileSignature,
 	GitCompareArrows,
 	type LucideIcon,
 	Network,
@@ -21,6 +22,7 @@ export type ToolId =
 	| "websocket"
 	| "rpc"
 	| "multisig"
+	| "multisig-sign"
 	| "faucet";
 
 export interface ToolSample {
@@ -39,6 +41,7 @@ export interface ToolDef {
 		| "/tools/websocket"
 		| "/tools/rpc"
 		| "/tools/multisig"
+		| "/multisig"
 		| "/faucet-miner";
 	readonly title: string;
 	readonly short: string;
@@ -189,12 +192,30 @@ export const TOOLS: readonly ToolDef[] = [
 		sample: { id: "lab-treasury", label: "Lab treasury (testnet 2-of-3)" },
 	},
 	{
+		id: "multisig-sign",
+		path: "/multisig",
+		title: "Multisig Signer",
+		short: "Multisig signer",
+		description:
+			"Propose, sign and submit native multi-sig actions — USDC and spot sends, perps ↔ spot transfers, withdrawals, API-wallet approvals — with your wallet, in your browser. Proposals travel as links or files; signatures are verified locally before anything is sent.",
+		answers:
+			"How do two of three signers get one usdSend onto the chain without a server?",
+		icon: FileSignature,
+		ruleSets: ["multisig", "signing", "errors"],
+		primarySource: {
+			label: "Multi-sig",
+			url: `${DOCS}/hypercore/multi-sig`,
+		},
+		sample: null,
+		writes: true,
+	},
+	{
 		id: "faucet",
 		path: "/faucet-miner",
 		title: "Testnet Faucet Miner",
 		short: "Faucet miner",
 		description:
-			"Chain generated wallets through the testnet faucet to mine testnet USDC. The one tool in the hub that signs and sends — with your wallet, in your browser.",
+			"Chain generated wallets through the testnet faucet to mine testnet USDC. It signs and sends — with your wallet, in your browser.",
 		answers: "How do I get more than one faucet drip of testnet USDC?",
 		icon: Droplets,
 		ruleSets: ["faucet"],

@@ -29,7 +29,7 @@ function useMountedTheme(): "light" | "dark" {
 	return theme;
 }
 
-/** Wallet stack for the faucet miner only. */
+/** Wallet stack, mounted only by the routes that sign: the faucet miner and the multisig signer. */
 export default function WalletProviders({ children }: { children: ReactNode }) {
 	const theme = useMountedTheme();
 	return (

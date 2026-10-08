@@ -47,7 +47,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			{
 				name: "description",
 				content:
-					"Read-only diagnostics for Hyperliquid developers: resolve assets, inspect signatures, decode CoreWriter actions, trace HyperEVM → HyperCore, lint orders, debug WebSockets and probe RPCs.",
+					"Tools for Hyperliquid developers, in your browser. Read-only diagnostics: resolve assets, inspect signatures, decode CoreWriter actions, trace HyperEVM → HyperCore, lint orders, debug WebSockets, probe RPCs, inspect multi-sigs. Plus a native multi-sig signer and a testnet faucet miner.",
 			},
 			{ name: "theme-color", content: "#0f1115" },
 		],

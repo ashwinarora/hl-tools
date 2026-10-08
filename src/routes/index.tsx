@@ -30,7 +30,8 @@ function Directory() {
 					<div className="max-w-3xl space-y-5">
 						<div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted-foreground">
 							<ShieldCheck className="size-3.5 text-brand" aria-hidden />
-							Read-only · no wallet required · runs in your browser
+							Runs in your browser · read-only unless a card says “Signs &amp;
+							sends”
 						</div>
 						<h1 className="text-balance text-[2rem] font-semibold leading-[1.1] tracking-tight sm:text-5xl">
 							Understand and verify any Hyperliquid action
