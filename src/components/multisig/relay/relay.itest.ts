@@ -50,7 +50,7 @@ import {
 	requestTreasury,
 } from "./api";
 import { type ChannelState, subscribeWallet } from "./realtime";
-import { sessionWallet, signIn, signOut } from "./session";
+import { probeSession, sessionWallet, signIn, signOut } from "./session";
 
 const NET = "mainnet" as const;
 const REAL_INFO = "https://api.hyperliquid.xyz/info";
@@ -310,6 +310,14 @@ describe("signing in", () => {
 			...(await sign(11)),
 		});
 		expect(old.error?.message).toMatch(/issued too long ago/);
+	});
+
+	it("tells a stored session's worth apart: ready, none, or the relay not answering", async () => {
+		expect(await probeSession(a.client)).toEqual({
+			status: "ready",
+			wallet: a.address,
+		});
+		expect(await probeSession(newClient())).toEqual({ status: "none" });
 	});
 
 	it("signs out in this client only", async () => {
@@ -848,5 +856,7 @@ describe("when the relay cannot be reached", () => {
 			"relay.unreachable",
 		);
 		expect(await sessionWallet(dead)).toBeNull();
+		// no stored session: nothing to ask the relay about
+		expect(await probeSession(dead)).toEqual({ status: "none" });
 	});
 });

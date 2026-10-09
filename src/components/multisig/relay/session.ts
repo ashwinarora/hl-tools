@@ -4,7 +4,7 @@
  * scripts all use these.
  */
 import { type Address, type Issue, issue } from "@hl-tools/core";
-import { relayIssue } from "../model/relay/errors";
+import { isUnreachable, relayIssue } from "../model/relay/errors";
 import { buildSignInMessage, signInOriginProblem } from "../model/relay/siwe";
 import { describeWalletError } from "../model/walletErrors";
 import type { RelayClient } from "./client";
@@ -57,6 +57,49 @@ export async function sessionWallet(
 		return address;
 	} catch {
 		return null;
+	}
+}
+
+export type SessionProbe =
+	| { readonly status: "ready"; readonly wallet: Address }
+	/** No session, or one the relay no longer recognises (it is cleared). */
+	| { readonly status: "none" }
+	/** There is a stored session but the relay did not answer; nothing is cleared. */
+	| { readonly status: "unreachable" };
+
+/**
+ * What a stored session is worth right now: asked once when the section
+ * opens with a session left in the browser.
+ */
+export async function probeSession(client: RelayClient): Promise<SessionProbe> {
+	try {
+		const { data, error } = await client.auth.getSession();
+		if (error) {
+			return isUnreachable(error)
+				? { status: "unreachable" }
+				: { status: "none" };
+		}
+		if (!data.session) return { status: "none" };
+		const { data: wallet, error: refused } = await client.rpc("whoami");
+		if (refused) {
+			if (isUnreachable(refused)) return { status: "unreachable" };
+			await signOut(client);
+			return { status: "none" };
+		}
+		if (typeof wallet === "string" && /^0x[0-9a-f]{40}$/.test(wallet)) {
+			let known = WALLETS.get(client);
+			if (!known) {
+				known = new Map();
+				WALLETS.set(client, known);
+			}
+			known.set(data.session.user.id, wallet as Address);
+			return { status: "ready", wallet: wallet as Address };
+		}
+		// a session that speaks for no wallet is of no use here
+		await signOut(client);
+		return { status: "none" };
+	} catch (e) {
+		return isUnreachable(e) ? { status: "unreachable" } : { status: "none" };
 	}
 }
 

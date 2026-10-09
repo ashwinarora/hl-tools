@@ -50,22 +50,19 @@ export function RailLink({
 
 /**
  * The section's left panel: who you are, then where you can go. Without a
- * relay it is short: the wallet, and the one screen that opens and starts
- * proposals.
+ * relay, or signed out, it is short: the identity box and the screen that
+ * opens and starts proposals.
  */
 export function Rail({
-	identity,
 	children,
 	foot,
 }: {
-	/** What the relay adds inside the identity box. */
-	identity?: ReactNode;
 	children?: ReactNode;
 	foot?: ReactNode;
 }) {
 	return (
 		<>
-			<WalletBox>{identity}</WalletBox>
+			<WalletBox />
 			{children}
 			<div className="flex flex-col gap-0.5 border-t border-border pt-3">
 				{foot}

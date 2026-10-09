@@ -1,15 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowUpRight, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { Callout } from "#/components/hub/status";
-import { short } from "#/components/tools/multisig/AddressLine";
 import { tool, toolRuleSets, toolVerifiedAt } from "#/lib/tools";
 import { useMultisigPrefs, usePrefsHydrated } from "#/store/multisigPrefsStore";
 import { RELAY_COPY } from "../model/relay/copy";
 import { relayConfig } from "../relay/config";
 import { Btn } from "./kit";
 import { Rail, RailLink } from "./Rail";
-import { useShellWallet } from "./WalletBox";
+import { WalletBox } from "./WalletBox";
 
 /**
  * The Multisig section's own frame inside the hub: the hub's top bar stays,
@@ -42,42 +41,16 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 	);
 }
 
-/** Below the rail's breakpoint: the wallet and the way to the start screen, in one row. */
+/** Below the rail's breakpoint the identity box sits above the screen, with the way to links and files. */
 function MobileBar() {
-	const w = useShellWallet();
 	return (
-		<div className="mb-4 flex items-center gap-2 min-[861px]:hidden">
-			{!w.mounted ? (
-				<span className="h-[34px]" aria-hidden />
-			) : w.connected && w.address ? (
-				<>
-					<span
-						className="inline-flex h-[34px] min-w-0 items-center gap-2 rounded-md border border-border-strong bg-surface px-2.5"
-						title={w.address}
-					>
-						<Wallet className="size-3.5 text-muted-foreground" aria-hidden />
-						<span className="truncate font-mono text-[13px]">
-							{short(w.address)}
-						</span>
-					</span>
-					<Btn variant="ghost" onClick={() => w.disconnect()}>
-						Disconnect
-					</Btn>
-				</>
-			) : (
-				<Btn
-					variant="brand"
-					disabled={!w.connect}
-					onClick={() => w.connect?.()}
-				>
-					<Wallet className="size-3.5" aria-hidden /> Connect wallet
-				</Btn>
-			)}
+		<div className="mb-4 flex flex-col gap-2 min-[861px]:hidden">
+			<WalletBox />
 			<Link
 				to="/multisig/open"
-				className="ml-auto text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+				className="self-end text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
 			>
-				Open or start
+				Open or start a proposal
 			</Link>
 		</div>
 	);

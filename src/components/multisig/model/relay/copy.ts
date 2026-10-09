@@ -15,10 +15,11 @@ export const RELAY_COPY = {
 		"Propose, sign and submit native Hyperliquid multi-sig actions with your own wallet.",
 	teamTitle: "With your team",
 	teamBody:
-		"Sign in with your wallet and add a treasury once. Every signer of it then sees its proposals and signatures here as they happen. Each signature is still verified in your browser, and only Hyperliquid decides what executes.",
+		"Sign in with your wallet to see your treasuries, what is waiting for your signature, and who signed what.",
+	teamSmall: "One wallet prompt. It approves nothing and moves nothing.",
 	soloTitle: "Without signing in",
 	soloBody:
-		"Pass a proposal on as a link or a file, and merge what comes back. Everything stays in this browser until you hand it to someone.",
+		"Everything also works with links and files passed by hand. Nothing is stored for you.",
 	withoutUs: "You can always do this without us.",
 	unreachable: "Relay unreachable. Links and files still work.",
 	suspended:

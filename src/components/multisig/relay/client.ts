@@ -16,7 +16,10 @@ export function getRelayClient(config: RelayConfig): Promise<RelayClient> {
 		createClient(config.url, config.key, {
 			auth: {
 				persistSession: true,
-				autoRefreshToken: true,
+				// The provider starts and stops token renewal itself: nothing may
+				// talk to the relay while the connected wallet is not the one signed in,
+				// or after the section is left.
+				autoRefreshToken: false,
 				// sign-in is a wallet signature; nothing ever arrives in the URL
 				detectSessionInUrl: false,
 				storageKey: RELAY_STORAGE_KEY,
