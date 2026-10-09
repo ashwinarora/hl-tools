@@ -100,3 +100,91 @@ create function tests.addrs(variadic n int[]) returns public.address[]
 language sql immutable as $$
 	select array_agg(tests.addr(x) order by tests.addr(x)) from unnest(n) x
 $$;
+
+-- ------------------------------------------------------------------- proposals
+create function tests.digest(n int) returns public.hash32
+language sql immutable as $$
+	select ('0x' || lpad(to_hex(n), 64, '0'))::public.hash32
+$$;
+
+create function tests.now_ms() returns bigint
+language sql stable as $$
+	select (extract(epoch from now()) * 1000)::bigint
+$$;
+
+-- A bare proposal document as the browser publishes it. `p_patch` is merged
+-- over the top level and `p_payload_patch` over the payload, to build the
+-- malformed ones.
+create function tests.doc(
+	p_network public.network, n_treasury int, n_finaliser int, d int, p_nonce bigint,
+	p_patch jsonb default '{}', p_payload_patch jsonb default '{}', p_type text default 'usdSend'
+) returns text
+language sql stable as $$
+	select ((jsonb_build_object(
+		'v', 1,
+		'payload', jsonb_build_object(
+			'network', p_network,
+			'multiSigUser', tests.addr(n_treasury),
+			'outerSigner', tests.addr(n_finaliser),
+			'action', jsonb_build_object('type', p_type, 'signatureChainId', '0x3e6',
+				'hyperliquidChain', 'Testnet', 'destination', tests.addr(9999), 'amount', '1', 'time', p_nonce),
+			'nonce', p_nonce,
+			'vaultAddress', null,
+			'expiresAfter', null) || p_payload_patch,
+		'digest', tests.digest(d),
+		'signatures', '[]'::jsonb,
+		'meta', jsonb_build_object('kind', 'user-signed', 'title', 'Test ' || d, 'note', null),
+		'receipt', null) || p_patch))::text
+$$;
+
+-- Wallet n shares proposal d for treasury n_treasury, finaliser n_finaliser.
+-- Runs as whatever role calls it, with wallet n's claims.
+create function tests.propose(
+	n int, n_treasury int, n_finaliser int, d int,
+	p_nonce bigint default null, p_network public.network default 'testnet', p_type text default 'usdSend'
+) returns void
+language plpgsql as $$
+declare
+	nonce bigint := coalesce(p_nonce, tests.now_ms());
+begin
+	perform tests.claims(n);
+	insert into public.proposals (network, treasury, digest, document, finaliser, nonce)
+	values (p_network, tests.addr(n_treasury), tests.digest(d),
+		tests.doc(p_network, n_treasury, n_finaliser, d, nonce, '{}', '{}', p_type), tests.addr(n_finaliser), nonce);
+end $$;
+
+create function tests.sign(n int, n_treasury int, d int, p_network public.network default 'testnet') returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.signatures (network, treasury, digest, r, s, v)
+	values (p_network, tests.addr(n_treasury), tests.digest(d), tests.digest(1000 + n), tests.digest(2000 + n), 27);
+end $$;
+
+create function tests.end_it(n int, n_treasury int, d int, p_kind text) returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.endings (network, treasury, digest, kind)
+	values ('testnet', tests.addr(n_treasury), tests.digest(d), p_kind);
+end $$;
+
+create function tests.receipt(n int, n_treasury int, d int, p_response text, p_http int default 200, p_at bigint default null) returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.receipts (network, treasury, digest, submitted_at, signature_chain_id, outer_r, outer_s, outer_v, http_status, response)
+	values ('testnet', tests.addr(n_treasury), tests.digest(d), coalesce(p_at, tests.now_ms()), '0x3e6',
+		tests.digest(3000 + n), tests.digest(4000 + n), 28, p_http, p_response);
+end $$;
+
+create function tests.status(n_treasury int, d int) returns text
+language sql as $$
+	select status from public.proposals where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
+$$;
+
+create function tests.kinds(n_treasury int, d int) returns text[]
+language sql as $$
+	select coalesce(array_agg(kind order by id), '{}') from public.events
+	where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
+$$;
