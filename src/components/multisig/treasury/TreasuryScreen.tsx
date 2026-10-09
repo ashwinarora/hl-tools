@@ -19,6 +19,7 @@ import {
 import { compareSigners, nextRecheck } from "../model/relay/signers";
 import { shortAddress } from "../model/stage";
 import { requestTreasury } from "../relay/api";
+import { useOpenProposals } from "../relay/openProposals";
 import { useRequest, useTreasury } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
 import { Card, linkButton, NetTag, SignsTag, TabList, Tag } from "../shell/kit";
@@ -136,6 +137,7 @@ export function TreasuryScreen({
 		network,
 		valid ? address : null,
 	);
+	const open = useOpenProposals();
 	const me = relay.wallet;
 
 	// The address in the URL names its network: the header follows it.
@@ -284,6 +286,12 @@ export function TreasuryScreen({
 	}
 
 	const frozen = treasury.frozenAt !== null;
+	const pending = open.items.filter(
+		(p) =>
+			p.open &&
+			p.network === treasury.network &&
+			p.treasury === treasury.address,
+	);
 	const usdc = live.spot?.balances.find((b) => b.coin === "USDC");
 	const setTab = (next: TreasuryTab) =>
 		void navigate({
@@ -374,12 +382,19 @@ export function TreasuryScreen({
 				value={tab}
 				onChange={setTab}
 				tabs={[
-					{ value: "pending", label: "Pending" },
+					{ value: "pending", label: "Pending", count: pending.length },
 					{ value: "history", label: "History" },
 					{ value: "signers", label: "Signers & API wallets" },
 				]}
 			/>
-			{tab === "pending" && <PendingTab />}
+			{tab === "pending" && me && (
+				<PendingTab
+					items={pending}
+					loading={open.loading}
+					me={me}
+					frozen={frozen}
+				/>
+			)}
 			{tab === "history" && <HistoryTab treasury={treasury} me={me} />}
 			{tab === "signers" && (
 				<SignersTab

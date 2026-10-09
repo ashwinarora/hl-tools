@@ -2,6 +2,7 @@ import { NETWORKS, type Network } from "@hl-tools/core";
 import { useEffect } from "react";
 import { radioGroupKeyDown } from "#/lib/radioGroup";
 import { cn } from "#/lib/utils";
+import { useNetworkHint } from "#/store/networkHintStore";
 import { useNetworkStore } from "#/store/networkStore";
 
 /**
@@ -16,6 +17,7 @@ export default function NetworkSwitch({
 }) {
 	const network = useNetworkStore((s) => s.network);
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
+	const pendingOn = useNetworkHint((s) => s.pendingOn);
 
 	useEffect(() => {
 		document.documentElement.setAttribute("data-network", network);
@@ -39,10 +41,18 @@ export default function NetworkSwitch({
 					data-net-seg={n}
 					onClick={() => setNetwork(n)}
 					className={cn(
-						"net-seg inline-flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+						"net-seg relative inline-flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
 						compact ? "px-1.5" : "px-2.5",
 					)}
 				>
+					{pendingOn === n && network !== n && (
+						<span
+							className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-warning"
+							title={`Something needs you on ${n}`}
+						>
+							<span className="sr-only">Something needs you on {n}.</span>
+						</span>
+					)}
 					<span
 						className={cn(
 							"size-1.5 rounded-full",
