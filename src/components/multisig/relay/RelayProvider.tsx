@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { generateSiweNonce } from "viem/siwe";
 import { useAccount, useSignMessage } from "wagmi";
 import { useWalletBusy } from "#/store/walletBusyStore";
+import { reconnectDelay } from "../model/relay/reconnect";
 import { getRelayClient, hasStoredSession, type RelayClient } from "./client";
 import { relayConfig } from "./config";
 import { type ChannelState, subscribeWallet } from "./realtime";
@@ -81,24 +82,58 @@ function RelaySession({
 		queries.removeQueries({ queryKey: ["relay"] });
 	}, [queries]);
 
-	const restore = useCallback(async () => {
-		if (!hasStoredSession()) {
-			setSession({ status: "none" });
-			return;
-		}
-		setSession({ status: "restoring" });
-		const client = await getRelayClient(config);
-		const probe = await probeSession(client);
-		setSession(
-			probe.status === "ready"
-				? { status: "ready", client, wallet: probe.wallet }
-				: { status: probe.status },
-		);
-	}, [config]);
+	// `quiet` asks again without flashing the "restoring" skeleton: the rail
+	// keeps saying "unreachable" until the relay really answers.
+	const probing = useRef(false);
+	const [unanswered, setUnanswered] = useState(0);
+	const restore = useCallback(
+		async (quiet = false) => {
+			if (probing.current) return;
+			if (!hasStoredSession()) {
+				setSession({ status: "none" });
+				setUnanswered(0);
+				return;
+			}
+			probing.current = true;
+			try {
+				if (!quiet) setSession({ status: "restoring" });
+				const client = await getRelayClient(config);
+				const probe = await probeSession(client);
+				setSession(
+					probe.status === "ready"
+						? { status: "ready", client, wallet: probe.wallet }
+						: { status: probe.status },
+				);
+				setUnanswered((n) => (probe.status === "unreachable" ? n + 1 : 0));
+			} finally {
+				probing.current = false;
+			}
+		},
+		[config],
+	);
 
 	useEffect(() => {
 		void restore();
 	}, [restore]);
+
+	// The relay not answering is usually brief. Ask again on a slowing schedule,
+	// and at once when the browser is back online or the tab is looked at again.
+	const down = session.status === "unreachable";
+	useEffect(() => {
+		if (!down) return;
+		const again = () => void restore(true);
+		const timer = setTimeout(again, reconnectDelay(unanswered - 1));
+		const seen = () => {
+			if (document.visibilityState === "visible") again();
+		};
+		window.addEventListener("online", again);
+		document.addEventListener("visibilitychange", seen);
+		return () => {
+			clearTimeout(timer);
+			window.removeEventListener("online", again);
+			document.removeEventListener("visibilitychange", seen);
+		};
+	}, [down, unanswered, restore]);
 
 	const mode: RelayMode =
 		session.status === "none"

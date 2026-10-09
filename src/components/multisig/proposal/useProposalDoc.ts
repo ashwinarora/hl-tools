@@ -307,7 +307,8 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 
 	// A signature or a result made here that the relay does not have yet (signed
 	// while offline, or the first push failed): caught up in the background,
-	// once per reason, and again when the browser comes back online.
+	// once per reason, and again when the browser comes back online or the
+	// relay is reachable again.
 	const catching = useRef(false);
 	const gaveUpOn = useRef<string | null>(null);
 	const [online, setOnline] = useState(0);
@@ -319,6 +320,13 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 		window.addEventListener("online", again);
 		return () => window.removeEventListener("online", again);
 	}, []);
+	// the wallet's channel (re)joining is the relay saying it is reachable again
+	const channel = relay.channel;
+	useEffect(() => {
+		if (channel !== "joined") return;
+		gaveUpOn.current = null;
+		setOnline((n) => n + 1);
+	}, [channel]);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `online` re-runs the catch-up after a reconnect
 	useEffect(() => {
 		const found = remoteData?.found;

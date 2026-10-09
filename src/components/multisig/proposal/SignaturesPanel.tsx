@@ -26,6 +26,13 @@ export function SignaturesPanel({
 	const finaliser = proposal.payload.outerSigner;
 	const signers = policy?.authorizedUsers ?? [];
 	const need = policy && policy.threshold > 0 ? policy.threshold : null;
+	// signed, but by a wallet the chain no longer lists (removed since, or never a signer)
+	const former =
+		policy && signers.length > 0
+			? proposal.signatures
+					.map((x) => x.signer)
+					.filter((a) => !signers.includes(a))
+			: [];
 	return (
 		<Card
 			title="Signatures"
@@ -65,6 +72,13 @@ export function SignaturesPanel({
 						</PersonRow>
 					);
 				})
+			)}
+			{former.length > 0 && (
+				<p className="mt-2.5 text-xs text-muted-foreground">
+					Also signed by {former.map(shortAddress).join(", ")}, not in the
+					current signer set: {former.length === 1 ? "it does" : "they do"} not
+					count.
+				</p>
 			)}
 			{policy && signers.length > 0 && !signers.includes(finaliser) && (
 				<p className="mt-2.5 text-xs text-warning">

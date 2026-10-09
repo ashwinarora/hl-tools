@@ -305,11 +305,14 @@ export function PersonRow({
 	);
 }
 
-/** "3 minutes ago", for "last checked". */
+/**
+ * "3 minutes ago", for "last checked". No seconds: the caller's clock ticks a
+ * few times a minute, and a count of seconds would be stale as it is read.
+ */
 export function ago(then: number, now: number): string {
 	const s = Math.max(0, Math.round((now - then) / 1000));
-	if (s < 10) return "just now";
-	if (s < 60) return `${s} seconds ago`;
+	if (s < 30) return "just now";
+	if (s < 60) return "less than a minute ago";
 	const m = Math.round(s / 60);
 	if (m < 60) return m === 1 ? "a minute ago" : `${m} minutes ago`;
 	const h = Math.round(m / 60);
