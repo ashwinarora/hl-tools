@@ -69,6 +69,8 @@ export function ProposalRows({
 								<span className="inline-flex h-7 items-center rounded-md border border-border-strong bg-surface px-2.5 text-xs font-medium">
 									Sign ▸
 								</span>
+							) : p.frozen ? (
+								<Tag tone="warn">no longer a multi-sig</Tag>
 							) : (
 								<Tag>waiting on others</Tag>
 							)}

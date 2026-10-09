@@ -125,7 +125,11 @@ function RailNav() {
 							key={`${t.network}:${t.address}`}
 							to="/multisig/t/$network/$address"
 							params={{ network: t.network, address: t.address }}
-							sub={`${shortAddress(t.address)} · ${t.threshold} of ${t.signers.length}`}
+							sub={`${shortAddress(t.address)} · ${
+								t.frozenAt === null
+									? `${t.threshold} of ${t.signers.length}`
+									: "no longer a multi-sig"
+							}`}
 							trailing={
 								t.needs > 0 ? (
 									<Count n={t.needs} label="need you" />
@@ -188,7 +192,10 @@ function MobileSwitcher() {
 			<option value="">Needs you ({nav.needs})</option>
 			{nav.treasuries.map((t) => (
 				<option key={t.address} value={t.address}>
-					{t.name} · {t.threshold} of {t.signers.length}
+					{t.name} ·{" "}
+					{t.frozenAt === null
+						? `${t.threshold} of ${t.signers.length}`
+						: "no longer a multi-sig"}
 					{t.needs > 0 ? ` · ${t.needs} need you` : ""}
 				</option>
 			))}

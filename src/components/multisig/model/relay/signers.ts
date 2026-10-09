@@ -22,6 +22,22 @@ export interface SignerDiff {
 }
 
 /**
+ * What a page knows about the live signer set, in the shape `compareSigners`
+ * takes. "The chain says this account is not a multi-sig" is an answer, and a
+ * different one from "not known yet": the first must reach the relay (it is
+ * how a treasury gets frozen), the second must not.
+ */
+export function livePolicy(
+	isMultiSig: boolean | null,
+	policy: Policy | null,
+	observedAt = 0,
+): Policy | null {
+	if (isMultiSig === null) return null;
+	if (!isMultiSig) return { authorizedUsers: [], threshold: 0, observedAt };
+	return policy;
+}
+
+/**
  * `live` is null while it is unknown (still loading, or the read failed): no
  * verdict then. An empty signer list means "not a multi-sig".
  */

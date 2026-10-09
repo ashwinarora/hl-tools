@@ -77,6 +77,7 @@ export function useOpenProposals() {
 					counted: await countedSigners(p, stored.signers, stored.threshold),
 					threshold: stored.threshold,
 					open: row.status === "open" && row.expiresAt > now,
+					frozen: stored.frozenAt !== null,
 					line: described.headline,
 					title: p.meta.title,
 					flags: described.flags,

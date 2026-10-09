@@ -17,6 +17,8 @@ export interface InboxEntry {
 	readonly threshold: number;
 	/** Still collecting: not ended, not accepted, not expired. */
 	readonly open: boolean;
+	/** Its treasury stopped being a multi-sig: nothing can be signed or submitted for it. */
+	readonly frozen: boolean;
 }
 
 /**
@@ -27,7 +29,8 @@ export interface InboxEntry {
 export type InboxGroup = "finish" | "sign" | "waiting";
 
 export function inboxGroup(e: InboxEntry, me: Address): InboxGroup | null {
-	if (!e.open) return null;
+	// a frozen treasury's proposals stay listed on its own page, but ask nobody for anything
+	if (!e.open || e.frozen) return null;
 	const signed = e.counted.includes(me);
 	const ready = e.counted.length >= e.threshold;
 	const completes = !signed && e.counted.length === e.threshold - 1;

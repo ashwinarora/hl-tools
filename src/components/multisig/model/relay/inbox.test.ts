@@ -21,7 +21,34 @@ const entry = (over: Partial<InboxEntry> = {}): InboxEntry => ({
 	counted: [],
 	threshold: 2,
 	open: true,
+	frozen: false,
 	...over,
+});
+
+describe("a treasury that is no longer a multi-sig", () => {
+	// found in the browser: its proposals kept asking for signatures nobody can give
+	const stuck = [
+		entry({ finaliser: A, counted: [B], frozen: true }),
+		entry({ finaliser: C, frozen: true }),
+		entry({ finaliser: A, counted: [A, B], frozen: true }),
+	];
+
+	it("asks nobody for anything", () => {
+		for (const e of stuck) {
+			expect(inboxGroup(e, A)).toBeNull();
+			expect(needsMe(e, A)).toBe(false);
+		}
+		expect(countNeeds(stuck, A, "testnet")).toBe(0);
+		expect(groupInbox(stuck, A, "testnet")).toEqual({
+			finish: [],
+			sign: [],
+			waiting: [],
+		});
+	});
+
+	it("still counts them as that treasury's pending proposals", () => {
+		expect(countOpen(stuck, "testnet", TREASURY)).toBe(3);
+	});
 });
 
 describe("inboxGroup", () => {

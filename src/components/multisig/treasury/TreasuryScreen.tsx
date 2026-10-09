@@ -16,7 +16,11 @@ import {
 	useNetworkHydrated,
 	useNetworkStore,
 } from "#/store/networkStore";
-import { compareSigners, nextRecheck } from "../model/relay/signers";
+import {
+	compareSigners,
+	livePolicy,
+	nextRecheck,
+} from "../model/relay/signers";
 import { shortAddress } from "../model/stage";
 import { requestTreasury } from "../relay/api";
 import { useOpenProposals } from "../relay/openProposals";
@@ -161,13 +165,13 @@ export function TreasuryScreen({
 	const diff = useMemo(
 		() =>
 			treasury
-				? compareSigners(live.policy, {
+				? compareSigners(livePolicy(live.isMultiSig, live.policy), {
 						signers: treasury.signers,
 						threshold: treasury.threshold,
 						frozen: treasury.frozenAt !== null,
 					})
 				: null,
-		[treasury, live.policy],
+		[treasury, live.isMultiSig, live.policy],
 	);
 
 	// A re-check: asked for by the button, or by this page seeing a difference.
@@ -315,6 +319,7 @@ export function TreasuryScreen({
 					</span>
 					<NetTag network={network} />
 					<span>
+						{frozen ? "was " : ""}
 						{treasury.threshold} of {treasury.signers.length} signers
 					</span>
 					{live.perp && (

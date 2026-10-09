@@ -42,14 +42,17 @@ export function SignersTab({
 	const hidden = useMultisigPrefs((s) => s.hidden.includes(key));
 	const setHidden = useMultisigPrefs((s) => s.setHidden);
 	const addedByMe = treasury.addedBy === me;
+	// no longer a multi-sig: what is listed is who signed for it last
+	const frozen = treasury.frozenAt !== null;
 
 	return (
 		<div className="grid grid-cols-1 items-start gap-4 min-[861px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 			<Card
-				title="Signers"
+				title={frozen ? "Last known signers" : "Signers"}
 				actions={
 					<Tag>
-						{treasury.threshold} of {treasury.signers.length} must sign
+						{treasury.threshold} of {treasury.signers.length}{" "}
+						{frozen ? "had to sign" : "must sign"}
 					</Tag>
 				}
 			>
@@ -112,8 +115,9 @@ export function SignersTab({
 
 				<div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3 text-xs text-muted-foreground">
 					<span>
-						Signer list read from Hyperliquid {ago(treasury.checkedAt, now)}.
-						Your browser also checks it live before anything is signed.
+						{frozen
+							? `Hyperliquid last asked ${ago(treasury.checkedAt, now)}: it reports no signer set for this account.`
+							: `Signer list read from Hyperliquid ${ago(treasury.checkedAt, now)}. Your browser also checks it live before anything is signed.`}
 					</span>
 					<div className="flex flex-wrap items-center gap-2">
 						<Btn

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { A, B, C, OUTSIDER } from "#/test/keys";
 import {
 	compareSigners,
+	livePolicy,
 	nextRecheck,
 	RECHECK_EVERY_MS,
 	RECHECK_MAX,
@@ -73,6 +74,39 @@ describe("compareSigners", () => {
 		expect(d?.same).toBe(false);
 		expect(d?.multisigAgain).toBe(true);
 		expect(d?.added).toEqual([]);
+	});
+});
+
+describe("livePolicy", () => {
+	it("is unknown while the chain has not answered", () => {
+		expect(livePolicy(null, null)).toBeNull();
+		expect(livePolicy(null, live([A, B, C], 2))).toBeNull();
+	});
+
+	it("passes a signer set through", () => {
+		const p = live([A, B, C], 2);
+		expect(livePolicy(true, p)).toBe(p);
+	});
+
+	it("turns 'not a multi-sig' into an empty signer set, not into 'unknown'", () => {
+		expect(livePolicy(false, null, 7)).toEqual({
+			authorizedUsers: [],
+			threshold: 0,
+			observedAt: 7,
+		});
+	});
+
+	it("lets a page see that its treasury stopped being a multi-sig (found in the browser: it never asked for the re-check that freezes it)", () => {
+		const d = compareSigners(livePolicy(false, null), stored());
+		expect(d?.same).toBe(false);
+		expect(d?.noLongerMultisig).toBe(true);
+		// and nothing is concluded while the read is still out
+		expect(compareSigners(livePolicy(null, null), stored())).toBeNull();
+	});
+
+	it("agrees with a frozen copy once the relay has caught up", () => {
+		const d = compareSigners(livePolicy(false, null), stored({ frozen: true }));
+		expect(d?.same).toBe(true);
 	});
 });
 
