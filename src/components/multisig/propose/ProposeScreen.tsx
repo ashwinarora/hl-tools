@@ -1,4 +1,5 @@
 import {
+	type Address,
 	createProposal,
 	describeAction,
 	fromPlain,
@@ -52,7 +53,12 @@ import {
 import { type InnerChain, innerChain } from "../model/chains";
 import { loadProposal, saveProposal } from "../model/history";
 import { describeWindow, type NonceMode, nonceFor } from "../model/nonce";
+import { RELAY_COPY } from "../model/relay/copy";
+import { publishRow } from "../model/relay/push";
 import { linkTransport } from "../model/transport";
+import { addSignature, publishProposal } from "../relay/api";
+import { useTreasuries } from "../relay/queries";
+import { useRelay } from "../relay/useRelay";
 import { NetTag, SignsTag, backLink as shellBack } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { TreasuryStrip } from "../TreasuryStrip";
@@ -180,6 +186,20 @@ export function ProposeScreen({
 	const flags = prepared?.flags ?? [];
 	const window = describeWindow(previewNonce, previewNow);
 
+	// With the relay in use and this wallet in its copy of the signer list, a new
+	// proposal is shared as it is created.
+	const relay = useRelay();
+	const { rows: listed } = useTreasuries();
+	const sharing =
+		!!relay.wallet &&
+		listed.some(
+			(t) =>
+				t.network === network &&
+				t.address === address &&
+				t.frozenAt === null &&
+				t.signers.includes(relay.wallet as Address),
+		);
+
 	const me = wallet.address?.toLowerCase() ?? null;
 	const iAmSigner =
 		me !== null && !!state.policy?.authorizedUsers.some((a) => a === me);
@@ -224,6 +244,28 @@ export function ProposeScreen({
 		try {
 			const saved = await saveProposal(proposal);
 			await client.invalidateQueries({ queryKey: ["multisig-proposals"] });
+			// Signed in and listed as a signer on the relay: co-signers see it at once.
+			// A relay failure does not undo the proposal; its page says "only in this
+			// browser" and offers to share it again.
+			if (sharing && relay.client && relay.wallet) {
+				const key = {
+					network: saved.proposal.payload.network,
+					treasury: saved.proposal.payload.multiSigUser,
+					digest: saved.proposal.digest,
+				};
+				const shared = await publishProposal(
+					relay.client,
+					relay.wallet,
+					publishRow(saved.proposal),
+				);
+				const mine = saved.proposal.signatures.find(
+					(x) => x.signer === relay.wallet,
+				);
+				if (!shared.issue && mine) {
+					await addSignature(relay.client, relay.wallet, key, mine);
+				}
+				void client.invalidateQueries({ queryKey: ["relay", relay.wallet] });
+			}
 			void navigate({
 				to: "/multisig/proposal",
 				search: { digest: saved.proposal.digest },
@@ -511,7 +553,12 @@ export function ProposeScreen({
 									<p className="text-sm text-muted-foreground">
 										Creating fixes the nonce and the digest and saves the
 										proposal in this browser. Nothing is sent to Hyperliquid
-										until the finaliser submits.
+										until the finaliser submits.{" "}
+										{sharing
+											? RELAY_COPY.createdShared
+											: relay.mode === "on"
+												? "The relay does not list your wallet as a signer of this treasury, so it stays in this browser until you share it."
+												: ""}
 									</p>
 								)}
 								<div className="flex flex-wrap items-center gap-2">

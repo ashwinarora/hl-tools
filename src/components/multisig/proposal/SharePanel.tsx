@@ -22,6 +22,7 @@ import {
 } from "#/components/ui/dialog";
 import { download } from "#/lib/download";
 import { useHandoffStore } from "#/store/handoffStore";
+import { RELAY_COPY } from "../model/relay/copy";
 import {
 	fileTransport,
 	linkTransport,
@@ -118,9 +119,15 @@ function LinkDialog({ proposal }: { proposal: Proposal }) {
 export function SharePanel({
 	proposal,
 	store,
+	secondary = false,
 }: {
 	proposal: Proposal;
 	store: (p: Proposal) => Promise<StoreResult>;
+	/**
+	 * The proposal is shared through the relay, so this is the way around it
+	 * rather than the way: folded away under "Export / Import".
+	 */
+	secondary?: boolean;
 }) {
 	const navigate = useNavigate();
 	const send = useHandoffStore((s) => s.send);
@@ -165,117 +172,141 @@ export function SharePanel({
 		});
 	};
 
+	const body = (
+		<div className="space-y-4">
+			<div className="flex flex-wrap items-center gap-2">
+				<LinkDialog proposal={proposal} />
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => fileTransport(download).publish(proposal)}
+				>
+					<Download className="size-3.5" aria-hidden /> Download file
+				</Button>
+				<CopyButton value={pretty} label="Copy JSON" />
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => {
+						// handed over in memory, like every pasted payload in the hub
+						send("multisig", pretty);
+						void navigate({ to: "/tools/multisig" });
+					}}
+				>
+					<Search className="size-3.5" aria-hidden /> Inspect
+				</Button>
+			</div>
+			<Field
+				label="Merge a returned copy"
+				htmlFor="ms-merge"
+				hint="Paste the link or document a signer sent back, or upload their file. Signatures are verified before they are added."
+			>
+				<TextArea
+					id="ms-merge"
+					value={text}
+					onChange={(e) => setText(e.target.value)}
+					rows={3}
+					className="min-h-20"
+					data-private
+				/>
+			</Field>
+			<div className="flex flex-wrap items-center gap-2">
+				<Button
+					size="sm"
+					variant="outline"
+					disabled={!text.trim()}
+					onClick={() => void merge(text)}
+				>
+					Merge
+				</Button>
+				<Button
+					size="sm"
+					variant="ghost"
+					onClick={() => fileRef.current?.click()}
+				>
+					<Upload className="size-3.5" aria-hidden /> Upload file
+				</Button>
+				<input
+					ref={fileRef}
+					type="file"
+					accept="application/json,.json"
+					className="hidden"
+					onChange={async (e) => {
+						const f = e.target.files?.[0];
+						e.target.value = "";
+						if (f) await merge(await f.text());
+					}}
+				/>
+			</div>
+			{result?.kind === "merged" && (
+				<Callout
+					tone={result.added > 0 ? "success" : "info"}
+					title={
+						result.added > 0
+							? `Added ${result.added} signature${result.added === 1 ? "" : "s"}; ${result.total} in total`
+							: `Nothing new: still ${result.total} signature${result.total === 1 ? "" : "s"}`
+					}
+				>
+					<IssueList issues={result.issues} />
+				</Callout>
+			)}
+			{result?.kind === "other" && (
+				<Callout
+					tone="warning"
+					title="That is a different proposal"
+					action={
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() =>
+								void navigate({
+									to: "/multisig/proposal",
+									search: { digest: result.digest },
+								})
+							}
+						>
+							Open it
+						</Button>
+					}
+				>
+					Its digest is {result.digest.slice(0, 18)}…, not this one's. It was
+					saved to this browser's history.
+				</Callout>
+			)}
+			{result?.kind === "failed" && (
+				<Callout tone="danger" title="Not a proposal this page can merge">
+					<IssueList issues={result.issues} />
+				</Callout>
+			)}
+		</div>
+	);
+
+	if (secondary) {
+		return (
+			<details className="group min-w-0 rounded-[10px] border border-border bg-surface shadow-[var(--shadow-card)]">
+				<summary className="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-4 py-3 [&::-webkit-details-marker]:hidden">
+					<span className="text-sm font-semibold">Export / Import</span>
+					<span className="text-xs text-muted-foreground">
+						{RELAY_COPY.withoutUs}
+					</span>
+				</summary>
+				<div className="border-t border-border p-4">
+					<p className="mb-4 text-xs text-muted-foreground">
+						The document is the whole proposal. A link or a file carries it to a
+						signer who does not use the relay; what they send back is merged
+						here, with every signature verified first.
+					</p>
+					{body}
+				</div>
+			</details>
+		);
+	}
 	return (
 		<Panel
 			title="Pass it on"
 			description="Send the proposal to the other signers; merge what they send back. You can always do this without us: the document is the whole proposal."
 		>
-			<div className="space-y-4">
-				<div className="flex flex-wrap items-center gap-2">
-					<LinkDialog proposal={proposal} />
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => fileTransport(download).publish(proposal)}
-					>
-						<Download className="size-3.5" aria-hidden /> Download file
-					</Button>
-					<CopyButton value={pretty} label="Copy JSON" />
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => {
-							// handed over in memory, like every pasted payload in the hub
-							send("multisig", pretty);
-							void navigate({ to: "/tools/multisig" });
-						}}
-					>
-						<Search className="size-3.5" aria-hidden /> Inspect
-					</Button>
-				</div>
-				<Field
-					label="Merge a returned copy"
-					htmlFor="ms-merge"
-					hint="Paste the link or document a signer sent back, or upload their file. Signatures are verified before they are added."
-				>
-					<TextArea
-						id="ms-merge"
-						value={text}
-						onChange={(e) => setText(e.target.value)}
-						rows={3}
-						className="min-h-20"
-						data-private
-					/>
-				</Field>
-				<div className="flex flex-wrap items-center gap-2">
-					<Button
-						size="sm"
-						variant="outline"
-						disabled={!text.trim()}
-						onClick={() => void merge(text)}
-					>
-						Merge
-					</Button>
-					<Button
-						size="sm"
-						variant="ghost"
-						onClick={() => fileRef.current?.click()}
-					>
-						<Upload className="size-3.5" aria-hidden /> Upload file
-					</Button>
-					<input
-						ref={fileRef}
-						type="file"
-						accept="application/json,.json"
-						className="hidden"
-						onChange={async (e) => {
-							const f = e.target.files?.[0];
-							e.target.value = "";
-							if (f) await merge(await f.text());
-						}}
-					/>
-				</div>
-				{result?.kind === "merged" && (
-					<Callout
-						tone={result.added > 0 ? "success" : "info"}
-						title={
-							result.added > 0
-								? `Added ${result.added} signature${result.added === 1 ? "" : "s"}; ${result.total} in total`
-								: `Nothing new: still ${result.total} signature${result.total === 1 ? "" : "s"}`
-						}
-					>
-						<IssueList issues={result.issues} />
-					</Callout>
-				)}
-				{result?.kind === "other" && (
-					<Callout
-						tone="warning"
-						title="That is a different proposal"
-						action={
-							<Button
-								size="sm"
-								variant="outline"
-								onClick={() =>
-									void navigate({
-										to: "/multisig/proposal",
-										search: { digest: result.digest },
-									})
-								}
-							>
-								Open it
-							</Button>
-						}
-					>
-						Its digest is {result.digest.slice(0, 18)}…, not this one's. It was
-						saved to this browser's history.
-					</Callout>
-				)}
-				{result?.kind === "failed" && (
-					<Callout tone="danger" title="Not a proposal this page can merge">
-						<IssueList issues={result.issues} />
-					</Callout>
-				)}
-			</div>
+			{body}
 		</Panel>
 	);
 }

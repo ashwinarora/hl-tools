@@ -4,15 +4,18 @@ import { FileQuestion, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { EmptyState } from "#/components/hub/layout";
 import { Callout, IssueList } from "#/components/hub/status";
+import { RELAY_COPY } from "#/components/multisig/model/relay/copy";
 import {
 	documentFromFragment,
 	openText,
 } from "#/components/multisig/model/transport";
 import { ProposalView } from "#/components/multisig/proposal/ProposalView";
 import { useProposalDoc } from "#/components/multisig/proposal/useProposalDoc";
-import { SignsTag } from "#/components/multisig/shell/kit";
+import { useRelay } from "#/components/multisig/relay/useRelay";
+import { Btn, SignsTag } from "#/components/multisig/shell/kit";
 import { ShellPage } from "#/components/multisig/shell/ShellPage";
 import { clearShared } from "#/lib/share";
+import { useWalletBusy } from "#/store/walletBusyStore";
 
 export const Route = createFileRoute("/multisig/proposal")({
 	// the digest is a public identifier; the document itself never enters the query string
@@ -95,26 +98,111 @@ function ProposalScreen() {
 					proposal…
 				</div>
 			) : (
-				<EmptyState
-					icon={FileQuestion}
-					title={
-						digest
-							? "This browser has no proposal with that digest"
-							: "No proposal selected"
-					}
-					description={
-						digest
-							? "Proposals live in the link or file you were sent, and in the history of the browser that opened them. Open the link again, or paste the document on the start page."
-							: "Open a proposal from a link, a file or your history."
-					}
-					sample={digest}
-					action={
-						<Link to="/multisig/open" className={backLink}>
-							Open a proposal
-						</Link>
-					}
+				<Missing
+					digest={digest}
+					issues={doc.issues}
+					relayIssue={doc.relay.issue}
 				/>
 			)}
 		</ShellPage>
+	);
+}
+
+/**
+ * Nothing to show for this digest. Who to ask depends on where the reader
+ * stands: with no relay, the link or the file; signed out, signing in is the
+ * other way; signed in, the relay has no such proposal for this wallet (which
+ * is also what it says when the wallet may not see it).
+ */
+function Missing({
+	digest,
+	issues,
+	relayIssue,
+}: {
+	digest: string | undefined;
+	issues: readonly Issue[];
+	relayIssue: Issue | null;
+}) {
+	const relay = useRelay();
+	const busy = useWalletBusy((b) => b.busy);
+	const open = (
+		<Link to="/multisig/open" className={backLink}>
+			Open a proposal
+		</Link>
+	);
+	if (!digest) {
+		return (
+			<EmptyState
+				icon={FileQuestion}
+				title="No proposal selected"
+				description="Open a proposal from a link, a file or your history."
+				action={open}
+			/>
+		);
+	}
+	if (relay.mode === "on") {
+		return (
+			<div className="space-y-4">
+				<EmptyState
+					icon={FileQuestion}
+					title="No proposal with that digest, here or on the relay"
+					description="This browser has not seen it, and the relay has none your wallet can open: it was never shared, or your wallet is not a signer of its treasury in the relay's copy of the signer list. If you were sent the document, paste it on the start page."
+					sample={digest}
+					action={open}
+				/>
+				{relayIssue && (
+					<Callout
+						tone={relayIssue.severity === "error" ? "danger" : "warning"}
+						title={relayIssue.message}
+					>
+						{relayIssue.fix}
+					</Callout>
+				)}
+				{issues.length > 0 && <IssueList issues={issues} />}
+			</div>
+		);
+	}
+	if (relay.mode === "off") {
+		return (
+			<EmptyState
+				icon={FileQuestion}
+				title="This browser has no proposal with that digest"
+				description="Proposals live in the link or file you were sent, and in the history of the browser that opened them. Open the link again, or paste the document on the start page."
+				sample={digest}
+				action={open}
+			/>
+		);
+	}
+	return (
+		<EmptyState
+			icon={FileQuestion}
+			title="This browser has no proposal with that digest"
+			description={
+				relay.mode === "restoring"
+					? "Checking your session…"
+					: relay.mode === "unreachable"
+						? RELAY_COPY.unreachable
+						: relay.mode === "suspended"
+							? `${RELAY_COPY.suspended} Sign in with the connected wallet to open it, or paste the document.`
+							: "Sign in to open it, or paste the document you were sent."
+			}
+			sample={digest}
+			action={
+				<div className="flex flex-wrap items-center justify-center gap-2">
+					{relay.mode === "unreachable" ? (
+						<Btn variant="outline" onClick={relay.retry}>
+							Try again
+						</Btn>
+					) : relay.mode !== "restoring" ? (
+						<Btn variant="brand" disabled={busy} onClick={relay.signIn}>
+							{relay.signingIn
+								? "Waiting for your wallet…"
+								: RELAY_COPY.signInButton}
+						</Btn>
+					) : null}
+					{open}
+				</div>
+			}
+		/>
 	);
 }

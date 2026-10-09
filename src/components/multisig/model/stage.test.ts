@@ -122,9 +122,8 @@ describe("deriveStage", () => {
 		const s = await stage(p, { wallet: B });
 		expect(s.phase).toBe("ready");
 		expect(s.headline).toBe("Ready · 2 of 2 signatures");
-		expect(s.detail).toContain(
-			`The finaliser ${shortAddress(B)} signs the envelope`,
-		);
+		// B is the finaliser and is the one looking
+		expect(s.detail).toContain("You are the finaliser");
 		expect([s.canSign, s.canExecute, s.executeAddsSignature]).toEqual([
 			true,
 			true,
@@ -214,7 +213,7 @@ describe("deriveStage", () => {
 		expect(done.phase).toBe("submitted");
 		expect(done.failedAttempt).toBeNull();
 		expect([done.canSign, done.canExecute]).toEqual([false, false]);
-		expect(done.executeReason).toBe("Submitted · accepted by the chain");
+		expect(done.executeReason).toBe("Submitted · accepted by Hyperliquid");
 
 		const failed = await stage({ ...p, receipt: ERR }, { wallet: B });
 		expect(failed.phase).toBe("ready");
@@ -291,5 +290,77 @@ describe("deriveStage", () => {
 			walletChainId: null,
 		});
 		expect(s.window.validUntil).toBe(NONCE + 2 * DAY);
+	});
+
+	it("tells the finaliser the ready proposal is theirs to submit", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 3); // A and C signed, B leads
+		expect((await stage(p, { wallet: B })).detail).toMatch(
+			/^You are the finaliser: submit it when you are ready · submittable until/,
+		);
+		expect((await stage(p, { wallet: A })).detail).toContain(
+			`The finaliser ${shortAddress(B)} signs the envelope and submits`,
+		);
+	});
+
+	it("is over once the proposer withdrew it: nothing to sign, nothing to submit, and the honest caveat", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 3);
+		const s = await stage(p, {
+			wallet: B,
+			ended: { kind: "withdrawn", by: A },
+		});
+		expect(s.phase).toBe("withdrawn");
+		expect(s.headline).toBe(`Withdrawn by the proposer, ${shortAddress(A)}`);
+		expect(s.detail).toContain("remain valid on chain until the window closes");
+		expect(s.detail).toContain(
+			`only the finaliser ${shortAddress(B)} could still submit it`,
+		);
+		expect([s.canSign, s.canExecute]).toEqual([false, false]);
+		expect(s.signReason).toBe(s.headline);
+		expect(s.executeReason).toBe(s.headline);
+		// still a signer and still shown as having signed
+		expect(s.role).toBe("signer-finaliser");
+	});
+
+	it("is over once the finaliser declined it", async () => {
+		const p = await signAs(makeProposal(), 1);
+		const s = await stage(p, { wallet: A, ended: { kind: "declined", by: B } });
+		expect(s.phase).toBe("declined");
+		expect(s.headline).toBe(`Declined by the finaliser, ${shortAddress(B)}`);
+		expect(s.detail).toMatch(/Re-propose it with a different finaliser/);
+		expect([s.canSign, s.canExecute]).toEqual([false, false]);
+	});
+
+	it("shows what happened on chain over what was said on the relay", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 2);
+		const s = await stage(
+			{ ...p, receipt: OK },
+			{ wallet: B, ended: { kind: "withdrawn", by: A } },
+		);
+		expect(s.phase).toBe("submitted");
+	});
+
+	it("refuses to sign or submit while the header is on the other network", async () => {
+		const p = await signAs(makeProposal(), 1); // testnet; A signed, B leads and would complete it
+		const wrong = await stage(p, { wallet: B, headerNetwork: "mainnet" });
+		expect(wrong.networkMismatch).toBe(true);
+		expect([wrong.canSign, wrong.canExecute]).toEqual([false, false]);
+		expect(wrong.signReason).toBe(
+			"This proposal is for testnet; the header is on mainnet. Switch the header to testnet to continue.",
+		);
+		expect(wrong.executeReason).toBe(wrong.signReason);
+		// the phase is still the proposal's own
+		expect(wrong.phase).toBe("collecting");
+
+		const right = await stage(p, { wallet: B, headerNetwork: "testnet" });
+		expect(right.networkMismatch).toBe(false);
+		expect([right.canSign, right.canExecute]).toEqual([true, true]);
+		// with no header given (the inspector), nothing is refused
+		expect((await stage(p, { wallet: B })).networkMismatch).toBe(false);
+	});
+
+	it("keeps saying why a ready proposal cannot be submitted by a non-finaliser on the wrong network", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 3);
+		const s = await stage(p, { wallet: A, headerNetwork: "mainnet" });
+		expect(s.executeReason).toMatch(/^This proposal is for testnet/);
 	});
 });

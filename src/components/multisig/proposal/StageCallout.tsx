@@ -7,6 +7,8 @@ const TONE: Record<Phase, Tone> = {
 	collecting: "info",
 	ready: "success",
 	submitted: "success",
+	withdrawn: "neutral",
+	declined: "neutral",
 	"not-yet-valid": "info",
 	expired: "danger",
 	"not-multisig": "danger",

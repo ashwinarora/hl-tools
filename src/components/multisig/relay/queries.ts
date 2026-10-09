@@ -8,6 +8,7 @@ import type { Address, Network } from "@hl-tools/core";
 import { useQuery } from "@tanstack/react-query";
 import type { Parsed, RequestRow, TreasuryRow } from "../model/relay/rows";
 import { getRequest, listTreasuries, type Result } from "./api";
+import type { RelayClient } from "./client";
 import { queryIssue, RelayQueryError, useRelay } from "./useRelay";
 
 export function unwrap<T>(r: Result<T>): T {
@@ -25,16 +26,29 @@ export function unwrap<T>(r: Result<T>): T {
 
 const EMPTY: readonly TreasuryRow[] = [];
 
+/** The treasuries query, also for code that needs the list outside a component's render. */
+export function treasuriesQuery(client: RelayClient, wallet: Address) {
+	return {
+		queryKey: ["relay", wallet, "treasuries"] as const,
+		queryFn: async (): Promise<Parsed<TreasuryRow>> =>
+			unwrap(await listTreasuries(client)),
+		staleTime: 15_000,
+	};
+}
+
 export function useTreasuries() {
 	const relay = useRelay();
 	const query = useQuery({
-		queryKey: ["relay", relay.wallet, "treasuries"],
-		enabled: !!relay.client,
-		queryFn: async (): Promise<Parsed<TreasuryRow>> =>
-			unwrap(
-				await listTreasuries(relay.client as NonNullable<typeof relay.client>),
-			),
-		staleTime: 15_000,
+		...(relay.client && relay.wallet
+			? treasuriesQuery(relay.client, relay.wallet)
+			: {
+					queryKey: ["relay", relay.wallet, "treasuries"] as const,
+					queryFn: async (): Promise<Parsed<TreasuryRow>> => ({
+						rows: [],
+						dropped: 0,
+					}),
+				}),
+		enabled: !!relay.client && !!relay.wallet,
 		retry: 1,
 	});
 	return {

@@ -5,9 +5,11 @@
  * document, the judgement and the connected wallet.
  */
 import {
+	type Address,
 	type ErrorExplanation,
 	explainExchangeError,
 	type Hex,
+	type Network,
 	type Policy,
 	type Proposal,
 	type Readiness,
@@ -26,6 +28,8 @@ export type Phase =
 	| "judging"
 	| "unsupported"
 	| "submitted"
+	| "withdrawn"
+	| "declined"
 	| "expired"
 	| "not-yet-valid"
 	| "not-multisig"
@@ -42,6 +46,20 @@ export interface StageInput {
 	readonly wallet: string | null;
 	readonly walletChainId: number | null;
 	readonly now?: number;
+	/**
+	 * Set when the proposal was ended on the relay: withdrawn by its proposer or
+	 * declined by its finaliser. A shared signal, not a cancellation on chain.
+	 */
+	readonly ended?: {
+		readonly kind: "withdrawn" | "declined";
+		readonly by: Address;
+	} | null;
+	/**
+	 * The network selected in the header. When given and different from the
+	 * proposal's, nothing can be signed until the reader switches: what gets
+	 * signed is decided by the proposal, and the reader must be looking at it.
+	 */
+	readonly headerNetwork?: Network;
 }
 
 export interface Stage {
@@ -64,6 +82,8 @@ export interface Stage {
 	readonly executeReason: string | null;
 	/** The live signer set differs from the one recorded when the proposal was made. */
 	readonly policyChanged: boolean;
+	/** The header is on the other network than the proposal: signing is refused until it is switched. */
+	readonly networkMismatch: boolean;
 	/** The explanation of a recorded submission that the chain rejected. */
 	readonly failedAttempt: ErrorExplanation | null;
 	readonly window: WindowInfo;
@@ -134,8 +154,17 @@ export function deriveStage(input: StageInput): Stage {
 	let detail: string;
 	if (accepted) {
 		phase = "submitted";
-		headline = "Submitted · accepted by the chain";
+		headline = "Submitted · accepted by Hyperliquid";
 		detail = `Submitted ${new Date(p.receipt?.submittedAt ?? 0).toISOString()}. Nothing more to sign.`;
+	} else if (input.ended?.kind === "withdrawn") {
+		phase = "withdrawn";
+		headline = `Withdrawn by the proposer, ${shortAddress(input.ended.by)}`;
+		detail = `Signatures already given remain valid on chain until the window closes (${window.text}), and only the finaliser ${shortAddress(leader)} could still submit it.`;
+	} else if (input.ended?.kind === "declined") {
+		phase = "declined";
+		headline = `Declined by the finaliser, ${shortAddress(input.ended.by)}`;
+		detail =
+			"It will not be submitted. Re-propose it with a different finaliser if it is still wanted.";
 	} else if (p.meta.kind === "l1") {
 		phase = "unsupported";
 		headline = "An L1 action: inspect only";
@@ -170,13 +199,20 @@ export function deriveStage(input: StageInput): Stage {
 	} else if (r.status === "ready") {
 		phase = "ready";
 		headline = `Ready · ${r.have} of ${r.need} signatures`;
-		detail = `The finaliser ${shortAddress(leader)} signs the envelope and submits · ${window.text}.`;
+		detail = isLeader
+			? `You are the finaliser: submit it when you are ready · ${window.text}.`
+			: `The finaliser ${shortAddress(leader)} signs the envelope and submits · ${window.text}.`;
 	} else {
 		phase = "collecting";
 		headline = `Collecting signatures · ${r.have} of ${r.need}`;
 		const who = r.missing.map(shortAddress).join(", ");
 		detail = `${who ? `${who} can still sign · ` : ""}${window.text}.`;
 	}
+
+	const networkMismatch =
+		input.headerNetwork !== undefined &&
+		input.headerNetwork !== p.payload.network;
+	const wrongNetwork = `This proposal is for ${p.payload.network}; the header is on ${input.headerNetwork}. Switch the header to ${p.payload.network} to continue.`;
 
 	const signable =
 		phase === "collecting" || phase === "ready" || phase === "not-yet-valid";
@@ -185,13 +221,15 @@ export function deriveStage(input: StageInput): Stage {
 			? "Checking signatures…"
 			: !signable
 				? headline
-				: role === "disconnected"
-					? "Connect a wallet to sign."
-					: !isSigner
-						? `${shortAddress(wallet ?? "")} is not in the signer set.`
-						: hasSigned
-							? "You signed this."
-							: null;
+				: networkMismatch
+					? wrongNetwork
+					: role === "disconnected"
+						? "Connect a wallet to sign."
+						: !isSigner
+							? `${shortAddress(wallet ?? "")} is not in the signer set.`
+							: hasSigned
+								? "You signed this."
+								: null;
 	const canSign = signReason === null;
 
 	const need = r?.need ?? null;
@@ -209,11 +247,13 @@ export function deriveStage(input: StageInput): Stage {
 				? `${r?.have ?? 0} of ${need ?? "?"} signatures so far.`
 				: !executable
 					? headline
-					: role === "disconnected"
-						? "Connect the finaliser's wallet to submit."
-						: !isLeader
-							? `Only the finaliser ${shortAddress(leader)} can submit.`
-							: null;
+					: networkMismatch
+						? wrongNetwork
+						: role === "disconnected"
+							? "Connect the finaliser's wallet to submit."
+							: !isLeader
+								? `Only the finaliser ${shortAddress(leader)} can submit.`
+								: null;
 	const canExecute = executeReason === null;
 
 	return {
@@ -228,6 +268,7 @@ export function deriveStage(input: StageInput): Stage {
 		executeAddsSignature: canExecute && executeAddsSignature,
 		executeReason,
 		policyChanged: policyChanged(p, policy),
+		networkMismatch,
 		failedAttempt,
 		window,
 		headline,
