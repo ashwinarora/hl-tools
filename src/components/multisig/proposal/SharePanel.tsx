@@ -228,6 +228,7 @@ export function SharePanel({
 				</Button>
 				<input
 					ref={fileRef}
+					name="returned-copy"
 					type="file"
 					accept="application/json,.json"
 					className="hidden"

@@ -102,6 +102,7 @@ export function OpenProposal({
 					</Button>
 					<input
 						ref={fileRef}
+						name="proposal-file"
 						type="file"
 						accept="application/json,.json"
 						className="hidden"

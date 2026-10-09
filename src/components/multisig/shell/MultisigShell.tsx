@@ -174,6 +174,7 @@ function MobileSwitcher() {
 				: "__other");
 	return (
 		<select
+			name="multisig-go-to"
 			aria-label="Go to"
 			value={here}
 			onChange={(e) => {

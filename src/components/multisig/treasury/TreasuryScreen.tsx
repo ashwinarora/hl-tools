@@ -63,6 +63,8 @@ function Title({ network, address }: { network: Network; address: Address }) {
 				<input
 					// biome-ignore lint/a11y/noAutofocus: the field replaces the title the user just chose to edit
 					autoFocus
+					name="treasury-name"
+					autoComplete="off"
 					value={draft}
 					maxLength={NAME_MAX}
 					onChange={(e) => setDraft(e.target.value)}
