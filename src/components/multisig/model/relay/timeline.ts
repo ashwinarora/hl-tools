@@ -18,6 +18,8 @@ export interface Part {
 	readonly text: string;
 	/** The action line of a proposal. */
 	readonly strong?: boolean;
+	/** The proposal's title: unsigned, shown only to tell like actions apart. */
+	readonly quiet?: boolean;
 }
 
 export interface TimelineEntry {
@@ -32,6 +34,8 @@ export interface TimelineContext {
 	readonly me: Address | null;
 	/** The action in words for a proposal, when its document is at hand. */
 	readonly line: (digest: Hex) => string | null;
+	/** The proposal's title, if it has one. It follows the action, never replaces it. */
+	readonly title?: (digest: Hex) => string | null;
 }
 
 const t = (text: string): Part => ({ text });
@@ -45,11 +49,16 @@ export function buildTimeline(
 		!a ? "Someone" : a === ctx.me ? "You" : shortAddress(a);
 	const object = (a: Address | null) =>
 		!a ? "someone" : a === ctx.me ? "you" : shortAddress(a);
-	const action = (digest: Hex | null, start: boolean): Part => {
+	const action = (digest: Hex | null, start: boolean): Part[] => {
 		const line = digest ? ctx.line(digest) : null;
-		return line
-			? { text: line, strong: true }
-			: t(start ? "A proposal" : "a proposal");
+		if (!line) return [t(start ? "A proposal" : "a proposal")];
+		const title = digest ? ctx.title?.(digest) : null;
+		return title
+			? [
+					{ text: line, strong: true },
+					{ text: ` (“${title}”)`, quiet: true },
+				]
+			: [{ text: line, strong: true }];
 	};
 
 	const asc = [...events].sort((a, b) => a.id - b.id);
@@ -126,7 +135,7 @@ export function buildTimeline(
 					entry(
 						[
 							t(`${subject(e.actor)} proposed `),
-							action(e.digest, false),
+							...action(e.digest, false),
 							t(
 								`${signedToo ? " and signed" : ""}.${finaliser ? ` Finaliser: ${object(finaliser)}.` : ""}`,
 							),
@@ -140,7 +149,7 @@ export function buildTimeline(
 				out.push(
 					entry([
 						t(`${subject(e.actor)} signed `),
-						action(e.digest, false),
+						...action(e.digest, false),
 						t("."),
 					]),
 				);
@@ -153,7 +162,7 @@ export function buildTimeline(
 								? "You took back your signature on "
 								: `${subject(e.actor)} took back their signature on `,
 						),
-						action(e.digest, false),
+						...action(e.digest, false),
 						t("."),
 					]),
 				);
@@ -161,7 +170,7 @@ export function buildTimeline(
 			case "proposal_withdrawn":
 				out.push(
 					entry([
-						action(e.digest, true),
+						...action(e.digest, true),
 						t(` was withdrawn by the proposer, ${object(e.actor)}.`),
 					]),
 				);
@@ -169,7 +178,7 @@ export function buildTimeline(
 			case "proposal_declined":
 				out.push(
 					entry([
-						action(e.digest, true),
+						...action(e.digest, true),
 						t(` was declined by the finaliser, ${object(e.actor)}.`),
 					]),
 				);
@@ -179,14 +188,14 @@ export function buildTimeline(
 					entry(
 						e.data.accepted === true
 							? [
-									action(e.digest, true),
+									...action(e.digest, true),
 									t(
 										` was accepted by Hyperliquid. Submitted by ${object(e.actor)}.`,
 									),
 								]
 							: [
 									t("Hyperliquid rejected "),
-									action(e.digest, false),
+									...action(e.digest, false),
 									t(`. Submitted by ${object(e.actor)}; it can be retried.`),
 								],
 					),

@@ -59,6 +59,30 @@ describe("buildTimeline", () => {
 		expect(entry?.digest).toBe(D1);
 	});
 
+	it("adds the proposal's title after the action, quietly, to tell like actions apart", () => {
+		const titled = {
+			me: A,
+			line: (d: Hex) => lines[d] ?? null,
+			title: (d: Hex) => (d === D1 ? "October payout" : null),
+		};
+		const [entry] = buildTimeline(
+			[eventRow("signature_added", { id: 1, digest: D1, actor: B })],
+			titled,
+		);
+		expect(entry?.parts).toEqual([
+			{ text: `${short(B)} signed ` },
+			{ text: "Send 120 USDC to 0x9a01…77c2", strong: true },
+			{ text: " (“October payout”)", quiet: true },
+			{ text: "." },
+		]);
+		// never a title in place of the action
+		const [unknown] = buildTimeline(
+			[eventRow("signature_added", { id: 2, digest: D2, actor: B })],
+			{ ...titled, title: () => "Looks harmless" },
+		);
+		expect(entryText(unknown as never)).toBe(`${short(B)} signed a proposal.`);
+	});
+
 	it("does not fold a signature that is not the proposer's, or not the next thing that happened", () => {
 		const other = [
 			eventRow("proposal_created", {
