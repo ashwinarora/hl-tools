@@ -12,6 +12,7 @@ export function SignaturesPanel({
 	policy,
 	counted,
 	me,
+	closed = false,
 }: {
 	proposal: Proposal;
 	/** The live signer set; null while unknown. */
@@ -19,6 +20,8 @@ export function SignaturesPanel({
 	/** Current signers whose signature verified; null while signatures are being checked. */
 	counted: readonly Address[] | null;
 	me: Address | null;
+	/** Nothing more can be signed (submitted, withdrawn, declined, expired). */
+	closed?: boolean;
 }) {
 	const finaliser = proposal.payload.outerSigner;
 	const signers = policy?.authorizedUsers ?? [];
@@ -50,7 +53,7 @@ export function SignaturesPanel({
 								) : has ? (
 									<Tag tone="ok">signed · verified</Tag>
 								) : (
-									<Tag>not yet</Tag>
+									<Tag>{closed ? "did not sign" : "not yet"}</Tag>
 								)
 							}
 						>

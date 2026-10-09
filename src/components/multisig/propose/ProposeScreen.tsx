@@ -62,6 +62,7 @@ import { useRelay } from "../relay/useRelay";
 import { NetTag, SignsTag, backLink as shellBack } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { TreasuryStrip } from "../TreasuryStrip";
+import { useTreasuryNames } from "../treasuryName";
 import { useTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
 import { ActionFields } from "./ActionFields";
@@ -190,6 +191,10 @@ export function ProposeScreen({
 	// proposal is shared as it is created.
 	const relay = useRelay();
 	const { rows: listed } = useTreasuries();
+	const nameOf = useTreasuryNames();
+	const inList = listed.some(
+		(t) => t.network === network && t.address === address,
+	);
 	const sharing =
 		!!relay.wallet &&
 		listed.some(
@@ -307,14 +312,24 @@ export function ProposeScreen({
 		<ShellPage
 			title="Propose an action"
 			back={
-				<Link to="/multisig/open" className={shellBack}>
-					◂ Open or start
-				</Link>
+				inList ? (
+					<Link
+						to="/multisig/t/$network/$address"
+						params={{ network, address }}
+						className={shellBack}
+					>
+						◂ {nameOf(network, address as Address)}
+					</Link>
+				) : (
+					<Link to="/multisig/open" className={shellBack}>
+						◂ Open or start
+					</Link>
+				)
 			}
 			meta={
 				<>
-					<span className="font-mono" title={address}>
-						{short(address)}
+					<span className={inList ? undefined : "font-mono"} title={address}>
+						{inList ? nameOf(network, address as Address) : short(address)}
 					</span>
 					{hydrated && <NetTag network={network} />}
 					{state.policy && state.policy.authorizedUsers.length > 0 && (

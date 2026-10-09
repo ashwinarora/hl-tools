@@ -53,6 +53,13 @@ const ACTIONABLE: ReadonlySet<Phase> = new Set([
 	"ready",
 	"not-yet-valid",
 ]);
+/** Phases after which nobody signs any more. */
+const CLOSED: ReadonlySet<Phase> = new Set([
+	"submitted",
+	"withdrawn",
+	"declined",
+	"expired",
+]);
 /** Phases that end with "make a new one": the old action, a fresh nonce. */
 const REPROPOSABLE: ReadonlySet<Phase> = new Set([
 	"expired",
@@ -336,6 +343,7 @@ export function ProposalView({
 							policy={state.policy}
 							counted={ready ? ready.counted : null}
 							me={me}
+							closed={CLOSED.has(stage.phase)}
 						/>
 						<TellCoSigners proposal={proposal} doc={doc} />
 						<SharePanel
