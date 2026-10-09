@@ -211,7 +211,9 @@ sign_in_sign_ups = 30
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
 token_verifications = 30
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
-web3 = 30
+# Local stack only: the integration suite, the lab scripts and the browser all sign in from one
+# address. A hosted project keeps Supabase's default of 30 (set there, not pushed from here).
+web3 = 300
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
 # [auth.captcha]

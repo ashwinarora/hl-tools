@@ -67,12 +67,20 @@ const str = (v: unknown): string | null =>
 /** A request that never reached the relay (offline, stack down, DNS). */
 export function isUnreachable(e: unknown): boolean {
 	if (!e || typeof e !== "object") return false;
-	const o = e as { name?: unknown; message?: unknown; status?: unknown };
+	const o = e as {
+		name?: unknown;
+		message?: unknown;
+		status?: unknown;
+		code?: unknown;
+		hint?: unknown;
+	};
 	const message = str(o.message) ?? "";
 	return (
 		o.name === "AuthRetryableFetchError" ||
 		o.status === 0 ||
-		/failed to fetch|fetch failed|networkerror|load failed|network request failed|econnrefused/i.test(
+		// the data client wraps a failed fetch as an error with no code: a real answer always has one
+		(o.code === "" && o.hint === "") ||
+		/failed to fetch|fetch failed|networkerror|load failed|network request failed|econnrefused|unable to connect/i.test(
 			message,
 		)
 	);

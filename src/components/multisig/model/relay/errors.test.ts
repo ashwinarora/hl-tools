@@ -78,6 +78,15 @@ describe("relayIssue", () => {
 			{ name: "AuthRetryableFetchError", message: "", status: 0 },
 			{ message: "TypeError: NetworkError when attempting to fetch resource." },
 			{ message: "Load failed" },
+			// what the data client returns when the request never left (Bun's wording)
+			{
+				message:
+					"Error: Unable to connect. Is the computer able to access the url?",
+				details: "Error: Unable to connect…\n    at fetchWithRetry (…)",
+				hint: "",
+				code: "",
+			},
+			{ message: "anything", details: "", hint: "", code: "" },
 		]) {
 			expect(isUnreachable(e)).toBe(true);
 			const i = relayIssue(e);

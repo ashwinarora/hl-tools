@@ -1,15 +1,23 @@
 /**
  * The Sign in with Ethereum message (EIP-4361) the wallet is asked to sign.
  * Supabase Auth verifies the signature and checks the domain and URI against
- * the site it is configured for; it has no nonce store, so the message is
- * given a short life instead.
+ * the site it is configured for, so a signature obtained on another site is
+ * refused here.
+ *
+ * What it does not do (measured on the local stack, GoTrue 2.197): it keeps
+ * no nonces and does not enforce the message's Expiration Time. A captured
+ * message and signature can sign in again for as long as the Issued At time
+ * is within ten minutes. The message only ever travels to the relay, over
+ * TLS, in the same request that returns the session, so capturing it is no
+ * easier than capturing the session. The expiry is still written: it is what
+ * the wallet shows, and it takes effect the day the server honours it.
  */
 import { createSiweMessage } from "viem/siwe";
 
 export const SIGN_IN_STATEMENT =
 	"Sign in to hl-tools Multisig. This only proves you control this wallet: it cannot move funds or approve anything.";
 
-/** How long a signed message may be used to sign in. */
+/** The life the message states for itself (the server's own limit is ten minutes from Issued At). */
 export const SIGN_IN_VALID_MS = 5 * 60_000;
 
 export interface SignInMessageInput {
