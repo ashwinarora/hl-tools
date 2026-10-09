@@ -97,6 +97,7 @@ create table private.worker_state (
 	last_lane text not null default 'refresh',
 	blocked_until_mainnet timestamptz,
 	blocked_until_testnet timestamptz,
+	-- the last step that made a call
 	last_run_at timestamptz
 );
 alter table private.worker_state enable row level security;
@@ -552,8 +553,8 @@ begin
 	for update skip locked;
 
 	if not found then
+		-- nothing written on an idle step: this runs every two seconds
 		perform private.drain_marks();
-		update private.worker_state set last_run_at = now();
 		return 'idle';
 	end if;
 
