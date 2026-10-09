@@ -1,6 +1,6 @@
 import type { Proposal, Receipt } from "@hl-tools/core";
 import { IDBFactory } from "fake-indexeddb";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { A, B, makeProposal, NOW, signAs } from "#/test/keys";
 import {
 	betterReceipt,
@@ -8,8 +8,10 @@ import {
 	listProposals,
 	loadProposal,
 	receiptOk,
+	rewriteProposal,
 	saveProposal,
 	toStored,
+	withProposalLock,
 } from "./history";
 
 const SIG = { r: `0x${"11".repeat(32)}`, s: `0x${"22".repeat(32)}`, v: 27 };
@@ -143,3 +145,168 @@ describe("history", () => {
 		expect((await listProposals()).map((r) => r.title)).toEqual(["two"]);
 	});
 });
+
+describe("writes of one proposal take turns", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("keeps both signatures when two copies are saved at the same moment", async () => {
+		const base = makeProposal();
+		const [withA, withB, withC] = await Promise.all([
+			signAs(base, 1),
+			signAs(base, 2),
+			signAs(base, 3),
+		]);
+		// without the lock each save reads "nothing stored" and the last write wins
+		const saved = await Promise.all(
+			[withA, withB, withC].map((p) => saveProposal(p as Proposal)),
+		);
+		expect(saved.every((r) => r.saved)).toBe(true);
+		const stored = (await loadProposal(base.digest)).proposal;
+		expect(stored?.signatures.map((s) => s.signer).sort()).toEqual(
+			[A, B, (withC as Proposal).signatures[0]?.signer].sort(),
+		);
+	});
+
+	it("runs in the order asked, one at a time, and lets other proposals through", async () => {
+		const log: string[] = [];
+		const job = (name: string, ms: number) => async () => {
+			log.push(`${name} start`);
+			await new Promise((r) => setTimeout(r, ms));
+			log.push(`${name} end`);
+			return name;
+		};
+		const results = await Promise.all([
+			withProposalLock("0xd1", job("first", 20)),
+			withProposalLock("0xd1", job("second", 1)),
+			withProposalLock("0xd2", job("other", 1)),
+		]);
+		expect(results).toEqual(["first", "second", "other"]);
+		expect(log.indexOf("first end")).toBeLessThan(log.indexOf("second start"));
+		expect(log.indexOf("other end")).toBeLessThan(log.indexOf("first end"));
+	});
+
+	it("is not stuck by a write that fails", async () => {
+		const failed = withProposalLock("0xd3", async () => {
+			throw new Error("disk full");
+		});
+		const next = withProposalLock("0xd3", async () => "fine");
+		await expect(failed).rejects.toThrow("disk full");
+		await expect(next).resolves.toBe("fine");
+	});
+
+	it("uses the browser's Web Locks when it has them, so tabs take turns too", async () => {
+		const names: string[] = [];
+		vi.stubGlobal("navigator", {
+			locks: {
+				request: (name: string, fn: () => Promise<unknown>) => {
+					names.push(name);
+					return fn();
+				},
+			},
+		});
+		const p = await signAs(makeProposal(), 1);
+		const saved = await saveProposal(p);
+		expect(saved.saved).toBe(true);
+		expect(names).toEqual([`hl-tools:proposal:${p.digest}`]);
+	});
+});
+
+describe("rewriteProposal", () => {
+	it("can remove a signature, which saving never does", async () => {
+		const base = makeProposal();
+		const both = await signAs(await signAs(base, 1), 2);
+		await saveProposal(both);
+		// saving a copy without A's signature leaves A's signature in place
+		await saveProposal(await signAs(base, 2));
+		expect((await loadProposal(base.digest)).proposal?.signatures).toHaveLength(
+			2,
+		);
+
+		const r = await rewriteProposal(base.digest, async (stored) => {
+			expect(stored?.signatures).toHaveLength(2);
+			return stored
+				? {
+						...stored,
+						signatures: stored.signatures.filter((s) => s.signer !== A),
+					}
+				: null;
+		});
+		expect(r?.saved).toBe(true);
+		expect(
+			(await loadProposal(base.digest)).proposal?.signatures.map(
+				(s) => s.signer,
+			),
+		).toEqual([B]);
+	});
+
+	it("stores a proposal this browser did not have", async () => {
+		const p = await signAs(makeProposal(), 1);
+		const r = await rewriteProposal(p.digest, async (stored) => {
+			expect(stored).toBeNull();
+			return p;
+		});
+		expect(r).toEqual({ proposal: p, saved: true, issues: [] });
+		expect((await loadProposal(p.digest)).proposal).toEqual(p);
+	});
+
+	it("writes nothing when the decision is to leave things alone, or changes nothing", async () => {
+		const p = await signAs(makeProposal(), 1);
+		await saveProposal(p, { now: 5 });
+		expect(await rewriteProposal(p.digest, async () => null)).toBeNull();
+		const same = await rewriteProposal(p.digest, async (stored) => stored, {
+			now: 99,
+		});
+		expect(same?.saved).toBe(false);
+		expect((await listProposals())[0]?.updatedAt).toBe(5);
+	});
+
+	it("refuses a copy filed under another digest or carrying another payload", async () => {
+		const p = await signAs(makeProposal(), 1);
+		await saveProposal(p);
+		const other = makeProposal({ title: "another", leader: A });
+		expect(await rewriteProposal(p.digest, async () => other)).toBeNull();
+		const r = await rewriteProposal(p.digest, async (stored) =>
+			stored
+				? { ...stored, payload: { ...stored.payload, expiresAfter: NOW + 1 } }
+				: null,
+		);
+		expect(r?.saved).toBe(false);
+		expect(r?.issues.map((i) => i.code)).toEqual(["history.payload_conflict"]);
+		expect((await loadProposal(p.digest)).proposal).toEqual(p);
+	});
+
+	it("decides on the copy as it is after any save already under way", async () => {
+		const base = makeProposal();
+		const withA = await signAs(base, 1);
+		const withB = await signAs(base, 2);
+		// a signature made on the page, and a relay update that knows only A, at the same moment
+		const [, rewritten] = await Promise.all([
+			saveProposal(withB),
+			rewriteProposal(base.digest, async (stored) => {
+				const merged = await saveLike(stored, withA);
+				return merged;
+			}),
+		]);
+		expect(rewritten?.proposal.signatures.map((s) => s.signer).sort()).toEqual(
+			[A, B].sort(),
+		);
+	});
+});
+
+/** What a relay update does inside the lock: merge its copy with whatever is stored now. */
+async function saveLike(
+	stored: Proposal | null,
+	incoming: Proposal,
+): Promise<Proposal> {
+	if (!stored) return incoming;
+	const have = new Set(stored.signatures.map((s) => s.signer));
+	return {
+		...stored,
+		signatures: [
+			...stored.signatures,
+			...incoming.signatures.filter((s) => !have.has(s.signer)),
+		],
+	};
+}
