@@ -28,7 +28,9 @@ import { Route as ToolsAssetsRouteImport } from './routes/tools/assets'
 import { Route as MultisigProposeRouteImport } from './routes/multisig/propose'
 import { Route as MultisigProposalRouteImport } from './routes/multisig/proposal'
 import { Route as MultisigOpenRouteImport } from './routes/multisig/open'
+import { Route as MultisigAddRouteImport } from './routes/multisig/add'
 import { Route as FaucetMinerHowToUseRouteImport } from './routes/faucet-miner/how-to-use'
+import { Route as MultisigTNetworkAddressRouteImport } from './routes/multisig/t.$network.$address'
 
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
@@ -125,10 +127,20 @@ const MultisigOpenRoute = MultisigOpenRouteImport.update({
   path: '/open',
   getParentRoute: () => MultisigRouteRoute,
 } as any)
+const MultisigAddRoute = MultisigAddRouteImport.update({
+  id: '/add',
+  path: '/add',
+  getParentRoute: () => MultisigRouteRoute,
+} as any)
 const FaucetMinerHowToUseRoute = FaucetMinerHowToUseRouteImport.update({
   id: '/how-to-use',
   path: '/how-to-use',
   getParentRoute: () => FaucetMinerRouteRoute,
+} as any)
+const MultisigTNetworkAddressRoute = MultisigTNetworkAddressRouteImport.update({
+  id: '/t/$network/$address',
+  path: '/t/$network/$address',
+  getParentRoute: () => MultisigRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -139,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/how-to-use': typeof HowToUseRoute
   '/privacy': typeof PrivacyRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/multisig/add': typeof MultisigAddRoute
   '/multisig/open': typeof MultisigOpenRoute
   '/multisig/proposal': typeof MultisigProposalRoute
   '/multisig/propose': typeof MultisigProposeRoute
@@ -152,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/tools/websocket': typeof ToolsWebsocketRoute
   '/faucet-miner/': typeof FaucetMinerIndexRoute
   '/multisig/': typeof MultisigIndexRoute
+  '/multisig/t/$network/$address': typeof MultisigTNetworkAddressRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -159,6 +173,7 @@ export interface FileRoutesByTo {
   '/how-to-use': typeof HowToUseRoute
   '/privacy': typeof PrivacyRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/multisig/add': typeof MultisigAddRoute
   '/multisig/open': typeof MultisigOpenRoute
   '/multisig/proposal': typeof MultisigProposalRoute
   '/multisig/propose': typeof MultisigProposeRoute
@@ -172,6 +187,7 @@ export interface FileRoutesByTo {
   '/tools/websocket': typeof ToolsWebsocketRoute
   '/faucet-miner': typeof FaucetMinerIndexRoute
   '/multisig': typeof MultisigIndexRoute
+  '/multisig/t/$network/$address': typeof MultisigTNetworkAddressRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -182,6 +198,7 @@ export interface FileRoutesById {
   '/how-to-use': typeof HowToUseRoute
   '/privacy': typeof PrivacyRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
+  '/multisig/add': typeof MultisigAddRoute
   '/multisig/open': typeof MultisigOpenRoute
   '/multisig/proposal': typeof MultisigProposalRoute
   '/multisig/propose': typeof MultisigProposeRoute
@@ -195,6 +212,7 @@ export interface FileRoutesById {
   '/tools/websocket': typeof ToolsWebsocketRoute
   '/faucet-miner/': typeof FaucetMinerIndexRoute
   '/multisig/': typeof MultisigIndexRoute
+  '/multisig/t/$network/$address': typeof MultisigTNetworkAddressRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -206,6 +224,7 @@ export interface FileRouteTypes {
     | '/how-to-use'
     | '/privacy'
     | '/faucet-miner/how-to-use'
+    | '/multisig/add'
     | '/multisig/open'
     | '/multisig/proposal'
     | '/multisig/propose'
@@ -219,6 +238,7 @@ export interface FileRouteTypes {
     | '/tools/websocket'
     | '/faucet-miner/'
     | '/multisig/'
+    | '/multisig/t/$network/$address'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -226,6 +246,7 @@ export interface FileRouteTypes {
     | '/how-to-use'
     | '/privacy'
     | '/faucet-miner/how-to-use'
+    | '/multisig/add'
     | '/multisig/open'
     | '/multisig/proposal'
     | '/multisig/propose'
@@ -239,6 +260,7 @@ export interface FileRouteTypes {
     | '/tools/websocket'
     | '/faucet-miner'
     | '/multisig'
+    | '/multisig/t/$network/$address'
   id:
     | '__root__'
     | '/'
@@ -248,6 +270,7 @@ export interface FileRouteTypes {
     | '/how-to-use'
     | '/privacy'
     | '/faucet-miner/how-to-use'
+    | '/multisig/add'
     | '/multisig/open'
     | '/multisig/proposal'
     | '/multisig/propose'
@@ -261,6 +284,7 @@ export interface FileRouteTypes {
     | '/tools/websocket'
     | '/faucet-miner/'
     | '/multisig/'
+    | '/multisig/t/$network/$address'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -415,12 +439,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MultisigOpenRouteImport
       parentRoute: typeof MultisigRouteRoute
     }
+    '/multisig/add': {
+      id: '/multisig/add'
+      path: '/add'
+      fullPath: '/multisig/add'
+      preLoaderRoute: typeof MultisigAddRouteImport
+      parentRoute: typeof MultisigRouteRoute
+    }
     '/faucet-miner/how-to-use': {
       id: '/faucet-miner/how-to-use'
       path: '/how-to-use'
       fullPath: '/faucet-miner/how-to-use'
       preLoaderRoute: typeof FaucetMinerHowToUseRouteImport
       parentRoute: typeof FaucetMinerRouteRoute
+    }
+    '/multisig/t/$network/$address': {
+      id: '/multisig/t/$network/$address'
+      path: '/t/$network/$address'
+      fullPath: '/multisig/t/$network/$address'
+      preLoaderRoute: typeof MultisigTNetworkAddressRouteImport
+      parentRoute: typeof MultisigRouteRoute
     }
   }
 }
@@ -439,17 +477,21 @@ const FaucetMinerRouteRouteWithChildren =
   FaucetMinerRouteRoute._addFileChildren(FaucetMinerRouteRouteChildren)
 
 interface MultisigRouteRouteChildren {
+  MultisigAddRoute: typeof MultisigAddRoute
   MultisigOpenRoute: typeof MultisigOpenRoute
   MultisigProposalRoute: typeof MultisigProposalRoute
   MultisigProposeRoute: typeof MultisigProposeRoute
   MultisigIndexRoute: typeof MultisigIndexRoute
+  MultisigTNetworkAddressRoute: typeof MultisigTNetworkAddressRoute
 }
 
 const MultisigRouteRouteChildren: MultisigRouteRouteChildren = {
+  MultisigAddRoute: MultisigAddRoute,
   MultisigOpenRoute: MultisigOpenRoute,
   MultisigProposalRoute: MultisigProposalRoute,
   MultisigProposeRoute: MultisigProposeRoute,
   MultisigIndexRoute: MultisigIndexRoute,
+  MultisigTNetworkAddressRoute: MultisigTNetworkAddressRoute,
 }
 
 const MultisigRouteRouteWithChildren = MultisigRouteRoute._addFileChildren(

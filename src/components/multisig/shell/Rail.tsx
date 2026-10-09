@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { cn } from "#/lib/utils";
 import { WalletBox } from "./WalletBox";
 
@@ -15,23 +15,35 @@ export function RailHeading({ children }: { children: ReactNode }) {
 	);
 }
 
-/** One destination in the rail: a name, an optional second line, an optional count. */
+/**
+ * One destination in the rail: a name, an optional second line, an optional
+ * count. The route is given loosely (a path and its params); the router still
+ * resolves it, the compiler just does not check the pair here.
+ */
 export function RailLink({
 	children,
 	sub,
 	trailing,
-	...link
+	to,
+	params,
+	exact = false,
 }: {
 	children: ReactNode;
 	sub?: ReactNode;
 	trailing?: ReactNode;
-} & Pick<
-	React.ComponentProps<typeof Link>,
-	"to" | "params" | "search" | "activeOptions"
->) {
+	to: string;
+	params?: Record<string, string>;
+	/** Current only on exactly this path, not on the pages under it. */
+	exact?: boolean;
+}) {
+	const target = { to, params } as unknown as Pick<
+		ComponentProps<typeof Link>,
+		"to"
+	>;
 	return (
 		<Link
-			{...link}
+			{...target}
+			activeOptions={{ exact }}
 			className={item}
 			activeProps={{ className: cn(item, current), "aria-current": "page" }}
 		>

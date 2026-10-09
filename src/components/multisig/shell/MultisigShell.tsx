@@ -3,11 +3,20 @@ import { ArrowUpRight, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { Callout } from "#/components/hub/status";
 import { tool, toolRuleSets, toolVerifiedAt } from "#/lib/tools";
-import { useMultisigPrefs, usePrefsHydrated } from "#/store/multisigPrefsStore";
+import {
+	treasuryKey,
+	useMultisigPrefs,
+	usePrefsHydrated,
+} from "#/store/multisigPrefsStore";
+import { useNetwork } from "#/store/networkStore";
 import { RELAY_COPY } from "../model/relay/copy";
+import { shortAddress } from "../model/stage";
 import { relayConfig } from "../relay/config";
-import { Btn } from "./kit";
-import { Rail, RailLink } from "./Rail";
+import { useTreasuries } from "../relay/queries";
+import { useRelay } from "../relay/useRelay";
+import { useTreasuryNames } from "../treasuryName";
+import { Btn, Tag } from "./kit";
+import { Rail, RailHeading, RailLink } from "./Rail";
 import { WalletBox } from "./WalletBox";
 
 /**
@@ -17,6 +26,7 @@ import { WalletBox } from "./WalletBox";
  * serves every state: no relay, signed out, signed in.
  */
 export function MultisigShell({ children }: { children: ReactNode }) {
+	const relay = useRelay();
 	return (
 		<div className="page-wrap">
 			<div className="grid grid-cols-1 items-start gap-4 pb-12 pt-4 min-[861px]:grid-cols-[252px_minmax(0,1fr)] min-[861px]:gap-7 min-[861px]:pb-16 min-[861px]:pt-6">
@@ -26,9 +36,15 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 				>
 					<Rail
 						foot={
-							<RailLink to="/multisig/open">Open or start a proposal</RailLink>
+							<RailLink to="/multisig/open">
+								{relay.mode === "on"
+									? "Open a file or link"
+									: "Open or start a proposal"}
+							</RailLink>
 						}
-					/>
+					>
+						{relay.mode === "on" && <RailNav />}
+					</Rail>
 				</aside>
 				<main className="min-w-0">
 					<MobileBar />
@@ -38,6 +54,64 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 				</main>
 			</div>
 		</div>
+	);
+}
+
+/** Signed in: the inbox, then the wallet's treasuries on the header's network. */
+function RailNav() {
+	const network = useNetwork();
+	const { rows, loading, issue } = useTreasuries();
+	const nameOf = useTreasuryNames();
+	const hydrated = usePrefsHydrated();
+	const hidden = useMultisigPrefs((s) => s.hidden);
+	const seen = useMultisigPrefs((s) => s.seen);
+	const relay = useRelay();
+	const mine = rows.filter(
+		(t) =>
+			t.network === network &&
+			!(hydrated && hidden.includes(treasuryKey(t.network, t.address))),
+	);
+	return (
+		<>
+			<nav className="flex flex-col gap-0.5">
+				<RailLink to="/multisig" exact>
+					Needs you
+				</RailLink>
+			</nav>
+			<div>
+				<RailHeading>My treasuries</RailHeading>
+				<nav className="flex flex-col gap-0.5">
+					{mine.map((t) => {
+						// added by someone else and never opened here: say so
+						const fresh =
+							hydrated &&
+							t.addedBy !== relay.wallet &&
+							!seen.includes(treasuryKey(t.network, t.address));
+						return (
+							<RailLink
+								key={`${t.network}:${t.address}`}
+								to="/multisig/t/$network/$address"
+								params={{ network: t.network, address: t.address }}
+								sub={`${shortAddress(t.address)} · ${t.threshold} of ${t.signers.length}`}
+								trailing={fresh ? <Tag tone="info">new</Tag> : null}
+							>
+								{nameOf(t.network, t.address)}
+							</RailLink>
+						);
+					})}
+					{mine.length === 0 && (
+						<span className="px-2.5 py-1.5 text-[13px] text-muted-foreground">
+							{loading
+								? "Reading…"
+								: issue
+									? issue.message
+									: `None on ${network} yet.`}
+						</span>
+					)}
+					<RailLink to="/multisig/add">+ Add a treasury</RailLink>
+				</nav>
+			</div>
+		</>
 	);
 }
 

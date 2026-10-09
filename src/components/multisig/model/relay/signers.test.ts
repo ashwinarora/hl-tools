@@ -1,7 +1,13 @@
 import type { Address, Policy } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import { A, B, C, OUTSIDER } from "#/test/keys";
-import { compareSigners, type StoredPolicy } from "./signers";
+import {
+	compareSigners,
+	nextRecheck,
+	RECHECK_EVERY_MS,
+	RECHECK_MAX,
+	type StoredPolicy,
+} from "./signers";
 
 const live = (
 	authorizedUsers: readonly Address[],
@@ -67,5 +73,36 @@ describe("compareSigners", () => {
 		expect(d?.same).toBe(false);
 		expect(d?.multisigAgain).toBe(true);
 		expect(d?.added).toEqual([]);
+	});
+});
+
+describe("nextRecheck", () => {
+	const T = 1_000_000;
+
+	it("asks at once the first time a difference is seen", () => {
+		expect(nextRecheck(null, 0, T)).toBe(0);
+	});
+
+	it("waits out the relay's own 30-second window before asking again", () => {
+		expect(RECHECK_EVERY_MS).toBeGreaterThan(30_000);
+		expect(nextRecheck(T, 1, T)).toBe(RECHECK_EVERY_MS);
+		expect(nextRecheck(T, 1, T + 10_000)).toBe(RECHECK_EVERY_MS - 10_000);
+		expect(nextRecheck(T, 1, T + RECHECK_EVERY_MS)).toBe(0);
+		expect(nextRecheck(T, 1, T + 10 * RECHECK_EVERY_MS)).toBe(0);
+	});
+
+	it("keeps asking while the difference lasts: a second change inside the window is not lost", () => {
+		// found in the browser: two signer changes 40 s apart; the second ask was dropped, not deferred
+		const firstAsk = T;
+		const secondChangeSeenAt = T + 20_000;
+		const wait = nextRecheck(firstAsk, 1, secondChangeSeenAt);
+		expect(wait).toBe(15_000);
+		expect(wait).not.toBeNull();
+	});
+
+	it("gives up after a handful of asks for the same difference", () => {
+		expect(nextRecheck(T, RECHECK_MAX - 1, T)).not.toBeNull();
+		expect(nextRecheck(T, RECHECK_MAX, T + 10 * RECHECK_EVERY_MS)).toBeNull();
+		expect(nextRecheck(null, RECHECK_MAX, T)).toBeNull();
 	});
 });

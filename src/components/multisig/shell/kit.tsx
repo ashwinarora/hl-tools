@@ -248,3 +248,71 @@ export const linkButtonSm =
 	"inline-flex h-7 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-border-strong bg-surface px-2.5 text-xs font-medium no-underline transition-colors hover:bg-surface-2";
 export const backLink =
 	"inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground no-underline transition-colors hover:bg-surface-2 hover:text-foreground";
+
+/** The tabs of a treasury page. `aria-selected` carries the state, as in the mockup. */
+export function TabList<T extends string>({
+	label,
+	value,
+	tabs,
+	onChange,
+}: {
+	label: string;
+	value: T;
+	tabs: readonly { value: T; label: ReactNode; count?: number }[];
+	onChange: (value: T) => void;
+}) {
+	return (
+		<div
+			role="tablist"
+			aria-label={label}
+			className="mb-4 flex gap-0.5 overflow-x-auto overflow-y-hidden border-b border-border [scrollbar-width:none]"
+		>
+			{tabs.map((t) => (
+				<button
+					key={t.value}
+					type="button"
+					role="tab"
+					aria-selected={t.value === value}
+					onClick={() => onChange(t.value)}
+					className={cn(
+						"inline-flex items-center gap-[7px] whitespace-nowrap border-b-2 px-3 py-[9px] text-sm transition-colors",
+						t.value === value
+							? "border-brand font-medium text-foreground"
+							: "border-transparent text-muted-foreground hover:text-foreground",
+					)}
+				>
+					{t.label}
+					{t.count ? <Count n={t.count} quiet /> : null}
+				</button>
+			))}
+		</div>
+	);
+}
+
+/** One line of a list of people: who, then what is true of them. */
+export function PersonRow({
+	children,
+	trailing,
+}: {
+	children: ReactNode;
+	trailing?: ReactNode;
+}) {
+	return (
+		<div className="flex items-center justify-between gap-2.5 border-t border-border py-[9px] first:border-t-0 first:pt-0 last:pb-0">
+			<span className="min-w-0">{children}</span>
+			{trailing}
+		</div>
+	);
+}
+
+/** "3 minutes ago", for "last checked". */
+export function ago(then: number, now: number): string {
+	const s = Math.max(0, Math.round((now - then) / 1000));
+	if (s < 10) return "just now";
+	if (s < 60) return `${s} seconds ago`;
+	const m = Math.round(s / 60);
+	if (m < 60) return m === 1 ? "a minute ago" : `${m} minutes ago`;
+	const h = Math.round(m / 60);
+	if (h < 48) return h === 1 ? "an hour ago" : `${h} hours ago`;
+	return `${Math.round(h / 24)} days ago`;
+}
