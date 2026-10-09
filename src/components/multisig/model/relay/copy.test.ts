@@ -33,6 +33,7 @@ describe("relay copy", () => {
 			"Your data never leaves this browser.",
 			"Kept secret.",
 			"Confidential by default.",
+			"Stored in this browser only.",
 		]) {
 			expect(caught(bad), bad).toBe(true);
 		}

@@ -141,15 +141,29 @@ function Missing({
 		);
 	}
 	if (relay.mode === "on") {
+		// the relay has a row for this digest, but this browser will not take it
+		const refused = issues.some(
+			(i) => i.code === "relay.row_invalid" || i.code === "relay.row_mismatch",
+		);
 		return (
 			<div className="space-y-4">
-				<EmptyState
-					icon={FileQuestion}
-					title="No proposal with that digest, here or on the relay"
-					description="This browser has not seen it, and the relay has none your wallet can open: it was never shared, or your wallet is not a signer of its treasury in the relay's copy of the signer list. If you were sent the document, paste it on the start page."
-					sample={digest}
-					action={open}
-				/>
+				{refused ? (
+					<EmptyState
+						icon={FileQuestion}
+						title="The relay's copy of this proposal does not verify"
+						description="This browser checks every document against its digest before showing it, and this one does not match, so it was ignored. Ask whoever proposed it for the link or the file, and paste it on the start page."
+						sample={digest}
+						action={open}
+					/>
+				) : (
+					<EmptyState
+						icon={FileQuestion}
+						title="No proposal with that digest, here or on the relay"
+						description="This browser has not seen it, and the relay has none your wallet can open: it was never shared, or your wallet is not a signer of its treasury in the relay's copy of the signer list. If you were sent the document, paste it on the start page."
+						sample={digest}
+						action={open}
+					/>
+				)}
 				{relayIssue && (
 					<Callout
 						tone={relayIssue.severity === "error" ? "danger" : "warning"}

@@ -21,6 +21,8 @@ export const RELAY_COPY = {
 	soloBody:
 		"Everything also works with links and files passed by hand. Nothing is stored for you.",
 	withoutUs: "You can always do this without us.",
+	recentHere:
+		"Proposals you made or opened here, as this browser keeps them (IndexedDB). The chain knows nothing of a proposal until it is submitted.",
 	unreachable: "Relay unreachable. Links and files still work.",
 	suspended:
 		"The connected wallet is not the one signed in, so nothing is read from or sent to the relay.",
@@ -57,4 +59,5 @@ export const FORBIDDEN_CLAIMS: readonly RegExp[] = [
 	/without a server/i,
 	/no backend/i,
 	/never leaves/i,
+	/browser only/i,
 ];

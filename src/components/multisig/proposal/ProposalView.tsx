@@ -99,6 +99,10 @@ export function ProposalView({
 		[proposal, issues],
 	);
 	const state = useJudgement(parsed, { refetchInterval: REFRESH_MS });
+	const relayNotes = useMemo(
+		() => issues.filter((i) => i.code.startsWith("relay.")),
+		[issues],
+	);
 	const target = useMemo<AccountTarget>(
 		() => ({
 			address: proposal.payload.multiSigUser,
@@ -221,6 +225,18 @@ export function ProposalView({
 					<Callout
 						tone="danger"
 						title={`The last submission was rejected: ${stage.failedAttempt.message}`}
+						action={
+							// "already used" often means it went through somewhere else: the ledger says
+							stage.failedAttempt.id === "nonce-duplicate" ? (
+								<Link
+									to="/tools/multisig"
+									search={{ view: "account", address: target.address }}
+									className={linkButtonSm}
+								>
+									Check the ledger in the inspector
+								</Link>
+							) : undefined
+						}
 					>
 						{stage.failedAttempt.cause} {stage.failedAttempt.fix}
 					</Callout>
@@ -248,6 +264,12 @@ export function ProposalView({
 						{doc.relay.issue.fix}
 					</Callout>
 				)}
+				{relayNotes.map((n) => (
+					// what this browser refused to take from the relay's copy
+					<Callout key={n.code + n.message} tone="warning" title={n.message}>
+						{n.fix}
+					</Callout>
+				))}
 
 				<div className="grid grid-cols-1 items-start gap-4 min-[861px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 					<div className="flex min-w-0 flex-col gap-4">

@@ -17,6 +17,8 @@ import {
 	listProposals,
 	type StoredProposal,
 } from "./model/history";
+import { RELAY_COPY } from "./model/relay/copy";
+import { useRelay } from "./relay/useRelay";
 
 function headline(row: StoredProposal): string {
 	const p = decodeProposal(row.doc).proposal;
@@ -77,12 +79,19 @@ export function HistoryList({ network }: { network: Network }) {
 		queryFn: () => listProposals(),
 		retry: 0,
 	});
+	// "this browser only" is true of the list; with the relay in use it is not
+	// true of every proposal in it, so the sentence does not say it there
+	const relayOff = useRelay().mode === "off";
 	const rows = (query.data ?? []).filter((r) => all || r.network === network);
 	const hidden = (query.data?.length ?? 0) - rows.length;
 	return (
 		<Panel
 			title="Recent in this browser"
-			description="Proposals you made or opened here. Stored in this browser only (IndexedDB); the chain knows nothing of a proposal until it is submitted."
+			description={
+				relayOff
+					? "Proposals you made or opened here. Stored in this browser only (IndexedDB); the chain knows nothing of a proposal until it is submitted."
+					: RELAY_COPY.recentHere
+			}
 			actions={
 				<label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
 					<input
