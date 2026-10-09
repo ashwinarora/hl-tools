@@ -64,3 +64,39 @@ begin
 	end loop;
 	return tests.addr(n);
 end $$;
+
+-- Tests see whatever the local database already holds. These empty the
+-- relay's working tables for the length of the transaction (DELETE, not
+-- TRUNCATE: the cron worker must not be locked out while a test runs).
+create function tests.quiet() returns void
+language plpgsql as $$
+begin
+	delete from private.lookup_queue;
+	delete from private.lookup_log;
+	delete from private.session_marks;
+	delete from private.treasury_checks;
+	delete from public.treasury_requests;
+	update private.worker_state set last_lane = 'refresh', blocked_until_mainnet = null,
+		blocked_until_testnet = null, last_run_at = null;
+	update private.settings set value = 'true' where key = 'worker.enabled';
+	update private.settings set value = '30' where key = 'worker.per_minute';
+end $$;
+
+-- A request as wallet n would make it through the API (the trigger stamps the
+-- requester from the session, whatever role inserts).
+create function tests.request(n int, p_kind text, p_network public.network, n_treasury int) returns uuid
+language plpgsql as $$
+declare
+	rid uuid;
+begin
+	perform tests.claims(n);
+	insert into public.treasury_requests (network, address, kind)
+	values (p_network, tests.addr(n_treasury), p_kind)
+	returning id into rid;
+	return rid;
+end $$;
+
+create function tests.addrs(variadic n int[]) returns public.address[]
+language sql immutable as $$
+	select array_agg(tests.addr(x) order by tests.addr(x)) from unnest(n) x
+$$;
