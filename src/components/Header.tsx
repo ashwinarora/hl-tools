@@ -117,7 +117,7 @@ export default function Header() {
 							key={t.id}
 							to={t.path}
 							className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
-							activeProps={{ className: "text-foreground" }}
+							activeProps={{ className: "bg-surface-2 text-foreground" }}
 						>
 							<t.icon className="size-3.5" aria-hidden />
 							{t.short}

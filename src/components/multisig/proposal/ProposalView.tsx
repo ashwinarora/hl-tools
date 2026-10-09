@@ -2,7 +2,7 @@ import type { Issue, Proposal } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Workspace } from "#/components/hub/layout";
-import { Callout, Pill, type Tone } from "#/components/hub/status";
+import { Callout, type Tone } from "#/components/hub/status";
 import { ProposalResult } from "#/components/tools/multisig/EnvelopeView";
 import {
 	type AccountTarget,
@@ -10,8 +10,14 @@ import {
 } from "#/components/tools/multisig/model";
 import { useJudgement } from "#/components/tools/multisig/useJudgement";
 import { useNetwork } from "#/store/networkStore";
-import { deriveStage, type Phase, type WalletRole } from "../model/stage";
-import { SignerPage } from "../SignerPage";
+import {
+	deriveStage,
+	type Phase,
+	shortAddress,
+	type WalletRole,
+} from "../model/stage";
+import { backLink, NetTag, SignsTag, Tag } from "../shell/kit";
+import { ShellPage } from "../shell/ShellPage";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { REFRESH_MS, useTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
@@ -81,7 +87,28 @@ export function ProposalView({
 	const role = ROLE[stage.role];
 
 	return (
-		<SignerPage wallet={role && <Pill tone={role.tone}>{role.label}</Pill>}>
+		<ShellPage
+			title={proposal.meta.title ?? "Proposal"}
+			back={
+				<Link to="/multisig/open" className={backLink}>
+					◂ Open or start
+				</Link>
+			}
+			meta={
+				<>
+					<span className="font-mono" title={target.address}>
+						{shortAddress(target.address)}
+					</span>
+					<NetTag network={target.network} />
+					{role && (
+						<Tag tone={role.tone === "success" ? "you" : "gray"}>
+							you: {role.label}
+						</Tag>
+					)}
+					<SignsTag />
+				</>
+			}
+		>
 			<div className="space-y-4">
 				<StageCallout
 					stage={stage}
@@ -167,6 +194,6 @@ export function ProposalView({
 					}
 				/>
 			</div>
-		</SignerPage>
+		</ShellPage>
 	);
 }

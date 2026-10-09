@@ -195,11 +195,10 @@ export const TOOLS: readonly ToolDef[] = [
 		id: "multisig-sign",
 		path: "/multisig",
 		title: "Multisig Signer",
-		short: "Multisig signer",
+		short: "Multisig",
 		description:
-			"Propose, sign and submit native multi-sig actions — USDC and spot sends, perps ↔ spot transfers, withdrawals, API-wallet approvals — with your wallet, in your browser. Proposals travel as links or files; signatures are verified locally before anything is sent.",
-		answers:
-			"How do two of three signers get one usdSend onto the chain without a server?",
+			"Propose, sign and submit native multi-sig actions — USDC and spot sends, perps ↔ spot transfers, withdrawals, API-wallet approvals — with your own wallet. Pass a proposal on as a link or a file, or sign in and every signer of a treasury sees it live. Signatures are verified in your browser before anything is sent.",
+		answers: "How do two of three signers get one usdSend onto the chain?",
 		icon: FileSignature,
 		ruleSets: ["multisig", "signing", "errors"],
 		primarySource: {

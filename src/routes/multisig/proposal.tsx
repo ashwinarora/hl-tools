@@ -10,7 +10,8 @@ import {
 } from "#/components/multisig/model/transport";
 import { ProposalView } from "#/components/multisig/proposal/ProposalView";
 import { useProposalDoc } from "#/components/multisig/proposal/useProposalDoc";
-import { SignerPage } from "#/components/multisig/SignerPage";
+import { SignsTag } from "#/components/multisig/shell/kit";
+import { ShellPage } from "#/components/multisig/shell/ShellPage";
 import { clearShared } from "#/lib/share";
 
 export const Route = createFileRoute("/multisig/proposal")({
@@ -72,14 +73,14 @@ function ProposalScreen() {
 		);
 
 	return (
-		<SignerPage>
+		<ShellPage title="Proposal" meta={<SignsTag />}>
 			{link.state === "failed" ? (
 				<Callout
 					tone="danger"
 					title="This link does not carry a proposal this page can open"
 					action={
-						<Link to="/multisig" className={backLink}>
-							Back to the signer
+						<Link to="/multisig/open" className={backLink}>
+							Back to the start
 						</Link>
 					}
 				>
@@ -108,12 +109,12 @@ function ProposalScreen() {
 					}
 					sample={digest}
 					action={
-						<Link to="/multisig" className={backLink}>
+						<Link to="/multisig/open" className={backLink}>
 							Open a proposal
 						</Link>
 					}
 				/>
 			)}
-		</SignerPage>
+		</ShellPage>
 	);
 }

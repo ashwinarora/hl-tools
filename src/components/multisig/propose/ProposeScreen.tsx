@@ -53,7 +53,8 @@ import { type InnerChain, innerChain } from "../model/chains";
 import { loadProposal, saveProposal } from "../model/history";
 import { describeWindow, type NonceMode, nonceFor } from "../model/nonce";
 import { linkTransport } from "../model/transport";
-import { SignerPage } from "../SignerPage";
+import { NetTag, SignsTag, backLink as shellBack } from "../shell/kit";
+import { ShellPage } from "../shell/ShellPage";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
@@ -245,23 +246,45 @@ export function ProposeScreen({
 
 	if (!address) {
 		return (
-			<SignerPage>
+			<ShellPage title="Propose an action" meta={<SignsTag />}>
 				<EmptyState
 					icon={FileSignature}
 					title="Choose the treasury first"
 					description="A proposal is made for one multi-sig account. Enter its address on the start page."
 					action={
-						<Link to="/multisig" className={backLink}>
+						<Link to="/multisig/open" className={backLink}>
 							Back to the start
 						</Link>
 					}
 				/>
-			</SignerPage>
+			</ShellPage>
 		);
 	}
 
 	return (
-		<SignerPage>
+		<ShellPage
+			title="Propose an action"
+			back={
+				<Link to="/multisig/open" className={shellBack}>
+					◂ Open or start
+				</Link>
+			}
+			meta={
+				<>
+					<span className="font-mono" title={address}>
+						{short(address)}
+					</span>
+					{hydrated && <NetTag network={network} />}
+					{state.policy && state.policy.authorizedUsers.length > 0 && (
+						<span>
+							{state.policy.threshold} of {state.policy.authorizedUsers.length}{" "}
+							signers
+						</span>
+					)}
+					<SignsTag />
+				</>
+			}
+		>
 			<Workspace
 				input={
 					<>
@@ -535,6 +558,6 @@ export function ProposeScreen({
 					</>
 				}
 			/>
-		</SignerPage>
+		</ShellPage>
 	);
 }

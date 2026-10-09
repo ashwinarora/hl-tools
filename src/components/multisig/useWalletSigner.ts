@@ -7,10 +7,11 @@
  * they are not on) and only then hands out a signer.
  */
 import { type Hex, type TypedDataSigner, viemSigner } from "@hl-tools/core";
-import { useCallback, useRef, useState } from "react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import { useAccount, useConfig, useSwitchChain } from "wagmi";
 import { getWalletClient } from "wagmi/actions";
+import { useWalletBusy } from "#/store/walletBusyStore";
 import { chainIdToNumber, chainLabel } from "./model/chains";
 import { describeWalletError } from "./model/walletErrors";
 
@@ -34,8 +35,8 @@ export function useWalletSigner(): WalletSigner {
 	const config = useConfig();
 	const { address, chainId, isConnected } = useAccount();
 	const { switchChainAsync } = useSwitchChain();
-	const busyRef = useRef(false);
-	const [busy, setBusy] = useState(false);
+	// shared with every other button that opens the wallet (the rail's sign-in included)
+	const busy = useWalletBusy((b) => b.busy);
 
 	const signerFor = useCallback(
 		async (hex: Hex): Promise<SignerResult> => {
@@ -76,16 +77,13 @@ export function useWalletSigner(): WalletSigner {
 	const run = useCallback(
 		async <T>(label: string, fn: () => Promise<T>): Promise<T | undefined> => {
 			// a second click while the wallet is open would queue a second popup
-			if (busyRef.current) return undefined;
-			busyRef.current = true;
-			setBusy(true);
+			if (!useWalletBusy.getState().begin()) return undefined;
 			const id = toast.loading(label);
 			try {
 				return await fn();
 			} finally {
 				toast.dismiss(id);
-				busyRef.current = false;
-				setBusy(false);
+				useWalletBusy.getState().end();
 			}
 		},
 		[],
