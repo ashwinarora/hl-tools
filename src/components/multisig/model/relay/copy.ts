@@ -66,6 +66,8 @@ export const RELAY_COPY = {
 	awayChecking: "Checking API wallets and transfers on Hyperliquid…",
 	awayFailed:
 		"Hyperliquid did not answer, so API wallets and transfers could not be checked.",
+	awayPartly:
+		"Some transfers could not be checked yet: Hyperliquid did not answer. They stay unread and are tried again.",
 	awayNotChecked:
 		"API wallets and transfers are checked when you open this treasury.",
 	awayOthers:

@@ -259,9 +259,15 @@ export type AwayScope =
  * checked      its API wallets and transfers were looked at
  * checking     being looked at now
  * failed       Hyperliquid did not answer
+ * partly       read, but some transfers could not be matched yet (they stay unread)
  * not-checked  not looked at on this visit (the home screen looks at ten)
  */
-export type ChainState = "checked" | "checking" | "failed" | "not-checked";
+export type ChainState =
+	| "checked"
+	| "checking"
+	| "failed"
+	| "partly"
+	| "not-checked";
 
 export interface AwayGroup {
 	readonly network: Network;
@@ -417,7 +423,7 @@ export function useAway(scope: AwayScope): Away {
 					: progress === "open"
 						? "checking"
 						: progress === "failed"
-							? "failed"
+							? "partly"
 							: "checked";
 			const baseline = agentsBaseline(mark, chain.agents);
 			if (baseline)

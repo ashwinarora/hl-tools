@@ -1,7 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Callout } from "#/components/hub/status";
-import { type AwayGroup, type AwayScope, useAway } from "../away/useAway";
+import {
+	type AwayGroup,
+	type AwayScope,
+	type ChainState,
+	useAway,
+} from "../away/useAway";
 import type { AwayItem } from "../model/relay/away";
 import { RELAY_COPY } from "../model/relay/copy";
 import { NamesFor } from "../names/Names";
@@ -13,6 +18,14 @@ import { useTreasuryNames } from "../treasuryName";
 
 /** Lines shown per treasury before the rest are left to the Signing log. */
 const SHOWN = 8;
+
+/** What a group says under its lines while Hyperliquid's side is not settled. */
+const CHAIN_LINE: Record<Exclude<ChainState, "checked">, string> = {
+	checking: RELAY_COPY.awayChecking,
+	failed: RELAY_COPY.awayFailed,
+	partly: RELAY_COPY.awayPartly,
+	"not-checked": RELAY_COPY.awayNotChecked,
+};
 
 const viewLink =
 	"shrink-0 text-xs font-medium text-brand underline underline-offset-2 hover:no-underline";
@@ -164,13 +177,9 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 					</NamesFor>
 					{g.chain !== "checked" && (
 						<p
-							className={`mt-2 text-xs ${g.chain === "failed" ? "text-warning" : "text-subtle-foreground"}`}
+							className={`mt-2 text-xs ${g.chain === "failed" || g.chain === "partly" ? "text-warning" : "text-subtle-foreground"}`}
 						>
-							{g.chain === "failed"
-								? RELAY_COPY.awayFailed
-								: g.chain === "checking"
-									? RELAY_COPY.awayChecking
-									: RELAY_COPY.awayNotChecked}
+							{CHAIN_LINE[g.chain]}
 						</p>
 					)}
 				</div>
