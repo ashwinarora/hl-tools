@@ -63,7 +63,7 @@ import { NetTag, SignsTag, backLink as shellBack } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useTreasuryNames } from "../treasuryName";
-import { useTreasuryState } from "../useTreasuryState";
+import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
 import { ActionFields } from "./ActionFields";
 
@@ -111,7 +111,7 @@ export function ProposeScreen({
 		() => (hydrated && address ? { address, network } : null),
 		[hydrated, address, network],
 	);
-	const state = useTreasuryState(target, { live: true });
+	const state = useLiveTreasuryState(target);
 
 	// Re-proposing: start from the action, finaliser and label of the proposal being replaced.
 	useEffect(() => {
@@ -153,7 +153,7 @@ export function ProposeScreen({
 		tokens: universe.data?.tokens,
 		balances: {
 			perpWithdrawable: state.perp?.withdrawable,
-			spot: state.spot?.balances,
+			spot: state.spot ?? undefined,
 		},
 		createdBy: wallet.address,
 		supersedes: superseded?.digest ?? null,
@@ -375,9 +375,10 @@ export function ProposeScreen({
 									network={network}
 									tokens={universe.data?.tokens ?? null}
 									held={
-										state.spot?.balances
-											.filter((b) => Number(b.total) !== 0)
-											.map((b) => b.token) ?? []
+										state.spot
+											?.filter((b) => Number(b.total) !== 0)
+											.map((b) => b.token)
+											.filter((t): t is number => t !== null) ?? []
 									}
 									tokensLoading={universe.isFetching}
 								/>

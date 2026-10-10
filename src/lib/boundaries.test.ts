@@ -142,6 +142,20 @@ describe("import boundaries", () => {
 		expect(offenders(model.filter((i) => !allowed(i)))).toEqual([]);
 	});
 
+	it("keeps live money independent of the relay", () => {
+		// balances come from Hyperliquid alone: they must stay live when the relay is down
+		const live = runtime.filter(
+			(i) =>
+				i.file.startsWith("components/multisig/live/") ||
+				i.file.startsWith("components/multisig/model/live/") ||
+				i.file === "components/multisig/useTreasuryState.ts",
+		);
+		expect(live.length).toBeGreaterThan(8);
+		expect(
+			offenders(live.filter((i) => /(^|\/)relay(\/|$)/.test(i.spec))),
+		).toEqual([]);
+	});
+
 	it("keeps the home page's paste detection free of everything but the model", () => {
 		const detect = runtime.filter((i) => i.file === "lib/detect.ts");
 		expect(

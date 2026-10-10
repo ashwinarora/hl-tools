@@ -30,7 +30,7 @@ import { Card, linkButton, NetTag, SignsTag, TabList, Tag } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
 import { defaultTreasuryName, useTreasuryName } from "../treasuryName";
-import { useTreasuryState } from "../useTreasuryState";
+import { useLiveTreasuryState } from "../useTreasuryState";
 import { HistoryTab } from "./HistoryTab";
 import { PendingTab } from "./PendingTab";
 import { SignersTab } from "./SignersTab";
@@ -162,7 +162,7 @@ export function TreasuryScreen({
 				: null,
 		[treasury],
 	);
-	const live = useTreasuryState(target, { live: true });
+	const live = useLiveTreasuryState(target);
 
 	const diff = useMemo(
 		() =>
@@ -298,7 +298,7 @@ export function TreasuryScreen({
 			p.network === treasury.network &&
 			p.treasury === treasury.address,
 	);
-	const usdc = live.spot?.balances.find((b) => b.coin === "USDC");
+	const usdc = live.spot?.find((b) => b.coin === "USDC");
 	const setTab = (next: TreasuryTab) =>
 		void navigate({
 			to: "/multisig/t/$network/$address",

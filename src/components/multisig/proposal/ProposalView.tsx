@@ -17,6 +17,7 @@ import {
 } from "#/components/tools/multisig/model";
 import { useJudgement } from "#/components/tools/multisig/useJudgement";
 import { useNetwork } from "#/store/networkStore";
+import { CONTROL_REFRESH_MS } from "../live/useControl";
 import { RELAY_COPY } from "../model/relay/copy";
 import {
 	deriveStage,
@@ -36,7 +37,7 @@ import {
 import { ShellPage } from "../shell/ShellPage";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useTreasuryNames } from "../treasuryName";
-import { REFRESH_MS, useTreasuryState } from "../useTreasuryState";
+import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
@@ -98,7 +99,7 @@ export function ProposalView({
 		() => documentToParsed(proposal, issues),
 		[proposal, issues],
 	);
-	const state = useJudgement(parsed, { refetchInterval: REFRESH_MS });
+	const state = useJudgement(parsed, { refetchInterval: CONTROL_REFRESH_MS });
 	const relayNotes = useMemo(
 		() => issues.filter((i) => i.code.startsWith("relay.")),
 		[issues],
@@ -110,13 +111,13 @@ export function ProposalView({
 		}),
 		[proposal.payload.multiSigUser, proposal.payload.network],
 	);
-	const treasury = useTreasuryState(target, { live: true });
+	const treasury = useLiveTreasuryState(target);
 	const row = doc.relay.row;
 	// While the signer set is still on its way, the page is "checking", not
 	// "signer set not loaded": that is for a read that failed. The same holds for
 	// the moment after it arrives, while signatures are re-counted against it.
 	// (A later refresh of the signer set keeps the previous count on screen
-	// until the new one is ready, so nothing flickers every 30 seconds.)
+	// until the new one is ready, so nothing flickers every minute.)
 	const waitingForPolicy =
 		state.policyQuery.isPending ||
 		(state.judgement?.policy === null && state.policy !== null);

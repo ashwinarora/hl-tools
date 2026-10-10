@@ -15,7 +15,7 @@ const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 /**
  * The treasury at a glance, on every signer screen: who must sign, which API
  * wallets can trade without them, and what the account holds. Observed, with
- * its network and time, and refreshed while the screen is open.
+ * its network and time; on a page that stays open the holdings arrive live.
  */
 export function TreasuryStrip({
 	state,
@@ -28,11 +28,10 @@ export function TreasuryStrip({
 	const { target } = state;
 	if (!target) return null;
 	const me = wallet?.toLowerCase();
-	const usdc = state.spot?.balances.find((b) => b.coin === "USDC");
+	const usdc = state.spot?.find((b) => b.coin === "USDC");
 	const otherTokens =
-		state.spot?.balances.filter(
-			(b) => b.coin !== "USDC" && Number(b.total) !== 0,
-		).length ?? 0;
+		state.spot?.filter((b) => b.coin !== "USDC" && Number(b.total) !== 0)
+			.length ?? 0;
 	const now = Date.now();
 	return (
 		<Panel
@@ -132,7 +131,7 @@ export function TreasuryStrip({
 							{
 								label: "Perps (account value · withdrawable)",
 								value: state.perp
-									? `${state.perp.marginSummary.accountValue} · ${state.perp.withdrawable} USDC`
+									? `${state.perp.accountValue} · ${state.perp.withdrawable} USDC`
 									: "—",
 								mono: true,
 							},
@@ -149,7 +148,7 @@ export function TreasuryStrip({
 						<ObservedLine
 							network={target.network}
 							observedAt={state.observedAt}
-							source={`${state.requests} info requests · weight ${state.weight}${state.live ? " · refreshed every 30 s while open" : ""}`}
+							source={state.source}
 						/>
 					)}
 				</div>

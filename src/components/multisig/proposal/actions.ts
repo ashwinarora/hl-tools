@@ -119,7 +119,10 @@ export async function finalise(i: {
 	mark("envelope", "active");
 	let policy: Policy;
 	try {
-		const observed = await infoClient(network).multiSigSigners(multiSigUser);
+		// not the answer of a moment ago: what the chain says now
+		const observed = await infoClient(network).multiSigSigners(multiSigUser, {
+			fresh: true,
+		});
 		policy = observed.data ?? {
 			authorizedUsers: [],
 			threshold: 0,
