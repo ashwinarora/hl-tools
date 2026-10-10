@@ -21,9 +21,10 @@ import {
 } from "#/components/tools/multisig/model";
 import { useJudgement } from "#/components/tools/multisig/useJudgement";
 import { useNetwork } from "#/store/networkStore";
-import { useChainMatch } from "../live/useChainMatch";
+import { useChainMatch, useTxLookups } from "../live/useChainMatch";
 import { CONTROL_REFRESH_MS } from "../live/useControl";
 import { explorerTxUrl } from "../model/chain/columns";
+import { laterSends, shutOutByTx } from "../model/chain/overtaken";
 import { RELAY_COPY } from "../model/relay/copy";
 import {
 	deriveStage,
@@ -187,7 +188,7 @@ export function ProposalView({
 		target.address as Address,
 		ordered && !settled,
 	);
-	const overtaken = useMemo(
+	const overtakenOnRecord = useMemo(
 		() =>
 			ordered &&
 			!settled &&
@@ -199,6 +200,26 @@ export function ProposalView({
 			) !== null,
 		[ordered, settled, proposal, known.proposals],
 	);
+	// A send made some other way leaves no proposal here, only a row in the
+	// treasury's ledger: its transaction says which number it carried.
+	const ledger = treasury.live.ledger;
+	const later = useMemo(
+		() =>
+			ordered && !settled && ledger
+				? laterSends(ledger, proposal.payload.action).map((r) =>
+						r.hash.toLowerCase(),
+					)
+				: [],
+		[ordered, settled, ledger, proposal.payload.action],
+	);
+	const laterTxs = useTxLookups(target.network, later);
+	const overtakenOnChain = useMemo(() => {
+		const txs = [...laterTxs.values()].flatMap((l) =>
+			l.state === "found" ? [l.tx] : [],
+		);
+		return shutOutByTx(proposal.payload.action, target.address, txs) !== null;
+	}, [laterTxs, proposal.payload.action, target.address]);
+	const overtaken = overtakenOnRecord || overtakenOnChain;
 	const clock = useNow();
 	// While the signer set is still on its way, the page is "checking", not
 	// "signer set not loaded": that is for a read that failed. The same holds for
