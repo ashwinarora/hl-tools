@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { describeWindow, EXTENDED_OFFSET_MS, nonceFor } from "./nonce";
+import {
+	describeWindow,
+	EXTENDED_OFFSET_MS,
+	expiresSoon,
+	nonceFor,
+} from "./nonce";
 
 const NOW = 1_791_399_781_235;
 const HOUR = 3_600_000;
@@ -31,5 +36,28 @@ describe("nonce", () => {
 		const early = describeWindow(NOW + 30 * HOUR, NOW);
 		expect(early.submittableNow).toBe(false);
 		expect(early.text).toMatch(/^opens .*, closes /);
+	});
+});
+
+describe("expiresSoon", () => {
+	it("marks a proposal in its last day, in words", () => {
+		expect(expiresSoon(NOW + 5 * HOUR + 60_000, NOW)).toEqual({
+			text: "expires in 5 hours",
+			at: NOW + 5 * HOUR + 60_000,
+		});
+		expect(expiresSoon(NOW + 12 * 60_000, NOW)?.text).toBe(
+			"expires in 12 minutes",
+		);
+		expect(expiresSoon(NOW + 20_000, NOW)?.text).toBe(
+			"expires in less than a minute",
+		);
+		expect(expiresSoon(NOW + 24 * HOUR, NOW)?.text).toBe("expires in 24 hours");
+	});
+	it("leaves alone one with more than a day left, and one that has closed", () => {
+		expect(expiresSoon(NOW + 24 * HOUR + 1, NOW)).toBeNull();
+		expect(expiresSoon(NOW + 47 * HOUR, NOW)).toBeNull();
+		expect(expiresSoon(NOW, NOW)).toBeNull();
+		expect(expiresSoon(NOW - HOUR, NOW)).toBeNull();
+		expect(expiresSoon(Number.NaN, NOW)).toBeNull();
 	});
 });

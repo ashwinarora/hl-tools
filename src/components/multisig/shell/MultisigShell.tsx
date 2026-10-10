@@ -14,7 +14,12 @@ import { useNetwork } from "#/store/networkStore";
 import { AwayKeeper } from "../away/AwayKeeper";
 import { useAway } from "../away/useAway";
 import { RELAY_COPY } from "../model/relay/copy";
-import { countNeeds, countOpen } from "../model/relay/inbox";
+import {
+	countNeeds,
+	countOpen,
+	SECTION_TITLE,
+	tabTitle,
+} from "../model/relay/inbox";
 import { shortAddress } from "../model/stage";
 import { relayConfig } from "../relay/config";
 import { useOpenProposals } from "../relay/openProposals";
@@ -55,6 +60,7 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 				<main className="min-w-0">
 					{relay.mode === "on" && <NetworkHint />}
 					{relay.mode === "on" && <AwayKeeper />}
+					{relay.mode === "on" && <TitleCount />}
 					<MobileBar />
 					<FirstUse />
 					{children}
@@ -244,6 +250,30 @@ function NetworkHint() {
 		setPendingOn(nav.elsewhere);
 		return () => setPendingOn(null);
 	}, [nav.elsewhere, setPendingOn]);
+	return null;
+}
+
+/**
+ * Puts what needs the signer into the browser tab's title, "(3) Multisig —
+ * hl-tools", so a tab in the background says there is something to do. No
+ * notification is sent anywhere. The plain title returns when the count is
+ * zero, when the signer signs out, and (the router's doing) outside the section.
+ */
+function TitleCount() {
+	const nav = useNav();
+	const path = useRouterState({ select: (s) => s.location.pathname });
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `path` re-applies the title after the router rewrote it on navigation
+	useEffect(() => {
+		document.title = tabTitle(nav.needs);
+	}, [nav.needs, path]);
+	useEffect(
+		() => () => {
+			// still inside the section (signed out, wallet switched): back to the plain title
+			if (window.location.pathname.startsWith("/multisig"))
+				document.title = SECTION_TITLE;
+		},
+		[],
+	);
 	return null;
 }
 

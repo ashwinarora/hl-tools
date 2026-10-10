@@ -1,10 +1,13 @@
 import type { Address } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { FLAG_TEXT } from "#/components/tools/multisig/EnvelopeView";
+import { expiresSoon } from "../model/nonce";
 import { inboxGroup } from "../model/relay/inbox";
+import { localDateTime } from "../model/time";
 import { NamesFor, Who } from "../names/Names";
 import type { OpenProposal } from "../relay/openProposals";
 import { Pips, Tag } from "../shell/kit";
+import { useNow } from "../shell/live";
 
 /**
  * Open proposals as a list. The big line is the action in words (what signers
@@ -21,11 +24,17 @@ export function ProposalRows({
 	/** Given in lists that span treasuries; omitted inside one treasury's page. */
 	treasuryName?: (item: OpenProposal) => string;
 }) {
+	const now = useNow(60_000);
 	return (
 		<div className="flex flex-col">
 			{items.map((p) => {
 				const group = inboxGroup(p, me);
 				const signed = p.counted.includes(me);
+				// only where time still matters: something can still be signed or submitted
+				const soon =
+					p.open && !p.stuck && !p.frozen
+						? expiresSoon(p.row.expiresAt, now)
+						: null;
 				return (
 					<Link
 						key={`${p.network}:${p.treasury}:${p.digest}`}
@@ -64,6 +73,14 @@ export function ProposalRows({
 										{FLAG_TEXT[f]?.label ?? f}
 									</Tag>
 								))}
+								{soon && (
+									<Tag
+										tone="warn"
+										title={`Its signing window closes ${localDateTime(soon.at)}. After that it has to be proposed again.`}
+									>
+										{soon.text}
+									</Tag>
+								)}
 							</span>
 						</span>
 						<Pips have={p.counted.length} need={p.threshold} />

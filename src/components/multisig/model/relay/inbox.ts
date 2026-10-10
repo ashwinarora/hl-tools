@@ -103,3 +103,16 @@ export function countOpen(
 		(e) => e.network === network && e.treasury === treasury && e.open,
 	).length;
 }
+
+/** The section's title in the browser tab. */
+export const SECTION_TITLE = "Multisig — hl-tools";
+
+/**
+ * The tab's title with what needs the signer in front, the way a mail client
+ * counts unread mail: "(3) Multisig — hl-tools". A tab in the background then
+ * says there is something to do without any notification being sent.
+ */
+export function tabTitle(needs: number): string {
+	if (!(needs >= 1)) return SECTION_TITLE;
+	return `(${needs > 99 ? "99+" : Math.floor(needs)}) ${SECTION_TITLE}`;
+}

@@ -8,6 +8,8 @@ import {
 	type InboxEntry,
 	inboxGroup,
 	needsMe,
+	SECTION_TITLE,
+	tabTitle,
 } from "./inbox";
 
 const OTHER = "0x00000000000000000000000000000000000000aa" as Address;
@@ -157,5 +159,18 @@ describe("a proposal whose finaliser is no longer a signer", () => {
 	it("a closed or frozen one is still not listed at all", () => {
 		expect(inboxGroup(entry({ stuck: true, open: false }), A)).toBeNull();
 		expect(inboxGroup(entry({ stuck: true, frozen: true }), A)).toBeNull();
+	});
+});
+
+describe("tabTitle", () => {
+	it("puts the count of what needs the signer in front", () => {
+		expect(tabTitle(3)).toBe("(3) Multisig — hl-tools");
+		expect(tabTitle(1)).toBe("(1) Multisig — hl-tools");
+		expect(tabTitle(250)).toBe("(99+) Multisig — hl-tools");
+	});
+	it("is the plain title when nothing does, or when the count is not one", () => {
+		for (const n of [0, -1, Number.NaN, 0.4])
+			expect(tabTitle(n)).toBe(SECTION_TITLE);
+		expect(SECTION_TITLE).toBe("Multisig — hl-tools");
 	});
 });
