@@ -32,9 +32,11 @@ import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
 import { defaultTreasuryName, useTreasuryName } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
+import { ChainTab } from "./ChainTab";
 import { OverviewTab } from "./OverviewTab";
 import { PendingTab } from "./PendingTab";
 import { SigningLogTab } from "./SigningLogTab";
+import { useKnownProposals } from "./useKnownProposals";
 
 /** The page title, renamable in place. The name stays in this browser. */
 function Title({ network, address }: { network: Network; address: Address }) {
@@ -161,7 +163,10 @@ export function TreasuryScreen({
 		() => (watching ? { address, network } : null),
 		[watching, address, network],
 	);
-	const live = useLiveTreasuryState(target);
+	// the ledger, trades, orders and funding are followed only while they are looked at
+	const live = useLiveTreasuryState(target, { history: tab === "chain" });
+	// every proposal on record for this treasury: explains transfers and API wallets
+	const known = useKnownProposals(network, address, !!treasury);
 
 	const diff = useMemo(
 		() =>
@@ -275,6 +280,7 @@ export function TreasuryScreen({
 					state={live}
 					me={relay.sessionWallet}
 					treasury={null}
+					proposals={known.proposals}
 				/>
 			</ShellPage>
 		);
@@ -427,6 +433,7 @@ export function TreasuryScreen({
 					{ value: "overview", label: "Overview" },
 					{ value: "pending", label: "Pending", count: pending.length },
 					{ value: "log", label: "Signing log" },
+					{ value: "chain", label: "On Hyperliquid" },
 				]}
 			/>
 			{tab === "overview" && (
@@ -436,6 +443,7 @@ export function TreasuryScreen({
 					state={live}
 					me={me}
 					treasury={treasury}
+					proposals={known.proposals}
 				/>
 			)}
 			{tab === "pending" && me && (
@@ -447,6 +455,15 @@ export function TreasuryScreen({
 				/>
 			)}
 			{tab === "log" && <SigningLogTab treasury={treasury} me={me} />}
+			{tab === "chain" && (
+				<ChainTab
+					network={network}
+					address={address}
+					state={live}
+					proposals={known.proposals}
+					proposalsState={known.state}
+				/>
+			)}
 		</ShellPage>
 	);
 }

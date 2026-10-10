@@ -1,11 +1,12 @@
 /** The sections of a treasury page, and what older links to them mean now. */
 
-export type TreasuryTab = "overview" | "pending" | "log";
+export type TreasuryTab = "overview" | "pending" | "log" | "chain";
 
 export const TREASURY_TABS: readonly TreasuryTab[] = [
 	"overview",
 	"pending",
 	"log",
+	"chain",
 ];
 
 /** Where a treasury page opens when its link names no section. */

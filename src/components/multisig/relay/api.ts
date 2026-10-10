@@ -170,6 +170,29 @@ export function listProposalsByDigest(
 	);
 }
 
+/** How many of a treasury's proposals are read to explain its ledger and API wallets. */
+export const PROPOSALS_PAGE = 200;
+
+/** A treasury's proposals, newest first, whatever became of them. */
+export function listProposals(
+	client: RelayClient,
+	network: Network,
+	treasury: Address,
+	opts: { limit?: number } = {},
+): Promise<Result<Parsed<ProposalRow>>> {
+	return read(
+		() =>
+			client
+				.from("proposals")
+				.select(PROPOSAL)
+				.eq("network", network)
+				.eq("treasury", treasury)
+				.order("created_at", { ascending: false })
+				.limit(opts.limit ?? PROPOSALS_PAGE),
+		proposalRows,
+	);
+}
+
 export const HISTORY_PAGE = 50;
 
 /** A treasury's history, newest first; `before` is the id to continue below. */

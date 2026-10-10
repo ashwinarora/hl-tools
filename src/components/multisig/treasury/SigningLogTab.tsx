@@ -207,9 +207,10 @@ export function SigningLogTab({
 				)}
 			</Card>
 			<p className="mx-0.5 mt-2 text-xs text-subtle-foreground">
-				Who proposed and who signed is recorded here. Hyperliquid itself only
-				records what the treasury did. The export holds every entry loaded above
-				and the proposals they refer to.
+				Kept by this tool: who proposed, who signed and who submitted. What
+				Hyperliquid itself recorded (transfers, trades) is under “On
+				Hyperliquid”. The export holds every entry loaded above and the
+				proposals they refer to.
 			</p>
 		</>
 	);

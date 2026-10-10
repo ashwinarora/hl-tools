@@ -5,6 +5,7 @@ import type {
 	PositionRow,
 	SpotBalanceRow,
 } from "@hl-tools/core";
+import { Link } from "@tanstack/react-router";
 import { ExternalLink, RefreshCw } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 import { cn } from "#/lib/utils";
@@ -26,6 +27,7 @@ import {
 	signedText,
 	sizeOf,
 } from "../model/chain/columns";
+import { approvalOf } from "../model/chain/match";
 import { RELAY_COPY } from "../model/relay/copy";
 import type { TreasuryRow } from "../model/relay/rows";
 import { shortAddress } from "../model/stage";
@@ -34,6 +36,7 @@ import { type DataColumn, DataTable } from "../shell/DataTable";
 import { ago, Btn, Card, PersonRow, Tag } from "../shell/kit";
 import { Figure, SourceLine, toneOf, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
+import type { KnownProposal } from "./useKnownProposals";
 
 const DAY = 86_400_000;
 /** An API wallet this close to its expiry is pointed out. */
@@ -228,6 +231,7 @@ export function OverviewTab({
 	state,
 	me,
 	treasury,
+	proposals,
 }: {
 	network: Network;
 	address: Address;
@@ -235,6 +239,8 @@ export function OverviewTab({
 	me: Address | null;
 	/** The relay's entry for this treasury; null when the relay cannot be asked. */
 	treasury: TreasuryRow | null;
+	/** The proposals on record, to say which one approved an API wallet. */
+	proposals: readonly KnownProposal[];
 }) {
 	const now = useNow();
 	const live = state.live;
@@ -426,6 +432,10 @@ export function OverviewTab({
 							{state.agents.map((g) => {
 								const expired = g.validUntil <= now;
 								const soon = !expired && g.validUntil - now < EXPIRES_SOON_MS;
+								const approvedBy = approvalOf(g.address, proposals);
+								const approval = approvedBy
+									? proposals.find((p) => p.digest === approvedBy)
+									: undefined;
 								return (
 									<PersonRow
 										key={g.address}
@@ -452,6 +462,18 @@ export function OverviewTab({
 										<span className="block text-xs text-subtle-foreground">
 											{expired ? "expired " : "expires "}
 											<When at={g.validUntil} />
+											{approval && (
+												<>
+													{" · approved through "}
+													<Link
+														to="/multisig/proposal"
+														search={{ digest: approval.digest }}
+														className="text-brand underline underline-offset-2"
+													>
+														{approval.title}
+													</Link>
+												</>
+											)}
 										</span>
 									</PersonRow>
 								);
