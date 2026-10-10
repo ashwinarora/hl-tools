@@ -32,6 +32,7 @@ import {
 	untilWorker,
 } from "#/test/relayStack";
 import { assembleProposal, removedSigners } from "../model/relay/assemble";
+import { acceptNicknames } from "../model/relay/nicknames";
 import { planPush, publishRow } from "../model/relay/push";
 import { buildSignInMessage } from "../model/relay/siwe";
 import {
@@ -40,6 +41,7 @@ import {
 	getProposal,
 	getRequest,
 	listEvents,
+	listNicknames,
 	listOpenProposals,
 	listProposalEvents,
 	listReports,
@@ -50,6 +52,7 @@ import {
 	removeSignature,
 	reportExecution,
 	requestTreasury,
+	setNickname,
 } from "./api";
 import { type ChannelState, subscribeWallet } from "./realtime";
 import { probeSession, sessionWallet, signIn, signOut } from "./session";
@@ -983,6 +986,138 @@ describe("a signer removed on chain", () => {
 		);
 		expect(t?.threshold).toBe(3);
 		expect(t?.signers).toHaveLength(3);
+	});
+});
+
+describe("nicknames", () => {
+	// by now the treasury's signers are a, b and c
+	const vendor = newAccount().address;
+	const vendor2 = newAccount().address;
+	let second: Address;
+	const namesIn = async (w: TestWallet, t: Address, signers: Address[]) => {
+		const rows = (await listNicknames(w.client)).data?.rows ?? [];
+		return Object.fromEntries(
+			[...acceptNicknames(rows, { network: NET, treasury: t, signers })].map(
+				([address, n]) => [address, n.name],
+			),
+		);
+	};
+	const name = (
+		w: TestWallet,
+		t: Address,
+		address: Address,
+		text: string | null,
+	) =>
+		setNickname(w.client, w.address, {
+			network: NET,
+			treasury: t,
+			address,
+			name: text,
+		});
+
+	beforeAll(async () => {
+		second = newAccount().address;
+		stub.answer(second, {
+			signers: [a.address, outsider.address],
+			threshold: 1,
+		});
+		expect((await add(a, second)).status).toBe("done");
+	});
+
+	it("is given by one signer and read by the co-signers, tidied", async () => {
+		expect(
+			(await name(a, treasury, vendor, "  The   Auditor ")).issue,
+		).toBeNull();
+		const signers = [a.address, b.address, c.address];
+		expect(await namesIn(b, treasury, signers)).toEqual({
+			[vendor]: "The Auditor",
+		});
+		// the treasury itself, and a signer's own address
+		expect((await name(b, treasury, treasury, "Operations")).issue).toBeNull();
+		expect((await name(a, treasury, a.address, "Alice")).issue).toBeNull();
+		expect(await namesIn(c, treasury, signers)).toEqual({
+			[vendor]: "The Auditor",
+			[treasury]: "Operations",
+			[a.address]: "Alice",
+		});
+	});
+
+	it("stays inside its treasury: the same address is unnamed, or named otherwise, in another", async () => {
+		const here = [a.address, outsider.address];
+		// outsider signs for the second treasury only: it reads none of the first one's names
+		expect(await namesIn(outsider, second, here)).toEqual({});
+		expect(
+			((await listNicknames(outsider.client)).data?.rows ?? []).filter(
+				(r) => r.treasury === treasury,
+			),
+		).toEqual([]);
+		expect((await name(outsider, second, vendor, "Lawyer")).issue).toBeNull();
+		expect((await name(a, second, a.address, "A.")).issue).toBeNull();
+		expect(await namesIn(a, second, here)).toEqual({
+			[vendor]: "Lawyer",
+			[a.address]: "A.",
+		});
+		// and the first treasury still says what it said
+		expect(
+			(await namesIn(a, treasury, [a.address, b.address, c.address]))[vendor],
+		).toBe("The Auditor");
+		// b signs for the first only
+		expect(
+			((await listNicknames(b.client)).data?.rows ?? []).some(
+				(r) => r.treasury === second,
+			),
+		).toBe(false);
+	});
+
+	it("leaves a signer's own name to that signer", async () => {
+		expect(codes((await name(b, treasury, a.address, "Boss")).issue)).toBe(
+			"relay.nickname_not_yours",
+		);
+		expect(codes((await name(b, treasury, a.address, null)).issue)).toBe(
+			"relay.nickname_not_yours",
+		);
+		expect(codes((await name(a, treasury, b.address, "Bob")).issue)).toBe(
+			"relay.nickname_not_yours",
+		);
+		expect((await name(a, treasury, a.address, null)).issue).toBeNull();
+		expect(
+			(await namesIn(b, treasury, [a.address, b.address, c.address]))[
+				a.address
+			],
+		).toBeUndefined();
+	});
+
+	it("refuses a name that reads like an address, and tells why", async () => {
+		const r = await name(a, treasury, vendor2, "0x5e7c…7216");
+		expect(codes(r.issue)).toBe("relay.nickname_invalid");
+		expect(r.issue?.message).toBe("A nickname cannot look like an address.");
+		expect(codes((await name(a, treasury, vendor2, "You")).issue)).toBe(
+			"relay.nickname_invalid",
+		);
+	});
+
+	it("gives a name to one address when two signers choose it at the same moment", async () => {
+		const results = await Promise.all([
+			name(a, treasury, vendor2, "Payroll"),
+			name(b, treasury, newAccount().address, "payroll"),
+		]);
+		expect(results.map((r) => codes(r.issue) ?? "ok").sort()).toEqual([
+			"ok",
+			"relay.nickname_taken",
+		]);
+		const names = Object.values(
+			await namesIn(c, treasury, [a.address, b.address, c.address]),
+		).filter((n) => n.toLowerCase() === "payroll");
+		expect(names).toHaveLength(1);
+	});
+
+	it("is closed to anyone who does not sign for that treasury", async () => {
+		expect(codes((await name(outsider, treasury, vendor, "Mine")).issue)).toBe(
+			"relay.not_allowed",
+		);
+		expect(codes((await name(b, second, vendor, "Mine")).issue)).toBe(
+			"relay.not_allowed",
+		);
 	});
 });
 

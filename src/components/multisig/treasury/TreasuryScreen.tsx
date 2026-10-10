@@ -1,7 +1,7 @@
 import { type Address, isNetwork, type Network } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Check, Pencil, X } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CopyButton } from "#/components/hub/CopyButton";
 import { Callout } from "#/components/hub/status";
@@ -10,7 +10,7 @@ import {
 	ADDRESS_RE,
 } from "#/components/tools/multisig/model";
 import { Button } from "#/components/ui/button";
-import { NAME_MAX, useMultisigPrefs } from "#/store/multisigPrefsStore";
+import { useMultisigPrefs } from "#/store/multisigPrefsStore";
 import {
 	useNetwork,
 	useNetworkHydrated,
@@ -24,6 +24,7 @@ import {
 } from "../model/relay/signers";
 import { shortAddress } from "../model/stage";
 import type { TreasuryTab } from "../model/tabs";
+import { TreasuryNames, useNames } from "../names/Names";
 import { requestTreasury } from "../relay/api";
 import { useOpenProposals } from "../relay/openProposals";
 import { useRequest, useTreasury } from "../relay/queries";
@@ -41,73 +42,30 @@ import { PendingTab } from "./PendingTab";
 import { SigningLogTab } from "./SigningLogTab";
 import { useKnownProposals } from "./useKnownProposals";
 
-/** The page title, renamable in place. The name stays in this browser. */
+/**
+ * The page title: the treasury's nickname, shared by its signers. The pencil
+ * opens the nickname dialog; a name this browser already had for the
+ * treasury is offered there as the starting value.
+ */
 function Title({ network, address }: { network: Network; address: Address }) {
-	const { name, nickname, rename } = useTreasuryName(network, address);
-	const [editing, setEditing] = useState(false);
-	const [draft, setDraft] = useState("");
-	if (editing) {
-		const save = () => {
-			rename(draft);
-			setEditing(false);
-		};
-		return (
-			<form
-				className="flex flex-wrap items-center gap-1.5"
-				onSubmit={(e) => {
-					e.preventDefault();
-					save();
-				}}
-			>
-				<input
-					// biome-ignore lint/a11y/noAutofocus: the field replaces the title the user just chose to edit
-					autoFocus
-					name="treasury-name"
-					autoComplete="off"
-					value={draft}
-					maxLength={NAME_MAX}
-					onChange={(e) => setDraft(e.target.value)}
-					onKeyDown={(e) => e.key === "Escape" && setEditing(false)}
-					placeholder={defaultTreasuryName(address)}
-					aria-label="A name for this treasury, kept in this browser"
-					className="h-9 w-[min(22rem,70vw)] rounded-md border border-border-strong bg-surface px-2.5 text-base font-semibold focus-visible:border-brand focus-visible:outline-none"
-				/>
-				<Button
-					type="submit"
-					size="icon-sm"
-					variant="ghost"
-					aria-label="Save the name"
-				>
-					<Check className="size-4" aria-hidden />
-				</Button>
-				<Button
-					type="button"
-					size="icon-sm"
-					variant="ghost"
-					aria-label="Cancel"
-					onClick={() => setEditing(false)}
-				>
-					<X className="size-4" aria-hidden />
-				</Button>
-			</form>
-		);
-	}
+	const { name, local } = useTreasuryName(network, address);
+	const names = useNames();
+	const can = !!names?.canName(address);
 	return (
 		<span className="inline-flex items-center gap-1.5">
 			{name}
-			<Button
-				size="icon-xs"
-				variant="ghost"
-				className="text-muted-foreground"
-				aria-label="Rename this treasury (the name stays in this browser)"
-				title="Rename (the name stays in this browser)"
-				onClick={() => {
-					setDraft(nickname ?? "");
-					setEditing(true);
-				}}
-			>
-				<Pencil aria-hidden />
-			</Button>
+			{can && (
+				<Button
+					size="icon-xs"
+					variant="ghost"
+					className="text-muted-foreground"
+					aria-label="Change this treasury's nickname"
+					title="Change this treasury's nickname (its signers see it)"
+					onClick={() => names?.edit(address, local ?? undefined)}
+				>
+					<Pencil aria-hidden />
+				</Button>
+			)}
 		</span>
 	);
 }
@@ -386,117 +344,121 @@ export function TreasuryScreen({
 			replace: true,
 		});
 
+	// who signs, as far as this page trusts: the chain's list once it is read
+	const signersNow = live.policy?.authorizedUsers ?? treasury.signers;
 	return (
-		<ShellPage
-			title={<Title network={network} address={address} />}
-			meta={
-				<>
-					<span
-						className="inline-flex items-center gap-1 font-mono"
-						title={address}
+		<TreasuryNames network={network} treasury={address} signers={signersNow}>
+			<ShellPage
+				title={<Title network={network} address={address} />}
+				meta={
+					<>
+						<span
+							className="inline-flex items-center gap-1 font-mono"
+							title={address}
+						>
+							{shortAddress(address)}
+							<CopyButton value={address} size="xs" />
+						</span>
+						<NetTag network={network} />
+						<span>
+							{frozen ? "was " : ""}
+							{treasury.threshold} of {treasury.signers.length} signers
+						</span>
+						{frozen && <Tag tone="warn">no longer a multi-sig</Tag>}
+						<SignsTag />
+					</>
+				}
+				actions={
+					frozen ? null : (
+						<Link
+							to="/multisig/propose"
+							search={{ treasury: address }}
+							className="inline-flex h-[34px] items-center justify-center whitespace-nowrap rounded-md bg-brand px-3.5 text-[13px] font-medium text-brand-foreground no-underline transition-colors hover:bg-brand/90"
+						>
+							Propose an action
+						</Link>
+					)
+				}
+			>
+				{frozen && (
+					<Callout
+						tone="warning"
+						title="This account is no longer a multi-sig"
+						className="mb-4"
 					>
-						{shortAddress(address)}
-						<CopyButton value={address} size="xs" />
-					</span>
-					<NetTag network={network} />
-					<span>
-						{frozen ? "was " : ""}
-						{treasury.threshold} of {treasury.signers.length} signers
-					</span>
-					{frozen && <Tag tone="warn">no longer a multi-sig</Tag>}
-					<SignsTag />
-				</>
-			}
-			actions={
-				frozen ? null : (
-					<Link
-						to="/multisig/propose"
-						search={{ treasury: address }}
-						className="inline-flex h-[34px] items-center justify-center whitespace-nowrap rounded-md bg-brand px-3.5 text-[13px] font-medium text-brand-foreground no-underline transition-colors hover:bg-brand/90"
+						Hyperliquid reports no signer set for it. Its history stays readable
+						for its last known signers, and nothing new can be proposed. If it
+						becomes a multi-sig again, it is picked up here by itself.
+					</Callout>
+				)}
+				{differs && diff && (
+					<Callout
+						tone="info"
+						title="Hyperliquid's signer list differs from the copy kept here"
+						className="mb-4"
 					>
-						Propose an action
-					</Link>
-				)
-			}
-		>
-			{frozen && (
-				<Callout
-					tone="warning"
-					title="This account is no longer a multi-sig"
-					className="mb-4"
-				>
-					Hyperliquid reports no signer set for it. Its history stays readable
-					for its last known signers, and nothing new can be proposed. If it
-					becomes a multi-sig again, it is picked up here by itself.
-				</Callout>
-			)}
-			{differs && diff && (
-				<Callout
-					tone="info"
-					title="Hyperliquid's signer list differs from the copy kept here"
-					className="mb-4"
-				>
-					{diff.noLongerMultisig
-						? "Hyperliquid no longer reports a signer set for this account. "
-						: diff.multisigAgain
-							? "Hyperliquid reports a signer set for this account again. "
-							: [
-									diff.added.length
-										? `Added on chain: ${diff.added.map(shortAddress).join(", ")}. `
-										: "",
-									diff.removed.length
-										? `Removed on chain: ${diff.removed.map(shortAddress).join(", ")}. `
-										: "",
-									diff.thresholdChanged && live.policy
-										? `Threshold on chain: ${live.policy.threshold}. `
-										: "",
-								].join("")}
-					{checking
-						? "The relay is looking it up now."
-						: "The relay has been asked to look again; this page updates by itself."}{" "}
-					Signatures are always counted against the live list.
-				</Callout>
-			)}
-			<TabList
-				label="Treasury sections"
-				value={tab}
-				onChange={setTab}
-				tabs={[
-					{ value: "overview", label: "Overview" },
-					{ value: "pending", label: "Pending", count: pending.length },
-					{ value: "log", label: "Signing log" },
-					{ value: "chain", label: "On Hyperliquid" },
-				]}
-			/>
-			{tab === "overview" && (
-				<OverviewTab
-					network={network}
-					address={address}
-					state={live}
-					me={me}
-					treasury={treasury}
-					proposals={known.proposals}
+						{diff.noLongerMultisig
+							? "Hyperliquid no longer reports a signer set for this account. "
+							: diff.multisigAgain
+								? "Hyperliquid reports a signer set for this account again. "
+								: [
+										diff.added.length
+											? `Added on chain: ${diff.added.map(shortAddress).join(", ")}. `
+											: "",
+										diff.removed.length
+											? `Removed on chain: ${diff.removed.map(shortAddress).join(", ")}. `
+											: "",
+										diff.thresholdChanged && live.policy
+											? `Threshold on chain: ${live.policy.threshold}. `
+											: "",
+									].join("")}
+						{checking
+							? "The relay is looking it up now."
+							: "The relay has been asked to look again; this page updates by itself."}{" "}
+						Signatures are always counted against the live list.
+					</Callout>
+				)}
+				<TabList
+					label="Treasury sections"
+					value={tab}
+					onChange={setTab}
+					tabs={[
+						{ value: "overview", label: "Overview" },
+						{ value: "pending", label: "Pending", count: pending.length },
+						{ value: "log", label: "Signing log" },
+						{ value: "chain", label: "On Hyperliquid" },
+					]}
 				/>
-			)}
-			{tab === "pending" && me && (
-				<PendingTab
-					items={pending}
-					loading={open.loading}
-					me={me}
-					frozen={frozen}
-				/>
-			)}
-			{tab === "log" && <SigningLogTab treasury={treasury} me={me} />}
-			{tab === "chain" && (
-				<ChainTab
-					network={network}
-					address={address}
-					state={live}
-					proposals={known.proposals}
-					proposalsState={known.state}
-					match={match}
-				/>
-			)}
-		</ShellPage>
+				{tab === "overview" && (
+					<OverviewTab
+						network={network}
+						address={address}
+						state={live}
+						me={me}
+						treasury={treasury}
+						proposals={known.proposals}
+					/>
+				)}
+				{tab === "pending" && me && (
+					<PendingTab
+						items={pending}
+						loading={open.loading}
+						me={me}
+						frozen={frozen}
+					/>
+				)}
+				{tab === "log" && <SigningLogTab treasury={treasury} me={me} />}
+				{tab === "chain" && (
+					<ChainTab
+						network={network}
+						address={address}
+						state={live}
+						proposals={known.proposals}
+						proposalsState={known.state}
+						match={match}
+					/>
+				)}
+			</ShellPage>
+		</TreasuryNames>
 	);
 }

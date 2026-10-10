@@ -30,7 +30,7 @@ import {
 } from "../model/chain/columns";
 import type { RowProposal } from "../model/chain/match";
 import type { HistoryPart } from "../model/live/account";
-import { shortAddress } from "../model/stage";
+import { Who } from "../names/Names";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Card } from "../shell/kit";
 import { SourceLine, toneOf, When } from "../shell/live";
@@ -229,9 +229,7 @@ export function ChainTab({
 							{w.party && (
 								<>
 									{" "}
-									<span className="font-mono" title={w.party}>
-										{shortAddress(w.party)}
-									</span>
+									<Who address={w.party} editable />
 								</>
 							)}
 						</>

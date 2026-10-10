@@ -11,16 +11,11 @@ import {
 	type Network,
 	type Proposal,
 } from "@hl-tools/core";
+import { joinParts, type Part, part, partsText, say } from "../parts";
 import { shortAddress } from "../stage";
 import { addressList, type EventRow } from "./rows";
 
-export interface Part {
-	readonly text: string;
-	/** The action line of a proposal. */
-	readonly strong?: boolean;
-	/** The proposal's title: unsigned, shown only to tell like actions apart. */
-	readonly quiet?: boolean;
-}
+export type { Part } from "../parts";
 
 export interface TimelineEntry {
 	/** The id of the (last) event behind this entry. */
@@ -38,20 +33,23 @@ export interface TimelineContext {
 	readonly title?: (digest: Hex) => string | null;
 }
 
-const t = (text: string): Part => ({ text });
-
 /** Newest first. A proposer's own signature right after proposing is folded into "proposed … and signed". */
 export function buildTimeline(
 	events: readonly EventRow[],
 	ctx: TimelineContext,
 ): TimelineEntry[] {
-	const subject = (a: Address | null) =>
-		!a ? "Someone" : a === ctx.me ? "You" : shortAddress(a);
-	const object = (a: Address | null) =>
-		!a ? "someone" : a === ctx.me ? "you" : shortAddress(a);
+	// who did it, at the start of a sentence and inside one
+	const subject = (a: Address | null): Part =>
+		!a
+			? part("Someone")
+			: { text: a === ctx.me ? "You" : shortAddress(a), who: a };
+	const object = (a: Address | null): Part =>
+		!a
+			? part("someone")
+			: { text: a === ctx.me ? "you" : shortAddress(a), who: a };
 	const action = (digest: Hex | null, start: boolean): Part[] => {
 		const line = digest ? ctx.line(digest) : null;
-		if (!line) return [t(start ? "A proposal" : "a proposal")];
+		if (!line) return [part(start ? "A proposal" : "a proposal")];
 		const title = digest ? ctx.title?.(digest) : null;
 		return title
 			? [
@@ -86,53 +84,46 @@ export function buildTimeline(
 		});
 		switch (e.kind) {
 			case "treasury_added": {
-				const signers = addressList(e.data.signers).map(object);
+				const signers = addressList(e.data.signers).map((a) => [object(a)]);
 				const threshold = Number(e.data.threshold);
 				out.push(
-					entry([
-						t(
-							`Treasury added by ${object(e.actor)}.${signers.length ? ` Signers: ${signers.join(", ")}.` : ""}${Number.isFinite(threshold) ? ` Threshold ${threshold}.` : ""}`,
-						),
-					]),
+					entry(
+						say`Treasury added by ${object(e.actor)}.${
+							signers.length ? say` Signers: ${joinParts(signers, ", ")}.` : ""
+						}${Number.isFinite(threshold) ? ` Threshold ${threshold}.` : ""}`,
+					),
 				);
 				break;
 			}
 			case "signers_changed": {
-				const added = addressList(e.data.added).map(
-					(a) => `${object(a)} added`,
-				);
-				const removed = addressList(e.data.removed).map(
-					(a) => `${object(a)} removed`,
-				);
+				const who = [
+					...addressList(e.data.added).map((a) => say`${object(a)} added`),
+					...addressList(e.data.removed).map((a) => say`${object(a)} removed`),
+				];
 				const before = Number(e.data.threshold_before);
 				const after = Number(e.data.threshold_after);
-				const who = [...added, ...removed];
 				const threshold =
 					before === after
 						? `Threshold stays ${after}.`
 						: `Threshold changed from ${before} to ${after}.`;
 				out.push(
-					entry([
-						t(
-							who.length
-								? `Signers changed: ${who.join(", ")}. ${threshold}`
-								: threshold,
-						),
-					]),
+					entry(
+						who.length
+							? say`Signers changed: ${joinParts(who, ", ")}. ${threshold}`
+							: say`${threshold}`,
+					),
 				);
 				break;
 			}
 			case "treasury_frozen":
 				out.push(
-					entry([
-						t(
-							"This account stopped being a multi-sig. Nothing new can be proposed; its history stays readable.",
-						),
-					]),
+					entry(
+						say`This account stopped being a multi-sig. Nothing new can be proposed; its history stays readable.`,
+					),
 				);
 				break;
 			case "treasury_unfrozen":
-				out.push(entry([t("This account is a multi-sig again.")]));
+				out.push(entry(say`This account is a multi-sig again.`));
 				break;
 			case "proposal_created": {
 				// the next event of the same proposal, if it is the proposer signing
@@ -145,13 +136,9 @@ export function buildTimeline(
 				const finaliser = addressList([e.data.finaliser])[0] ?? null;
 				out.push(
 					entry(
-						[
-							t(`${subject(e.actor)} proposed `),
-							...action(e.digest, false),
-							t(
-								`${signedToo ? " and signed" : ""}.${finaliser ? ` Finaliser: ${object(finaliser)}.` : ""}`,
-							),
-						],
+						say`${subject(e.actor)} proposed ${action(e.digest, false)}${
+							signedToo ? " and signed" : ""
+						}.${finaliser ? say` Finaliser: ${object(finaliser)}.` : ""}`,
 						signedToo && next ? next.id : e.id,
 					),
 				);
@@ -159,79 +146,57 @@ export function buildTimeline(
 			}
 			case "signature_added":
 				out.push(
-					entry([
-						t(`${subject(e.actor)} signed `),
-						...action(e.digest, false),
-						t("."),
-					]),
+					entry(say`${subject(e.actor)} signed ${action(e.digest, false)}.`),
 				);
 				break;
 			case "signature_removed":
 				out.push(
-					entry([
-						t(
-							e.actor && e.actor === ctx.me
-								? "You took back your signature on "
-								: `${subject(e.actor)} took back their signature on `,
-						),
-						...action(e.digest, false),
-						t("."),
-					]),
+					entry(
+						e.actor && e.actor === ctx.me
+							? say`${subject(e.actor)} took back your signature on ${action(e.digest, false)}.`
+							: say`${subject(e.actor)} took back their signature on ${action(e.digest, false)}.`,
+					),
 				);
 				break;
 			case "proposal_withdrawn":
 				out.push(
-					entry([
-						...action(e.digest, true),
-						t(` was withdrawn by the proposer, ${object(e.actor)}.`),
-					]),
+					entry(
+						say`${action(e.digest, true)} was withdrawn by the proposer, ${object(e.actor)}.`,
+					),
 				);
 				break;
 			case "proposal_declined":
 				out.push(
-					entry([
-						...action(e.digest, true),
-						t(` was declined by the finaliser, ${object(e.actor)}.`),
-					]),
+					entry(
+						say`${action(e.digest, true)} was declined by the finaliser, ${object(e.actor)}.`,
+					),
 				);
 				break;
 			case "proposal_carried_out": {
 				if (acceptedHere.has(e.digest)) break;
 				const noticed = addressList([e.data.reported_by])[0] ?? null;
 				out.push(
-					entry([
-						...action(e.digest, true),
-						t(
-							` was carried out outside this tool. The relay checked the transaction on Hyperliquid${noticed ? `; ${object(noticed)} noticed it` : ""}.`,
-						),
-					]),
+					entry(
+						say`${action(e.digest, true)} was carried out outside this tool. The relay checked the transaction on Hyperliquid${
+							noticed ? say`; ${object(noticed)} noticed it` : ""
+						}.`,
+					),
 				);
 				break;
 			}
 			case "unknown":
 				out.push(
-					entry([
-						t(
-							`An entry this version of the page cannot describe (“${e.rawKind}”).`,
-						),
-					]),
+					entry(
+						say`An entry this version of the page cannot describe (“${e.rawKind}”).`,
+					),
 				);
 				break;
 			case "submission_recorded":
 				out.push(
 					entry(
 						e.data.accepted === true
-							? [
-									...action(e.digest, true),
-									t(
-										` was accepted by Hyperliquid. Submitted by ${object(e.actor)}.`,
-									),
-								]
-							: [
-									t("Hyperliquid rejected "),
-									...action(e.digest, false),
-									t(`. Submitted by ${object(e.actor)}; it can be retried.`),
-								],
+							? say`${action(e.digest, true)} was accepted by Hyperliquid. Submitted by ${object(e.actor)}.`
+							: say`Hyperliquid rejected ${action(e.digest, false)}. Submitted by ${object(e.actor)}; it can be retried.`,
 					),
 				);
 				break;
@@ -241,7 +206,7 @@ export function buildTimeline(
 }
 
 export function entryText(e: TimelineEntry): string {
-	return e.parts.map((p) => p.text).join("");
+	return partsText(e.parts);
 }
 
 export function historyFilename(network: Network, treasury: Address): string {

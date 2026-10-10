@@ -9,6 +9,9 @@ import {
 } from "#/components/hub/layout";
 import { Callout } from "#/components/hub/status";
 import type { ActionForm } from "../model/actions";
+import { RELAY_COPY } from "../model/relay/copy";
+import { shortAddress } from "../model/stage";
+import { useNames, Who } from "../names/Names";
 
 export interface TokenOption {
 	readonly index: number;
@@ -29,6 +32,61 @@ function tokenGroups(
 		{ label: "Held by this account", tokens: mine },
 		{ label: "All spot tokens", tokens: rest },
 	].filter((g) => g.tokens.length > 0);
+}
+
+const ADDRESS = /^0x[0-9a-f]{40}$/;
+
+/**
+ * Under the destination field: the treasury's nicknamed addresses to pick
+ * from, and, once an address is typed or picked, who it is here. A nickname
+ * is a label a signer typed: the whole address is shown with it, and that
+ * address is what gets signed.
+ */
+function DestinationNames({
+	value,
+	onPick,
+}: {
+	value: string;
+	onPick: (address: string) => void;
+}) {
+	const names = useNames();
+	if (!names) return null;
+	const typed = value.trim().toLowerCase();
+	const known = ADDRESS.test(typed) ? names.of(typed) : null;
+	const choices = [...names.all]
+		// the treasury does not pay itself
+		.filter(([address]) => address !== names.treasury && address !== typed)
+		.sort((a, b) => a[1].name.localeCompare(b[1].name));
+	return (
+		<div className="mt-2 flex flex-col gap-2">
+			{known && (
+				<p className="rounded-md border border-border bg-surface-2 px-2.5 py-2 text-xs">
+					<Who address={typed} full />
+				</p>
+			)}
+			{choices.length > 0 && (
+				<div className="flex flex-wrap items-center gap-1.5">
+					<span className="text-xs text-subtle-foreground">
+						{RELAY_COPY.nicknamePick}
+					</span>
+					{choices.map(([address, n]) => (
+						<button
+							key={address}
+							type="button"
+							onClick={() => onPick(address)}
+							title={address}
+							className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2 py-0.5 text-xs transition-colors hover:bg-surface-2"
+						>
+							<span className="font-medium">{n.name}</span>
+							<span className="font-mono text-subtle-foreground">
+								{shortAddress(address)}
+							</span>
+						</button>
+					))}
+				</div>
+			)}
+		</div>
+	);
 }
 
 /** The inputs of the chosen action. Errors come from the model, keyed by field. */
@@ -65,6 +123,10 @@ export function ActionFields({
 				onBlur={(e) => set("destination", e.target.value.trim().toLowerCase())}
 				placeholder="0x…"
 				aria-invalid={!!error("destination")}
+			/>
+			<DestinationNames
+				value={form.destination}
+				onPick={(a) => set("destination", a)}
 			/>
 		</Field>
 	);

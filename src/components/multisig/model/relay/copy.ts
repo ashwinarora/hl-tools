@@ -41,6 +41,18 @@ export const RELAY_COPY = {
 		"As reported by the finaliser's browser. The ledger is the proof.",
 	addMeta:
 		"Paste its address once. After that, every co-signer who signs in sees it automatically.",
+	// Nicknames. They are shared with the treasury's signers through the relay,
+	// so none of this may call them the reader's own secret.
+	nicknameScope:
+		"Used only in this treasury: its signers see it, and it is shown nowhere else. The address stays visible next to it.",
+	nicknameOwn:
+		"This is your own address: nobody else can choose its nickname here.",
+	nicknameTreasury: "Any signer of this treasury can change it.",
+	nicknameOther:
+		"Any signer of this treasury can change it. Nothing is signed.",
+	nicknameHint: "Up to 40 characters. A nickname cannot look like an address.",
+	nicknameWhere: "Used only in this treasury.",
+	nicknamePick: "Nicknamed in this treasury:",
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;

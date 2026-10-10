@@ -30,8 +30,8 @@ import {
 import { approvalOf } from "../model/chain/match";
 import { RELAY_COPY } from "../model/relay/copy";
 import type { TreasuryRow } from "../model/relay/rows";
-import { shortAddress } from "../model/stage";
 import { fromNow } from "../model/time";
+import { Who } from "../names/Names";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { ago, Btn, Card, PersonRow, Tag } from "../shell/kit";
 import { Figure, SourceLine, toneOf, useNow, When } from "../shell/live";
@@ -405,10 +405,7 @@ export function OverviewTab({
 								key={a}
 								trailing={a === me ? <Tag tone="you">you</Tag> : null}
 							>
-								<span className="font-mono text-[13px]" title={a}>
-									<span className="hidden min-[1101px]:inline">{a}</span>
-									<span className="min-[1101px]:hidden">{shortAddress(a)}</span>
-								</span>
+								<Who address={a} editable className="text-[13px]" />
 							</PersonRow>
 						))
 					)}
@@ -453,12 +450,11 @@ export function OverviewTab({
 										<b className="text-sm font-semibold">
 											{g.name || "(unnamed)"}
 										</b>{" "}
-										<span
-											className="font-mono text-[13px] text-muted-foreground"
-											title={g.address}
-										>
-											{shortAddress(g.address)}
-										</span>
+										<Who
+											address={g.address}
+											editable
+											className="text-[13px] text-muted-foreground"
+										/>
 										<span className="block text-xs text-subtle-foreground">
 											{expired ? "expired " : "expires "}
 											<When at={g.validUntil} />
@@ -491,12 +487,11 @@ export function OverviewTab({
 				<div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3 text-xs text-muted-foreground">
 					<span>
 						Added to this tool by{" "}
-						<span
-							className="font-mono text-foreground"
-							title={treasury.addedBy}
-						>
-							{treasury.addedBy === me ? "you" : shortAddress(treasury.addedBy)}
-						</span>{" "}
+						{treasury.addedBy === me ? (
+							<span className="text-foreground">you</span>
+						) : (
+							<Who address={treasury.addedBy} className="text-foreground" />
+						)}{" "}
 						on <When at={treasury.createdAt} />.
 						{treasury.addedBy !== me && ` ${RELAY_COPY.addedByOther}`}
 					</span>

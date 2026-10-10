@@ -55,6 +55,19 @@ const REFUSALS: Record<string, Known> = {
 		message:
 			"Another proposal has the same action and number with a different finaliser, so Hyperliquid's record cannot tell which one was carried out.",
 	},
+	"relay.nickname_invalid": {
+		message: "That nickname cannot be used.",
+	},
+	"relay.nickname_not_yours": {
+		message: "Only that signer can choose the nickname of their own address.",
+	},
+	"relay.nickname_taken": {
+		message: "Another address in this treasury already has that nickname.",
+	},
+	"relay.nickname_cap": {
+		message: "A treasury keeps at most 500 nicknames.",
+		fix: "Take away one that is no longer needed.",
+	},
 	"relay.not_proposer": {
 		message: "Only the wallet that proposed it can withdraw a proposal.",
 	},

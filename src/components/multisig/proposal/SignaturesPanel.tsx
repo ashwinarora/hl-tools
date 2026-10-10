@@ -1,5 +1,5 @@
 import type { Address, Policy, Proposal } from "@hl-tools/core";
-import { shortAddress } from "../model/stage";
+import { Who } from "../names/Names";
 import { Card, PersonRow, Pips, Tag } from "../shell/kit";
 
 /**
@@ -64,9 +64,7 @@ export function SignaturesPanel({
 								)
 							}
 						>
-							<span className="font-mono text-[13px]" title={a}>
-								{shortAddress(a)}
-							</span>{" "}
+							<Who address={a} className="text-[13px]" />{" "}
 							{a === me && <Tag tone="you">you</Tag>}{" "}
 							{a === finaliser && <Tag>finaliser</Tag>}
 						</PersonRow>
@@ -75,14 +73,20 @@ export function SignaturesPanel({
 			)}
 			{former.length > 0 && (
 				<p className="mt-2.5 text-xs text-muted-foreground">
-					Also signed by {former.map(shortAddress).join(", ")}, not in the
-					current signer set: {former.length === 1 ? "it does" : "they do"} not
-					count.
+					Also signed by{" "}
+					{former.map((a, i) => (
+						<span key={a}>
+							{i > 0 && ", "}
+							<Who address={a} />
+						</span>
+					))}
+					, not in the current signer set:{" "}
+					{former.length === 1 ? "it does" : "they do"} not count.
 				</p>
 			)}
 			{policy && signers.length > 0 && !signers.includes(finaliser) && (
 				<p className="mt-2.5 text-xs text-warning">
-					The finaliser {shortAddress(finaliser)} is not in the current signer
+					The finaliser <Who address={finaliser} /> is not in the current signer
 					set.
 				</p>
 			)}

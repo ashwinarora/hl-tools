@@ -6,6 +6,7 @@
  * by recovering it.)
  */
 import type { Address, Hex, Network } from "@hl-tools/core";
+import type { NicknameRow } from "./nicknames";
 
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 const HASH32 = /^0x[0-9a-f]{64}$/;
@@ -341,6 +342,18 @@ export function reportRows(data: unknown): Parsed<ReportRow> {
 		reason: optional(r.reason, text),
 		createdAt: time(r.created_at),
 		finishedAt: optional(r.finished_at, time),
+	}));
+}
+
+/** Shape only: whether a nickname may be shown is decided by `acceptNicknames`. */
+export function nicknameRows(data: unknown): Parsed<NicknameRow> {
+	return each(data, (r) => ({
+		network: network(r.network),
+		treasury: address(r.treasury),
+		address: address(r.address),
+		name: text(r.name),
+		setBy: address(r.set_by),
+		setAt: time(r.set_at),
 	}));
 }
 

@@ -2,7 +2,7 @@ import type { Address } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { FLAG_TEXT } from "#/components/tools/multisig/EnvelopeView";
 import { inboxGroup } from "../model/relay/inbox";
-import { shortAddress } from "../model/stage";
+import { NamesFor, Who } from "../names/Names";
 import type { OpenProposal } from "../relay/openProposals";
 import { Pips, Tag } from "../shell/kit";
 
@@ -41,7 +41,14 @@ export function ProposalRows({
 								{treasuryName && <span>{treasuryName(p)}</span>}
 								{p.title && <span>{p.title}</span>}
 								<span>
-									by {p.createdBy === me ? "you" : shortAddress(p.createdBy)}
+									by{" "}
+									{p.createdBy === me ? (
+										"you"
+									) : (
+										<NamesFor network={p.network} treasury={p.treasury}>
+											<Who address={p.createdBy} />
+										</NamesFor>
+									)}
 								</span>
 								{p.flags.map((f) => (
 									<Tag

@@ -16,6 +16,7 @@ import {
 } from "@hl-tools/core";
 import { chainIdToNumber, chainLabel } from "./chains";
 import { describeWindow, type WindowInfo } from "./nonce";
+import { joinParts, type Part, partsText, say } from "./parts";
 
 export type WalletRole =
 	| "disconnected"
@@ -99,6 +100,9 @@ export interface Stage {
 	readonly window: WindowInfo;
 	readonly headline: string;
 	readonly detail: string;
+	/** The two sentences with their addresses and moments marked (see model/parts). */
+	readonly headlineParts: readonly Part[];
+	readonly detailParts: readonly Part[];
 }
 
 export const shortAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
@@ -176,80 +180,84 @@ export function deriveStage(input: StageInput): Stage {
 		p.meta.kind === "user-signed" &&
 		(p.payload.vaultAddress !== null || p.payload.expiresAfter !== null);
 
+	const who = (a: string): Part => ({ text: shortAddress(a), who: a });
 	let phase: Phase;
-	let headline: string;
-	let detail: string;
+	let head: Part[];
+	let body: Part[];
 	if (accepted) {
+		const at = p.receipt?.submittedAt ?? 0;
 		phase = "submitted";
-		headline = "Submitted · accepted by Hyperliquid";
-		detail = `Submitted ${new Date(p.receipt?.submittedAt ?? 0).toISOString()}. Nothing more to sign.`;
+		head = say`Submitted · accepted by Hyperliquid`;
+		body = say`Submitted ${{ text: new Date(at).toISOString(), when: at }}. Nothing more to sign.`;
 	} else if (input.carriedOut) {
 		phase = "carried-out";
-		headline = "Carried out outside this tool";
-		detail =
-			"Hyperliquid carried this action out, but its result was never recorded here: it was submitted some other way. The relay checked the transaction itself. Nothing more to sign.";
+		head = say`Carried out outside this tool`;
+		body = say`Hyperliquid carried this action out, but its result was never recorded here: it was submitted some other way. The relay checked the transaction itself. Nothing more to sign.`;
 	} else if (input.closedUnknown) {
 		phase = "closed";
-		headline = "Closed";
-		detail =
-			"The relay marks this proposal as closed in a way this version of the page does not know. Reload the page to get the current one.";
+		head = say`Closed`;
+		body = say`The relay marks this proposal as closed in a way this version of the page does not know. Reload the page to get the current one.`;
 	} else if (input.ended?.kind === "withdrawn") {
 		phase = "withdrawn";
-		headline = `Withdrawn by the proposer, ${shortAddress(input.ended.by)}`;
-		detail = `Signatures already given remain valid on chain until the window closes (${window.text}), and only the finaliser ${shortAddress(leader)} could still submit it.`;
+		head = say`Withdrawn by the proposer, ${who(input.ended.by)}`;
+		body = say`Signatures already given remain valid on chain until the window closes (${window.parts}), and only the finaliser ${who(leader)} could still submit it.`;
 	} else if (input.ended?.kind === "declined") {
 		phase = "declined";
-		headline = `Declined by the finaliser, ${shortAddress(input.ended.by)}`;
-		detail =
-			"It will not be submitted. Re-propose it with a different finaliser if it is still wanted.";
+		head = say`Declined by the finaliser, ${who(input.ended.by)}`;
+		body = say`It will not be submitted. Re-propose it with a different finaliser if it is still wanted.`;
 	} else if (p.meta.kind === "l1") {
 		phase = "unsupported";
-		headline = "An L1 action: inspect only";
-		detail =
-			"Orders, cancels and other L1 actions are outside the signer. It can be read and checked here, not signed.";
+		head = say`An L1 action: inspect only`;
+		body = say`Orders, cancels and other L1 actions are outside the signer. It can be read and checked here, not signed.`;
 	} else if (unsignedFields) {
 		phase = "unsupported";
-		headline = "This document sets a vault address or an expiry";
-		detail =
-			"Signers of a user-signed action do not sign those two fields, so anyone could have added them. This page will not sign or submit it.";
+		head = say`This document sets a vault address or an expiry`;
+		body = say`Signers of a user-signed action do not sign those two fields, so anyone could have added them. This page will not sign or submit it.`;
 	} else if (!r) {
 		phase = "judging";
-		headline = "Checking signatures…";
-		detail = "Recovering every signer and fetching the live signer set.";
+		head = say`Checking signatures…`;
+		body = say`Recovering every signer and fetching the live signer set.`;
 	} else if (r.status === "expired") {
 		phase = "expired";
-		headline = "Expired";
-		detail = `The signing window ${window.text}. Re-propose it with a fresh nonce; collected signatures do not carry over.`;
+		head = say`Expired`;
+		body = say`The signing window ${window.parts}. Re-propose it with a fresh nonce; collected signatures do not carry over.`;
 	} else if (r.status === "not-multisig") {
 		phase = "not-multisig";
-		headline = `Not a multi-sig on ${p.payload.network}`;
-		detail = `${shortAddress(p.payload.multiSigUser)} has no signer set there, so no signature can count.`;
+		head = say`Not a multi-sig on ${p.payload.network}`;
+		body = say`${who(p.payload.multiSigUser)} has no signer set there, so no signature can count.`;
 	} else if (r.status === "unknown") {
 		phase = "unknown";
-		headline = "Signer set not loaded";
-		detail =
-			"The signer set could not be fetched, so nothing can be judged yet.";
+		head = say`Signer set not loaded`;
+		body = say`The signer set could not be fetched, so nothing can be judged yet.`;
 	} else if (r.status === "not-yet-valid") {
 		phase = "not-yet-valid";
-		headline = `Not submittable yet · ${r.have} of ${r.need}`;
-		detail = `The signing window ${window.text}. Signers can sign in the meantime.`;
+		head = say`Not submittable yet · ${String(r.have)} of ${String(r.need)}`;
+		body = say`The signing window ${window.parts}. Signers can sign in the meantime.`;
 	} else if (finaliserLeft(p, policy)) {
 		// counted before "ready": enough signatures change nothing when nobody can submit
 		phase = "stuck";
-		headline = "Cannot be finished";
-		detail = `Only the finaliser can submit a proposal, and ${isLeader ? "your wallet" : shortAddress(leader)} is no longer one of this treasury's signers. Withdraw it and propose it again with another finaliser.`;
+		head = say`Cannot be finished`;
+		body = say`Only the finaliser can submit a proposal, and ${isLeader ? "your wallet" : who(leader)} is no longer one of this treasury's signers. Withdraw it and propose it again with another finaliser.`;
 	} else if (r.status === "ready") {
 		phase = "ready";
-		headline = `Ready · ${r.have} of ${r.need} signatures`;
-		detail = isLeader
-			? `You are the finaliser: submit it when you are ready · ${window.text}.`
-			: `The finaliser ${shortAddress(leader)} signs the envelope and submits · ${window.text}.`;
+		head = say`Ready · ${String(r.have)} of ${String(r.need)} signatures`;
+		body = isLeader
+			? say`You are the finaliser: submit it when you are ready · ${window.parts}.`
+			: say`The finaliser ${who(leader)} signs the envelope and submits · ${window.parts}.`;
 	} else {
 		phase = "collecting";
-		headline = `Collecting signatures · ${r.have} of ${r.need}`;
-		const who = r.missing.map(shortAddress).join(", ");
-		detail = `${who ? `${who} can still sign · ` : ""}${window.text}.`;
+		head = say`Collecting signatures · ${String(r.have)} of ${String(r.need)}`;
+		const missing = joinParts(
+			// the reader is "you", first
+			[...r.missing]
+				.sort((a, b) => Number(b === wallet) - Number(a === wallet))
+				.map((a) => [a === wallet ? { text: "you", who: a } : who(a)]),
+			", ",
+		);
+		body = say`${missing.length ? say`${missing} can still sign · ` : ""}${window.parts}.`;
 	}
+	const headline = partsText(head);
+	const detail = partsText(body);
 
 	const networkMismatch =
 		input.headerNetwork !== undefined &&
@@ -315,5 +323,7 @@ export function deriveStage(input: StageInput): Stage {
 		window,
 		headline,
 		detail,
+		headlineParts: head,
+		detailParts: body,
 	};
 }

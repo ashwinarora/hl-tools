@@ -46,17 +46,55 @@ describe("buildTimeline", () => {
 		]);
 	});
 
-	it("marks the action line, and only it, as the strong part", () => {
+	it("marks the action line as the strong part, and names whose address a part is", () => {
 		const [entry] = buildTimeline(
 			[eventRow("signature_added", { id: 1, digest: D1, actor: B })],
 			ctx(),
 		);
 		expect(entry?.parts).toEqual([
-			{ text: `${short(B)} signed ` },
+			// a screen may show B's nickname here; the text stays the plain address
+			{ text: short(B), who: B },
+			{ text: " signed " },
 			{ text: "Send 120 USDC to 0x9a01…77c2", strong: true },
 			{ text: "." },
 		]);
 		expect(entry?.digest).toBe(D1);
+		// the reader is named as "You", and still as an address a screen can recognise
+		const [mine] = buildTimeline(
+			[eventRow("signature_added", { id: 1, digest: D1, actor: A })],
+			ctx(),
+		);
+		expect(mine?.parts[0]).toEqual({ text: "You", who: A });
+		// nobody is nobody's address
+		const [nobody] = buildTimeline(
+			[eventRow("signature_added", { id: 1, digest: D1, actor: null })],
+			ctx(),
+		);
+		expect(nobody?.parts[0]).toEqual({ text: "Someone signed " });
+	});
+
+	it("names every address in a list as a part of its own", () => {
+		const [entry] = buildTimeline(
+			[
+				eventRow("treasury_added", {
+					id: 1,
+					actor: A,
+					data: { signers: [A, B, C], threshold: 2 },
+				}),
+			],
+			ctx(B),
+		);
+		expect(
+			entry?.parts.filter((p) => p.who).map((p) => [p.text, p.who]),
+		).toEqual([
+			[short(A), A],
+			[short(A), A],
+			["you", B],
+			[short(C), C],
+		]);
+		expect(entryText(entry as never)).toBe(
+			`Treasury added by ${short(A)}. Signers: ${short(A)}, you, ${short(C)}. Threshold 2.`,
+		);
 	});
 
 	it("adds the proposal's title after the action, quietly, to tell like actions apart", () => {
@@ -70,7 +108,8 @@ describe("buildTimeline", () => {
 			titled,
 		);
 		expect(entry?.parts).toEqual([
-			{ text: `${short(B)} signed ` },
+			{ text: short(B), who: B },
+			{ text: " signed " },
 			{ text: "Send 120 USDC to 0x9a01…77c2", strong: true },
 			{ text: " (“October payout”)", quiet: true },
 			{ text: "." },

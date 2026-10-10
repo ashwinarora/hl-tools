@@ -471,4 +471,54 @@ describe("deriveStage", () => {
 		).toBe(false);
 		expect(finaliserLeft(p, { ...POLICY, authorizedUsers: [A, C] })).toBe(true);
 	});
+
+	it("marks the addresses and moments in its sentences, so a screen can show nicknames and local time", async () => {
+		const collecting = await stage(await signAs(makeProposal(), 1));
+		// B and C have not signed; the window closes two days after the nonce
+		expect(
+			collecting.detailParts.filter((p) => p.who).map((p) => p.who),
+		).toEqual([B, C].sort());
+		expect(collecting.detailParts.find((p) => p.when)?.when).toBe(
+			NONCE + 2 * DAY,
+		);
+		// the plain strings are the parts read as text: nothing else changed
+		expect(collecting.detailParts.map((p) => p.text).join("")).toBe(
+			collecting.detail,
+		);
+		expect(collecting.headlineParts.map((p) => p.text).join("")).toBe(
+			collecting.headline,
+		);
+
+		const withdrawn = await stage(makeProposal(), {
+			ended: { kind: "withdrawn", by: A },
+		});
+		expect(withdrawn.headlineParts).toEqual([
+			{ text: "Withdrawn by the proposer, " },
+			{ text: shortAddress(A), who: A },
+		]);
+		expect(withdrawn.detailParts.filter((p) => p.who)).toEqual([
+			{ text: shortAddress(B), who: B },
+		]);
+
+		const done = await stage({ ...makeProposal(), receipt: OK });
+		expect(done.detailParts.find((p) => p.when)).toEqual({
+			text: new Date(NOW).toISOString(),
+			when: NOW,
+		});
+
+		// the reader, among those who can still sign, is "you" and comes first
+		const mine = await stage(await signAs(makeProposal(), 1), { wallet: C });
+		expect(mine.detail).toContain(`you, ${shortAddress(B)} can still sign`);
+		expect(mine.detailParts.find((p) => p.text === "you")).toEqual({
+			text: "you",
+			who: C,
+		});
+
+		// "your wallet" is words, not an address to look up
+		const stuck = await stage(makeProposal(), {
+			policy: { ...POLICY, authorizedUsers: [A, C] },
+			wallet: B,
+		});
+		expect(stuck.detailParts.some((p) => p.who)).toBe(false);
+	});
 });

@@ -5,6 +5,7 @@
  * almost three.
  */
 import { nonceWindow } from "@hl-tools/core";
+import { type Part, partsText, say } from "./parts";
 
 export type NonceMode = "now" | "extended";
 
@@ -21,6 +22,8 @@ export interface WindowInfo {
 	/** Whole hours until the window closes (0 once closed). */
 	readonly hoursLeft: number;
 	readonly text: string;
+	/** The same sentence with its moments marked, so a screen can show them in local time. */
+	readonly parts: readonly Part[];
 }
 
 const minute = (ms: number) =>
@@ -30,11 +33,19 @@ export function describeWindow(nonce: number, now: number): WindowInfo {
 	const { validFrom, validUntil } = nonceWindow(nonce);
 	const submittableNow = now > validFrom && now < validUntil;
 	const hoursLeft = Math.max(0, Math.floor((validUntil - now) / 3_600_000));
-	const text =
+	const at = (ms: number): Part => ({ text: minute(ms), when: ms });
+	const parts =
 		now >= validUntil
-			? `closed ${minute(validUntil)}`
+			? say`closed ${at(validUntil)}`
 			: now <= validFrom
-				? `opens ${minute(validFrom)}, closes ${minute(validUntil)}`
-				: `submittable until ${minute(validUntil)} (${hoursLeft} h left)`;
-	return { validFrom, validUntil, submittableNow, hoursLeft, text };
+				? say`opens ${at(validFrom)}, closes ${at(validUntil)}`
+				: say`submittable until ${at(validUntil)} (${String(hoursLeft)} h left)`;
+	return {
+		validFrom,
+		validUntil,
+		submittableNow,
+		hoursLeft,
+		text: partsText(parts),
+		parts,
+	};
 }

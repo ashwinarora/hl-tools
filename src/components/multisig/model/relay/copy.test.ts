@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FORBIDDEN_CLAIMS, RELAY_COPY } from "./copy";
 import { REFUSAL_TEXTS } from "./errors";
+import { nicknameProblem } from "./nicknames";
 import { SIGN_IN_STATEMENT } from "./siwe";
 
 describe("relay copy", () => {
@@ -8,6 +9,11 @@ describe("relay copy", () => {
 		...Object.entries(RELAY_COPY),
 		["sign-in statement", SIGN_IN_STATEMENT],
 		...REFUSAL_TEXTS.map((t, i): [string, string] => [`refusal ${i}`, t]),
+		// what the page says when it refuses a nickname before asking the relay
+		...["", "0xabc", "You", "x".repeat(41), `a${String.fromCodePoint(0x200b)}b`]
+			.map((name) => nicknameProblem(name))
+			.filter((t): t is string => t !== null)
+			.map((t, i): [string, string] => [`nickname rule ${i}`, t]),
 	];
 
 	it.each(

@@ -56,6 +56,7 @@ import { describeWindow, type NonceMode, nonceFor } from "../model/nonce";
 import { RELAY_COPY } from "../model/relay/copy";
 import { publishRow } from "../model/relay/push";
 import { linkTransport } from "../model/transport";
+import { TreasuryNames, useNames } from "../names/Names";
 import { addSignature, publishProposal } from "../relay/api";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -309,318 +310,350 @@ export function ProposeScreen({
 	}
 
 	return (
-		<ShellPage
-			title="Propose an action"
-			back={
-				inList ? (
-					<Link
-						to="/multisig/t/$network/$address"
-						params={{ network, address }}
-						className={shellBack}
-					>
-						◂ {nameOf(network, address as Address)}
-					</Link>
-				) : (
-					<Link to="/multisig/open" className={shellBack}>
-						◂ Open or start
-					</Link>
-				)
-			}
-			meta={
-				<>
-					<span className={inList ? undefined : "font-mono"} title={address}>
-						{inList ? nameOf(network, address as Address) : short(address)}
-					</span>
-					{hydrated && <NetTag network={network} />}
-					{state.policy && state.policy.authorizedUsers.length > 0 && (
-						<span>
-							{state.policy.threshold} of {state.policy.authorizedUsers.length}{" "}
-							signers
-						</span>
-					)}
-					<SignsTag />
-				</>
-			}
+		<TreasuryNames
+			network={network}
+			treasury={(address ?? ZERO) as Address}
+			signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
 		>
-			<Workspace
-				input={
+			<ShellPage
+				title="Propose an action"
+				back={
+					inList ? (
+						<Link
+							to="/multisig/t/$network/$address"
+							params={{ network, address }}
+							className={shellBack}
+						>
+							◂ {nameOf(network, address as Address)}
+						</Link>
+					) : (
+						<Link to="/multisig/open" className={shellBack}>
+							◂ Open or start
+						</Link>
+					)
+				}
+				meta={
 					<>
-						<TreasuryStrip state={state} wallet={wallet.address} />
-						{superseded && (
-							<Callout tone="info" title="Re-proposing">
-								Started from the proposal {short(superseded.digest)}. This is a
-								new proposal with a new nonce: signatures do not carry over.
-							</Callout>
+						<span className={inList ? undefined : "font-mono"} title={address}>
+							{inList ? nameOf(network, address as Address) : short(address)}
+						</span>
+						{hydrated && <NetTag network={network} />}
+						{state.policy && state.policy.authorizedUsers.length > 0 && (
+							<span>
+								{state.policy.threshold} of{" "}
+								{state.policy.authorizedUsers.length} signers
+							</span>
 						)}
-						<Panel
-							title="Action"
-							description={
-								ACTION_KINDS.find((k) => k.kind === form.kind)?.description
-							}
-						>
-							<div className="space-y-4">
-								<Segmented<ActionKind>
-									label="Action"
-									value={form.kind}
-									onChange={(v) => set("kind", v)}
-									options={ACTION_KINDS.map((k) => ({
-										value: k.kind,
-										label: k.label,
-									}))}
-								/>
-								<ActionFields
-									form={form}
-									set={set}
-									error={error}
-									network={network}
-									tokens={universe.data?.tokens ?? null}
-									held={
-										state.spot
-											?.filter((b) => Number(b.total) !== 0)
-											.map((b) => b.token)
-											.filter((t): t is number => t !== null) ?? []
-									}
-									tokensLoading={universe.isFetching}
-								/>
-							</div>
-						</Panel>
-						<Panel
-							title="Signing"
-							description="Fixed when the proposal is created: every signer signs exactly this."
-						>
-							<div className="space-y-4">
-								<Field
-									label="Who finalises this?"
-									htmlFor="ms-finaliser"
-									error={error("finaliser")}
-									hint="The signer who will be there at the end: only this wallet can sign the envelope and submit. If they sign last, they finish in one sitting."
-								>
-									<Select
-										id="ms-finaliser"
-										value={form.finaliser}
-										onChange={(e) => set("finaliser", e.target.value)}
-										aria-invalid={!!error("finaliser")}
-										disabled={!state.policy}
-									>
-										<option value="">Choose a signer…</option>
-										{state.policy?.authorizedUsers.map((a) => (
-											<option key={a} value={a}>
-												{a}
-												{a === me ? " (you)" : ""}
-											</option>
-										))}
-									</Select>
-								</Field>
-								<Field
-									label="Signers sign under"
-									hint={`EIP-712 chain ${chain.hex} (${chain.id}). Every signer's wallet switches to ${chain.label} to sign; nothing is sent to that chain.`}
-								>
-									<Segmented<InnerChain>
-										label="Signing chain"
-										value={form.chain}
-										onChange={(v) => set("chain", v)}
-										options={[
-											{
-												value: "hyperevm",
-												label: innerChain(network, "hyperevm").label,
-											},
-											{
-												value: "arbitrum",
-												label: innerChain(network, "arbitrum").label,
-											},
-										]}
-									/>
-								</Field>
-								<Field
-									label="Signing window"
-									hint={`If created now: ${window.text}. After that the chain rejects it and it must be re-proposed.`}
-								>
-									<Segmented<NonceMode>
-										label="Signing window"
-										value={form.nonceMode}
-										onChange={(v) => set("nonceMode", v)}
-										options={[
-											{ value: "now", label: "2 days" },
-											{ value: "extended", label: "Give signers 3 days" },
-										]}
-									/>
-								</Field>
-							</div>
-						</Panel>
-						<Panel
-							title="Label"
-							description="Unsigned: it travels with the document so signers know what this is, and anyone holding the document can change it."
-						>
-							<div className="space-y-4">
-								<Field label="Title" htmlFor="ms-title">
-									<TextInput
-										id="ms-title"
-										value={form.title}
-										onChange={(e) => set("title", e.target.value)}
-										placeholder="October contributor payout"
-									/>
-								</Field>
-								<Field label="Note" htmlFor="ms-note">
-									<TextArea
-										id="ms-note"
-										mono={false}
-										className="min-h-16"
-										rows={2}
-										value={form.note}
-										onChange={(e) => set("note", e.target.value)}
-									/>
-								</Field>
-							</div>
-						</Panel>
+						<SignsTag />
 					</>
 				}
-				output={
-					<>
-						<Panel
-							title={
-								<span className="flex items-center gap-2">
-									Preview <NetworkBadge network={network} />
-								</span>
-							}
-							description="What signers will be asked to sign. The nonce and the digest are fixed when you create."
-						>
-							{action ? (
+			>
+				<Workspace
+					input={
+						<>
+							<TreasuryStrip state={state} wallet={wallet.address} />
+							{superseded && (
+								<Callout tone="info" title="Re-proposing">
+									Started from the proposal {short(superseded.digest)}. This is
+									a new proposal with a new nonce: signatures do not carry over.
+								</Callout>
+							)}
+							<Panel
+								title="Action"
+								description={
+									ACTION_KINDS.find((k) => k.kind === form.kind)?.description
+								}
+							>
 								<div className="space-y-4">
-									<div>
-										<p className="text-base font-medium [overflow-wrap:anywhere]">
-											{describeAction(action).headline}
-										</p>
-										<div className="mt-2 flex flex-wrap gap-2">
-											{flags.map((f) => (
-												<Pill key={f} tone={FLAG_TEXT[f]?.tone ?? "info"}>
-													{FLAG_TEXT[f]?.label ?? f}
-												</Pill>
-											))}
-										</div>
-									</div>
-									<KeyValueGrid
-										columns={2}
-										items={[
-											{
-												label: "From (multi-sig user)",
-												value: (
-													<AddressLine address={address} network={network} />
-												),
-											},
-											{
-												label: "Finaliser (leader)",
-												value: ADDRESS_RE.test(form.finaliser) ? (
-													<AddressLine
-														address={form.finaliser}
-														network={network}
-													/>
-												) : (
-													"not chosen"
-												),
-											},
-											{
-												label: "Signers sign under",
-												value: `${chain.label} · ${chain.hex}`,
-												mono: true,
-											},
-											{ label: "Signing window", value: window.text },
-										]}
+									<Segmented<ActionKind>
+										label="Action"
+										value={form.kind}
+										onChange={(v) => set("kind", v)}
+										options={ACTION_KINDS.map((k) => ({
+											value: k.kind,
+											label: k.label,
+										}))}
+									/>
+									<ActionFields
+										form={form}
+										set={set}
+										error={error}
+										network={network}
+										tokens={universe.data?.tokens ?? null}
+										held={
+											state.spot
+												?.filter((b) => Number(b.total) !== 0)
+												.map((b) => b.token)
+												.filter((t): t is number => t !== null) ?? []
+										}
+										tokensLoading={universe.isFetching}
 									/>
 								</div>
-							) : (
-								<p className="text-sm text-muted-foreground">
-									Fill in the action to see what will be signed.
-								</p>
-							)}
-							{otherIssues.length > 0 && (
-								<div className="mt-4">
-									<IssueList issues={otherIssues} />
-								</div>
-							)}
-						</Panel>
-						{action && (
-							<Panel
-								title="Inner action"
-								description="The canonical action, as it will be hashed. Its time or nonce field is replaced when you create."
-							>
-								<CodeBlock
-									content={stringifyJson(fromPlain(action), 2)}
-									lang="json"
-									maxHeight="18rem"
-								/>
 							</Panel>
-						)}
-						<Panel title="Create">
-							<div className="space-y-3">
-								{!hydrated || state.loading ? (
-									<p
-										className="flex items-center gap-2 text-sm text-muted-foreground"
-										aria-busy="true"
+							<Panel
+								title="Signing"
+								description="Fixed when the proposal is created: every signer signs exactly this."
+							>
+								<div className="space-y-4">
+									<Field
+										label="Who finalises this?"
+										htmlFor="ms-finaliser"
+										error={error("finaliser")}
+										hint="The signer who will be there at the end: only this wallet can sign the envelope and submit. If they sign last, they finish in one sitting."
 									>
-										<Loader2 className="size-4 animate-spin" aria-hidden />{" "}
-										Reading the treasury…
-									</p>
-								) : !ready ? (
-									<p className="text-sm text-muted-foreground">
-										A proposal needs a multi-sig account on {network}. See the
-										treasury panel.
-									</p>
+										<Select
+											id="ms-finaliser"
+											value={form.finaliser}
+											onChange={(e) => set("finaliser", e.target.value)}
+											aria-invalid={!!error("finaliser")}
+											disabled={!state.policy}
+										>
+											<option value="">Choose a signer…</option>
+											<SignerOptions
+												signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
+												me={me}
+											/>
+										</Select>
+									</Field>
+									<Field
+										label="Signers sign under"
+										hint={`EIP-712 chain ${chain.hex} (${chain.id}). Every signer's wallet switches to ${chain.label} to sign; nothing is sent to that chain.`}
+									>
+										<Segmented<InnerChain>
+											label="Signing chain"
+											value={form.chain}
+											onChange={(v) => set("chain", v)}
+											options={[
+												{
+													value: "hyperevm",
+													label: innerChain(network, "hyperevm").label,
+												},
+												{
+													value: "arbitrum",
+													label: innerChain(network, "arbitrum").label,
+												},
+											]}
+										/>
+									</Field>
+									<Field
+										label="Signing window"
+										hint={`If created now: ${window.text}. After that the chain rejects it and it must be re-proposed.`}
+									>
+										<Segmented<NonceMode>
+											label="Signing window"
+											value={form.nonceMode}
+											onChange={(v) => set("nonceMode", v)}
+											options={[
+												{ value: "now", label: "2 days" },
+												{ value: "extended", label: "Give signers 3 days" },
+											]}
+										/>
+									</Field>
+								</div>
+							</Panel>
+							<Panel
+								title="Label"
+								description="Unsigned: it travels with the document so signers know what this is, and anyone holding the document can change it."
+							>
+								<div className="space-y-4">
+									<Field label="Title" htmlFor="ms-title">
+										<TextInput
+											id="ms-title"
+											value={form.title}
+											onChange={(e) => set("title", e.target.value)}
+											placeholder="October contributor payout"
+										/>
+									</Field>
+									<Field label="Note" htmlFor="ms-note">
+										<TextArea
+											id="ms-note"
+											mono={false}
+											className="min-h-16"
+											rows={2}
+											value={form.note}
+											onChange={(e) => set("note", e.target.value)}
+										/>
+									</Field>
+								</div>
+							</Panel>
+						</>
+					}
+					output={
+						<>
+							<Panel
+								title={
+									<span className="flex items-center gap-2">
+										Preview <NetworkBadge network={network} />
+									</span>
+								}
+								description="What signers will be asked to sign. The nonce and the digest are fixed when you create."
+							>
+								{action ? (
+									<div className="space-y-4">
+										<div>
+											<p className="text-base font-medium [overflow-wrap:anywhere]">
+												{describeAction(action).headline}
+											</p>
+											<div className="mt-2 flex flex-wrap gap-2">
+												{flags.map((f) => (
+													<Pill key={f} tone={FLAG_TEXT[f]?.tone ?? "info"}>
+														{FLAG_TEXT[f]?.label ?? f}
+													</Pill>
+												))}
+											</div>
+										</div>
+										<KeyValueGrid
+											columns={2}
+											items={[
+												{
+													label: "From (multi-sig user)",
+													value: (
+														<AddressLine address={address} network={network} />
+													),
+												},
+												{
+													label: "Finaliser (leader)",
+													value: ADDRESS_RE.test(form.finaliser) ? (
+														<AddressLine
+															address={form.finaliser}
+															network={network}
+														/>
+													) : (
+														"not chosen"
+													),
+												},
+												{
+													label: "Signers sign under",
+													value: `${chain.label} · ${chain.hex}`,
+													mono: true,
+												},
+												{ label: "Signing window", value: window.text },
+											]}
+										/>
+									</div>
 								) : (
 									<p className="text-sm text-muted-foreground">
-										Creating fixes the nonce and the digest and saves the
-										proposal in this browser. Nothing is sent to Hyperliquid
-										until the finaliser submits.{" "}
-										{sharing
-											? RELAY_COPY.createdShared
-											: relay.mode === "on"
-												? "The relay does not list your wallet as a signer of this treasury, so it stays in this browser until you share it."
-												: ""}
+										Fill in the action to see what will be signed.
 									</p>
 								)}
-								<div className="flex flex-wrap items-center gap-2">
-									<Button
-										variant="brand"
-										disabled={!ready || !iAmSigner || wallet.busy}
-										onClick={() =>
-											void wallet.run("Waiting for the wallet…", () =>
-												create(true),
-											)
-										}
-									>
-										{wallet.address
-											? `Create and sign as ${short(wallet.address)}`
-											: "Create and sign"}
-									</Button>
-									<Button
-										variant="outline"
-										disabled={!ready || wallet.busy}
-										onClick={() => void create(false)}
-									>
-										Create without signing
-									</Button>
+								{otherIssues.length > 0 && (
+									<div className="mt-4">
+										<IssueList issues={otherIssues} />
+									</div>
+								)}
+							</Panel>
+							{action && (
+								<Panel
+									title="Inner action"
+									description="The canonical action, as it will be hashed. Its time or nonce field is replaced when you create."
+								>
+									<CodeBlock
+										content={stringifyJson(fromPlain(action), 2)}
+										lang="json"
+										maxHeight="18rem"
+									/>
+								</Panel>
+							)}
+							<Panel title="Create">
+								<div className="space-y-3">
+									{!hydrated || state.loading ? (
+										<p
+											className="flex items-center gap-2 text-sm text-muted-foreground"
+											aria-busy="true"
+										>
+											<Loader2 className="size-4 animate-spin" aria-hidden />{" "}
+											Reading the treasury…
+										</p>
+									) : !ready ? (
+										<p className="text-sm text-muted-foreground">
+											A proposal needs a multi-sig account on {network}. See the
+											treasury panel.
+										</p>
+									) : (
+										<p className="text-sm text-muted-foreground">
+											Creating fixes the nonce and the digest and saves the
+											proposal in this browser. Nothing is sent to Hyperliquid
+											until the finaliser submits.{" "}
+											{sharing
+												? RELAY_COPY.createdShared
+												: relay.mode === "on"
+													? "The relay does not list your wallet as a signer of this treasury, so it stays in this browser until you share it."
+													: ""}
+										</p>
+									)}
+									<div className="flex flex-wrap items-center gap-2">
+										<Button
+											variant="brand"
+											disabled={!ready || !iAmSigner || wallet.busy}
+											onClick={() =>
+												void wallet.run("Waiting for the wallet…", () =>
+													create(true),
+												)
+											}
+										>
+											{wallet.address
+												? `Create and sign as ${short(wallet.address)}`
+												: "Create and sign"}
+										</Button>
+										<Button
+											variant="outline"
+											disabled={!ready || wallet.busy}
+											onClick={() => void create(false)}
+										>
+											Create without signing
+										</Button>
+									</div>
+									{ready && !iAmSigner && (
+										<p className="text-xs text-muted-foreground">
+											{wallet.address
+												? `${short(wallet.address)} is not in the signer set, so it can draft a proposal but not sign it.`
+												: "Connect a signer's wallet to sign on the spot, or create the proposal unsigned and pass it on."}
+										</p>
+									)}
+									{attempted && !draft.input && (
+										<Callout tone="danger" title="Not created yet">
+											Fix the fields marked on the left.
+										</Callout>
+									)}
+									{failure && (
+										<Callout tone="danger" title={failure.title}>
+											<IssueList issues={failure.issues} />
+										</Callout>
+									)}
 								</div>
-								{ready && !iAmSigner && (
-									<p className="text-xs text-muted-foreground">
-										{wallet.address
-											? `${short(wallet.address)} is not in the signer set, so it can draft a proposal but not sign it.`
-											: "Connect a signer's wallet to sign on the spot, or create the proposal unsigned and pass it on."}
-									</p>
-								)}
-								{attempted && !draft.input && (
-									<Callout tone="danger" title="Not created yet">
-										Fix the fields marked on the left.
-									</Callout>
-								)}
-								{failure && (
-									<Callout tone="danger" title={failure.title}>
-										<IssueList issues={failure.issues} />
-									</Callout>
-								)}
-							</div>
-						</Panel>
-					</>
-				}
-			/>
-		</ShellPage>
+							</Panel>
+						</>
+					}
+				/>
+			</ShellPage>
+		</TreasuryNames>
+	);
+}
+
+const NO_SIGNERS: readonly Address[] = [];
+const ZERO = "0x0000000000000000000000000000000000000000";
+
+/** The treasury's signers as choices: nickname first where there is one, always with the address. */
+function SignerOptions({
+	signers,
+	me,
+}: {
+	signers: readonly Address[];
+	me: string | null;
+}) {
+	const names = useNames();
+	return (
+		<>
+			{signers.map((a) => {
+				const nick = names?.of(a)?.name;
+				return (
+					<option key={a} value={a}>
+						{nick ? `${nick} · ` : ""}
+						{a}
+						{a === me ? " (you)" : ""}
+					</option>
+				);
+			})}
+		</>
 	);
 }

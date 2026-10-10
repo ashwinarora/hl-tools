@@ -15,6 +15,7 @@ import {
 	historyExport,
 	historyFilename,
 } from "../model/relay/timeline";
+import { Sentence } from "../names/Sentence";
 import { HISTORY_PAGE, listEvents, listProposalsByDigest } from "../relay/api";
 import { unwrap } from "../relay/queries";
 import { queryIssue, useRelay } from "../relay/useRelay";
@@ -158,24 +159,7 @@ export function SigningLogTab({
 									className="pt-0.5 text-xs text-subtle-foreground"
 								/>
 								<span className="text-sm [overflow-wrap:anywhere]">
-									{e.parts.map((p, i) =>
-										p.strong ? (
-											// biome-ignore lint/suspicious/noArrayIndexKey: the parts of one fixed sentence
-											<b key={i} className="font-semibold">
-												{p.text}
-											</b>
-										) : (
-											<span
-												// biome-ignore lint/suspicious/noArrayIndexKey: the parts of one fixed sentence
-												key={i}
-												className={
-													p.quiet ? "text-muted-foreground" : undefined
-												}
-											>
-												{p.text}
-											</span>
-										),
-									)}
+									<Sentence parts={e.parts} />
 									{e.digest && (
 										<>
 											{" "}

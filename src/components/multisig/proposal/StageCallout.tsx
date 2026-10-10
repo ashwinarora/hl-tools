@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Callout, type Tone } from "#/components/hub/status";
 import type { Phase, Stage } from "../model/stage";
+import { Sentence } from "../names/Sentence";
 
 const TONE: Record<Phase, Tone> = {
 	judging: "neutral",
@@ -28,8 +29,12 @@ export function StageCallout({
 	action?: ReactNode;
 }) {
 	return (
-		<Callout tone={TONE[stage.phase]} title={stage.headline} action={action}>
-			{stage.detail}
+		<Callout
+			tone={TONE[stage.phase]}
+			title={<Sentence parts={stage.headlineParts} />}
+			action={action}
+		>
+			<Sentence parts={stage.detailParts} />
 		</Callout>
 	);
 }

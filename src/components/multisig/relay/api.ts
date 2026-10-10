@@ -16,11 +16,13 @@ import {
 } from "@hl-tools/core";
 import { receiptText } from "../model/relay/assemble";
 import { isDuplicate, relayIssue } from "../model/relay/errors";
+import type { NicknameRow } from "../model/relay/nicknames";
 import type { PublishRow } from "../model/relay/push";
 import {
 	type EndingKind,
 	type EventRow,
 	eventRows,
+	nicknameRows,
 	type Parsed,
 	type ProposalRow,
 	proposalRows,
@@ -55,6 +57,7 @@ const PROPOSAL =
 	"receipts(submitted_at,submitted_by,signature_chain_id,outer_r,outer_s,outer_v,http_status,response,accepted,recorded_at)";
 const EVENT = "id,network,treasury,digest,kind,actor,data,at";
 const REQUEST = "id,network,address,kind,status,reason,created_at,finished_at";
+const NICKNAME = "network,treasury,address,name,set_by,set_at";
 const REPORT =
 	"id,network,treasury,digest,tx_hash,status,reason,created_at,finished_at";
 
@@ -265,6 +268,16 @@ export function listReports(
 	);
 }
 
+/** Every nickname the wallet may read: those of the treasuries it signs for, each under its own treasury. */
+export function listNicknames(
+	client: RelayClient,
+): Promise<Result<Parsed<NicknameRow>>> {
+	return read(
+		() => client.from("nicknames").select(NICKNAME).limit(5000),
+		nicknameRows,
+	);
+}
+
 // ----------------------------------------------------------------------- writes
 
 /** Ask the relay to look an account up: `add` to start tracking it, `check` to refresh its signer copy. */
@@ -361,6 +374,30 @@ export function reportExecution(
 		as,
 		() => client.from("execution_reports").insert({ ...key, tx_hash: txHash }),
 		{ duplicateIsFine: true },
+	);
+}
+
+/**
+ * Give an address a nickname inside one treasury, or (with null) take it
+ * away. No signature: it is a label for the treasury's signers, not an action.
+ */
+export function setNickname(
+	client: RelayClient,
+	as: Address,
+	change: {
+		readonly network: Network;
+		readonly treasury: Address;
+		readonly address: Address;
+		readonly name: string | null;
+	},
+): Promise<Result<true>> {
+	return write(client, as, () =>
+		client.from("nickname_changes").insert({
+			network: change.network,
+			treasury: change.treasury,
+			address: change.address,
+			name: change.name,
+		}),
 	);
 }
 
