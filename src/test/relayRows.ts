@@ -119,6 +119,7 @@ export function eventRow(
 			"0x0000000000000000000000000000000000000abc" as EventRow["treasury"],
 		digest: null,
 		kind,
+		rawKind: kind,
 		actor: null,
 		data: {},
 		at: NOW + id * 1000,

@@ -5,6 +5,7 @@ import {
 	addressList,
 	eventRows,
 	proposalRows,
+	reportRows,
 	requestRows,
 	treasuryRows,
 } from "./rows";
@@ -114,7 +115,7 @@ describe("proposalRows", () => {
 	});
 
 	it.each([
-		["an unknown status", { status: "cancelled" }],
+		["a status that is not text", { status: 5 }],
 		["a digest that is not 32 bytes", { digest: "0x1234" }],
 		["a document that is not text", { document: { v: 1 } }],
 		["a nonce that is a string", { nonce: "1791399781235" }],
@@ -217,6 +218,7 @@ describe("eventRows", () => {
 			treasury: TREASURY,
 			digest: null,
 			kind: "treasury_added",
+			rawKind: "treasury_added",
 			actor: A,
 			data: { signers: [A, B], threshold: 2 },
 			at: Date.parse(ISO),
@@ -231,9 +233,93 @@ describe("eventRows", () => {
 		expect(row?.data).toEqual({});
 	});
 
-	it("drops an event of a kind this version does not know", () => {
-		expect(eventRows([event({ kind: "treasury_renamed" })])).toEqual({
+	it("keeps an event of a kind this version does not know, as unknown", () => {
+		const { rows, dropped } = eventRows([
+			event({ kind: "treasury_renamed" }),
+			event({ id: 8, kind: "proposal_carried_out" }),
+		]);
+		expect(dropped).toBe(0);
+		expect(rows.map((r) => [r.kind, r.rawKind])).toEqual([
+			["unknown", "treasury_renamed"],
+			["proposal_carried_out", "proposal_carried_out"],
+		]);
+	});
+
+	it("drops an event whose kind is not text", () => {
+		expect(eventRows([event({ kind: 5 }), event({ kind: null })])).toEqual({
 			rows: [],
+			dropped: 2,
+		});
+	});
+});
+
+describe("proposal statuses the relay may grow", () => {
+	it("reads 'carried_out', and keeps a status it does not know as unknown", () => {
+		const row = (status: unknown) => ({
+			network: "testnet",
+			treasury: TREASURY,
+			digest: `0x${"1".repeat(64)}`,
+			document: "{}",
+			created_by: A,
+			finaliser: B,
+			nonce: 1,
+			expires_at: ISO,
+			status,
+			closed_at: null,
+			created_at: ISO,
+		});
+		const { rows, dropped } = proposalRows([
+			row("carried_out"),
+			row("superseded"),
+			row("open"),
+		]);
+		expect(dropped).toBe(0);
+		expect(rows.map((r) => r.status)).toEqual([
+			"carried_out",
+			"unknown",
+			"open",
+		]);
+	});
+});
+
+describe("reportRows", () => {
+	const report = (over: Record<string, unknown> = {}) => ({
+		id: "6f1c0c1e-0000-4000-8000-000000000001",
+		network: "testnet",
+		treasury: TREASURY,
+		digest: `0x${"1".repeat(64)}`,
+		tx_hash: `0x${"7".repeat(64)}`,
+		status: "rejected",
+		reason: "other_action",
+		created_at: ISO,
+		finished_at: ISO,
+		...over,
+	});
+	it("reads a report and its answer", () => {
+		expect(reportRows([report()]).rows[0]).toEqual({
+			id: "6f1c0c1e-0000-4000-8000-000000000001",
+			network: "testnet",
+			treasury: TREASURY,
+			digest: `0x${"1".repeat(64)}`,
+			txHash: `0x${"7".repeat(64)}`,
+			status: "rejected",
+			reason: "other_action",
+			createdAt: Date.parse(ISO),
+			finishedAt: Date.parse(ISO),
+		});
+		expect(
+			reportRows([
+				report({ status: "pending", reason: null, finished_at: null }),
+			]).rows[0],
+		).toMatchObject({ status: "pending", reason: null, finishedAt: null });
+	});
+	it.each([
+		["a status it does not know", { status: "queued" }],
+		["a transaction hash that is not 32 bytes", { tx_hash: "0x12" }],
+		["no digest", { digest: null }],
+		["another network", { network: "devnet" }],
+	])("drops a report with %s", (_label, over) => {
+		expect(reportRows([report(), report(over)])).toMatchObject({
 			dropped: 1,
 		});
 	});

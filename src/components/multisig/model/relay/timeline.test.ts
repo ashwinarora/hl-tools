@@ -259,6 +259,79 @@ describe("buildTimeline", () => {
 		]);
 	});
 
+	it("says when a proposal was carried out outside the tool, and who noticed", () => {
+		const TX = `0x${"72".repeat(32)}`;
+		expect(
+			texts([
+				eventRow("proposal_carried_out", {
+					id: 5,
+					digest: D1,
+					data: { tx_hash: TX, tx_time: NOW, reported_by: B },
+				}),
+			]),
+		).toEqual([
+			`Send 120 USDC to 0x9a01…77c2 was carried out outside this tool. The relay checked the transaction on Hyperliquid; ${short(B)} noticed it.`,
+		]);
+		// the one who noticed, reading it
+		expect(
+			texts(
+				[
+					eventRow("proposal_carried_out", {
+						id: 5,
+						digest: D1,
+						data: { tx_hash: TX, reported_by: B },
+					}),
+				],
+				B,
+			)[0],
+		).toContain("; you noticed it.");
+		expect(
+			texts([eventRow("proposal_carried_out", { id: 5, digest: D1 })]),
+		).toEqual([
+			"Send 120 USDC to 0x9a01…77c2 was carried out outside this tool. The relay checked the transaction on Hyperliquid.",
+		]);
+	});
+
+	it("says it once when the finaliser's own result arrives after all", () => {
+		const carried = eventRow("proposal_carried_out", {
+			id: 5,
+			digest: D1,
+			data: { reported_by: B },
+		});
+		const accepted = eventRow("submission_recorded", {
+			id: 6,
+			digest: D1,
+			actor: C,
+			data: { accepted: true, http_status: 200 },
+		});
+		expect(texts([carried, accepted])).toEqual([
+			`Send 120 USDC to 0x9a01…77c2 was accepted by Hyperliquid. Submitted by ${short(C)}.`,
+		]);
+		// a rejected attempt afterwards does not unsay that it was carried out
+		const rejected = eventRow("submission_recorded", {
+			id: 6,
+			digest: D1,
+			actor: C,
+			data: { accepted: false, http_status: 200 },
+		});
+		expect(texts([carried, rejected])).toHaveLength(2);
+		// and another proposal's acceptance has nothing to do with it
+		expect(texts([carried, { ...accepted, digest: D2 }])).toHaveLength(2);
+	});
+
+	it("keeps an entry it cannot describe, and says so", () => {
+		expect(
+			texts([
+				{
+					...eventRow("unknown", { id: 9 }),
+					rawKind: "treasury_renamed",
+				},
+			]),
+		).toEqual([
+			"An entry this version of the page cannot describe (“treasury_renamed”).",
+		]);
+	});
+
 	it("orders by event id whatever order the rows arrive in", () => {
 		const a = eventRow("treasury_unfrozen", { id: 9 });
 		const b = eventRow("treasury_frozen", { id: 4 });

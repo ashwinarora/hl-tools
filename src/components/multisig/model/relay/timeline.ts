@@ -63,6 +63,18 @@ export function buildTimeline(
 
 	const asc = [...events].sort((a, b) => a.id - b.id);
 	const folded = new Set<number>();
+	// A proposal closed as "carried out outside" whose finaliser then recorded
+	// the accepted result was submitted through the tool after all: said once.
+	const acceptedHere = new Set(
+		asc
+			.filter(
+				(e) =>
+					e.kind === "submission_recorded" &&
+					e.data.accepted === true &&
+					e.digest !== null,
+			)
+			.map((e) => e.digest),
+	);
 	const out: TimelineEntry[] = [];
 	for (const [i, e] of asc.entries()) {
 		if (folded.has(e.id)) continue;
@@ -183,6 +195,28 @@ export function buildTimeline(
 					]),
 				);
 				break;
+			case "proposal_carried_out": {
+				if (acceptedHere.has(e.digest)) break;
+				const noticed = addressList([e.data.reported_by])[0] ?? null;
+				out.push(
+					entry([
+						...action(e.digest, true),
+						t(
+							` was carried out outside this tool. The relay checked the transaction on Hyperliquid${noticed ? `; ${object(noticed)} noticed it` : ""}.`,
+						),
+					]),
+				);
+				break;
+			}
+			case "unknown":
+				out.push(
+					entry([
+						t(
+							`An entry this version of the page cannot describe (“${e.rawKind}”).`,
+						),
+					]),
+				);
+				break;
 			case "submission_recorded":
 				out.push(
 					entry(
@@ -239,7 +273,7 @@ export function historyExport(i: {
 				.map((e) => ({
 					id: e.id,
 					at: new Date(e.at).toISOString(),
-					kind: e.kind,
+					kind: e.rawKind,
 					actor: e.actor,
 					digest: e.digest,
 					data: e.data,

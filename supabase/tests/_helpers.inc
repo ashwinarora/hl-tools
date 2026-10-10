@@ -76,7 +76,8 @@ begin
 	delete from private.session_marks;
 	delete from private.treasury_checks;
 	delete from public.treasury_requests;
-	update private.worker_state set last_lane = 'refresh', blocked_until_mainnet = null,
+	delete from public.execution_reports;
+	update private.worker_state set last_lane = 'refresh', last_kind = 'tx', blocked_until_mainnet = null,
 		blocked_until_testnet = null, last_run_at = null;
 	update private.settings set value = 'true' where key = 'worker.enabled';
 	update private.settings set value = '30' where key = 'worker.per_minute';
@@ -188,3 +189,30 @@ language sql as $$
 	select coalesce(array_agg(kind order by id), '{}') from public.events
 	where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
 $$;
+
+-- ------------------------------------------------------------ carried out outside
+create function tests.tx_hash(n int) returns public.hash32
+language sql immutable as $$
+	select ('0x' || lpad(to_hex(n), 60, '0') || '7e57')::public.hash32
+$$;
+
+-- Wallet n says transaction h carried proposal d of treasury n_treasury out.
+create function tests.report(n int, n_treasury int, d int, h int, p_network public.network default 'testnet') returns uuid
+language plpgsql as $$
+declare
+	rid uuid;
+begin
+	perform tests.claims(n);
+	insert into public.execution_reports (network, treasury, digest, tx_hash)
+	values (p_network, tests.addr(n_treasury), tests.digest(d), tests.tx_hash(h))
+	returning id into rid;
+	return rid;
+end $$;
+
+-- The action a stored proposal carries, as the explorer would return it.
+create function tests.action_of(n_treasury int, d int) returns jsonb
+language sql as $$
+	select document::jsonb #> '{payload,action}' from public.proposals
+	where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
+$$;
+
