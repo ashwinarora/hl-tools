@@ -18,8 +18,10 @@ import { chainIdToNumber, chainLabel } from "./chains";
 import { describeWindow, type WindowInfo } from "./nonce";
 import { joinParts, type Part, partsText, say } from "./parts";
 
+/** `unknown`: a wallet is connected, but the signer set has not been read yet. */
 export type WalletRole =
 	| "disconnected"
+	| "unknown"
 	| "outsider"
 	| "signer"
 	| "finaliser"
@@ -163,7 +165,10 @@ export function deriveStage(input: StageInput): Stage {
 					: "signer"
 				: isLeader
 					? "finaliser"
-					: "outsider";
+					: // "not a signer" is a verdict: not before the signer set is known
+						policy
+						? "outsider"
+						: "unknown";
 	const hasSigned =
 		wallet !== null && !!r && r.counted.some((a) => a === wallet);
 

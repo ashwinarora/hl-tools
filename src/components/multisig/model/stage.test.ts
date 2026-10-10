@@ -448,6 +448,22 @@ describe("deriveStage", () => {
 		).toBe("expired");
 	});
 
+	it("does not call a wallet 'not a signer' before the signer set has been read", async () => {
+		// found in the browser: the proposal page flashed "you: not a signer" while loading
+		const p = await signAs(makeProposal(), 1);
+		const loading = await stage(p, { wallet: A, policy: null, judged: false });
+		expect(loading.role).toBe("unknown");
+		expect(loading.canSign).toBe(false);
+		// the finaliser is named by the document itself, whatever the signer set
+		expect(
+			(await stage(p, { wallet: B, policy: null, judged: false })).role,
+		).toBe("finaliser");
+		// once it is read, the verdict stands
+		expect((await stage(p, { wallet: A })).role).toBe("signer");
+		expect((await stage(p, { wallet: OUTSIDER })).role).toBe("outsider");
+		expect((await stage(p)).role).toBe("disconnected");
+	});
+
 	it("says a send cannot be submitted once a newer send of the treasury was carried out", async () => {
 		// two signatures, the finaliser's wallet connected: it would be "ready"
 		const p = await signAs(await signAs(makeProposal(), 1), 2);

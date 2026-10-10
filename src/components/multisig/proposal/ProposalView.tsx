@@ -103,6 +103,7 @@ const NO_SIGNERS: readonly Address[] = [];
 
 const ROLE: Record<WalletRole, string | null> = {
 	disconnected: null,
+	unknown: null,
 	outsider: "not a signer",
 	signer: "signer",
 	finaliser: "finaliser",
