@@ -1,0 +1,71 @@
+[
+ {
+  "name": "found",
+  "hash": "0x722d2b195f94365e73a6042b24b1be01030042fefa97553015f5d66c1e981049",
+  "status": 200,
+  "body": {
+   "type": "txDetails",
+   "tx": {
+    "time": 1791400180792,
+    "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+    "action": {
+     "type": "usdSend",
+     "signatureChainId": "0x66eee",
+     "hyperliquidChain": "Testnet",
+     "destination": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+     "amount": "110",
+     "time": 1791400180224
+    },
+    "block": 723825086,
+    "hash": "0x722d2b195f94365e73a6042b24b1be01030042fefa97553015f5d66c1e981049",
+    "error": null
+   }
+  }
+ },
+ {
+  "name": "unknown-block",
+  "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "status": 200,
+  "body": {
+   "type": "error",
+   "message": "invalid block height: 0"
+  }
+ },
+ {
+  "name": "unknown-in-block",
+  "hash": "0x722d2b195f94365e73a6042b24b1be01030042fefa97553015f5d66c1e980000",
+  "status": 200,
+  "body": {
+   "type": "error",
+   "message": "Unexpected error (code=10014)"
+  }
+ },
+ {
+  "name": "malformed",
+  "hash": "0x1234",
+  "status": 422,
+  "body": "Failed to deserialize the JSON body into the target type"
+ },
+ {
+  "name": "failed",
+  "hash": "0xc78a517f046c6c71c904042b24ad4101090069649f6f8b436b52fcd1c360465c",
+  "status": 200,
+  "body": {
+   "type": "txDetails",
+   "tx": {
+    "time": 1791400111454,
+    "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+    "action": {
+     "type": "convertToMultiSigUser",
+     "signatureChainId": "0x66eee",
+     "hyperliquidChain": "Testnet",
+     "signers": "{\"authorizedUsers\":[],\"threshold\":0}",
+     "nonce": 1791400110878
+    },
+    "block": 723823937,
+    "hash": "0xc78a517f046c6c71c904042b24ad4101090069649f6f8b436b52fcd1c360465c",
+    "error": "Invalid multi-sig threshold"
+   }
+  }
+ }
+]

@@ -14,6 +14,23 @@ export interface DescribeContext {
 	readonly coin?: (asset: number) => string | undefined;
 }
 
+/** What an address named in an action is to that action. */
+export type ActionPartyRole =
+	| "destination"
+	| "agent"
+	| "signer"
+	| "vault"
+	| "subAccount"
+	| "builder"
+	| "validator"
+	| "user";
+
+export interface ActionParty {
+	readonly role: ActionPartyRole;
+	/** Lowercased; only well-formed 20-byte addresses are listed. */
+	readonly address: string;
+}
+
 export interface ActionDescription {
 	readonly type: string;
 	/** One line, e.g. "Limit buy 0.001 BTC at 50000 (Gtc)". */
@@ -23,6 +40,68 @@ export interface ActionDescription {
 	readonly flags: readonly RiskFlag[];
 	/** False when the type is not modelled; the headline then says so. */
 	readonly known: boolean;
+	/**
+	 * Every account the action names, in the order the text mentions them, so
+	 * a screen can say who an address is without cutting the sentences apart.
+	 */
+	readonly parties: readonly ActionParty[];
+}
+
+const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
+
+function partiesOf(type: string, action: PlainObject): readonly ActionParty[] {
+	const out: ActionParty[] = [];
+	const add = (role: ActionPartyRole, v: unknown) => {
+		if (typeof v !== "string" || !ADDRESS.test(v)) return;
+		const address = v.toLowerCase();
+		if (!out.some((p) => p.role === role && p.address === address))
+			out.push({ role, address });
+	};
+	switch (type) {
+		case "usdSend":
+		case "spotSend":
+		case "withdraw3":
+			add("destination", action.destination);
+			break;
+		case "sendAsset":
+			add("destination", action.destination);
+			add("subAccount", action.fromSubAccount);
+			break;
+		case "sendToEvmWithData":
+			add("destination", action.destinationRecipient);
+			break;
+		case "approveAgent":
+			add("agent", action.agentAddress);
+			break;
+		case "approveBuilderFee":
+			add("builder", action.builder);
+			break;
+		case "order":
+			add("builder", (action.builder as PlainObject | undefined)?.b);
+			break;
+		case "tokenDelegate":
+			add("validator", action.validator);
+			break;
+		case "vaultTransfer":
+			add("vault", action.vaultAddress);
+			break;
+		case "subAccountTransfer":
+		case "subAccountSpotTransfer":
+			add("subAccount", action.subAccountUser);
+			break;
+		case "linkStakingUser":
+		case "userDexAbstraction":
+		case "userSetAbstraction":
+		case "userPortfolioMargin":
+			add("user", action.user);
+			break;
+		case "convertToMultiSigUser":
+			for (const a of parseSignersString(action.signers).set?.authorizedUsers ??
+				[])
+				add("signer", a);
+			break;
+	}
+	return out;
 }
 
 const s = (v: unknown): string =>
@@ -82,6 +161,7 @@ export function describeAction(
 	const type =
 		typeof action.type === "string" ? action.type : String(action.type);
 	const flags = riskFlags(action);
+	const parties = partiesOf(type, action);
 	const done = (
 		headline: string,
 		lines: string[] = [],
@@ -92,6 +172,7 @@ export function describeAction(
 		lines,
 		flags,
 		known,
+		parties,
 	});
 	switch (type) {
 		case "order": {

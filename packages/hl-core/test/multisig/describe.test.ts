@@ -543,3 +543,91 @@ describe("describeAction details", () => {
 		expect(describeAction({ type: 5 as never }).headline).toContain('"5"');
 	});
 });
+
+describe("describeAction parties", () => {
+	const of = (type: string) =>
+		describeAction(SAMPLES[type] as PlainObject).parties.map(
+			(p) => `${p.role} ${p.address}`,
+		);
+	const lc = (a: string) => a.toLowerCase();
+	it("names every account an action mentions, with what it is to the action", () => {
+		expect(of("usdSend")).toEqual([`destination ${lc(RECIPIENT)}`]);
+		expect(of("spotSend")).toEqual([`destination ${lc(RECIPIENT)}`]);
+		expect(of("withdraw3")).toEqual([`destination ${lc(RECIPIENT)}`]);
+		expect(of("sendAsset")).toEqual([
+			`destination ${lc(RECIPIENT)}`,
+			`subAccount ${lc(A)}`,
+		]);
+		expect(of("sendToEvmWithData")).toEqual([`destination ${lc(B)}`]);
+		expect(of("approveAgent")).toEqual([`agent ${lc(B)}`]);
+		expect(of("approveBuilderFee")).toEqual([`builder ${lc(B)}`]);
+		expect(of("tokenDelegate")).toEqual([`validator ${lc(B)}`]);
+		expect(of("vaultTransfer")).toEqual([`vault ${lc(A)}`]);
+		expect(of("subAccountTransfer")).toEqual([`subAccount ${lc(A)}`]);
+		expect(of("subAccountSpotTransfer")).toEqual([`subAccount ${lc(A)}`]);
+		for (const type of [
+			"linkStakingUser",
+			"userDexAbstraction",
+			"userSetAbstraction",
+			"userPortfolioMargin",
+		])
+			expect(of(type)).toEqual([`user ${lc(B)}`]);
+		expect(of("convertToMultiSigUser")).toEqual(
+			[A, B].sort().map((a) => `signer ${lc(a)}`),
+		);
+	});
+	it("lists nobody for actions that name no account", () => {
+		for (const type of [
+			"order",
+			"cancel",
+			"usdClassTransfer",
+			"cDeposit",
+			"noop",
+			"createSubAccount",
+		])
+			expect(of(type)).toEqual([]);
+		expect(describeAction({ type: "spotDeploy", user: A }).parties).toEqual([]);
+		// converting back to a normal user names no signers
+		expect(
+			describeAction({ type: "convertToMultiSigUser", signers: "null" })
+				.parties,
+		).toEqual([]);
+		expect(
+			describeAction({ type: "convertToMultiSigUser", signers: "{" }).parties,
+		).toEqual([]);
+	});
+	it("lists an order's builder, lowercases, and skips what is not an address", () => {
+		expect(
+			describeAction({ ...ORDER, builder: { b: B, f: 10 } }).parties,
+		).toEqual([{ role: "builder", address: lc(B) }]);
+		expect(
+			describeAction({
+				type: "usdSend",
+				destination: RECIPIENT.toUpperCase().replace("0X", "0x"),
+				amount: "1",
+			}).parties,
+		).toEqual([{ role: "destination", address: lc(RECIPIENT) }]);
+		for (const destination of ["0x123", `${RECIPIENT}00`, 5, null, undefined])
+			expect(
+				describeAction({
+					type: "usdSend",
+					destination: destination as never,
+					amount: "1",
+				}).parties,
+			).toEqual([]);
+		// a sub-account sending to itself is one account in two roles; the same role twice is one entry
+		expect(
+			describeAction({
+				type: "sendAsset",
+				destination: A,
+				fromSubAccount: A,
+			}).parties.map((p) => p.role),
+		).toEqual(["destination", "subAccount"]);
+		expect(
+			describeAction({
+				type: "convertToMultiSigUser",
+				signers: JSON.stringify({ authorizedUsers: [A, A], threshold: 1 }),
+			}).parties,
+		).toEqual([{ role: "signer", address: lc(A) }]);
+	});
+});

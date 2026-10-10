@@ -99,6 +99,36 @@ describe("InfoClient account methods", () => {
 		await client.extraAgents(USER);
 		expect(seen.length).toBe(7);
 	});
+	it("`fresh` asks the network whatever is cached, and later readers get the new answer", async () => {
+		const answers: Record<string, unknown> = {
+			userToMultiSigSigners: {
+				authorizedUsers: ["0x5e7c3420160987d04db5e8ed6d5bc14f61237216"],
+				threshold: 1,
+			},
+			extraAgents: [],
+		};
+		const { seen, transport } = fakeTransport(answers);
+		const client = new InfoClient("testnet", { transport, now: () => 1_000 });
+		expect((await client.multiSigSigners(USER)).data?.threshold).toBe(1);
+		// the signer set changes on chain inside the cache window
+		answers.userToMultiSigSigners = {
+			authorizedUsers: ["0x5e7c3420160987d04db5e8ed6d5bc14f61237216"],
+			threshold: 2,
+		};
+		expect((await client.multiSigSigners(USER)).data?.threshold).toBe(1);
+		expect(seen.length).toBe(1);
+		expect(
+			(await client.multiSigSigners(USER, { fresh: true })).data?.threshold,
+		).toBe(2);
+		expect(seen.length).toBe(2);
+		expect((await client.multiSigSigners(USER)).data?.threshold).toBe(2);
+		expect(seen.length).toBe(2);
+		// the same for API wallets
+		await client.extraAgents(USER);
+		await client.extraAgents(USER, { fresh: true });
+		await client.extraAgents(USER);
+		expect(seen.length).toBe(4);
+	});
 	it("a non-multisig user answers null", async () => {
 		const { transport } = fakeTransport({ userToMultiSigSigners: null });
 		const client = new InfoClient("mainnet", { transport });

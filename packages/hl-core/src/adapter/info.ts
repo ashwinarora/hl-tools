@@ -163,15 +163,18 @@ export class InfoClient<N extends Network> {
 			});
 	}
 
-	/** Send an info request. `ttlMs: 0` bypasses the cache. */
+	/**
+	 * Send an info request. `ttlMs: 0` bypasses the cache; `fresh` asks the
+	 * network whatever is cached and keeps the new answer for later callers.
+	 */
 	async info<T>(
 		body: InfoBody,
-		options: { ttlMs?: number; signal?: AbortSignal } = {},
+		options: { ttlMs?: number; signal?: AbortSignal; fresh?: boolean } = {},
 	): Promise<Observed<T, N>> {
 		const ttl = options.ttlMs ?? DEFAULT_TTLS[body.type] ?? 0;
 		const key = JSON.stringify(body);
 		const now = this.now();
-		if (ttl > 0) {
+		if (ttl > 0 && !options.fresh) {
 			const hit = this.cache.get(key);
 			if (hit && hit.expires > now) return hit.value as Promise<Observed<T, N>>;
 		}
@@ -276,11 +279,17 @@ export class InfoClient<N extends Network> {
 	 * multi-sig user. This is the only info request that reveals multi-sig
 	 * status (`userRole` keeps answering `user`).
 	 */
-	async multiSigSigners(user: string): Promise<Observed<Policy | null, N>> {
-		const r = await this.info<RawMultiSigSigners | null>({
-			type: "userToMultiSigSigners",
-			user: user.toLowerCase(),
-		});
+	async multiSigSigners(
+		user: string,
+		options: {
+			/** Read before signing or submitting: not from the cache. */ fresh?: boolean;
+			signal?: AbortSignal;
+		} = {},
+	): Promise<Observed<Policy | null, N>> {
+		const r = await this.info<RawMultiSigSigners | null>(
+			{ type: "userToMultiSigSigners", user: user.toLowerCase() },
+			options,
+		);
 		const data: Policy | null = r.data
 			? {
 					authorizedUsers: [...r.data.authorizedUsers]
@@ -298,11 +307,14 @@ export class InfoClient<N extends Network> {
 	}
 
 	/** Approved API wallets of a user. Agents of a multi-sig user trade without an envelope. */
-	extraAgents(user: string): Promise<Observed<readonly AgentInfo[], N>> {
-		return this.info<readonly AgentInfo[]>({
-			type: "extraAgents",
-			user: user.toLowerCase(),
-		});
+	extraAgents(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<readonly AgentInfo[], N>> {
+		return this.info<readonly AgentInfo[]>(
+			{ type: "extraAgents", user: user.toLowerCase() },
+			options,
+		);
 	}
 
 	clearinghouseState(user: string): Promise<Observed<PerpState, N>> {

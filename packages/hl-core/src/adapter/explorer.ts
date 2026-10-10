@@ -10,7 +10,7 @@ import { type Observed, observed } from "../identity.ts";
 import { type Network, networkConfig } from "../network.ts";
 import { InfoRequestError } from "./info.ts";
 
-/** One explorer transaction as `userDetails` returns it (newest first). */
+/** One explorer transaction, as `userDetails` lists it and `txDetails` returns it. */
 export interface ExplorerTx {
 	readonly time: number;
 	readonly user: string;
@@ -36,12 +36,17 @@ export interface ExplorerOptions {
 	readonly now?: () => number;
 }
 
-export async function explorerUserDetails<N extends Network>(
+/** POST one explorer request; hands back the status and the body as text. */
+async function post<N extends Network>(
 	network: N,
-	user: string,
-	options: ExplorerOptions = {},
-): Promise<Observed<ExplorerHistory, N>> {
-	const body = { type: "userDetails", user: user.toLowerCase() };
+	body: { readonly type: string } & Record<string, unknown>,
+	options: ExplorerOptions,
+): Promise<{
+	readonly status: number;
+	readonly ok: boolean;
+	readonly text: string;
+	readonly url: string;
+}> {
 	const url = networkConfig(network).coreExplorerApiUrl;
 	const doFetch = options.fetch ?? fetch;
 	let res: Response;
@@ -63,20 +68,48 @@ export async function explorerUserDetails<N extends Network>(
 			e,
 		);
 	}
-	const text = await res.text();
-	if (!res.ok) {
-		throw new InfoRequestError(
-			network,
-			body,
-			res.status === 429
-				? "Explorer rate limit hit (every explorer request weighs 40 of the 1200/min budget)."
-				: `Explorer answered HTTP ${res.status}.`,
-			res.status,
-		);
-	}
+	return { status: res.status, ok: res.ok, text: await res.text(), url };
+}
+
+function refused<N extends Network>(
+	network: N,
+	body: { readonly type: string } & Record<string, unknown>,
+	status: number,
+): InfoRequestError {
+	return new InfoRequestError(
+		network,
+		body,
+		status === 429
+			? "Explorer rate limit hit (every explorer request weighs 40 of the 1200/min budget)."
+			: `Explorer answered HTTP ${status}.`,
+		status,
+	);
+}
+
+function txOf(t: Record<string, unknown>): ExplorerTx {
+	return {
+		time: Number(t.time),
+		user: String(t.user ?? "").toLowerCase(),
+		action: (t.action && typeof t.action === "object"
+			? t.action
+			: { type: "unknown" }) as ExplorerTx["action"],
+		block: Number(t.block),
+		hash: String(t.hash ?? ""),
+		error: typeof t.error === "string" ? t.error : null,
+	};
+}
+
+export async function explorerUserDetails<N extends Network>(
+	network: N,
+	user: string,
+	options: ExplorerOptions = {},
+): Promise<Observed<ExplorerHistory, N>> {
+	const body = { type: "userDetails", user: user.toLowerCase() };
+	const res = await post(network, body, options);
+	if (!res.ok) throw refused(network, body, res.status);
 	let parsed: unknown;
 	try {
-		parsed = JSON.parse(text);
+		parsed = JSON.parse(res.text);
 	} catch {
 		throw new InfoRequestError(
 			network,
@@ -96,21 +129,108 @@ export async function explorerUserDetails<N extends Network>(
 	}
 	const txs: ExplorerTx[] = raw
 		.filter((t): t is Record<string, unknown> => !!t && typeof t === "object")
-		.map((t) => ({
-			time: Number(t.time),
-			user: String(t.user ?? "").toLowerCase(),
-			action: (t.action && typeof t.action === "object"
-				? t.action
-				: { type: "unknown" }) as ExplorerTx["action"],
-			block: Number(t.block),
-			hash: String(t.hash ?? ""),
-			error: typeof t.error === "string" ? t.error : null,
-		}))
+		.map(txOf)
 		.sort((a, b) => b.time - a.time);
 	return observed(
 		network,
-		`POST ${url} userDetails`,
+		`POST ${res.url} userDetails`,
 		{ txs, truncated: txs.length >= EXPLORER_PAGE_CAP },
 		(options.now ?? Date.now)(),
 	);
+}
+
+/**
+ * What `txDetails` says about one hash. `found: false` is an answer, not a
+ * failure: the explorer does not know the hash (yet, or at all).
+ */
+export type ExplorerTxLookup =
+	| { readonly found: true; readonly tx: ExplorerTx }
+	| { readonly found: false; readonly reason: string };
+
+const TX_HASH = /^0x[0-9a-fA-F]{64}$/;
+
+/**
+ * Look one transaction up by hash. For a multi-sig transaction `user` is the
+ * multi-sig account and `action` the inner action exactly as it was signed;
+ * a rejected attempt is found too, with `error` set. Measured on testnet
+ * (2026-10-11): the hash of a transfer is known about 0.2 s after the ledger
+ * shows it; an unknown hash answers 200 with `{"type":"error"}`, a malformed
+ * one HTTP 422. One request, weight 40.
+ */
+export async function explorerTxDetails<N extends Network>(
+	network: N,
+	hash: string,
+	options: ExplorerOptions = {},
+): Promise<Observed<ExplorerTxLookup, N>> {
+	const now = options.now ?? Date.now;
+	const source = `POST ${networkConfig(network).coreExplorerApiUrl} txDetails`;
+	// not worth a request, and the explorer would answer 422
+	if (!TX_HASH.test(hash))
+		return observed(
+			network,
+			source,
+			{ found: false, reason: "Not a transaction hash." },
+			now(),
+		);
+	const wanted = hash.toLowerCase();
+	const body = { type: "txDetails", hash: wanted };
+	const res = await post(network, body, options);
+	if (res.status === 422)
+		return observed(
+			network,
+			source,
+			{ found: false, reason: "The explorer did not accept the hash." },
+			now(),
+		);
+	if (!res.ok) throw refused(network, body, res.status);
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(res.text);
+	} catch {
+		throw new InfoRequestError(
+			network,
+			body,
+			"Explorer answered non-JSON.",
+			res.status,
+		);
+	}
+	const answer = (parsed ?? {}) as {
+		type?: unknown;
+		message?: unknown;
+		tx?: unknown;
+	};
+	if (answer.type === "error")
+		return observed(
+			network,
+			source,
+			{
+				found: false,
+				reason:
+					typeof answer.message === "string" && answer.message
+						? answer.message
+						: "The explorer does not know this hash.",
+			},
+			now(),
+		);
+	if (
+		answer.type !== "txDetails" ||
+		!answer.tx ||
+		typeof answer.tx !== "object"
+	)
+		throw new InfoRequestError(
+			network,
+			body,
+			"Explorer answer has no transaction.",
+			res.status,
+		);
+	const tx = txOf(answer.tx as Record<string, unknown>);
+	// an answer about another transaction must never be matched to this one
+	if (tx.hash.toLowerCase() !== wanted)
+		throw new InfoRequestError(
+			network,
+			body,
+			"Explorer answered for another transaction.",
+			res.status,
+		);
+	return observed(network, source, { found: true, tx }, now());
 }
