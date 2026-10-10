@@ -7,7 +7,6 @@ import {
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { formatTimestamp } from "#/components/hub/status";
 import { download } from "#/lib/download";
 import { assembleProposal } from "../model/relay/assemble";
 import type { EventRow, TreasuryRow } from "../model/relay/rows";
@@ -20,6 +19,7 @@ import { HISTORY_PAGE, listEvents, listProposalsByDigest } from "../relay/api";
 import { unwrap } from "../relay/queries";
 import { queryIssue, useRelay } from "../relay/useRelay";
 import { Btn, Card, Empty } from "../shell/kit";
+import { When } from "../shell/live";
 
 /**
  * Who did what, and when: the relay's record for this treasury, in sentences.
@@ -27,7 +27,7 @@ import { Btn, Card, Empty } from "../shell/kit";
  * document; the record itself holds identifiers only. Hyperliquid's ledger
  * shows what the treasury did, never who proposed or signed.
  */
-export function HistoryTab({
+export function SigningLogTab({
 	treasury,
 	me,
 }: {
@@ -127,7 +127,7 @@ export function HistoryTab({
 	return (
 		<>
 			<Card
-				title="History"
+				title="Signing log"
 				flush
 				actions={
 					<Btn
@@ -141,7 +141,7 @@ export function HistoryTab({
 				}
 			>
 				{pages.isPending ? (
-					<Empty>Reading the history…</Empty>
+					<Empty>Reading the signing log…</Empty>
 				) : entries.length === 0 ? (
 					<Empty>
 						{issue ? issue.message : "Nothing has happened here yet."}
@@ -153,12 +153,10 @@ export function HistoryTab({
 								key={e.id}
 								className="grid grid-cols-1 gap-0.5 border-t border-border px-4 py-2.5 first:border-t-0 min-[861px]:grid-cols-[150px_minmax(0,1fr)] min-[861px]:gap-3"
 							>
-								<time
-									dateTime={new Date(e.at).toISOString()}
-									className="pt-0.5 font-mono text-xs text-subtle-foreground"
-								>
-									{formatTimestamp(e.at).slice(0, 16)} UTC
-								</time>
+								<When
+									at={e.at}
+									className="pt-0.5 text-xs text-subtle-foreground"
+								/>
 								<span className="text-sm [overflow-wrap:anywhere]">
 									{e.parts.map((p, i) =>
 										p.strong ? (

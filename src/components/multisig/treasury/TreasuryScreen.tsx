@@ -22,6 +22,7 @@ import {
 	nextRecheck,
 } from "../model/relay/signers";
 import { shortAddress } from "../model/stage";
+import type { TreasuryTab } from "../model/tabs";
 import { requestTreasury } from "../relay/api";
 import { useOpenProposals } from "../relay/openProposals";
 import { useRequest, useTreasury } from "../relay/queries";
@@ -31,16 +32,9 @@ import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
 import { defaultTreasuryName, useTreasuryName } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
-import { HistoryTab } from "./HistoryTab";
+import { OverviewTab } from "./OverviewTab";
 import { PendingTab } from "./PendingTab";
-import { SignersTab } from "./SignersTab";
-
-export type TreasuryTab = "pending" | "history" | "signers";
-export const TREASURY_TABS: readonly TreasuryTab[] = [
-	"pending",
-	"history",
-	"signers",
-];
+import { SigningLogTab } from "./SigningLogTab";
 
 /** The page title, renamable in place. The name stays in this browser. */
 function Title({ network, address }: { network: Network; address: Address }) {
@@ -114,10 +108,13 @@ function Title({ network, address }: { network: Network; address: Address }) {
 }
 
 /**
- * One treasury: what waits for signatures, what happened, and who signs.
- * Shown to the wallets in the relay's copy of its signer list; that copy is
- * compared with the live list every time the page is open, and a difference
- * makes the relay look again.
+ * One treasury: what it holds and who controls it, what waits for
+ * signatures, and what happened. Shown to the wallets in the relay's copy of
+ * its signer list; that copy is compared with the live list every time the
+ * page is open, and a difference makes the relay look again.
+ *
+ * What the treasury holds comes straight from Hyperliquid, for the address in
+ * the page's own link: it stays on screen when the relay cannot be reached.
  */
 export function TreasuryScreen({
 	network: rawNetwork,
@@ -155,12 +152,14 @@ export function TreasuryScreen({
 		if (treasury) markSeen(treasury.network, treasury.address);
 	}, [treasury, markSeen]);
 
+	// Hyperliquid is asked about the address in the link, never about a row of
+	// the relay: for a listed treasury, and for a signed-in wallet whose relay
+	// has stopped answering.
+	const unreachable = relay.mode === "unreachable";
+	const watching = valid && (!!treasury || unreachable);
 	const target = useMemo<AccountTarget | null>(
-		() =>
-			treasury
-				? { address: treasury.address, network: treasury.network }
-				: null,
-		[treasury],
+		() => (watching ? { address, network } : null),
+		[watching, address, network],
 	);
 	const live = useLiveTreasuryState(target);
 
@@ -238,6 +237,49 @@ export function TreasuryScreen({
 		);
 	}
 
+	if (unreachable) {
+		return (
+			<ShellPage
+				title={defaultTreasuryName(address)}
+				meta={
+					<>
+						<span
+							className="inline-flex items-center gap-1 font-mono"
+							title={address}
+						>
+							{shortAddress(address)}
+							<CopyButton value={address} size="xs" />
+						</span>
+						<NetTag network={network} />
+						<SignsTag />
+					</>
+				}
+			>
+				<Callout
+					tone="warning"
+					title="The relay cannot be reached"
+					className="mb-4"
+					action={
+						<Button size="sm" variant="outline" onClick={relay.retry}>
+							Try again
+						</Button>
+					}
+				>
+					Pending proposals and the signing log are not shown until it is back;
+					this page keeps trying by itself. What the treasury holds and who
+					controls it come straight from Hyperliquid and stay current.
+				</Callout>
+				<OverviewTab
+					network={network}
+					address={address}
+					state={live}
+					me={relay.sessionWallet}
+					treasury={null}
+				/>
+			</ShellPage>
+		);
+	}
+
 	if (relay.mode !== "on") {
 		return (
 			<ShellPage
@@ -298,7 +340,6 @@ export function TreasuryScreen({
 			p.network === treasury.network &&
 			p.treasury === treasury.address,
 	);
-	const usdc = live.spot?.find((b) => b.coin === "USDC");
 	const setTab = (next: TreasuryTab) =>
 		void navigate({
 			to: "/multisig/t/$network/$address",
@@ -324,12 +365,6 @@ export function TreasuryScreen({
 						{frozen ? "was " : ""}
 						{treasury.threshold} of {treasury.signers.length} signers
 					</span>
-					{live.perp && (
-						<span>
-							Perps {live.perp.withdrawable} USDC · Spot {usdc?.total ?? "0"}{" "}
-							USDC
-						</span>
-					)}
 					{frozen && <Tag tone="warn">no longer a multi-sig</Tag>}
 					<SignsTag />
 				</>
@@ -389,11 +424,20 @@ export function TreasuryScreen({
 				value={tab}
 				onChange={setTab}
 				tabs={[
+					{ value: "overview", label: "Overview" },
 					{ value: "pending", label: "Pending", count: pending.length },
-					{ value: "history", label: "History" },
-					{ value: "signers", label: "Signers & API wallets" },
+					{ value: "log", label: "Signing log" },
 				]}
 			/>
+			{tab === "overview" && (
+				<OverviewTab
+					network={network}
+					address={address}
+					state={live}
+					me={me}
+					treasury={treasury}
+				/>
+			)}
 			{tab === "pending" && me && (
 				<PendingTab
 					items={pending}
@@ -402,16 +446,7 @@ export function TreasuryScreen({
 					frozen={frozen}
 				/>
 			)}
-			{tab === "history" && <HistoryTab treasury={treasury} me={me} />}
-			{tab === "signers" && (
-				<SignersTab
-					treasury={treasury}
-					live={live}
-					me={me}
-					checking={checking}
-					onCheck={() => void check()}
-				/>
-			)}
+			{tab === "log" && <SigningLogTab treasury={treasury} me={me} />}
 		</ShellPage>
 	);
 }

@@ -4,12 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Panel } from "#/components/hub/layout";
-import {
-	Callout,
-	formatTimestamp,
-	NetworkBadge,
-	Pill,
-} from "#/components/hub/status";
+import { Callout, NetworkBadge, Pill } from "#/components/hub/status";
 import { short } from "#/components/tools/multisig/AddressLine";
 import { errorMessage } from "#/hooks/useHyperliquid";
 import {
@@ -19,6 +14,7 @@ import {
 } from "./model/history";
 import { RELAY_COPY } from "./model/relay/copy";
 import { useRelay } from "./relay/useRelay";
+import { When } from "./shell/live";
 
 function headline(row: StoredProposal): string {
 	const p = decodeProposal(row.doc).proposal;
@@ -52,9 +48,7 @@ function Row({ row, onDelete }: { row: StoredProposal; onDelete: () => void }) {
 					</span>
 					{row.submitted === "ok" && <Pill tone="success">submitted</Pill>}
 					{row.submitted === "error" && <Pill tone="danger">rejected</Pill>}
-					<span className="font-mono">
-						{formatTimestamp(row.updatedAt).slice(0, 16)} UTC
-					</span>
+					<When at={row.updatedAt} />
 				</span>
 			</Link>
 			<button

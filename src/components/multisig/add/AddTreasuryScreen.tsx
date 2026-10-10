@@ -79,7 +79,7 @@ export function AddTreasuryScreen() {
 			void navigate({
 				to: "/multisig/t/$network/$address",
 				params: { network: request.network, address: request.address },
-				search: { tab: "signers" },
+				search: { tab: "overview" },
 			});
 		}
 	}, [request, current, queries, me, navigate]);

@@ -8,9 +8,8 @@ import {
 } from "#/components/hub/status";
 import { AddressLine, short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
+import { When } from "./shell/live";
 import type { TreasuryState } from "./useTreasuryState";
-
-const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /**
  * The treasury at a glance, on every signer screen: who must sign, which API
@@ -120,7 +119,7 @@ export function TreasuryStrip({
 														<Pill tone="neutral">expired</Pill>
 													) : (
 														<Pill tone="warning">
-															until {day(a.validUntil)}
+															until <When at={a.validUntil} />
 														</Pill>
 													)}
 												</span>

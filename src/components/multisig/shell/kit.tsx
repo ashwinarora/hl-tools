@@ -186,14 +186,17 @@ export function Card({
 	className,
 	bodyClassName,
 	flush = false,
+	footer,
 }: {
 	title?: ReactNode;
 	actions?: ReactNode;
 	children: ReactNode;
 	className?: string;
 	bodyClassName?: string;
-	/** No padding around the body (lists, timelines). */
+	/** No padding around the body (lists, timelines, tables). */
 	flush?: boolean;
+	/** A quiet line under the body: where it comes from, a way to more. */
+	footer?: ReactNode;
 }) {
 	return (
 		<section
@@ -211,6 +214,11 @@ export function Card({
 				</header>
 			)}
 			<div className={cn(!flush && "p-4", bodyClassName)}>{children}</div>
+			{footer && (
+				<footer className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-border px-4 py-2 text-xs text-muted-foreground">
+					{footer}
+				</footer>
+			)}
 		</section>
 	);
 }
