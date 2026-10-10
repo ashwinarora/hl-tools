@@ -19,7 +19,12 @@ import {
 	TREASURY,
 	usdSend,
 } from "#/test/keys";
-import { deriveStage, type StageInput, shortAddress } from "./stage";
+import {
+	deriveStage,
+	finaliserLeft,
+	type StageInput,
+	shortAddress,
+} from "./stage";
 
 const DAY = 86_400_000;
 const SIG = { r: `0x${"11".repeat(32)}`, s: `0x${"22".repeat(32)}`, v: 27 };
@@ -362,5 +367,108 @@ describe("deriveStage", () => {
 		const p = await signAs(await signAs(makeProposal(), 1), 3);
 		const s = await stage(p, { wallet: A, headerNetwork: "mainnet" });
 		expect(s.executeReason).toMatch(/^This proposal is for testnet/);
+	});
+
+	it("is closed as carried out outside the tool once the relay has checked the transaction", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 2);
+		const s = await stage(p, {
+			wallet: B,
+			walletChainId: 998,
+			carriedOut: { txHash: `0x${"72".repeat(32)}` },
+		});
+		expect(s.phase).toBe("carried-out");
+		expect(s.headline).toBe("Carried out outside this tool");
+		expect(s.detail).toContain("The relay checked the transaction itself");
+		// ready on paper, but there is nothing left to do
+		expect(s.canSign).toBe(false);
+		expect(s.canExecute).toBe(false);
+		expect(s.signReason).toBe("Carried out outside this tool");
+		expect(s.executeReason).toBe("Carried out outside this tool");
+		// it outranks a withdrawal: what happened on chain is what happened
+		expect(
+			(
+				await stage(p, {
+					carriedOut: { txHash: null },
+					ended: { kind: "withdrawn", by: A },
+				})
+			).phase,
+		).toBe("carried-out");
+		// and the finaliser's own accepted result outranks it
+		expect(
+			(await stage({ ...p, receipt: OK }, { carriedOut: { txHash: null } }))
+				.phase,
+		).toBe("submitted");
+	});
+
+	it("is closed, without a guess, when the relay closed it in a way this version does not know", async () => {
+		const s = await stage(await signAs(makeProposal(), 1), {
+			wallet: B,
+			closedUnknown: true,
+		});
+		expect(s.phase).toBe("closed");
+		expect(s.headline).toBe("Closed");
+		expect(s.canSign).toBe(false);
+		expect(s.canExecute).toBe(false);
+	});
+
+	it("cannot be finished once its finaliser has left the signer set", async () => {
+		// B leads; the chain now lists A, C and a newcomer
+		const without = {
+			...POLICY,
+			authorizedUsers: [A, C, OUTSIDER].sort(),
+		};
+		const ready = await signAs(await signAs(makeProposal(), 1), 3);
+		const s = await stage(ready, {
+			policy: without,
+			wallet: A,
+			walletChainId: 998,
+		});
+		expect(s.phase).toBe("stuck");
+		expect(s.headline).toBe("Cannot be finished");
+		expect(s.detail).toContain(shortAddress(B));
+		expect(s.detail).toContain("propose it again with another finaliser");
+		expect(s.canSign).toBe(false);
+		expect(s.canExecute).toBe(false);
+		// the finaliser themself, reading it
+		const own = await stage(ready, {
+			policy: without,
+			wallet: B,
+			walletChainId: 998,
+		});
+		expect(own.phase).toBe("stuck");
+		expect(own.detail).toContain("your wallet is no longer");
+		expect(own.canExecute).toBe(false);
+		// still collecting: the same, there is no point in signing
+		expect(
+			(await stage(makeProposal(), { policy: without, wallet: A })).phase,
+		).toBe("stuck");
+		// an expired one is expired first
+		expect(
+			(await stage(ready, { policy: without, now: NONCE + 3 * DAY })).phase,
+		).toBe("expired");
+	});
+
+	it("does not call it stuck when the finaliser never was a signer, or when that cannot be known", async () => {
+		// a document made elsewhere may name a signer's funded API wallet as finaliser
+		const led = makeProposal({ leader: OUTSIDER });
+		expect(finaliserLeft(led, POLICY)).toBe(false);
+		expect((await stage(led)).phase).toBe("collecting");
+		const p = makeProposal();
+		expect(finaliserLeft(p, POLICY)).toBe(false);
+		expect(finaliserLeft(p, null)).toBe(false);
+		// not a multi-sig any more is its own state
+		expect(
+			finaliserLeft(p, { ...POLICY, authorizedUsers: [], threshold: 0 }),
+		).toBe(false);
+		expect(
+			finaliserLeft(
+				{ ...p, meta: { ...p.meta, policyAtCreation: null } },
+				{
+					...POLICY,
+					authorizedUsers: [A, C],
+				},
+			),
+		).toBe(false);
+		expect(finaliserLeft(p, { ...POLICY, authorizedUsers: [A, C] })).toBe(true);
 	});
 });

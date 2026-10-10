@@ -51,6 +51,10 @@ const REFUSALS: Record<string, Known> = {
 	"relay.not_finaliser": {
 		message: "Only the finaliser can do this.",
 	},
+	"relay.report_ambiguous": {
+		message:
+			"Another proposal has the same action and number with a different finaliser, so Hyperliquid's record cannot tell which one was carried out.",
+	},
 	"relay.not_proposer": {
 		message: "Only the wallet that proposed it can withdraw a proposal.",
 	},

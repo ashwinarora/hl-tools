@@ -28,6 +28,9 @@ export type Phase =
 	| "judging"
 	| "unsupported"
 	| "submitted"
+	| "carried-out"
+	| "closed"
+	| "stuck"
 	| "withdrawn"
 	| "declined"
 	| "expired"
@@ -54,6 +57,13 @@ export interface StageInput {
 		readonly kind: "withdrawn" | "declined";
 		readonly by: Address;
 	} | null;
+	/**
+	 * Set when the relay closed the proposal as carried out outside the tool:
+	 * it checked the transaction on Hyperliquid itself.
+	 */
+	readonly carriedOut?: { readonly txHash: Hex | null } | null;
+	/** The relay closed the proposal in a way this version of the page does not know. */
+	readonly closedUnknown?: boolean;
 	/**
 	 * The network selected in the header. When given and different from the
 	 * proposal's, nothing can be signed until the reader switches: what gets
@@ -100,6 +110,23 @@ function policyChanged(p: Proposal, live: Policy | null): boolean {
 		then.threshold !== live.threshold ||
 		then.authorizedUsers.length !== live.authorizedUsers.length ||
 		then.authorizedUsers.some((a) => !live.authorizedUsers.includes(a))
+	);
+}
+
+/**
+ * The finaliser was one of the signers when the proposal was made and is not
+ * one any more. Hyperliquid accepts an envelope only from a current signer, so
+ * nobody can submit it. (A finaliser that never was a signer is left alone:
+ * a document made elsewhere may name a signer's funded API wallet, which can
+ * submit.)
+ */
+export function finaliserLeft(p: Proposal, live: Policy | null): boolean {
+	const then = p.meta.policyAtCreation;
+	const leader = p.payload.outerSigner;
+	if (!then || !live || live.threshold === 0) return false;
+	return (
+		then.authorizedUsers.includes(leader) &&
+		!live.authorizedUsers.includes(leader)
 	);
 }
 
@@ -156,6 +183,16 @@ export function deriveStage(input: StageInput): Stage {
 		phase = "submitted";
 		headline = "Submitted · accepted by Hyperliquid";
 		detail = `Submitted ${new Date(p.receipt?.submittedAt ?? 0).toISOString()}. Nothing more to sign.`;
+	} else if (input.carriedOut) {
+		phase = "carried-out";
+		headline = "Carried out outside this tool";
+		detail =
+			"Hyperliquid carried this action out, but its result was never recorded here: it was submitted some other way. The relay checked the transaction itself. Nothing more to sign.";
+	} else if (input.closedUnknown) {
+		phase = "closed";
+		headline = "Closed";
+		detail =
+			"The relay marks this proposal as closed in a way this version of the page does not know. Reload the page to get the current one.";
 	} else if (input.ended?.kind === "withdrawn") {
 		phase = "withdrawn";
 		headline = `Withdrawn by the proposer, ${shortAddress(input.ended.by)}`;
@@ -196,6 +233,11 @@ export function deriveStage(input: StageInput): Stage {
 		phase = "not-yet-valid";
 		headline = `Not submittable yet · ${r.have} of ${r.need}`;
 		detail = `The signing window ${window.text}. Signers can sign in the meantime.`;
+	} else if (finaliserLeft(p, policy)) {
+		// counted before "ready": enough signatures change nothing when nobody can submit
+		phase = "stuck";
+		headline = "Cannot be finished";
+		detail = `Only the finaliser can submit a proposal, and ${isLeader ? "your wallet" : shortAddress(leader)} is no longer one of this treasury's signers. Withdraw it and propose it again with another finaliser.`;
 	} else if (r.status === "ready") {
 		phase = "ready";
 		headline = `Ready · ${r.have} of ${r.need} signatures`;

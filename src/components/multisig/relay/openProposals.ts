@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { assembleProposal, countedSigners } from "../model/relay/assemble";
 import type { InboxEntry } from "../model/relay/inbox";
 import type { ProposalRow } from "../model/relay/rows";
+import { finaliserLeft } from "../model/stage";
 import { listOpenProposals } from "./api";
 import { treasuriesQuery, unwrap } from "./queries";
 import { queryIssue, useRelay } from "./useRelay";
@@ -78,6 +79,11 @@ export function useOpenProposals() {
 					threshold: stored.threshold,
 					open: row.status === "open" && row.expiresAt > now,
 					frozen: stored.frozenAt !== null,
+					stuck: finaliserLeft(p, {
+						authorizedUsers: stored.signers,
+						threshold: stored.threshold,
+						observedAt: stored.checkedAt,
+					}),
 					line: described.headline,
 					title: p.meta.title,
 					flags: described.flags,

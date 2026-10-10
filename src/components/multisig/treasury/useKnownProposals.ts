@@ -16,6 +16,7 @@ import { useMemo } from "react";
 import type { DoneProposal, MatchCandidate } from "../model/chain/match";
 import { listProposals as listLocal, receiptOk } from "../model/history";
 import { assembleProposal } from "../model/relay/assemble";
+import type { ProposalStatus } from "../model/relay/rows";
 import { listProposals } from "../relay/api";
 import { unwrap } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -24,10 +25,17 @@ export interface KnownProposal extends MatchCandidate, DoneProposal {
 	/** The proposer's title, or the action in words. */
 	readonly title: string;
 	readonly proposal: Proposal;
+	/** The relay's status; null for a proposal only this browser holds. */
+	readonly status: ProposalStatus | null;
 }
 
-function known(p: Proposal, accepted: boolean): KnownProposal {
+function known(
+	p: Proposal,
+	accepted: boolean,
+	status: ProposalStatus | null,
+): KnownProposal {
 	return {
+		status,
 		digest: p.digest,
 		action: p.payload.action,
 		nonce: p.payload.nonce,
@@ -73,7 +81,14 @@ export function useKnownProposals(
 			for (const row of got.rows) {
 				const a = await assembleProposal(row);
 				if (a.assembled)
-					out.push(known(a.assembled.proposal, row.status === "accepted"));
+					out.push(
+						known(
+							a.assembled.proposal,
+							// carried out is done too, whoever sent it
+							row.status === "accepted" || row.status === "carried_out",
+							row.status,
+						),
+					);
 			}
 			return out;
 		},
@@ -88,7 +103,7 @@ export function useKnownProposals(
 			for (const stored of await listLocal(network)) {
 				if (stored.multiSigUser !== address) continue;
 				const p = decodeProposal(stored.doc).proposal;
-				if (p) out.push(known(p, !!p.receipt && receiptOk(p.receipt)));
+				if (p) out.push(known(p, !!p.receipt && receiptOk(p.receipt), null));
 			}
 			return out;
 		},
@@ -102,7 +117,13 @@ export function useKnownProposals(
 			const have = byDigest.get(p.digest);
 			byDigest.set(
 				p.digest,
-				have ? { ...p, accepted: p.accepted || have.accepted } : p,
+				have
+					? {
+							...p,
+							accepted: p.accepted || have.accepted,
+							status: p.status ?? have.status,
+						}
+					: p,
 			);
 		}
 		return [...byDigest.values()];

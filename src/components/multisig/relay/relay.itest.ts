@@ -42,11 +42,13 @@ import {
 	listEvents,
 	listOpenProposals,
 	listProposalEvents,
+	listReports,
 	listTreasuries,
 	type ProposalKey,
 	publishProposal,
 	recordReceipt,
 	removeSignature,
+	reportExecution,
 	requestTreasury,
 } from "./api";
 import { type ChannelState, subscribeWallet } from "./realtime";
@@ -54,6 +56,7 @@ import { probeSession, sessionWallet, signIn, signOut } from "./session";
 
 const NET = "mainnet" as const;
 const REAL_INFO = "https://api.hyperliquid.xyz/info";
+const REAL_EXPLORER = "https://rpc.hyperliquid.xyz/explorer";
 
 let sql: Sql;
 let stub: InfoStub;
@@ -166,6 +169,7 @@ beforeAll(async () => {
 	sql = database();
 	stub = await infoStub();
 	await sql`update private.settings set value = ${stub.url} where key = 'info_url.mainnet'`;
+	await sql`update private.settings set value = ${stub.url} where key = 'explorer_url.mainnet'`;
 	[a, b, c, outsider] = await Promise.all([
 		newWallet(),
 		newWallet(),
@@ -181,6 +185,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	await sql`update private.settings set value = ${REAL_INFO} where key = 'info_url.mainnet'`;
+	await sql`update private.settings set value = ${REAL_EXPLORER} where key = 'explorer_url.mainnet'`;
 	await sql.end();
 	await stub.close();
 });
@@ -801,6 +806,144 @@ describe("recording the result", () => {
 			(await listEvents(a.client, NET, treasury)).data?.rows ?? []
 		).map((e) => e.kind);
 		expect(kinds[0]).toBe("signers_changed");
+	});
+});
+
+describe("a proposal carried out without the tool", () => {
+	let n = 0;
+	const tx = () => `0x${(++n).toString(16).padStart(8, "0")}${"7e".repeat(28)}`;
+	/** The 30 seconds a report waits, skipped. */
+	const due = async (p: Proposal) => {
+		await sql`update public.execution_reports set not_before = now() - interval '1 second'
+			where digest = ${p.digest} and status = 'pending'`;
+	};
+	const statusOf = async (w: TestWallet, p: Proposal) =>
+		(await read(w, p)).row?.status ?? null;
+	const reports = async (w: TestWallet, p: Proposal) =>
+		((await listReports(w.client, keyOf(p))).data?.rows ?? []).map(
+			(r) => `${r.status}${r.reason ? `:${r.reason}` : ""}`,
+		);
+
+	it("is closed for every signer once the relay has seen the transaction for itself", async () => {
+		const p = await proposal("integration: carried out", [a]);
+		await publishProposal(a.client, a.address, publishRow(p));
+		const hash = tx();
+		stub.tx(hash, { user: treasury, action: p.payload.action });
+		expect(
+			(await reportExecution(a.client, a.address, keyOf(p), hash as never))
+				.issue,
+		).toBeNull();
+		expect(await reports(a, p)).toEqual(["pending"]);
+		// a co-signer does not read the report itself, and telling twice is fine
+		expect(await reports(b, p)).toEqual([]);
+		expect(
+			(await reportExecution(b.client, b.address, keyOf(p), hash as never))
+				.issue,
+		).toBeNull();
+		expect(await statusOf(a, p)).toBe("open");
+
+		const asked = stub.txCalls.length;
+		await due(p);
+		await untilWorker(sql, async () => (await statusOf(a, p)) !== "open");
+		expect(stub.txCalls.slice(asked)).toEqual([hash]);
+		expect(await statusOf(a, p)).toBe("carried_out");
+		expect(await statusOf(b, p)).toBe("carried_out");
+		expect(await reports(a, p)).toEqual(["confirmed"]);
+		const events =
+			(await listProposalEvents(a.client, keyOf(p))).data?.rows ?? [];
+		const last = events.at(-1);
+		expect(last?.kind).toBe("proposal_carried_out");
+		expect(last?.actor).toBeNull();
+		expect(last?.data).toMatchObject({ tx_hash: hash, reported_by: a.address });
+		// it left everyone's pending list, and nothing more can be signed for it
+		expect(
+			(await listOpenProposals(b.client)).data?.rows.some(
+				(r) => r.digest === p.digest,
+			),
+		).toBe(false);
+		expect(
+			codes(
+				(await endProposal(a.client, a.address, keyOf(p), "withdrawn")).issue,
+			),
+		).toBe("relay.proposal_closed");
+
+		// the finaliser's own result, arriving late, makes it a normal accepted proposal
+		expect(
+			(await recordReceipt(b.client, b.address, keyOf(p), receipt(true))).issue,
+		).toBeNull();
+		expect(await statusOf(a, p)).toBe("accepted");
+	});
+
+	it("is not believed when the transaction is something else", async () => {
+		const p = await proposal("integration: false report", [a]);
+		await publishProposal(a.client, a.address, publishRow(p));
+		const other = tx();
+		stub.tx(other, {
+			user: treasury,
+			action: { ...p.payload.action, amount: "2" },
+		});
+		await reportExecution(a.client, a.address, keyOf(p), other as never);
+		await due(p);
+		await untilWorker(sql, async () => (await reports(a, p))[0] !== "pending");
+		expect(await reports(a, p)).toEqual(["rejected:other_action"]);
+
+		// the right action, rejected by the chain
+		const failed = tx();
+		stub.tx(failed, {
+			user: treasury,
+			action: p.payload.action,
+			error: "Insufficient balance for withdrawal.",
+		});
+		await reportExecution(a.client, a.address, keyOf(p), failed as never);
+		await due(p);
+		await untilWorker(
+			sql,
+			async () =>
+				(await reports(a, p)).length === 2 &&
+				!(await reports(a, p)).includes("pending"),
+		);
+		expect((await reports(a, p)).sort()).toEqual([
+			"rejected:other_action",
+			"rejected:tx_failed",
+		]);
+
+		// another account's transaction with the very same action
+		const theirs = tx();
+		stub.tx(theirs, { user: outsider.address, action: p.payload.action });
+		await reportExecution(b.client, b.address, keyOf(p), theirs as never);
+		await due(p);
+		await untilWorker(sql, async () => (await reports(b, p))[0] !== "pending");
+		expect(await reports(b, p)).toEqual(["rejected:other_account"]);
+		expect(await statusOf(a, p)).toBe("open");
+	});
+
+	it("can only be reported by a signer of that treasury", async () => {
+		const p = await proposal("integration: outsider report", [a]);
+		await publishProposal(a.client, a.address, publishRow(p));
+		expect(
+			codes(
+				(
+					await reportExecution(
+						outsider.client,
+						outsider.address,
+						keyOf(p),
+						tx() as never,
+					)
+				).issue,
+			),
+		).toBe("relay.not_allowed");
+		expect(
+			codes(
+				(
+					await reportExecution(
+						a.client,
+						a.address,
+						{ ...keyOf(p), digest: `0x${"ee".repeat(32)}` },
+						tx() as never,
+					)
+				).issue,
+			),
+		).toBe("relay.unknown_proposal");
 	});
 });
 

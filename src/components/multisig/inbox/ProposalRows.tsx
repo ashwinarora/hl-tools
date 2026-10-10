@@ -71,6 +71,8 @@ export function ProposalRows({
 								</span>
 							) : p.frozen ? (
 								<Tag tone="warn">no longer a multi-sig</Tag>
+							) : p.stuck ? (
+								<Tag tone="warn">cannot be finished</Tag>
 							) : (
 								<Tag>waiting on others</Tag>
 							)}

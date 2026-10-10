@@ -24,8 +24,10 @@ import {
 	type Parsed,
 	type ProposalRow,
 	proposalRows,
+	type ReportRow,
 	type RequestKind,
 	type RequestRow,
+	reportRows,
 	requestRows,
 	type TreasuryRow,
 	treasuryRows,
@@ -53,6 +55,8 @@ const PROPOSAL =
 	"receipts(submitted_at,submitted_by,signature_chain_id,outer_r,outer_s,outer_v,http_status,response,accepted,recorded_at)";
 const EVENT = "id,network,treasury,digest,kind,actor,data,at";
 const REQUEST = "id,network,address,kind,status,reason,created_at,finished_at";
+const REPORT =
+	"id,network,treasury,digest,tx_hash,status,reason,created_at,finished_at";
 
 type Answer = { data: unknown; error: unknown };
 
@@ -243,6 +247,24 @@ export function getRequest(
 	);
 }
 
+/** The signed-in wallet's own reports about one proposal, oldest first. */
+export function listReports(
+	client: RelayClient,
+	key: ProposalKey,
+): Promise<Result<Parsed<ReportRow>>> {
+	return read(
+		() =>
+			client
+				.from("execution_reports")
+				.select(REPORT)
+				.eq("network", key.network)
+				.eq("treasury", key.treasury)
+				.eq("digest", key.digest)
+				.order("created_at"),
+		reportRows,
+	);
+}
+
 // ----------------------------------------------------------------------- writes
 
 /** Ask the relay to look an account up: `add` to start tracking it, `check` to refresh its signer copy. */
@@ -320,6 +342,25 @@ export function removeSignature(
 			.eq("treasury", key.treasury)
 			.eq("digest", key.digest)
 			.eq("signer", as),
+	);
+}
+
+/**
+ * Point the relay at the transaction that carried a proposal out without it.
+ * The relay checks the transaction itself before closing anything. Already
+ * told (by this wallet or a co-signer) counts as done.
+ */
+export function reportExecution(
+	client: RelayClient,
+	as: Address,
+	key: ProposalKey,
+	txHash: Hex,
+): Promise<Result<true>> {
+	return write(
+		client,
+		as,
+		() => client.from("execution_reports").insert({ ...key, tx_hash: txHash }),
+		{ duplicateIsFine: true },
 	);
 }
 

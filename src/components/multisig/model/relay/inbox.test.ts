@@ -22,6 +22,7 @@ const entry = (over: Partial<InboxEntry> = {}): InboxEntry => ({
 	threshold: 2,
 	open: true,
 	frozen: false,
+	stuck: false,
 	...over,
 });
 
@@ -132,5 +133,26 @@ describe("groupInbox and counts", () => {
 		expect(countOpen(entries, "testnet", TREASURY)).toBe(3);
 		expect(countOpen(entries, "testnet", OTHER)).toBe(1);
 		expect(countOpen(entries, "mainnet", OTHER)).toBe(0);
+	});
+});
+
+describe("a proposal whose finaliser is no longer a signer", () => {
+	// only the finaliser can submit; when they have left the signer set, no signature finishes it
+	it("asks nobody to sign or to finish, and stays listed as waiting", () => {
+		const unsigned = entry({ finaliser: C, stuck: true });
+		const ready = entry({ finaliser: A, counted: [B, C], stuck: true });
+		for (const e of [unsigned, ready]) {
+			expect(inboxGroup(e, A)).toBe("waiting");
+			expect(inboxGroup(e, B)).toBe("waiting");
+			expect(needsMe(e, A)).toBe(false);
+		}
+		expect(countNeeds([unsigned, ready], A, "testnet")).toBe(0);
+		expect(groupInbox([unsigned, ready], A, "testnet").waiting).toHaveLength(2);
+		// it still counts as open on its treasury's page, where its proposer can withdraw it
+		expect(countOpen([unsigned, ready], "testnet", TREASURY)).toBe(2);
+	});
+	it("a closed or frozen one is still not listed at all", () => {
+		expect(inboxGroup(entry({ stuck: true, open: false }), A)).toBeNull();
+		expect(inboxGroup(entry({ stuck: true, frozen: true }), A)).toBeNull();
 	});
 });

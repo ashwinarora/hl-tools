@@ -34,6 +34,7 @@ import {
 } from "../model/relay/assemble";
 import { relayIssue } from "../model/relay/errors";
 import { planPush, publishBlocker, type RelayKnown } from "../model/relay/push";
+import { type CarriedOut, carriedOutOf } from "../model/relay/report";
 import type { EndingKind, ProposalRow } from "../model/relay/rows";
 import {
 	addSignature,
@@ -63,6 +64,8 @@ export interface RelayView {
 	readonly loading: boolean;
 	/** The relay's row (status, who proposed, how it ended); null when not known. */
 	readonly row: ProposalRow | null;
+	/** What the relay recorded when it closed the proposal as carried out outside the tool. */
+	readonly carriedOut: CarriedOut | null;
 	readonly expired: boolean;
 	/** Signers whose signature is on the relay and verifies. */
 	readonly signers: readonly Address[];
@@ -107,6 +110,7 @@ interface Remote {
 	readonly found: RelayProposal | null;
 	readonly issues: readonly Issue[];
 	readonly removed: readonly Address[];
+	readonly carriedOut: CarriedOut | null;
 }
 
 const keyOf = (p: Proposal): ProposalKey => ({
@@ -135,14 +139,16 @@ async function readRemote(client: RelayClient, digest: Hex): Promise<Remote> {
 		);
 	}
 	let removed: Address[] = [];
+	let carriedOut: CarriedOut | null = null;
 	if (found) {
 		const events = await listProposalEvents(client, keyOf(found.proposal));
 		// without the events nothing is dropped: a signature that verifies stays shown
 		if (events.data) {
 			removed = [...removedSigners(events.data.rows, found.proposal.digest)];
+			carriedOut = carriedOutOf(events.data.rows);
 		}
 	}
-	return { found, issues, removed };
+	return { found, issues, removed, carriedOut };
 }
 
 export function useProposalDoc(digest: string | undefined): ProposalDoc {
@@ -479,6 +485,7 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 		known: !!found,
 		loading: !!client && !!digest && remote.isPending,
 		row: found?.row ?? null,
+		carriedOut: remoteData?.carriedOut ?? null,
 		expired: !!found && found.row.expiresAt <= Date.now(),
 		signers: found?.proposal.signatures.map((s) => s.signer) ?? [],
 		canPublish: !!client && !found && blocker === null && storedSignerNow,

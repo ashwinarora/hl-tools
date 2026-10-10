@@ -5,7 +5,8 @@ import {
 	type Proposal,
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { ExternalLink } from "lucide-react";
+import { useCallback, useMemo } from "react";
 import { Callout } from "#/components/hub/status";
 import {
 	FLAG_TEXT,
@@ -17,7 +18,9 @@ import {
 } from "#/components/tools/multisig/model";
 import { useJudgement } from "#/components/tools/multisig/useJudgement";
 import { useNetwork } from "#/store/networkStore";
+import { useChainMatch } from "../live/useChainMatch";
 import { CONTROL_REFRESH_MS } from "../live/useControl";
+import { explorerTxUrl } from "../model/chain/columns";
 import { RELAY_COPY } from "../model/relay/copy";
 import {
 	deriveStage,
@@ -26,6 +29,8 @@ import {
 	type WalletRole,
 } from "../model/stage";
 import { useTreasuries } from "../relay/queries";
+import { useExecutionReporter } from "../relay/useExecutionReporter";
+import { useRelay } from "../relay/useRelay";
 import {
 	backLink,
 	Card,
@@ -34,6 +39,7 @@ import {
 	SignsTag,
 	Tag,
 } from "../shell/kit";
+import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useTreasuryNames } from "../treasuryName";
@@ -53,16 +59,21 @@ const ACTIONABLE: ReadonlySet<Phase> = new Set([
 	"collecting",
 	"ready",
 	"not-yet-valid",
+	// nothing to sign, but its proposer can still withdraw it and a signer take a signature back
+	"stuck",
 ]);
 /** Phases after which nobody signs any more. */
 const CLOSED: ReadonlySet<Phase> = new Set([
 	"submitted",
+	"carried-out",
+	"closed",
 	"withdrawn",
 	"declined",
 	"expired",
 ]);
 /** Phases that end with "make a new one": the old action, a fresh nonce. */
 const REPROPOSABLE: ReadonlySet<Phase> = new Set([
+	"stuck",
 	"expired",
 	"withdrawn",
 	"declined",
@@ -93,6 +104,7 @@ export function ProposalView({
 	doc: ProposalDoc;
 }) {
 	const header = useNetwork();
+	const relay = useRelay();
 	const wallet = useWalletSigner();
 	const me = wallet.address as Address | null;
 	const parsed = useMemo(
@@ -111,8 +123,35 @@ export function ProposalView({
 		}),
 		[proposal.payload.multiSigUser, proposal.payload.network],
 	);
-	const treasury = useLiveTreasuryState(target);
 	const row = doc.relay.row;
+	// While the relay holds it as not carried out, this page follows the
+	// treasury's ledger: if the finaliser sent it some other way, the transfer
+	// shows up there, and the relay is pointed at its transaction.
+	const unsettled =
+		row?.status === "open" ||
+		row?.status === "withdrawn" ||
+		row?.status === "declined";
+	const treasury = useLiveTreasuryState(target, { history: unsettled });
+	const candidates = useMemo(
+		() => [
+			{
+				digest: proposal.digest,
+				action: proposal.payload.action,
+				nonce: proposal.payload.nonce,
+				finaliser: proposal.payload.outerSigner,
+			},
+		],
+		[proposal],
+	);
+	const match = useChainMatch(
+		target,
+		unsettled ? treasury.live.ledger : null,
+		candidates,
+		unsettled,
+	);
+	const status = row?.status ?? null;
+	const statusOf = useCallback(() => status, [status]);
+	const clock = useNow();
 	// While the signer set is still on its way, the page is "checking", not
 	// "signer set not loaded": that is for a read that failed. The same holds for
 	// the moment after it arrives, while signatures are re-counted against it.
@@ -131,6 +170,11 @@ export function ProposalView({
 		ended: row?.ending
 			? { kind: row.ending.kind, by: row.ending.endedBy }
 			: null,
+		carriedOut:
+			row?.status === "carried_out"
+				? { txHash: doc.relay.carriedOut?.txHash ?? null }
+				: null,
+		closedUnknown: row?.status === "unknown",
 		headerNetwork: header,
 	});
 	const role = ROLE[stage.role];
@@ -145,6 +189,16 @@ export function ProposalView({
 	const listed = mine.find(
 		(t) => t.network === target.network && t.address === target.address,
 	);
+	useExecutionReporter({
+		network: target.network,
+		treasury: target.address as Address,
+		ledger: unsettled ? treasury.live.ledger : null,
+		match,
+		statusOf,
+		signer: !!listed && !!relay.wallet && listed.signers.includes(relay.wallet),
+		now: clock,
+	});
+	const carriedTx = doc.relay.carriedOut?.txHash ?? null;
 	const treasuryName = listed
 		? nameOf(target.network, target.address as Address)
 		: shortAddress(target.address);
@@ -203,13 +257,54 @@ export function ProposalView({
 					stage={stage}
 					action={
 						stage.phase === "submitted" ? (
-							<Link
-								to="/tools/multisig"
-								search={{ view: "account", address: target.address }}
-								className={linkButtonSm}
-							>
-								Check the ledger in the inspector
-							</Link>
+							listed ? (
+								<Link
+									to="/multisig/t/$network/$address"
+									params={{
+										network: target.network,
+										address: target.address,
+									}}
+									search={{ tab: "chain" }}
+									className={linkButtonSm}
+								>
+									See it on Hyperliquid's record
+								</Link>
+							) : (
+								<Link
+									to="/tools/multisig"
+									search={{ view: "account", address: target.address }}
+									className={linkButtonSm}
+								>
+									Check the ledger in the inspector
+								</Link>
+							)
+						) : stage.phase === "carried-out" ? (
+							<span className="flex flex-wrap items-center gap-2">
+								{listed && (
+									<Link
+										to="/multisig/t/$network/$address"
+										params={{
+											network: target.network,
+											address: target.address,
+										}}
+										search={{ tab: "chain" }}
+										className={linkButtonSm}
+									>
+										See it on Hyperliquid's record
+									</Link>
+								)}
+								{carriedTx && (
+									<a
+										href={explorerTxUrl(target.network, carriedTx)}
+										target="_blank"
+										rel="noopener noreferrer"
+										className={linkButtonSm}
+									>
+										Transaction
+										<ExternalLink className="size-3" aria-hidden />
+									</a>
+								)}
+							</span>
 						) : REPROPOSABLE.has(stage.phase) ? (
 							repropose
 						) : undefined

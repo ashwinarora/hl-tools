@@ -9,9 +9,8 @@ import type {
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, RefreshCw } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
-import type { AccountTarget } from "#/components/tools/multisig/model";
 import { cn } from "#/lib/utils";
-import { useChainMatch } from "../live/useChainMatch";
+import type { ChainMatch } from "../live/useChainMatch";
 import {
 	amountText,
 	compareAmount,
@@ -190,27 +189,18 @@ export function ChainTab({
 	state,
 	proposals,
 	proposalsState,
+	match,
 }: {
 	network: Network;
 	address: Address;
 	state: LiveTreasuryState;
 	proposals: readonly KnownProposal[];
 	proposalsState: KnownState;
+	/** Which proposal each ledger row belongs to (looked up by the page, once for all its tabs). */
+	match: ChainMatch;
 }) {
 	const live = state.live;
 	const [list, setList] = useState<List>("transfers");
-	const target = useMemo<AccountTarget>(
-		() => ({ network, address }),
-		[network, address],
-	);
-	// With the relay's record unreadable nothing may be called "none on record":
-	// rows that could be a proposal's stay "checking…" until it is back.
-	const match = useChainMatch(
-		target,
-		live.ledger,
-		proposals,
-		proposalsState === "ready",
-	);
 	const titles = useMemo(
 		() => new Map(proposals.map((p) => [p.digest as string, p.title])),
 		[proposals],

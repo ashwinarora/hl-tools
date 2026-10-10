@@ -147,19 +147,24 @@ export function YourPart({
 	}
 
 	const waiting = need !== null ? Math.max(0, need - have) : null;
-	const note = stage.canExecute
-		? adds
-			? "Your signature completes the threshold. Two wallet prompts, then it is sent."
-			: "One wallet prompt, then it is sent."
-		: stage.canSign
-			? `${RELAY_COPY.underSign}${chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
-			: stage.hasSigned
-				? stage.phase === "ready"
-					? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to submit.`
-					: waiting
-						? `You signed this. It needs ${waiting} more.`
-						: "You signed this."
-				: (stage.signReason ?? stage.executeReason ?? "");
+	const note =
+		stage.phase === "stuck"
+			? actions.withdraw
+				? "It cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again with another finaliser."
+				: "It cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it."
+			: stage.canExecute
+				? adds
+					? "Your signature completes the threshold. Two wallet prompts, then it is sent."
+					: "One wallet prompt, then it is sent."
+				: stage.canSign
+					? `${RELAY_COPY.underSign}${chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
+					: stage.hasSigned
+						? stage.phase === "ready"
+							? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to submit.`
+							: waiting
+								? `You signed this. It needs ${waiting} more.`
+								: "You signed this."
+						: (stage.signReason ?? stage.executeReason ?? "");
 
 	const any =
 		stage.canExecute ||

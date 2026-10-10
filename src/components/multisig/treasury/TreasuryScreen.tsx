@@ -16,6 +16,7 @@ import {
 	useNetworkHydrated,
 	useNetworkStore,
 } from "#/store/networkStore";
+import { useChainMatch } from "../live/useChainMatch";
 import {
 	compareSigners,
 	livePolicy,
@@ -26,8 +27,10 @@ import type { TreasuryTab } from "../model/tabs";
 import { requestTreasury } from "../relay/api";
 import { useOpenProposals } from "../relay/openProposals";
 import { useRequest, useTreasury } from "../relay/queries";
+import { useExecutionReporter } from "../relay/useExecutionReporter";
 import { useRelay } from "../relay/useRelay";
 import { Card, linkButton, NetTag, SignsTag, TabList, Tag } from "../shell/kit";
+import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
 import { defaultTreasuryName, useTreasuryName } from "../treasuryName";
@@ -163,10 +166,44 @@ export function TreasuryScreen({
 		() => (watching ? { address, network } : null),
 		[watching, address, network],
 	);
-	// the ledger, trades, orders and funding are followed only while they are looked at
-	const live = useLiveTreasuryState(target, { history: tab === "chain" });
 	// every proposal on record for this treasury: explains transfers and API wallets
 	const known = useKnownProposals(network, address, !!treasury);
+	const openHere = useMemo(
+		() =>
+			open.items.filter(
+				(p) => p.open && p.network === network && p.treasury === address,
+			),
+		[open.items, network, address],
+	);
+	// The ledger, trades, orders and funding are followed while they are looked
+	// at, and while a proposal is pending: that is how this page notices one
+	// that was carried out without the tool.
+	const live = useLiveTreasuryState(target, {
+		history: tab === "chain" || openHere.length > 0,
+	});
+	// With the relay's record unreadable nothing may be called "none on record":
+	// rows that could be a proposal's stay "checking…" until it is back.
+	const match = useChainMatch(
+		target,
+		live.live.ledger,
+		known.proposals,
+		known.state === "ready",
+	);
+	const statusOf = useCallback(
+		(digest: string) =>
+			known.proposals.find((p) => p.digest === digest)?.status ?? null,
+		[known.proposals],
+	);
+	const clock = useNow();
+	useExecutionReporter({
+		network,
+		treasury: address,
+		ledger: live.live.ledger,
+		match,
+		statusOf,
+		signer: !!treasury && !!me && treasury.signers.includes(me),
+		now: clock,
+	});
 
 	const diff = useMemo(
 		() =>
@@ -340,12 +377,7 @@ export function TreasuryScreen({
 	}
 
 	const frozen = treasury.frozenAt !== null;
-	const pending = open.items.filter(
-		(p) =>
-			p.open &&
-			p.network === treasury.network &&
-			p.treasury === treasury.address,
-	);
+	const pending = openHere;
 	const setTab = (next: TreasuryTab) =>
 		void navigate({
 			to: "/multisig/t/$network/$address",
@@ -462,6 +494,7 @@ export function TreasuryScreen({
 					state={live}
 					proposals={known.proposals}
 					proposalsState={known.state}
+					match={match}
 				/>
 			)}
 		</ShellPage>

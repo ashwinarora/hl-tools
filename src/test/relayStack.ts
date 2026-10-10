@@ -111,19 +111,41 @@ export type StubAnswer =
 	| "rate-limited"
 	| "broken";
 
+/** What the stand-in explorer says about one transaction hash. */
+export type StubTx =
+	| {
+			readonly user: Address;
+			readonly action: Record<string, unknown>;
+			readonly error?: string | null;
+			readonly time?: number;
+	  }
+	| "unknown"
+	| "rate-limited"
+	| "broken";
+
 export interface InfoStub {
 	/** As the database container reaches it. */
 	readonly url: string;
 	/** Every account asked about, in order. */
 	readonly calls: Address[];
+	/** Every transaction hash asked about, in order. */
+	readonly txCalls: string[];
 	answer(address: Address, a: StubAnswer): void;
+	/** Script the explorer's answer for a hash. Unscripted hashes are "unknown". */
+	tx(hash: string, a: StubTx): void;
 	close(): Promise<void>;
 }
 
-/** Stands in for `POST /info {type: "userToMultiSigSigners"}`. Unknown accounts are "not a multi-sig". */
+/**
+ * Stands in for `POST /info {type: "userToMultiSigSigners"}` (unknown accounts
+ * are "not a multi-sig") and for the explorer's `{type: "txDetails"}`
+ * (unknown hashes are "no such transaction"), on one address.
+ */
 export async function infoStub(): Promise<InfoStub> {
 	const answers = new Map<string, StubAnswer>();
+	const txs = new Map<string, StubTx>();
 	const calls: Address[] = [];
+	const txCalls: string[] = [];
 	const server: Server = createServer((req, res) => {
 		let body = "";
 		req.on("data", (c) => {
@@ -131,9 +153,40 @@ export async function infoStub(): Promise<InfoStub> {
 		});
 		req.on("end", () => {
 			let user = "";
+			let asked: { type?: unknown; hash?: unknown } = {};
 			try {
-				user = String((JSON.parse(body) as { user?: unknown }).user ?? "");
+				asked = JSON.parse(body) as typeof asked;
+				user = String((asked as { user?: unknown }).user ?? "");
 			} catch {}
+			if (asked.type === "txDetails") {
+				const hash = String(asked.hash ?? "");
+				txCalls.push(hash);
+				const t = txs.get(hash) ?? "unknown";
+				if (t === "rate-limited") {
+					res.writeHead(429).end();
+				} else if (t === "broken") {
+					res
+						.writeHead(502, { "content-type": "text/html" })
+						.end("<html>bad gateway</html>");
+				} else {
+					res.writeHead(200, { "content-type": "application/json" }).end(
+						t === "unknown"
+							? '{"type":"error","message":"invalid block height: 0"}'
+							: JSON.stringify({
+									type: "txDetails",
+									tx: {
+										time: t.time ?? Date.now(),
+										user: t.user,
+										action: t.action,
+										block: 1,
+										hash,
+										error: t.error ?? null,
+									},
+								}),
+					);
+				}
+				return;
+			}
 			calls.push(user as Address);
 			const a = answers.get(user) ?? "not-multisig";
 			if (a === "rate-limited") {
@@ -159,7 +212,9 @@ export async function infoStub(): Promise<InfoStub> {
 	return {
 		url: `http://host.docker.internal:${port}/info`,
 		calls,
+		txCalls,
 		answer: (address, a) => void answers.set(address, a),
+		tx: (hash, a) => void txs.set(hash, a),
 		close: () => new Promise((resolve) => server.close(() => resolve())),
 	};
 }
