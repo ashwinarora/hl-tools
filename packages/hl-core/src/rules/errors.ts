@@ -34,7 +34,7 @@ export const ERROR_RULES = defineRuleSet({
 		{
 			version: "1.3.0",
 			date: "2026-10-11",
-			note: '"Nonce already used." — the answer to a usdSend whose `time` is older than a usdSend the account has already carried out, even though that number was never used (recorded on testnet through multi-sig envelopes, with the same and with another leader). Not the leader\'s duplicate check, which reads "Invalid nonce: duplicate nonce N".',
+			note: '"Nonce already used." — the answer to a usdSend whose `time` is older than a usdSend the account has already carried out, even though that number was never used (recorded on testnet through multi-sig envelopes, with the same and with another leader). Not the leader\'s duplicate check, which reads "Invalid nonce: duplicate nonce N". Also "User has pending agent removal": a second API wallet removal sent a second after the first.',
 		},
 	],
 });
@@ -416,6 +416,16 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		cause:
 			"The account has already carried out a USDC send (usdSend) with this `time` or a later one. Hyperliquid takes an account's USDC sends only in increasing order of their `time`: once a newer send has gone through, an older one is refused, whoever submits it and although its number was never used.",
 		fix: "Check the ledger: if this send is there, nothing is left to do. Otherwise propose it again, so that it gets a new number; every signer signs again.",
+		documented: false,
+	},
+	{
+		id: "agent-removal-pending",
+		pattern: /pending agent removal/i,
+		example: "User has pending agent removal",
+		category: "account",
+		cause:
+			"The account removed another API wallet a moment ago and Hyperliquid has not finished with it. It takes one removal at a time (recorded on testnet: two removals one second apart, the second refused).",
+		fix: "Wait a little and send the removal again. For a multi-sig that means proposing it again, since the refused one cannot be reused.",
 		documented: false,
 	},
 	{

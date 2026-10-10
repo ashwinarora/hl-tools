@@ -46,6 +46,8 @@ describe("explainExchangeError: every recorded string", () => {
 		],
 		// recorded 2026-10-11: a multi-sig usdSend older than one the treasury had carried out
 		["Nonce already used.", "nonce-used", {}],
+		// recorded 2026-10-11: the second of two API wallet removals sent a second apart
+		["User has pending agent removal", "agent-removal-pending", {}],
 		["Action already expired", "expired", {}],
 		[
 			"Mainnet and testnet require different signature.",
