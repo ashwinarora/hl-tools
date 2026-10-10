@@ -44,6 +44,7 @@ describe("a treasury that is no longer a multi-sig", () => {
 			finish: [],
 			sign: [],
 			waiting: [],
+			dead: [],
 		});
 	});
 
@@ -138,16 +139,18 @@ describe("groupInbox and counts", () => {
 
 describe("a proposal whose finaliser is no longer a signer", () => {
 	// only the finaliser can submit; when they have left the signer set, no signature finishes it
-	it("asks nobody to sign or to finish, and stays listed as waiting", () => {
+	it("asks nobody to sign or to finish, and is listed apart from what merely waits", () => {
 		const unsigned = entry({ finaliser: C, stuck: true });
 		const ready = entry({ finaliser: A, counted: [B, C], stuck: true });
 		for (const e of [unsigned, ready]) {
-			expect(inboxGroup(e, A)).toBe("waiting");
-			expect(inboxGroup(e, B)).toBe("waiting");
+			expect(inboxGroup(e, A)).toBe("dead");
+			expect(inboxGroup(e, B)).toBe("dead");
 			expect(needsMe(e, A)).toBe(false);
 		}
 		expect(countNeeds([unsigned, ready], A, "testnet")).toBe(0);
-		expect(groupInbox([unsigned, ready], A, "testnet").waiting).toHaveLength(2);
+		const groups = groupInbox([unsigned, ready], A, "testnet");
+		expect(groups.dead).toHaveLength(2);
+		expect(groups.waiting).toHaveLength(0);
 		// it still counts as open on its treasury's page, where its proposer can withdraw it
 		expect(countOpen([unsigned, ready], "testnet", TREASURY)).toBe(2);
 	});

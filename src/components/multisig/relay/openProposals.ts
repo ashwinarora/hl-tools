@@ -7,6 +7,8 @@
 import {
 	describeAction,
 	type Issue,
+	orderMark,
+	overtakenBy,
 	type Proposal,
 	type RiskFlag,
 } from "@hl-tools/core";
@@ -15,7 +17,7 @@ import { assembleProposal, countedSigners } from "../model/relay/assemble";
 import type { InboxEntry } from "../model/relay/inbox";
 import type { ProposalRow } from "../model/relay/rows";
 import { finaliserLeft } from "../model/stage";
-import { listOpenProposals } from "./api";
+import { listCarriedOutAfter, listOpenProposals } from "./api";
 import { treasuriesQuery, unwrap } from "./queries";
 import { queryIssue, useRelay } from "./useRelay";
 
@@ -27,6 +29,8 @@ export interface OpenProposal extends InboxEntry {
 	readonly title: string | null;
 	readonly flags: readonly RiskFlag[];
 }
+
+type Assembly = Awaited<ReturnType<typeof assembleProposal>>;
 
 interface OpenData {
 	readonly items: readonly OpenProposal[];
@@ -55,11 +59,32 @@ export function useOpenProposals() {
 			const items: OpenProposal[] = [];
 			const issues: Issue[] = [];
 			let unverified = got.dropped;
+			const assembled = new Map<ProposalRow, Assembly>();
+			for (const row of got.rows)
+				assembled.set(row, await assembleProposal(row, { now }));
+			// Sends Hyperliquid takes only in order: those carried out since the
+			// oldest one still pending decide which pending ones are shut out.
+			const marks = [...assembled.values()].flatMap((a) => {
+				const m = a.assembled
+					? orderMark(a.assembled.proposal.payload.action)
+					: null;
+				return m ? [m.time] : [];
+			});
+			const done: { row: ProposalRow; action: unknown }[] = [];
+			if (marks.length > 0) {
+				// without this read nothing is called shut out: the proposal page judges again
+				const newer = await listCarriedOutAfter(client, Math.min(...marks) - 1);
+				for (const row of newer.data?.rows ?? []) {
+					const a = await assembleProposal(row, { now });
+					if (a.assembled)
+						done.push({ row, action: a.assembled.proposal.payload.action });
+				}
+			}
 			for (const row of got.rows) {
 				const stored = treasuries.rows.find(
 					(t) => t.network === row.network && t.address === row.treasury,
 				);
-				const a = await assembleProposal(row, { now });
+				const a = assembled.get(row) as Assembly;
 				issues.push(...a.issues);
 				if (!a.assembled || !stored) {
 					if (!a.assembled) unverified += 1;
@@ -79,11 +104,21 @@ export function useOpenProposals() {
 					threshold: stored.threshold,
 					open: row.status === "open" && row.expiresAt > now,
 					frozen: stored.frozenAt !== null,
-					stuck: finaliserLeft(p, {
-						authorizedUsers: stored.signers,
-						threshold: stored.threshold,
-						observedAt: stored.checkedAt,
-					}),
+					stuck:
+						finaliserLeft(p, {
+							authorizedUsers: stored.signers,
+							threshold: stored.threshold,
+							observedAt: stored.checkedAt,
+						}) ||
+						overtakenBy(
+							p.payload.action,
+							done.filter(
+								(d) =>
+									d.row.network === row.network &&
+									d.row.treasury === row.treasury &&
+									d.row.digest !== row.digest,
+							),
+						) !== null,
 					line: described.headline,
 					title: p.meta.title,
 					flags: described.flags,

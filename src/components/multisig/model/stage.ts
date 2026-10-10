@@ -32,6 +32,7 @@ export type Phase =
 	| "carried-out"
 	| "closed"
 	| "stuck"
+	| "overtaken"
 	| "withdrawn"
 	| "declined"
 	| "expired"
@@ -65,6 +66,13 @@ export interface StageInput {
 	readonly carriedOut?: { readonly txHash: Hex | null } | null;
 	/** The relay closed the proposal in a way this version of the page does not know. */
 	readonly closedUnknown?: boolean;
+	/**
+	 * A newer action of the same ordered kind (a USDC send) has been carried out
+	 * for this treasury: Hyperliquid will refuse this one. See the core's
+	 * `overtakenBy`. A recorded attempt that Hyperliquid refused for that reason
+	 * says the same, and is read from the receipt here.
+	 */
+	readonly overtaken?: boolean;
 	/**
 	 * The network selected in the header. When given and different from the
 	 * proposal's, nothing can be signed until the reader switches: what gets
@@ -221,6 +229,11 @@ export function deriveStage(input: StageInput): Stage {
 		phase = "expired";
 		head = say`Expired`;
 		body = say`The signing window ${window.parts}. Re-propose it with a fresh nonce; collected signatures do not carry over.`;
+	} else if (input.overtaken || failedAttempt?.id === "nonce-used") {
+		// before "ready": signatures change nothing once Hyperliquid will refuse it
+		phase = "overtaken";
+		head = say`Cannot be submitted any more`;
+		body = say`Hyperliquid takes a treasury's USDC sends in the order they were proposed, and a newer one has been carried out. This one would be refused. Propose it again: it gets a new number, and the signers sign once more.`;
 	} else if (r.status === "not-multisig") {
 		phase = "not-multisig";
 		head = say`Not a multi-sig on ${p.payload.network}`;

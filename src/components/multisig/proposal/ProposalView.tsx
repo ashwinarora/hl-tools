@@ -3,6 +3,8 @@ import {
 	type Address,
 	describeAction,
 	type Issue,
+	orderMark,
+	overtakenBy,
 	type Proposal,
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
@@ -44,6 +46,7 @@ import {
 import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { TreasuryStrip } from "../TreasuryStrip";
+import { useKnownProposals } from "../treasury/useKnownProposals";
 import { useTreasuryNames } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
@@ -64,6 +67,7 @@ const ACTIONABLE: ReadonlySet<Phase> = new Set([
 	"not-yet-valid",
 	// nothing to sign, but its proposer can still withdraw it and a signer take a signature back
 	"stuck",
+	"overtaken",
 ]);
 /** Phases after which nobody signs any more. */
 const CLOSED: ReadonlySet<Phase> = new Set([
@@ -77,6 +81,7 @@ const CLOSED: ReadonlySet<Phase> = new Set([
 /** Phases that end with "make a new one": the old action, a fresh nonce. */
 const REPROPOSABLE: ReadonlySet<Phase> = new Set([
 	"stuck",
+	"overtaken",
 	"expired",
 	"withdrawn",
 	"declined",
@@ -167,6 +172,31 @@ export function ProposalView({
 	);
 	const status = row?.status ?? null;
 	const statusOf = useCallback(() => status, [status]);
+	// A USDC send is shut out once a newer send of the treasury is carried out:
+	// the other proposals on record say whether that has happened.
+	const ordered = useMemo(
+		() => orderMark(proposal.payload.action) !== null,
+		[proposal.payload.action],
+	);
+	const settled =
+		status === "accepted" || status === "carried_out" || status === "unknown";
+	const known = useKnownProposals(
+		target.network,
+		target.address as Address,
+		ordered && !settled,
+	);
+	const overtaken = useMemo(
+		() =>
+			ordered &&
+			!settled &&
+			overtakenBy(
+				proposal.payload.action,
+				known.proposals.filter(
+					(p) => p.accepted && p.digest !== proposal.digest,
+				),
+			) !== null,
+		[ordered, settled, proposal, known.proposals],
+	);
 	const clock = useNow();
 	// While the signer set is still on its way, the page is "checking", not
 	// "signer set not loaded": that is for a read that failed. The same holds for
@@ -191,6 +221,7 @@ export function ProposalView({
 				? { txHash: doc.relay.carriedOut?.txHash ?? null }
 				: null,
 		closedUnknown: row?.status === "unknown",
+		overtaken,
 		headerNetwork: header,
 	});
 	const role = ROLE[stage.role];

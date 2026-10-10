@@ -358,6 +358,28 @@ export async function listProposalsIn(
 	return { data: { rows, dropped }, issue: null };
 }
 
+/**
+ * Proposals that were carried out (through the tool or outside it) with a
+ * nonce above `afterNonce`, across the wallet's treasuries, newest first.
+ * They tell which older pending sends Hyperliquid will now refuse.
+ */
+export function listCarriedOutAfter(
+	client: RelayClient,
+	afterNonce: number,
+): Promise<Result<Parsed<ProposalRow>>> {
+	return read(
+		() =>
+			client
+				.from("proposals")
+				.select(PROPOSAL)
+				.in("status", ["accepted", "carried_out"])
+				.gt("nonce", afterNonce)
+				.order("nonce", { ascending: false })
+				.limit(200),
+		proposalRows,
+	);
+}
+
 /** Proposals nobody ended whose signing window closed between two moments. */
 export function listLapsed(
 	client: RelayClient,

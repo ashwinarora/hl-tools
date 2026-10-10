@@ -448,6 +448,56 @@ describe("deriveStage", () => {
 		).toBe("expired");
 	});
 
+	it("says a send cannot be submitted once a newer send of the treasury was carried out", async () => {
+		// two signatures, the finaliser's wallet connected: it would be "ready"
+		const p = await signAs(await signAs(makeProposal(), 1), 2);
+		expect((await stage(p, { wallet: B })).phase).toBe("ready");
+		const s = await stage(p, { wallet: B, overtaken: true });
+		expect(s.phase).toBe("overtaken");
+		expect(s.headline).toBe("Cannot be submitted any more");
+		expect(s.detail).toMatch(/in the order they were proposed/);
+		expect(s.detail).toMatch(/Propose it again/);
+		// nobody is asked for anything any more
+		expect(s.canExecute).toBe(false);
+		expect(s.canSign).toBe(false);
+		expect(s.executeReason).toBe("Cannot be submitted any more");
+		expect(
+			(await stage(makeProposal(), { wallet: A, overtaken: true })).canSign,
+		).toBe(false);
+	});
+
+	it("reads the same from an attempt Hyperliquid refused for that reason", async () => {
+		const refused = receipt({ status: "err", response: "Nonce already used." });
+		const p = {
+			...(await signAs(await signAs(makeProposal(), 1), 2)),
+			receipt: refused,
+		};
+		const s = await stage(p, { wallet: B });
+		expect(s.phase).toBe("overtaken");
+		expect(s.failedAttempt?.id).toBe("nonce-used");
+		// another rejection is still only a failed attempt: it can be retried
+		const other = await stage({ ...p, receipt: ERR }, { wallet: B });
+		expect(other.phase).toBe("ready");
+	});
+
+	it("keeps what ended a proposal ahead of 'overtaken': accepted, withdrawn, expired", async () => {
+		const p = await signAs(makeProposal(), 1);
+		expect(
+			(await stage({ ...p, receipt: OK }, { overtaken: true })).phase,
+		).toBe("submitted");
+		expect(
+			(
+				await stage(p, {
+					overtaken: true,
+					ended: { kind: "withdrawn", by: A },
+				})
+			).phase,
+		).toBe("withdrawn");
+		expect(
+			(await stage(p, { overtaken: true, now: NONCE + 3 * DAY })).phase,
+		).toBe("expired");
+	});
+
 	it("does not call it stuck when the finaliser never was a signer, or when that cannot be known", async () => {
 		// a document made elsewhere may name a signer's funded API wallet as finaliser
 		const led = makeProposal({ leader: OUTSIDER });

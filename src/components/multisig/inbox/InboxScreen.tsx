@@ -43,8 +43,14 @@ export function InboxScreen() {
 		(p) => !(hydrated && hidden.includes(treasuryKey(p.network, p.treasury))),
 	);
 	const groups = groupInbox(shown, me, network);
+	// Oldest first where the reader submits: Hyperliquid takes a treasury's USDC
+	// sends only in the order they were proposed, so working down the list is safe.
+	const finish = [...groups.finish].sort((a, b) => a.row.nonce - b.row.nonce);
 	const total =
-		groups.finish.length + groups.sign.length + groups.waiting.length;
+		groups.finish.length +
+		groups.sign.length +
+		groups.waiting.length +
+		groups.dead.length;
 	const name = (p: OpenProposal) => nameOf(p.network, p.treasury);
 	const hasTreasuries = treasuries.some((t) => t.network === network);
 
@@ -67,11 +73,12 @@ export function InboxScreen() {
 							Ready for you to finish
 						</GroupTitle>
 						<Card flush>
-							<ProposalRows items={groups.finish} me={me} treasuryName={name} />
+							<ProposalRows items={finish} me={me} treasuryName={name} />
 						</Card>
 						<p className="mx-0.5 mt-1.5 text-xs text-subtle-foreground">
 							You were named finaliser on these. One click signs what is left
-							and submits.
+							and submits. Oldest first: Hyperliquid takes a treasury's USDC
+							sends in the order they were proposed.
 						</p>
 					</section>
 				)}
@@ -97,6 +104,20 @@ export function InboxScreen() {
 								treasuryName={name}
 							/>
 						</Card>
+					</section>
+				)}
+				{groups.dead.length > 0 && (
+					<section>
+						<GroupTitle count={groups.dead.length}>
+							Cannot be finished
+						</GroupTitle>
+						<Card flush>
+							<ProposalRows items={groups.dead} me={me} treasuryName={name} />
+						</Card>
+						<p className="mx-0.5 mt-1.5 text-xs text-subtle-foreground">
+							Hyperliquid would refuse these now, so nothing here needs a
+							signature. Open one to see why and to propose it again.
+						</p>
 					</section>
 				)}
 				{total === 0 && (

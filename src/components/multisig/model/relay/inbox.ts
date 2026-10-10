@@ -19,7 +19,10 @@ export interface InboxEntry {
 	readonly open: boolean;
 	/** Its treasury stopped being a multi-sig: nothing can be signed or submitted for it. */
 	readonly frozen: boolean;
-	/** Its finaliser is no longer a signer: it cannot be submitted, whoever signs. */
+	/**
+	 * It cannot be submitted, whoever signs: its finaliser is no longer a signer,
+	 * or it is a USDC send and a newer send of the treasury has been carried out.
+	 */
 	readonly stuck: boolean;
 }
 
@@ -27,14 +30,15 @@ export interface InboxEntry {
  * finish   you are the finaliser and can submit now (your own signature may be the last one missing)
  * sign     your signature is still wanted
  * waiting  nothing for you to do: you signed, or it is already ready and someone else finalises
+ * dead     it cannot be submitted any more: it waits to be withdrawn and proposed again
  */
-export type InboxGroup = "finish" | "sign" | "waiting";
+export type InboxGroup = "finish" | "sign" | "waiting" | "dead";
 
 export function inboxGroup(e: InboxEntry, me: Address): InboxGroup | null {
 	// a frozen treasury's proposals stay listed on its own page, but ask nobody for anything
 	if (!e.open || e.frozen) return null;
 	// nobody's signature can finish it: it waits for its proposer to withdraw it
-	if (e.stuck) return "waiting";
+	if (e.stuck) return "dead";
 	const signed = e.counted.includes(me);
 	const ready = e.counted.length >= e.threshold;
 	const completes = !signed && e.counted.length === e.threshold - 1;
@@ -52,6 +56,7 @@ export interface Inbox<T extends InboxEntry> {
 	readonly finish: readonly T[];
 	readonly sign: readonly T[];
 	readonly waiting: readonly T[];
+	readonly dead: readonly T[];
 }
 
 export function groupInbox<T extends InboxEntry>(
@@ -59,7 +64,12 @@ export function groupInbox<T extends InboxEntry>(
 	me: Address,
 	network: Network,
 ): Inbox<T> {
-	const out = { finish: [] as T[], sign: [] as T[], waiting: [] as T[] };
+	const out = {
+		finish: [] as T[],
+		sign: [] as T[],
+		waiting: [] as T[],
+		dead: [] as T[],
+	};
 	for (const e of entries) {
 		if (e.network !== network) continue;
 		const g = inboxGroup(e, me);

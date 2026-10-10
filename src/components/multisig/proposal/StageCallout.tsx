@@ -11,6 +11,7 @@ const TONE: Record<Phase, Tone> = {
 	"carried-out": "success",
 	closed: "neutral",
 	stuck: "warning",
+	overtaken: "warning",
 	withdrawn: "neutral",
 	declined: "neutral",
 	"not-yet-valid": "info",

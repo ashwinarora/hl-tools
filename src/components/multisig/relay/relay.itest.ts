@@ -11,6 +11,7 @@
 import {
 	type Address,
 	createProposal,
+	overtakenBy,
 	type Proposal,
 	type Receipt,
 	signProposal,
@@ -50,6 +51,7 @@ import {
 	endProposal,
 	getProposal,
 	getRequest,
+	listCarriedOutAfter,
 	listEvents,
 	listEventsAfter,
 	listLapsed,
@@ -1371,6 +1373,46 @@ describe("what a signer has read", () => {
 		expect(await told(c)).toEqual([]);
 		// what the marker knew of the chain is kept by a write that says nothing of it
 		expect((await markOf(c))?.agents).toEqual(before.agents);
+	});
+});
+
+describe("a newer send carried out before an older one", () => {
+	it("is found from the older one's side, by its signers and nobody else", async () => {
+		const older = await proposal("integration: older send", [a]);
+		await new Promise((r) => setTimeout(r, 5));
+		const newer = await proposal("integration: newer send", [a]);
+		expect(newer.payload.nonce).toBeGreaterThan(older.payload.nonce);
+		await publishProposal(a.client, a.address, publishRow(older));
+		await publishProposal(a.client, a.address, publishRow(newer));
+		expect(
+			(await recordReceipt(b.client, b.address, keyOf(newer), receipt(true)))
+				.issue,
+		).toBeNull();
+
+		// what the inbox reads: everything carried out since the older one's number
+		const since = (w: TestWallet, nonce: number) =>
+			listCarriedOutAfter(w.client, nonce).then((r) =>
+				(r.data?.rows ?? []).filter((x) => x.treasury === treasury),
+			);
+		const done = await since(c, older.payload.nonce - 1);
+		expect(done.map((r) => r.digest)).toContain(newer.digest);
+		// the older one is still open, so it is not in that list itself
+		expect(done.map((r) => r.digest)).not.toContain(older.digest);
+		expect(
+			(await since(c, newer.payload.nonce)).map((r) => r.digest),
+		).not.toContain(newer.digest);
+		expect(await since(outsider, 0)).toEqual([]);
+
+		// and with the documents verified here, the older send is shut out
+		const actions = [];
+		for (const row of done) {
+			const x = await assembleProposal(row);
+			if (x.assembled)
+				actions.push({ action: x.assembled.proposal.payload.action });
+		}
+		expect(overtakenBy(older.payload.action, actions)).not.toBeNull();
+		expect(overtakenBy(newer.payload.action, [])).toBeNull();
+		await endProposal(a.client, a.address, keyOf(older), "withdrawn");
 	});
 });
 

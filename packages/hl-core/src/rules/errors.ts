@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.2.0",
-	verifiedAt: "2026-10-09",
+	version: "1.3.0",
+	verifiedAt: "2026-10-11",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
 	sources: [
@@ -30,6 +30,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.2.0",
 			date: "2026-10-09",
 			note: '"Insufficient balance for withdrawal." — the answer to a usdSend larger than the withdrawable perps balance (recorded on testnet through a multi-sig envelope; the chain uses the withdrawal wording for sends too).',
+		},
+		{
+			version: "1.3.0",
+			date: "2026-10-11",
+			note: '"Nonce already used." — the answer to a usdSend whose `time` is older than a usdSend the account has already carried out, even though that number was never used (recorded on testnet through multi-sig envelopes, with the same and with another leader). Not the leader\'s duplicate check, which reads "Invalid nonce: duplicate nonce N".',
 		},
 	],
 });
@@ -402,6 +407,16 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 			"The leader already used this nonce (the same envelope was submitted twice, or two proposals share a nonce). Nonce sets are per leader.",
 		fix: "If the first submission succeeded, nothing to do. Otherwise re-propose with a new nonce.",
 		documented: true,
+	},
+	{
+		id: "nonce-used",
+		pattern: /^nonce already used/i,
+		example: "Nonce already used.",
+		category: "signing",
+		cause:
+			"The account has already carried out a USDC send (usdSend) with this `time` or a later one. Hyperliquid takes an account's USDC sends only in increasing order of their `time`: once a newer send has gone through, an older one is refused, whoever submits it and although its number was never used.",
+		fix: "Check the ledger: if this send is there, nothing is left to do. Otherwise propose it again, so that it gets a new number; every signer signs again.",
+		documented: false,
 	},
 	{
 		id: "network-signature",

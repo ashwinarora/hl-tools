@@ -1,4 +1,10 @@
-import type { Address, Issue, Proposal } from "@hl-tools/core";
+import {
+	type Address,
+	type Issue,
+	type Proposal,
+	wouldShutOut,
+} from "@hl-tools/core";
+import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { Callout, IssueList } from "#/components/hub/status";
@@ -6,6 +12,7 @@ import { useNetworkStore } from "#/store/networkStore";
 import { RELAY_COPY } from "../model/relay/copy";
 import { relayActions } from "../model/relay/status";
 import { type Stage, shortAddress } from "../model/stage";
+import { useOpenProposals } from "../relay/openProposals";
 import { Btn, Card, Tag } from "../shell/kit";
 import type { WalletSigner } from "../useWalletSigner";
 import {
@@ -50,6 +57,7 @@ export function YourPart({
 	const [failure, setFailure] = useState<readonly Issue[] | null>(null);
 	const [confirm, setConfirm] = useState<"withdrawn" | "declined" | null>(null);
 	const [finishing, setFinishing] = useState(false);
+	const open = useOpenProposals();
 
 	const { network, outerSigner } = proposal.payload;
 	const me = wallet.address as Address | null;
@@ -152,19 +160,44 @@ export function YourPart({
 			? actions.withdraw
 				? "It cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again with another finaliser."
 				: "It cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it."
-			: stage.canExecute
-				? adds
-					? "Your signature completes the threshold. Two wallet prompts, then it is sent."
-					: "One wallet prompt, then it is sent."
-				: stage.canSign
-					? `${RELAY_COPY.underSign}${chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
-					: stage.hasSigned
-						? stage.phase === "ready"
-							? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to submit.`
-							: waiting
-								? `You signed this. It needs ${waiting} more.`
-								: "You signed this."
-						: (stage.signReason ?? stage.executeReason ?? "");
+			: stage.phase === "overtaken"
+				? actions.withdraw
+					? "It cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again."
+					: actions.decline
+						? "It cannot be submitted, so nothing here needs your signature. Decline it to take it off everyone's pending list; it can then be proposed again."
+						: "It cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it and propose it again."
+				: stage.canExecute
+					? adds
+						? "Your signature completes the threshold. Two wallet prompts, then it is sent."
+						: "One wallet prompt, then it is sent."
+					: stage.canSign
+						? `${RELAY_COPY.underSign}${chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
+						: stage.hasSigned
+							? stage.phase === "ready"
+								? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to submit.`
+								: waiting
+									? `You signed this. It needs ${waiting} more.`
+									: "You signed this."
+							: (stage.signReason ?? stage.executeReason ?? "");
+
+	// Older sends of this treasury still waiting: submitting this one first
+	// would shut them out (Hyperliquid takes USDC sends only in order).
+	const olderSends = stage.canExecute
+		? wouldShutOut(
+				proposal.payload.action,
+				open.items
+					.filter(
+						(p) =>
+							p.open &&
+							!p.stuck &&
+							!p.frozen &&
+							p.network === network &&
+							p.treasury === proposal.payload.multiSigUser &&
+							p.digest !== proposal.digest,
+					)
+					.map((p) => ({ action: p.proposal.payload.action, item: p })),
+			).map((x) => x.item)
+		: [];
 
 	const any =
 		stage.canExecute ||
@@ -178,6 +211,35 @@ export function YourPart({
 			title="Your part"
 			actions={isFinaliser ? <Tag tone="you">you are the finaliser</Tag> : null}
 		>
+			{olderSends.length > 0 && (
+				<Callout
+					tone="warning"
+					className="mb-3"
+					title={
+						olderSends.length === 1
+							? "Submitting this first shuts out an older USDC send"
+							: `Submitting this first shuts out ${olderSends.length} older USDC sends`
+					}
+				>
+					Hyperliquid takes a treasury's USDC sends in the order they were
+					proposed. Still waiting from before this one:{" "}
+					{olderSends.map((p, i) => (
+						<span key={p.digest}>
+							{i > 0 && ", "}
+							<Link
+								to="/multisig/proposal"
+								search={{ digest: p.digest }}
+								className="underline underline-offset-2"
+							>
+								{p.title ?? p.line}
+							</Link>
+						</span>
+					))}
+					. Submit {olderSends.length === 1 ? "it" : "them"} first, or{" "}
+					{olderSends.length === 1 ? "it" : "they"} will have to be proposed
+					again.
+				</Callout>
+			)}
 			{any && (
 				<div className="flex flex-wrap items-center gap-2">
 					{stage.canExecute ? (

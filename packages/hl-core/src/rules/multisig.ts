@@ -8,10 +8,10 @@ export const NKTKAS_SIGNING: RuleSource = {
 export const MULTISIG_RULES = defineRuleSet({
 	id: "multisig",
 	title: "Native multi-sig",
-	version: "1.0.0",
-	verifiedAt: "2026-10-07",
+	version: "1.1.0",
+	verifiedAt: "2026-10-11",
 	summary:
-		"A multi-sig user is an ordinary account whose own key can no longer send; up to 10 authorized users sign, a leader (an authorized user, or a funded API wallet of one) collects at least `threshold` distinct signatures and submits a `multiSig` envelope. Inner L1 actions are hashed as `[multiSigUser, outerSigner, action]` with the envelope's nonce, vault and expiry; inner user-signed actions gain `payloadMultiSigUser` and `outerSigner` after `hyperliquidChain`. The leader signs `HyperliquidTransaction:SendMultiSig{hyperliquidChain, multiSigActionHash, nonce}` over the envelope with inner signatures trimmed. Only the leader's nonce set is used; the multi-sig user's rate limit is charged.",
+		"A multi-sig user is an ordinary account whose own key can no longer send; up to 10 authorized users sign, a leader (an authorized user, or a funded API wallet of one) collects at least `threshold` distinct signatures and submits a `multiSig` envelope. Inner L1 actions are hashed as `[multiSigUser, outerSigner, action]` with the envelope's nonce, vault and expiry; inner user-signed actions gain `payloadMultiSigUser` and `outerSigner` after `hyperliquidChain`. The leader signs `HyperliquidTransaction:SendMultiSig{hyperliquidChain, multiSigActionHash, nonce}` over the envelope with inner signatures trimmed. Only the leader's nonce set is used; the multi-sig user's rate limit is charged. An account's USDC sends (`usdSend`) are taken only in increasing order of their `time`: once a newer one is carried out, an older pending one is refused.",
 	sources: [
 		docs("hypercore/multi-sig", "Multi-sig"),
 		docs("for-developers/api/nonces-and-api-wallets", "Nonces and API wallets"),
@@ -24,8 +24,20 @@ export const MULTISIG_RULES = defineRuleSet({
 			date: "2026-10-07",
 			note: "Envelope hashing, signer-set rules, nonce window, agent and leader behaviour verified on testnet (163 recorded requests).",
 		},
+		{
+			version: "1.1.0",
+			date: "2026-10-11",
+			note: 'USDC sends are ordered: after an account carried out a `usdSend`, a `usdSend` with an older `time` is refused with "Nonce already used.", whoever leads and whatever the destination (12 pairs recorded on testnet through multi-sig envelopes). `usdClassTransfer`, `spotSend` and `approveAgent` are taken in any order; a failed attempt does not move the mark. Not documented by Hyperliquid.',
+		},
 	],
 });
+
+/**
+ * Kinds of action an account's chain state takes only in increasing order of
+ * their own number (`time`): a later one carried out shuts the earlier ones
+ * out. Measured, not documented; see `multisig/order.ts`.
+ */
+export const ORDERED_ACTION_TYPES: readonly string[] = ["usdSend"];
 
 /** The chain rejects an 11th authorized user (`Too many multi-sig signers`). */
 export const MAX_SIGNERS = 10;

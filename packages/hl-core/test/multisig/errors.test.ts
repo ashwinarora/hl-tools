@@ -44,6 +44,8 @@ describe("explainExchangeError: every recorded string", () => {
 			"nonce-duplicate",
 			{ nonce: "1791399877207" },
 		],
+		// recorded 2026-10-11: a multi-sig usdSend older than one the treasury had carried out
+		["Nonce already used.", "nonce-used", {}],
 		["Action already expired", "expired", {}],
 		[
 			"Mainnet and testnet require different signature.",
