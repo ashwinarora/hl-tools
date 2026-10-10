@@ -33,6 +33,7 @@ import type { TreasuryRow } from "../model/relay/rows";
 import { fromNow } from "../model/time";
 import { Who } from "../names/Names";
 import { type DataColumn, DataTable } from "../shell/DataTable";
+import { Help } from "../shell/Help";
 import { ago, Btn, Card, PersonRow, Tag } from "../shell/kit";
 import { Figure, SourceLine, toneOf, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
@@ -62,6 +63,7 @@ const SPOT: readonly DataColumn<SpotBalanceRow>[] = [
 	{
 		id: "hold",
 		header: "On hold",
+		headerExtra: <Help k="onHold" />,
 		numeric: true,
 		sort: (a, b) => compareAmount(a.hold, b.hold),
 		cell: (r) => amountText(r.hold),
@@ -120,6 +122,7 @@ const POSITIONS: readonly DataColumn<PositionRow>[] = [
 	{
 		id: "pnl",
 		header: "Unrealised profit",
+		headerExtra: <Help k="unrealised" />,
 		numeric: true,
 		sort: (a, b) => compareAmount(a.unrealizedPnl, b.unrealizedPnl),
 		cell: (r) => signedText(r.unrealizedPnl, { maxDecimals: 2 }),
@@ -128,6 +131,7 @@ const POSITIONS: readonly DataColumn<PositionRow>[] = [
 	{
 		id: "liq",
 		header: "Liquidation price",
+		headerExtra: <Help k="liquidation" />,
 		numeric: true,
 		sort: (a, b) => compareAmount(a.liquidationPx, b.liquidationPx),
 		cell: (r) => amountText(r.liquidationPx),
@@ -191,7 +195,7 @@ function Checked({
 }) {
 	return (
 		<>
-			<span>
+			<span className="inline-flex flex-wrap items-center gap-x-1">
 				{state.observedAt === null
 					? state.checking
 						? "Reading from Hyperliquid…"
@@ -199,6 +203,7 @@ function Checked({
 					: state.failed
 						? `The last check failed. Shown as read ${ago(state.observedAt, now)}.`
 						: `Checked ${ago(state.observedAt, now)} · again every minute while this page is open`}
+				<Help k="checked" />
 			</span>
 			<button
 				type="button"
@@ -269,7 +274,7 @@ export function OverviewTab({
 		<div className="flex flex-col gap-4">
 			<SourceLine status={live.status} onRetry={live.retry}>
 				Balances, positions and orders arrive live from Hyperliquid. Nothing
-				here is stored by this tool.
+				here is stored by this tool. <Help k="live" />
 			</SourceLine>
 
 			{live.otherDexes && live.otherDexes.length > 0 && (
@@ -292,7 +297,14 @@ export function OverviewTab({
 				</div>
 			)}
 
-			<Card title="Balances" flush>
+			<Card
+				title={
+					<span className="inline-flex items-center gap-1.5">
+						Balances <Help k="perpsSpot" />
+					</span>
+				}
+				flush
+			>
 				<dl className="grid grid-cols-1 divide-y divide-border border-b border-border min-[641px]:grid-cols-3 min-[641px]:divide-x min-[641px]:divide-y-0">
 					<Figure
 						label="Perps account value"
@@ -308,6 +320,7 @@ export function OverviewTab({
 					/>
 					<Figure
 						label="Can be moved now"
+						extra={<Help k="movable" />}
 						value={
 							live.perp
 								? amountText(live.perp.withdrawable, {
@@ -380,7 +393,11 @@ export function OverviewTab({
 
 			<div className="grid grid-cols-1 items-start gap-4 min-[861px]:grid-cols-2">
 				<Card
-					title={frozen ? "Last known signers" : "Signers"}
+					title={
+						<span className="inline-flex items-center gap-1.5">
+							{frozen ? "Last known signers" : "Signers"} <Help k="signer" />
+						</span>
+					}
 					actions={
 						threshold !== null && signers.length > 0 ? (
 							<Tag>
@@ -412,7 +429,11 @@ export function OverviewTab({
 				</Card>
 
 				<Card
-					title="API wallets"
+					title={
+						<span className="inline-flex items-center gap-1.5">
+							API wallets <Help k="apiWallet" />
+						</span>
+					}
 					actions={active !== null ? <Tag>{active} active</Tag> : null}
 					footer={<Checked state={state} now={now} what="the API wallets" />}
 				>

@@ -60,6 +60,7 @@ import { TreasuryNames, useNames } from "../names/Names";
 import { addSignature, publishProposal } from "../relay/api";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
+import { Help } from "../shell/Help";
 import { NetTag, SignsTag, backLink as shellBack } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { TreasuryStrip } from "../TreasuryStrip";
@@ -397,6 +398,7 @@ export function ProposeScreen({
 								<div className="space-y-4">
 									<Field
 										label="Who finalises this?"
+										trailing={<Help k="finaliser" />}
 										htmlFor="ms-finaliser"
 										error={error("finaliser")}
 										hint="The signer who will be there at the end: only this wallet can sign the envelope and submit. If they sign last, they finish in one sitting."
@@ -417,6 +419,7 @@ export function ProposeScreen({
 									</Field>
 									<Field
 										label="Signers sign under"
+										trailing={<Help k="signingChain" />}
 										hint={`EIP-712 chain ${chain.hex} (${chain.id}). Every signer's wallet switches to ${chain.label} to sign; nothing is sent to that chain.`}
 									>
 										<Segmented<InnerChain>
@@ -437,6 +440,7 @@ export function ProposeScreen({
 									</Field>
 									<Field
 										label="Signing window"
+										trailing={<Help k="signingWindow" />}
 										hint={`If created now: ${window.text}. After that the chain rejects it and it must be re-proposed.`}
 									>
 										<Segmented<NonceMode>

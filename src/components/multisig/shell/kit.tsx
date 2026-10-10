@@ -8,6 +8,7 @@ import type { Network } from "@hl-tools/core";
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
+import { Help } from "./Help";
 
 /** The rail shows from this width up; below it the mobile bar takes over. */
 export const SHELL_WIDE = 861;
@@ -109,9 +110,12 @@ export function NetTag({ network }: { network: Network }) {
 /** Every page of the section says once, quietly, that it is not read-only. */
 export function SignsTag() {
 	return (
-		<Tag title="This section signs with your wallet and submits to Hyperliquid">
-			Signs &amp; sends
-		</Tag>
+		<span className="inline-flex items-center gap-1">
+			<Tag title="This section signs with your wallet and submits to Hyperliquid">
+				Signs &amp; sends
+			</Tag>
+			<Help k="signsAndSends" />
+		</span>
 	);
 }
 

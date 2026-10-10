@@ -31,6 +31,7 @@ import { useOpenProposals } from "../relay/openProposals";
 import { useRequest, useTreasury } from "../relay/queries";
 import { useExecutionReporter } from "../relay/useExecutionReporter";
 import { useRelay } from "../relay/useRelay";
+import { Help } from "../shell/Help";
 import { Card, linkButton, NetTag, SignsTag, TabList, Tag } from "../shell/kit";
 import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
@@ -362,9 +363,10 @@ export function TreasuryScreen({
 							<CopyButton value={address} size="xs" />
 						</span>
 						<NetTag network={network} />
-						<span>
+						<span className="inline-flex items-center gap-1">
 							{frozen ? "was " : ""}
 							{treasury.threshold} of {treasury.signers.length} signers
+							<Help k="threshold" />
 						</span>
 						{frozen && <Tag tone="warn">no longer a multi-sig</Tag>}
 						<SignsTag />

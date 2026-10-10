@@ -14,6 +14,7 @@ import { shortAddress } from "../model/stage";
 import { requestTreasury } from "../relay/api";
 import { useRequest, useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
+import { Help } from "../shell/Help";
 import { Btn, Card, linkButtonSm } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
@@ -139,6 +140,7 @@ export function AddTreasuryScreen() {
 					>
 						<Field
 							label={`Multi-sig account address on ${ready ? network : "…"}`}
+							trailing={<Help k="treasury" />}
 							htmlFor="ms-add"
 							error={
 								input.trim() && !valid

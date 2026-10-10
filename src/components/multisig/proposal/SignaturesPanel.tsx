@@ -3,6 +3,7 @@ import { RELAY_COPY } from "../model/relay/copy";
 import { seenBy, seenLabel, type ViewRow } from "../model/relay/views";
 import { localDateTime, utcDateTime } from "../model/time";
 import { Who } from "../names/Names";
+import { Help } from "../shell/Help";
 import { Card, PersonRow, Pips, Tag } from "../shell/kit";
 import { useNow } from "../shell/live";
 
@@ -52,7 +53,11 @@ export function SignaturesPanel({
 			: [];
 	return (
 		<Card
-			title="Signatures"
+			title={
+				<span className="inline-flex items-center gap-1.5">
+					Signatures <Help k="threshold" />
+				</span>
+			}
 			actions={
 				need !== null && counted ? (
 					<Pips have={counted.length} need={need} />
@@ -108,7 +113,7 @@ export function SignaturesPanel({
 			)}
 			{seen && !closed && signers.length > 0 && (
 				<p className="mt-2.5 text-xs text-subtle-foreground">
-					{RELAY_COPY.seenNote}
+					{RELAY_COPY.seenNote} <Help k="seen" />
 				</p>
 			)}
 			{former.length > 0 && (

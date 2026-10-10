@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { Callout, type Tone } from "#/components/hub/status";
+import type { HelpKey } from "../model/help";
 import type { Phase, Stage } from "../model/stage";
 import { Sentence } from "../names/Sentence";
+import { Help } from "../shell/Help";
 
 const TONE: Record<Phase, Tone> = {
 	judging: "neutral",
@@ -21,6 +23,17 @@ const TONE: Record<Phase, Tone> = {
 	unsupported: "warning",
 };
 
+/** The term a stage's sentence leans on, explained by the mark after it. */
+const TERM: Partial<Record<Phase, HelpKey>> = {
+	collecting: "signingWindow",
+	ready: "signingWindow",
+	"not-yet-valid": "signingWindow",
+	expired: "signingWindow",
+	"carried-out": "outside",
+	overtaken: "sendOrder",
+	stuck: "finaliser",
+};
+
 /** Where the proposal stands, in one sentence, at the top of the page. */
 export function StageCallout({
 	stage,
@@ -36,6 +49,12 @@ export function StageCallout({
 			action={action}
 		>
 			<Sentence parts={stage.detailParts} />
+			{TERM[stage.phase] && (
+				<>
+					{" "}
+					<Help k={TERM[stage.phase] as HelpKey} />
+				</>
+			)}
 		</Callout>
 	);
 }

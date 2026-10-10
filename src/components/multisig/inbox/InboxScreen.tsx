@@ -10,6 +10,7 @@ import { groupInbox } from "../model/relay/inbox";
 import { type OpenProposal, useOpenProposals } from "../relay/openProposals";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
+import { Help } from "../shell/Help";
 import {
 	Card,
 	Empty,
@@ -71,6 +72,7 @@ export function InboxScreen() {
 					<section>
 						<GroupTitle count={groups.finish.length}>
 							Ready for you to finish
+							<Help k="inboxFinish" />
 						</GroupTitle>
 						<Card flush>
 							<ProposalRows items={finish} me={me} treasuryName={name} />
@@ -86,6 +88,7 @@ export function InboxScreen() {
 					<section>
 						<GroupTitle count={groups.sign.length}>
 							Waiting for your signature
+							<Help k="inboxSign" />
 						</GroupTitle>
 						<Card flush>
 							<ProposalRows items={groups.sign} me={me} treasuryName={name} />
@@ -96,6 +99,7 @@ export function InboxScreen() {
 					<section>
 						<GroupTitle count={groups.waiting.length}>
 							You signed, waiting on others
+							<Help k="inboxWaiting" />
 						</GroupTitle>
 						<Card flush>
 							<ProposalRows
@@ -110,6 +114,7 @@ export function InboxScreen() {
 					<section>
 						<GroupTitle count={groups.dead.length}>
 							Cannot be finished
+							<Help k="inboxDead" />
 						</GroupTitle>
 						<Card flush>
 							<ProposalRows items={groups.dead} me={me} treasuryName={name} />

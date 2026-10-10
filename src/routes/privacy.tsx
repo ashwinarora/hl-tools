@@ -6,7 +6,7 @@ export const Route = createFileRoute("/privacy")({
 	component: PrivacyPage,
 });
 
-const UPDATED = "2026-10-10";
+const UPDATED = "2026-10-11";
 const REPO = "https://github.com/ashwinarora/hl-tools";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -74,9 +74,10 @@ function PrivacyPage() {
 					<p>
 						Your browser keeps a few things locally: the selected network and
 						theme, recorded WebSocket sessions, the multi-sig proposals you made
-						or opened, treasury nicknames, and, in the faucet miner, the wallets
-						it generated. They never leave the browser unless you export or
-						share them. Clearing the site's data removes them.
+						or opened, names you gave treasuries in this browser, and, in the
+						faucet miner, the wallets it generated. They never leave the browser
+						unless you export or share them. Clearing the site's data removes
+						them.
 					</p>
 					<p>
 						Connecting a wallet uses the wallet's own software. If you pick a
@@ -110,13 +111,38 @@ function PrivacyPage() {
 							back.
 						</li>
 						<li>
-							<b>Outcomes</b>: that a proposal was withdrawn or declined, and
-							what Hyperliquid answered when it was submitted.
+							<b>Outcomes</b>: that a proposal was withdrawn or declined, what
+							Hyperliquid answered when it was submitted, and, when a proposal
+							was carried out some other way, the transaction your browser
+							pointed the relay to.
+						</li>
+						<li>
+							<b>Nicknames</b> that you or a co-signer give to an address or to
+							a treasury, with who gave each one and when. A nickname belongs to
+							one treasury and is shown nowhere else.
+						</li>
+						<li>
+							<b>That you opened a proposal</b>: the first time you open a
+							pending proposal while signed in, the relay records it with the
+							time. Your co-signers see it next to your address ("seen 2 hours
+							ago"), and you see theirs.
+						</li>
+						<li>
+							<b>What you have marked as read</b>: for each treasury, up to
+							where you last pressed "Got it" in "While you were away", when,
+							and which API wallet addresses the page had shown you by then.
 						</li>
 						<li>
 							<b>A history</b> of the above: which address did what, and when.
+							Marking something as read is not part of that history.
 						</li>
 					</ul>
+					<p>
+						To keep signer lists current, and to check a transaction it was
+						pointed to, the relay itself asks Hyperliquid's public API about
+						those accounts and transactions. It sends Hyperliquid nothing about
+						you.
+					</p>
 					<p>
 						Your browser also keeps a session token so you stay signed in. The
 						relay never receives a private key or a seed phrase, and nothing on
@@ -130,7 +156,8 @@ function PrivacyPage() {
 							<b>The current signers of a treasury</b>, according to
 							Hyperliquid's signer list, can read everything stored for that
 							treasury. A signer added later can read its earlier history; a
-							removed signer loses access once the list is refreshed.
+							removed signer loses access once the list is refreshed. One thing
+							is kept from co-signers: what each signer has marked as read.
 						</li>
 						<li>
 							<b>The operator of the relay</b> can read everything stored on it.

@@ -19,6 +19,7 @@ import { Sentence } from "../names/Sentence";
 import { HISTORY_PAGE, listEvents, listProposalsByDigest } from "../relay/api";
 import { unwrap } from "../relay/queries";
 import { queryIssue, useRelay } from "../relay/useRelay";
+import { Help } from "../shell/Help";
 import { Btn, Card, Empty } from "../shell/kit";
 import { When } from "../shell/live";
 
@@ -128,7 +129,11 @@ export function SigningLogTab({
 	return (
 		<>
 			<Card
-				title="Signing log"
+				title={
+					<span className="inline-flex items-center gap-1.5">
+						Signing log <Help k="recordAndLog" />
+					</span>
+				}
 				flush
 				actions={
 					<Btn

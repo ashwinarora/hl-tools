@@ -13,6 +13,7 @@ import { RELAY_COPY } from "../model/relay/copy";
 import { relayActions } from "../model/relay/status";
 import { type Stage, shortAddress } from "../model/stage";
 import { useOpenProposals } from "../relay/openProposals";
+import { Help } from "../shell/Help";
 import { Btn, Card, Tag } from "../shell/kit";
 import type { WalletSigner } from "../useWalletSigner";
 import {
@@ -208,7 +209,14 @@ export function YourPart({
 
 	return (
 		<Card
-			title="Your part"
+			title={
+				<span className="inline-flex items-center gap-1.5">
+					Your part
+					{(actions.takeBack || actions.withdraw || actions.decline) && (
+						<Help k="waysOut" />
+					)}
+				</span>
+			}
 			actions={isFinaliser ? <Tag tone="you">you are the finaliser</Tag> : null}
 		>
 			{olderSends.length > 0 && (
@@ -304,6 +312,12 @@ export function YourPart({
 					}
 				>
 					{note}
+					{stage.canSign && !stage.canExecute && chain && (
+						<>
+							{" "}
+							<Help k="signingChain" />
+						</>
+					)}
 				</p>
 			)}
 			{stage.networkMismatch && (

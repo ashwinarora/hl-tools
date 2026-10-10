@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useWalletBusy } from "#/store/walletBusyStore";
 import { RELAY_COPY } from "../model/relay/copy";
 import { useRelay } from "../relay/useRelay";
+import { Help } from "../shell/Help";
 import { Btn, Card, linkButton, SignsTag } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { SmallPrint } from "../shell/WalletBox";
@@ -57,7 +58,8 @@ export function Landing() {
 							</p>
 						)}
 						<span className="text-xs text-subtle-foreground">
-							{RELAY_COPY.teamSmall} <SmallPrint className="text-xs" />
+							{RELAY_COPY.teamSmall} <Help k="signIn" />{" "}
+							<SmallPrint className="text-xs" />
 						</span>
 					</div>
 				</Card>

@@ -6,6 +6,7 @@ import type { AwayItem } from "../model/relay/away";
 import { RELAY_COPY } from "../model/relay/copy";
 import { NamesFor } from "../names/Names";
 import { Sentence } from "../names/Sentence";
+import { Help } from "../shell/Help";
 import { Btn } from "../shell/kit";
 import { When } from "../shell/live";
 import { useTreasuryNames } from "../treasuryName";
@@ -77,11 +78,12 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 			className="rounded-[10px] border border-info/35 bg-surface shadow-sm"
 		>
 			<header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-				<h2 className="text-sm font-semibold">
-					{RELAY_COPY.awayTitle}{" "}
+				<h2 className="flex flex-wrap items-center gap-x-1.5 text-sm font-semibold">
+					{RELAY_COPY.awayTitle}
 					<span className="font-normal text-subtle-foreground">
 						· since <When at={since} />
 					</span>
+					<Help k="away" />
 				</h2>
 				{single ? (
 					<Btn

@@ -1,0 +1,153 @@
+/**
+ * What the small "?" marks say. Written for someone who has never used a
+ * multi-sig: one term each, in plain words, with what it means for their
+ * money. Checked (help.test.ts) like the relay's copy: nothing here promises
+ * secrecy, a price or the absence of a server, nothing uses the developer's
+ * words, and every text is short enough to be read in one go.
+ */
+export interface HelpText {
+	readonly title: string;
+	readonly body: string;
+}
+
+export const HELP = {
+	treasury: {
+		title: "Treasury",
+		body: "A Hyperliquid account that its signers control together. Its own key no longer works by itself: every action needs the agreed number of signers.",
+	},
+	signer: {
+		title: "Signer",
+		body: "One of the wallets the treasury lists as allowed to approve its actions. A signer approves with their own wallet. Nobody can sign for them, and this site never holds a key.",
+	},
+	threshold: {
+		title: "Threshold",
+		body: "How many signers must approve before anything can happen. With “2 of 3”, any two of the three are enough, and no single signer can move funds alone.",
+	},
+	finaliser: {
+		title: "Finaliser",
+		body: "The signer chosen to send the proposal to Hyperliquid once enough signers have approved. Only the finaliser can send it, and only exactly as it was signed: the amount and the destination cannot be changed.",
+	},
+	proposal: {
+		title: "Proposal",
+		body: "A request for the treasury to do one thing, such as a payment. Nothing happens until enough signers have approved it and the finaliser has sent it.",
+	},
+	signingWindow: {
+		title: "Signing window",
+		body: "How long a proposal can still be sent: two days from when it was made. After that Hyperliquid refuses it and its signatures are worth nothing. It can then be proposed again.",
+	},
+	signingChain: {
+		title: "Signed under a chain",
+		body: "Your wallet asks which network a signature is for, so Hyperliquid's actions name one. Nothing is sent to that network and nothing is paid there. The action goes to Hyperliquid only.",
+	},
+	apiWallet: {
+		title: "API wallet",
+		body: "A separate key the treasury has allowed to trade for it, usually for a bot. It places and cancels orders by itself, without the signers. It cannot withdraw funds. Approve one only for a bot you trust.",
+	},
+	movable: {
+		title: "Can be moved now",
+		body: "The part of the perps balance that is not tied up as margin for open positions. It is what a payment can use right now.",
+	},
+	perpsSpot: {
+		title: "Perps and spot",
+		body: "Hyperliquid keeps two balances per account. Perps holds the USDC that backs futures positions. Spot holds tokens owned outright. Money is moved between the two with a proposal.",
+	},
+	onHold: {
+		title: "On hold",
+		body: "The part of a balance reserved by open orders. It comes back when the order is cancelled and is spent when the order fills.",
+	},
+	unrealised: {
+		title: "Unrealised profit",
+		body: "What an open position would gain or lose if it were closed at the current price. It moves with the market and becomes real only when the position is closed.",
+	},
+	liquidation: {
+		title: "Liquidation price",
+		body: "The market price at which Hyperliquid would close this position by force, because the margin no longer covers it. The further away it is, the safer the position.",
+	},
+	funding: {
+		title: "Funding",
+		body: "A small payment between holders of long and short positions, settled every hour. A positive number was received, a negative one was paid.",
+	},
+	live: {
+		title: "Live figures",
+		body: "Balances, positions and orders are pushed by Hyperliquid as they change, so there is no need to reload. If the connection drops, the badge says so and the page reconnects by itself.",
+	},
+	checked: {
+		title: "Checked a moment ago",
+		body: "Signers and API wallets are read from Hyperliquid once a minute while this page is open. The round arrow reads them again at once.",
+	},
+	inboxFinish: {
+		title: "Ready for you to finish",
+		body: "Enough signers have approved, or your signature is the last one missing, and you are the finaliser. Open one, check it, and send it. Start with the oldest.",
+	},
+	inboxSign: {
+		title: "Waiting for your signature",
+		body: "Proposals from your co-signers that still need approvals. Open one, check the destination and the amount, and sign if you agree. Signing by itself sends nothing.",
+	},
+	inboxWaiting: {
+		title: "You signed, waiting on others",
+		body: "Nothing for you to do. Each of these needs more signatures, or is ready and waits for its finaliser to send it.",
+	},
+	inboxDead: {
+		title: "Cannot be finished",
+		body: "Hyperliquid would refuse these, so no signature can help. Usually a newer payment of the same treasury was sent first, or the finaliser is no longer a signer. Open one to propose it again.",
+	},
+	sendOrder: {
+		title: "Payments go in order",
+		body: "Hyperliquid accepts a treasury's USDC payments only in the order they were proposed. If a newer one is sent first, the older ones are refused and have to be proposed again.",
+	},
+	waysOut: {
+		title: "Take back, withdraw, decline",
+		body: "Take back removes your own signature. Withdraw (by the proposer) and decline (by the finaliser) end the proposal for everyone here. A signature already given still counts on Hyperliquid until the signing window closes, so these are an agreement between signers, not a lock.",
+	},
+	seen: {
+		title: "Seen",
+		body: "A signer opened this proposal while signed in, and when. It tells “has not looked yet” from “looked and has not signed”. Every signer of this treasury sees these marks, the one about themselves too.",
+	},
+	nickname: {
+		title: "Nickname",
+		body: "A name the signers give an address, used only in this treasury. The address is always shown next to it, and it is the address you sign, never the name. Any signer can set one, so check the address before a payment.",
+	},
+	noneOnRecord: {
+		title: "None on record",
+		body: "This transfer left the treasury and no proposal known here explains it. It was signed and sent some other way, for example with another tool. If none of the signers knows it, find out who signed it.",
+	},
+	recordAndLog: {
+		title: "Two records",
+		body: "The Signing log is what happened here: who proposed, signed and sent. “On Hyperliquid” is the account's own record of every transfer, trade and order, whoever caused it. The second is the proof. The first explains it.",
+	},
+	outside: {
+		title: "Carried out outside this tool",
+		body: "Hyperliquid carried this action out, but it was not sent from this site. The transaction was looked up on Hyperliquid and the proposal closed, so that nobody signs it a second time.",
+	},
+	away: {
+		title: "While you were away",
+		body: "What finished or changed since you last pressed “Got it”: actions sent without your signature, changes to signers and API wallets, and money that left with no proposal. Showing it marks nothing as read.",
+	},
+	signIn: {
+		title: "Signing in",
+		body: "One wallet prompt proves which wallet you are. It approves nothing and cannot move funds. It lets this site show your treasuries and what your co-signers have proposed.",
+	},
+	signsAndSends: {
+		title: "Signs & sends",
+		body: "This part of the site can ask your wallet for a signature and can send actions to Hyperliquid. Your wallet shows every request first, and nothing happens without your approval there.",
+	},
+} as const satisfies Record<string, HelpText>;
+
+export type HelpKey = keyof typeof HELP;
+
+/** The longest a help text may be: what fits the small box without scrolling. */
+export const HELP_MAX = 290;
+
+/** Words of the trade that a newcomer should not have to know. */
+export const HELP_JARGON: readonly RegExp[] = [
+	/\bnonce\b/i,
+	/\bdigest\b/i,
+	/\bEIP-?\d+/i,
+	/\benvelope\b/i,
+	/\bpayload\b/i,
+	/\bthe relay\b/i,
+	/\bRPC\b/,
+	/\bL1\b/,
+	/\bHyperCore\b/i,
+	/\bon-?chain\b/i,
+];

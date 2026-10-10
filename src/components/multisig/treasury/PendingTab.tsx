@@ -1,6 +1,7 @@
 import type { Address } from "@hl-tools/core";
 import { ProposalRows } from "../inbox/ProposalRows";
 import type { OpenProposal } from "../relay/openProposals";
+import { Help } from "../shell/Help";
 import { Card, Empty } from "../shell/kit";
 
 /** A treasury's open proposals, whoever they wait for. */
@@ -16,7 +17,18 @@ export function PendingTab({
 	frozen: boolean;
 }) {
 	return (
-		<Card flush>
+		<Card
+			flush
+			footer={
+				items.length > 1 ? (
+					<span className="inline-flex flex-wrap items-center gap-x-1">
+						Finish the oldest first: Hyperliquid takes a treasury's USDC
+						payments in the order they were proposed.
+						<Help k="sendOrder" />
+					</span>
+				) : undefined
+			}
+		>
 			{items.length > 0 ? (
 				<ProposalRows items={items} me={me} />
 			) : (

@@ -35,6 +35,7 @@ import { TreasuryNames, Who } from "../names/Names";
 import { useTreasuries } from "../relay/queries";
 import { useExecutionReporter } from "../relay/useExecutionReporter";
 import { useRelay } from "../relay/useRelay";
+import { Help } from "../shell/Help";
 import {
 	backLink,
 	Card,
@@ -519,8 +520,8 @@ export function ProposalView({
 									<dd className="font-mono text-[13px] [overflow-wrap:anywhere]">
 										{target.address}
 									</dd>
-									<dt className="pt-0.5 text-xs text-muted-foreground">
-										Finaliser
+									<dt className="flex items-center gap-1 pt-0.5 text-xs text-muted-foreground">
+										Finaliser <Help k="finaliser" />
 									</dt>
 									<dd className="text-[13px]">
 										<Who address={proposal.payload.outerSigner} full />

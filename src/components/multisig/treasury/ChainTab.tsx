@@ -32,6 +32,7 @@ import type { RowProposal } from "../model/chain/match";
 import type { HistoryPart } from "../model/live/account";
 import { Who } from "../names/Names";
 import { type DataColumn, DataTable } from "../shell/DataTable";
+import { Help } from "../shell/Help";
 import { Card } from "../shell/kit";
 import { SourceLine, toneOf, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
@@ -281,6 +282,7 @@ export function ChainTab({
 			{
 				id: "proposal",
 				header: "Proposal",
+				headerExtra: <Help k="noneOnRecord" />,
 				cell: (r) => (
 					<ProposalCell
 						match={match.of(r)}
@@ -437,6 +439,7 @@ export function ChainTab({
 			{
 				id: "payment",
 				header: "Payment, USDC",
+				headerExtra: <Help k="funding" />,
 				numeric: true,
 				sort: (a, b) => compareAmount(a.usdc, b.usdc),
 				cell: (r) => signedText(r.usdc),
@@ -467,7 +470,8 @@ export function ChainTab({
 	return (
 		<div className="flex flex-col gap-4">
 			<SourceLine status={live.status} onRetry={live.retry}>
-				Hyperliquid's own record of this account. This is not the Signing log.
+				Hyperliquid's own record of this account. This is not the Signing log.{" "}
+				<Help k="recordAndLog" />
 			</SourceLine>
 
 			<div

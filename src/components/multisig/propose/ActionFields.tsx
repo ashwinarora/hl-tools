@@ -12,6 +12,7 @@ import type { ActionForm } from "../model/actions";
 import { RELAY_COPY } from "../model/relay/copy";
 import { shortAddress } from "../model/stage";
 import { useNames, Who } from "../names/Names";
+import { Help } from "../shell/Help";
 
 export interface TokenOption {
 	readonly index: number;
@@ -111,6 +112,7 @@ export function ActionFields({
 	const destination = (hint: ReactNode) => (
 		<Field
 			label="Destination"
+			trailing={<Help k="nickname" />}
 			htmlFor="ms-destination"
 			error={error("destination")}
 			hint={hint}
