@@ -231,3 +231,27 @@ create function tests.nick_of(n_treasury int, p_address public.address) returns 
 language sql as $$
 	select name from public.nicknames where treasury = tests.addr(n_treasury) and address = p_address
 $$;
+
+-- ---------------------------------------------------------------------- attention
+-- Wallet n opens proposal d of treasury n_treasury.
+create function tests.view(n int, n_treasury int, d int, p_network public.network default 'testnet') returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.proposal_views (network, treasury, digest)
+	values (p_network, tests.addr(n_treasury), tests.digest(d));
+end $$;
+
+-- Wallet n has read treasury n_treasury's news up to history entry `p_event`.
+create function tests.mark(n int, n_treasury int, p_event bigint, p_chain jsonb default '{}', p_network public.network default 'testnet') returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.read_marks (network, treasury, event_id, chain)
+	values (p_network, tests.addr(n_treasury), p_event, p_chain);
+end $$;
+
+create function tests.newest_event(n_treasury int) returns bigint
+language sql as $$
+	select coalesce(max(id), 0) from public.events where treasury = tests.addr(n_treasury)
+$$;
