@@ -533,6 +533,130 @@ Small things the milestone turned up: a signer with no signature read "not yet" 
 - The signer-set changes were made by lab scripts, not through the page: `convertToMultiSigUser` is refused by the propose screen on purpose. The relay's "accepted signer change is looked up first" rule is covered by the integration suite with a stub.
 - Phone-width captures of the Multisig section in the table below are 360 px wide: they were taken in a desktop window emulated at 375 px, where the scrollbar takes 15 px. The start and propose pages were captured again in the new shell with no wallet connected; the signed-in screens were captured as a lab signer (see DECISIONS.md, "Relay screenshots").
 
+## 11. Multisig — the treasury live, attention, nicknames, help
+
+Verified 2026-10-11 against the local Supabase stack and Hyperliquid testnet, in the user's own Brave instance through the Chrome DevTools MCP (port 9222) with Rabby, as in §10. Who plays whom is unchanged: the browser is the Rabby account **S1**; co-signers are the lab keys **A**, **B**, **C** and **D**, driven by scripts that call the page's own client functions; **T2** is the mixed 2-of-3 of S1, A and B; the **lab treasury** `0xf836…d148` (2-of-3 of A, B, C) holds a small position and two resting orders placed by its API wallet, so the tables have something in them. A second, isolated browser context is signed in as lab signer A with a stand-in wallet that cannot sign; it is the co-signer's screen and the source of every committed capture. No key of the wallet was read, typed or stored, and its addresses stay out of the repository.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 68 files, 1,461 tests (core 866, app 595), all passing |
+| Core coverage | `cd packages/hl-core && bunx vitest run --coverage` | 100 % statements, branches, functions and lines for `adapter`, `multisig` and `rules` |
+| Database (pgTAP) | `bun run db:reset && bun run db:test` | 14 files, 784 assertions, all passing |
+| Relay integration | `bun run test:relay` | 48 tests, all passing |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean; the relay client is still its own lazy chunk, imported only by the Multisig layout |
+| Database advisors | `supabase db advisors --local` | no issues |
+
+New pgTAP files:
+
+| File | What it proves |
+|---|---|
+| `120_carried_out` (114) | A report only by a stored signer, stamped by the database; the 30-second wait; a transaction of another account, with an error, or with another action rejected; "not found yet" retried and then failed; twins refused; a proposal closed from open, withdrawn, declined and expired; both orders of the race with the finaliser's own receipt ending in "accepted"; one outbound call per worker step with the explorer counted double; 10 reports an hour |
+| `130_nicknames` (146) | A nickname is read only by its treasury's signers and never from another treasury sharing the address; a signer's own address only by that signer; uniqueness within a treasury under simultaneous writes; the text rules (length, address-like, reserved words, invisible characters); 60 changes an hour, 500 per treasury; a nickname others gave is dropped when the address becomes a signer; no client role can write the table itself |
+| `140_attention` (63) | A view is taken once, as oneself, only for an open proposal, and pings the signers once; markers are read only by their wallet, only move forward, never pass the newest history entry, keep what an update leaves out, refuse a malformed chain part, and are capped at 600 an hour |
+
+`100_matrix` and `110_live` cover the four new tables against every role and verb.
+
+### Money: Overview and "On Hyperliquid" (browser + scripts)
+
+| Check | Expected | Result |
+|---|---|---|
+| One socket | one WebSocket per network for the treasury on screen; no HTTP polling of balances | ✅ network panel: one socket, two `info` requests a minute (signers, API wallets) |
+| Tables move by themselves | the lab API wallet trades by script | ✅ positions, open orders, trades and order history change without a reload |
+| Control | a lab script approves an API wallet | ✅ in the box within the minute; "Checked … ago" and the refresh button |
+| Hidden tab | nothing asked while hidden; asked again when looked at | ✅ (visibility simulated; a tab driven by DevTools never reports hidden) |
+| Sorting | every column of every table, both directions, `aria-sort` set | ✅ 42 sortable columns in 7 tables (balances, positions, open orders, transfers, trades, orders, funding) |
+| Relay down | `supabase stop` with a treasury page open | ✅ balances stay live; the page recovers when the stack is back |
+| A transfer and its proposal | S1 finalises a send through the page | ✅ the row appears live with a link to its proposal |
+| A send made by script | no proposal exists | ✅ "none on record" |
+| "View more" | opens Hyperliquid's own page for that account, on the right host per network | ✅ |
+
+### Carried out elsewhere, cannot be finished
+
+| Check | Expected | Result |
+|---|---|---|
+| The finaliser submits a ready proposal with a script, telling nobody | a co-signer's open page reports the transaction; the relay checks it against the real explorer and closes the proposal for everyone | ✅ three runs: closed 32 s after the page's report each time, within a minute of the transaction, and linked to it; "Carried out outside this tool" |
+| A finaliser rotated out of the signer set | "Cannot be finished", nobody asked to sign, "Re-propose" | ✅ |
+| A false report | a real transaction of another action; an unknown hash | ✅ rejected, proposal untouched (pgTAP and integration suite) |
+
+### The order of USDC sends (found in this round)
+
+Two sends were pending for T2. The newer one was finalised first; the older one, signed by two and never submitted, was then answered `Nonce already used.` and no money moved. Measured afterwards on the lab treasury with lab keys, twelve pairs of requests (`fixtures/multisig/send-order.json`): a `usdSend` older than one the account has carried out is refused, whoever leads and whatever the destination; `usdClassTransfer`, `spotSend` and `approveAgent` are taken in any order; a failed attempt does not count. Hyperliquid's documentation does not mention it.
+
+| Check | Expected | Result |
+|---|---|---|
+| The recorded pairs | the core's `overtakenBy` predicts each answer | ✅ 12 of 12 (`order.test.ts`) |
+| Four sends of T2 older than a carried-out one | "Cannot be submitted any more" on their pages with "Re-propose"; "Cannot be finished" in the inbox; not counted as needing anyone | ✅ the three that had asked S1 to finish them no longer do; all four are listed under "Cannot be finished" |
+| Two sends pending, S1 finaliser of both | the newer one's page warns that submitting it first shuts the older one out, and links to it; the inbox lists the older one first | ✅ |
+| S1 finalises the older one through the page | accepted (two wallet prompts) | ✅ |
+| A send made by script while S1 looks at a pending send | the page says "Cannot be submitted any more" by itself | ✅ 0.6 s after the exchange accepted the script's send (ledger row, then the explorer) |
+| A recorded refusal with this text | the same state, for every signer | ✅ (`stage.test.ts`) |
+
+A second unknown answer turned up while cleaning up: `User has pending agent removal`, for the second of two API wallet removals a second apart. It is in the catalogue too (errors 1.3.0).
+
+### Nicknames (browser + scripts)
+
+| Check | Expected | Result |
+|---|---|---|
+| S1 names an address | lab A's open page shows it without a reload | ✅ 0.2 s from stored to shown |
+| S1 names lab A's address | refused: only that signer | ✅ "Only that signer can choose the nickname of their own address." |
+| Lab A names itself; the same address in another treasury | shown in the first, unnamed in the second | ✅ |
+| A second address is given an existing nickname (other letter case, trailing space) | refused | ✅ "Another address in this treasury already has that nickname." |
+| An address-like name; "You" | refused with its sentence | ✅ |
+| A wallet that does not sign for the treasury | refused; reads none | ✅ |
+| A row planted in the database: a signer's address named by another signer | ignored by the page | ✅ not shown anywhere (an address-like name cannot even be planted: a check constraint refuses it) |
+| Before a wallet prompt | the destination with its full address, and who gave the nickname and when | ✅ |
+
+### Attention
+
+| Check | Expected | Result |
+|---|---|---|
+| "Seen" | lab B opens a proposal by script while S1 looks at it | ✅ S1's panel changes from "not seen yet" to "seen just now, not signed" 0.2 s later, no reload |
+| A tab nobody looks at | the proposal on screen in a hidden tab for 6 s | ✅ no view recorded; recorded 1.1 s after the tab came to the front |
+| A wallet that is not the signed-in one | nothing said about who looked, nothing recorded | ✅ "not yet", as before Phase 4 |
+| The first marker | written silently at the newest history entry; nothing "while you were away" on the first visit | ✅ |
+| S1 away | lab keys finalise a send without S1, approve an API wallet with a script, send 1 USDC with a script, and submit a proposal S1 had signed with a script | ✅ on return the notice lists all four within 1.6 s (the relay's two at once, then the API wallet, then the transfer once its transaction was compared); a dot on "Needs you" and on the treasury |
+| "Got it" | the group goes, the dots go, a reload keeps it gone; lab A's notice is untouched | ✅ |
+| "Mark all as read" | one request for every treasury shown | ✅ two markers in one insert |
+| Requests | only the local relay and Hyperliquid: two `info` reads per treasury, the explorer only for transfers that could be a proposal's | ✅ |
+| Tab title | "(2) Multisig — hl-tools"; follows the inbox live; survives navigation inside the section; plain outside it | ✅ (2) → (3) 0.2 s after a script's proposal |
+| "Expires soon" | a proposal with 17 hours left | ✅ "expires in 17 hours", the local time on hover; not shown on one that cannot be finished |
+
+### Help
+
+| Check | Expected | Result |
+|---|---|---|
+| Every text | no promise of secrecy, price or serverlessness; none of the developer's words; at most 290 characters | ✅ `help.test.ts`, 30 texts |
+| Hover, keyboard focus, tap | opens; stays open after a tap; Escape and a click elsewhere close; the focus stays where it was | ✅ |
+| Phone width | every hint on the inbox, the treasury tabs, the proposal, the propose form and the add screen opens inside the viewport and does not cover its mark | ✅ 41 marks checked at 375 px |
+
+### Negative matrix
+
+| Case | How | Expected | Result |
+|---|---|---|---|
+| Socket dropped | network off for 20 s on a live treasury page, then on | "Reconnecting…", live again by itself, no duplicated rows | ✅ "Reconnecting…" after 19 s, "Not updating" after three failed attempts, "Live" 0.5 s after the network returned; 45 rows before and after, the same ones |
+| Eleventh account on one network address | cannot be provoked: Hyperliquid does not enforce the cap | "Live updates unavailable" with "Try again" | unit tests only (`wsHub.test.ts`, the store's `refused` state) |
+| Explorer answering 429 | `fetch` to the explorer replaced in the page | "could not check"; nothing called "none on record" that could be a proposal's; no report filed; look-ups paced | ❌ → fixed. The cells were right (10 "could not check" after three paced attempts each, 30 requests in 70 s), but the notice said that API wallets could not be checked although they had been read. It now says that some transfers could not be checked yet and stay unread |
+| The finaliser's report after "carried out outside" | pgTAP, both orders | ends as "accepted", once in the Signing log | ✅ |
+| Twin proposals | pgTAP and `match.test.ts` | neither closed automatically; the row says it matches more than one | ✅ |
+| Look-alike address named "Auditor" | script | the copy is refused as taken; the full address is on screen before signing | ✅ |
+| Marker from another wallet; marker past the newest entry; a malformed chain part | pgTAP and integration suite | refused | ✅ |
+| "Got it" on two devices at once | integration suite | both taken, nothing comes back | ✅ |
+| More than ten treasuries | `treasuriesToCheck` | the first ten are asked about, the rest say so and are checked when opened | unit test only |
+| Signed out | home, a treasury link, a proposal link | no notice, no marks, plain title | ✅ no request to the relay or to Hyperliquid at all |
+| Relay off, relay unreachable | every new hook is switched by the relay's mode | Phase 2 and Phase 3 behaviour | by construction; the money part with the stack stopped was run (above) |
+| A role tag before the signer set is read | found while testing | no "not a signer" verdict without a signer set | ❌ → fixed (`stage.test.ts`): the proposal page flashed "you: not a signer" at a signer while loading |
+| Hydration, phone width, both themes | full loads of the inbox and a treasury page; every new screen at 375 px and 1440 px in both themes | no console message; `scrollWidth = clientWidth` | ✅ |
+
+### Not run, and limits of what was run
+
+- Everything ran against the local stack and testnet. Nothing was signed or submitted on mainnet.
+- The order of `usdSend` was measured on testnet, through multi-sig envelopes. `withdraw3` and `sendAsset` were not tried (no withdrawals in testing), and a plain account was not tried.
+- The inbox learns that a send was overtaken from the proposals on record. A newer send made with another tool is noticed on the proposal page, which has the ledger, and by every signer after the first refused attempt.
+- "More than ten treasuries" and "live updates refused" have no browser run: the first needs eleven real multi-sigs listing one wallet, the second a limit Hyperliquid does not enforce.
+- The committed captures of "On Hyperliquid" are of a tall viewport, not of the full page (see DECISIONS.md).
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
@@ -631,8 +755,11 @@ Also verified at the end: `bun --bun run test` (277 passing after this round), `
 | Multisig Inspector — envelope (2026-10-09) | [view](docs/screenshots/multisig-envelope-dark-desktop.jpeg) | [view](docs/screenshots/multisig-envelope-light-desktop.jpeg) | [view](docs/screenshots/multisig-envelope-dark-mobile.jpeg) | [view](docs/screenshots/multisig-envelope-light-mobile.jpeg) |
 | Multisig Signer — start, `/multisig/open` (2026-10-10, new shell) | [view](docs/screenshots/multisig-sign-dark-desktop.jpeg) | [view](docs/screenshots/multisig-sign-light-desktop.jpeg) | [view](docs/screenshots/multisig-sign-dark-mobile.jpeg) | [view](docs/screenshots/multisig-sign-light-mobile.jpeg) |
 | Multisig Signer — propose (2026-10-10, new shell) | [view](docs/screenshots/multisig-propose-dark-desktop.jpeg) | [view](docs/screenshots/multisig-propose-light-desktop.jpeg) | [view](docs/screenshots/multisig-propose-dark-mobile.jpeg) | [view](docs/screenshots/multisig-propose-light-mobile.jpeg) |
-| Multisig Signer — proposal (2026-10-10, new layout) | [view](docs/screenshots/multisig-proposal-dark-desktop.jpeg) | [view](docs/screenshots/multisig-proposal-light-desktop.jpeg) | [view](docs/screenshots/multisig-proposal-dark-mobile.jpeg) | [view](docs/screenshots/multisig-proposal-light-mobile.jpeg) |
+| Multisig — proposal, with "seen" marks (2026-10-11) | [view](docs/screenshots/multisig-proposal-dark-desktop.jpeg) | [view](docs/screenshots/multisig-proposal-light-desktop.jpeg) | [view](docs/screenshots/multisig-proposal-dark-mobile.jpeg) | [view](docs/screenshots/multisig-proposal-light-mobile.jpeg) |
 | Multisig — landing, signed out (2026-10-10) | [view](docs/screenshots/multisig-landing-dark-desktop.jpeg) | [view](docs/screenshots/multisig-landing-light-desktop.jpeg) | [view](docs/screenshots/multisig-landing-dark-mobile.jpeg) | [view](docs/screenshots/multisig-landing-light-mobile.jpeg) |
-| Multisig — Needs you (2026-10-10) | [view](docs/screenshots/multisig-inbox-dark-desktop.jpeg) | [view](docs/screenshots/multisig-inbox-light-desktop.jpeg) | [view](docs/screenshots/multisig-inbox-dark-mobile.jpeg) | [view](docs/screenshots/multisig-inbox-light-mobile.jpeg) |
-| Multisig — treasury, History tab (2026-10-10) | [view](docs/screenshots/multisig-treasury-dark-desktop.jpeg) | [view](docs/screenshots/multisig-treasury-light-desktop.jpeg) | [view](docs/screenshots/multisig-treasury-dark-mobile.jpeg) | [view](docs/screenshots/multisig-treasury-light-mobile.jpeg) |
+| Multisig — Needs you, with "While you were away" (2026-10-11) | [view](docs/screenshots/multisig-inbox-dark-desktop.jpeg) | [view](docs/screenshots/multisig-inbox-light-desktop.jpeg) | [view](docs/screenshots/multisig-inbox-dark-mobile.jpeg) | [view](docs/screenshots/multisig-inbox-light-mobile.jpeg) |
+| Multisig — treasury, Overview (2026-10-11) | [view](docs/screenshots/multisig-overview-dark-desktop.jpeg) | [view](docs/screenshots/multisig-overview-light-desktop.jpeg) | [view](docs/screenshots/multisig-overview-dark-mobile.jpeg) | [view](docs/screenshots/multisig-overview-light-mobile.jpeg) |
+| Multisig — treasury, On Hyperliquid (2026-10-11, top of the table) | [view](docs/screenshots/multisig-onchain-dark-desktop.jpeg) | [view](docs/screenshots/multisig-onchain-light-desktop.jpeg) | [view](docs/screenshots/multisig-onchain-dark-mobile.jpeg) | [view](docs/screenshots/multisig-onchain-light-mobile.jpeg) |
+| Multisig — treasury, Signing log (2026-10-11) | [view](docs/screenshots/multisig-treasury-dark-desktop.jpeg) | [view](docs/screenshots/multisig-treasury-light-desktop.jpeg) | [view](docs/screenshots/multisig-treasury-dark-mobile.jpeg) | [view](docs/screenshots/multisig-treasury-light-mobile.jpeg) |
+| Multisig — nickname dialog (2026-10-11) | [view](docs/screenshots/multisig-nickname-dark-desktop.jpeg) | [view](docs/screenshots/multisig-nickname-light-desktop.jpeg) | [view](docs/screenshots/multisig-nickname-dark-mobile.jpeg) | [view](docs/screenshots/multisig-nickname-light-mobile.jpeg) |
 | Multisig — add a treasury (2026-10-10) | [view](docs/screenshots/multisig-add-dark-desktop.jpeg) | [view](docs/screenshots/multisig-add-light-desktop.jpeg) | [view](docs/screenshots/multisig-add-dark-mobile.jpeg) | [view](docs/screenshots/multisig-add-light-mobile.jpeg) |

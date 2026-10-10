@@ -224,8 +224,7 @@ function MobileSwitcher() {
 		>
 			{here === "__other" && <option value="__other">Go to…</option>}
 			<option value="">
-				Needs you ({nav.needs})
-				{nav.unread ? " · changes while you were away" : ""}
+				Needs you ({nav.needs}){nav.unread ? " · changes" : ""}
 			</option>
 			{nav.treasuries.map((t) => (
 				<option key={t.address} value={t.address}>
@@ -234,7 +233,7 @@ function MobileSwitcher() {
 						? `${t.threshold} of ${t.signers.length}`
 						: "no longer a multi-sig"}
 					{t.needs > 0 ? ` · ${t.needs} need you` : ""}
-					{t.unread ? " · changed while you were away" : ""}
+					{t.unread ? " · changed" : ""}
 				</option>
 			))}
 			<option value="__add">+ Add a treasury</option>
