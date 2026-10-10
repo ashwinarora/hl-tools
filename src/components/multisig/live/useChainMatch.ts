@@ -43,34 +43,38 @@ const ZERO_HASH = /^0x0+$/;
 const key = (network: Network, hash: string) =>
 	["explorer-tx", network, hash.toLowerCase()] as const;
 
-export interface ChainMatch {
-	/** What the row's "Proposal" cell says. */
-	of(row: LedgerRow): RowProposal;
-	/** Look a row's transaction up again after "could not check". */
-	retry(row: LedgerRow): void;
+/** The hashes worth a look-up: rows that could be a known proposal's. */
+export function hashesToLookUp(
+	ledger: readonly LedgerRow[],
+	proposals: readonly MatchCandidate[],
+): string[] {
+	const out = new Set<string>();
+	for (const row of ledger)
+		if (
+			candidatesFor(row, proposals).kind === "candidates" &&
+			!ZERO_HASH.test(row.hash)
+		)
+			out.add(row.hash.toLowerCase());
+	return [...out];
 }
 
-export function useChainMatch(
-	target: AccountTarget | null,
-	ledger: readonly LedgerRow[] | null,
-	proposals: readonly MatchCandidate[],
-	/** False while the proposals on record are not known: nothing is looked up, nothing is "none". */
-	ready: boolean,
-): ChainMatch {
-	const network = target?.network ?? "mainnet";
-	const account = target?.address ?? "";
-	const queries = useQueryClient();
-	const hashes = useMemo(() => {
-		if (!ready || !ledger) return [];
-		const out = new Set<string>();
-		for (const row of ledger)
-			if (
-				candidatesFor(row, proposals).kind === "candidates" &&
-				!ZERO_HASH.test(row.hash)
-			)
-				out.add(row.hash.toLowerCase());
-		return [...out];
-	}, [ready, ledger, proposals]);
+/** A row's look-up, as `rowProposal` takes it. */
+export function lookupOf(
+	lookups: ReadonlyMap<string, Lookup>,
+	row: LedgerRow,
+): Lookup | undefined {
+	const hash = row.hash.toLowerCase();
+	return ZERO_HASH.test(hash) ? { state: "unknown-hash" } : lookups.get(hash);
+}
+
+/**
+ * The transactions behind some hashes, from Hyperliquid's explorer: once per
+ * hash for the session, paced, shared by every screen that asks.
+ */
+export function useTxLookups(
+	network: Network,
+	hashes: readonly string[],
+): ReadonlyMap<string, Lookup> {
 	const results = useQueries({
 		queries: hashes.map((hash) => ({
 			queryKey: key(network, hash),
@@ -93,7 +97,7 @@ export function useChainMatch(
 			refetchOnReconnect: false,
 		})),
 	});
-	const lookups = useMemo(() => {
+	return useMemo(() => {
 		const m = new Map<string, Lookup>();
 		hashes.forEach((hash, i) => {
 			const q = results[i];
@@ -111,6 +115,30 @@ export function useChainMatch(
 		});
 		return m;
 	}, [hashes, results]);
+}
+
+export interface ChainMatch {
+	/** What the row's "Proposal" cell says. */
+	of(row: LedgerRow): RowProposal;
+	/** Look a row's transaction up again after "could not check". */
+	retry(row: LedgerRow): void;
+}
+
+export function useChainMatch(
+	target: AccountTarget | null,
+	ledger: readonly LedgerRow[] | null,
+	proposals: readonly MatchCandidate[],
+	/** False while the proposals on record are not known: nothing is looked up, nothing is "none". */
+	ready: boolean,
+): ChainMatch {
+	const network = target?.network ?? "mainnet";
+	const account = target?.address ?? "";
+	const queries = useQueryClient();
+	const hashes = useMemo(
+		() => (ready && ledger ? hashesToLookUp(ledger, proposals) : []),
+		[ready, ledger, proposals],
+	);
+	const lookups = useTxLookups(network, hashes);
 	const of = useCallback(
 		(row: LedgerRow): RowProposal => {
 			if (!ready) {
@@ -119,13 +147,7 @@ export function useChainMatch(
 					? { kind: "checking" }
 					: { kind: "not-applicable" };
 			}
-			const hash = row.hash.toLowerCase();
-			return rowProposal(
-				row,
-				account,
-				proposals,
-				ZERO_HASH.test(hash) ? { state: "unknown-hash" } : lookups.get(hash),
-			);
+			return rowProposal(row, account, proposals, lookupOf(lookups, row));
 		},
 		[ready, account, proposals, lookups],
 	);

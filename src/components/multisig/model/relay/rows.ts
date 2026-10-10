@@ -145,6 +145,18 @@ export interface ReportRow {
 	readonly finishedAt: number | null;
 }
 
+/** One "Got it": the signer's marker for a treasury at that moment. The newest per treasury counts. */
+export interface MarkRow {
+	readonly id: number;
+	readonly network: Network;
+	readonly treasury: Address;
+	readonly eventId: number;
+	/** Null when the marker never recorded one. */
+	readonly ledgerTime: number | null;
+	readonly agents: readonly Address[] | null;
+	readonly markedAt: number;
+}
+
 export interface Parsed<T> {
 	readonly rows: readonly T[];
 	/** Rows that did not have the expected shape and were left out. */
@@ -351,6 +363,42 @@ export function viewRows(data: unknown): Parsed<ViewRow> {
 		signer: address(r.signer),
 		seenAt: time(r.seen_at),
 	}));
+}
+
+export function markRows(data: unknown): Parsed<MarkRow> {
+	return each(data, (r) => {
+		const chain = isObj(r.chain) ? r.chain : {};
+		const eventId = int(r.event_id);
+		if (eventId < 0) bad();
+		return {
+			id: int(r.id),
+			network: network(r.network),
+			treasury: address(r.treasury),
+			eventId,
+			ledgerTime:
+				chain.ledgerTime === undefined
+					? null
+					: int(chain.ledgerTime) >= 0
+						? int(chain.ledgerTime)
+						: bad(),
+			agents:
+				chain.agents === undefined ? null : list(chain.agents).map(address),
+			markedAt: time(r.marked_at),
+		};
+	});
+}
+
+/** The newest marker per treasury, keyed `network:treasury`. */
+export function latestMarks(
+	rows: readonly MarkRow[],
+): ReadonlyMap<string, MarkRow> {
+	const out = new Map<string, MarkRow>();
+	for (const m of rows) {
+		const key = `${m.network}:${m.treasury}`;
+		const had = out.get(key);
+		if (!had || m.id > had.id) out.set(key, m);
+	}
+	return out;
 }
 
 /** Shape only: whether a nickname may be shown is decided by `acceptNicknames`. */

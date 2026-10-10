@@ -16,6 +16,7 @@ import {
 	useNetworkHydrated,
 	useNetworkStore,
 } from "#/store/networkStore";
+import { AwayNotice } from "../inbox/AwayNotice";
 import { useChainMatch } from "../live/useChainMatch";
 import {
 	compareSigners,
@@ -152,6 +153,7 @@ export function TreasuryScreen({
 			known.proposals.find((p) => p.digest === digest)?.status ?? null,
 		[known.proposals],
 	);
+	const awayScope = useMemo(() => ({ network, address }), [network, address]);
 	const clock = useNow();
 	useExecutionReporter({
 		network,
@@ -418,6 +420,9 @@ export function TreasuryScreen({
 						Signatures are always counted against the live list.
 					</Callout>
 				)}
+				<div className="mb-4 empty:hidden">
+					<AwayNotice scope={awayScope} />
+				</div>
 				<TabList
 					label="Treasury sections"
 					value={tab}

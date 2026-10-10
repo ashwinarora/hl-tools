@@ -20,6 +20,7 @@ import {
 } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { useTreasuryNames } from "../treasuryName";
+import { AwayNotice } from "./AwayNotice";
 import { ProposalRows } from "./ProposalRows";
 
 /**
@@ -59,6 +60,7 @@ export function InboxScreen() {
 			}
 		>
 			<div className="flex flex-col gap-4">
+				<AwayNotice scope="all" />
 				{groups.finish.length > 0 && (
 					<section>
 						<GroupTitle count={groups.finish.length}>

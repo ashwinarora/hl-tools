@@ -4,10 +4,13 @@ import { rawProposal, rowFor } from "#/test/relayRows";
 import {
 	addressList,
 	eventRows,
+	latestMarks,
+	markRows,
 	proposalRows,
 	reportRows,
 	requestRows,
 	treasuryRows,
+	viewRows,
 } from "./rows";
 
 const ISO = "2026-10-09T18:54:44.915368+00:00";
@@ -359,6 +362,85 @@ describe("requestRows", () => {
 				},
 			]).dropped,
 		).toBe(1);
+	});
+});
+
+describe("viewRows", () => {
+	it("reads who opened a proposal and when, and drops what is not that", () => {
+		const got = viewRows([
+			{ signer: B, seen_at: ISO },
+			{ signer: "0xnope", seen_at: ISO },
+			{ signer: C, seen_at: "yesterday" },
+		]);
+		expect(got.rows).toEqual([{ signer: B, seenAt: Date.parse(ISO) }]);
+		expect(got.dropped).toBe(2);
+	});
+});
+
+describe("markRows", () => {
+	const mark = (over: Record<string, unknown> = {}) => ({
+		id: 7,
+		network: "testnet",
+		treasury: TREASURY,
+		event_id: 42,
+		chain: { ledgerTime: 1_791_000_000_000, agents: [A] },
+		marked_at: ISO,
+		...over,
+	});
+	it("reads a marker with what it knows of the chain", () => {
+		expect(markRows([mark()]).rows).toEqual([
+			{
+				id: 7,
+				network: "testnet",
+				treasury: TREASURY,
+				eventId: 42,
+				ledgerTime: 1_791_000_000_000,
+				agents: [A],
+				markedAt: Date.parse(ISO),
+			},
+		]);
+	});
+	it("tells 'never recorded' from 'none': a marker without a list is not a marker with an empty one", () => {
+		const [bare, empty] = markRows([
+			mark({ chain: {} }),
+			mark({ chain: { agents: [] } }),
+		]).rows;
+		expect(bare).toMatchObject({ ledgerTime: null, agents: null });
+		expect(empty).toMatchObject({ ledgerTime: null, agents: [] });
+		// no chain object at all reads as nothing recorded
+		expect(markRows([mark({ chain: null })]).rows[0]).toMatchObject({
+			ledgerTime: null,
+			agents: null,
+		});
+	});
+	it("drops a marker that is not one", () => {
+		const got = markRows([
+			mark({ event_id: -1 }),
+			mark({ event_id: 1.5 }),
+			mark({ chain: { ledgerTime: -5 } }),
+			mark({ chain: { ledgerTime: "now" } }),
+			mark({ chain: { agents: ["0xnope"] } }),
+			mark({ chain: { agents: "all" } }),
+			mark({ treasury: "0x1" }),
+			mark({ marked_at: null }),
+		]);
+		expect(got.rows).toEqual([]);
+		expect(got.dropped).toBe(8);
+	});
+	it("takes the newest marker of each treasury", () => {
+		const other = "0x00000000000000000000000000000000000000aa";
+		const rows = markRows([
+			mark({ id: 3, event_id: 10 }),
+			mark({ id: 9, event_id: 30 }),
+			mark({ id: 5, event_id: 20 }),
+			mark({ id: 4, treasury: other, event_id: 2 }),
+			mark({ id: 8, network: "mainnet", event_id: 1 }),
+		]).rows;
+		const latest = latestMarks(rows);
+		expect(latest.size).toBe(3);
+		expect(latest.get(`testnet:${TREASURY}`)?.eventId).toBe(30);
+		expect(latest.get(`testnet:${other}`)?.eventId).toBe(2);
+		expect(latest.get(`mainnet:${TREASURY}`)?.eventId).toBe(1);
 	});
 });
 

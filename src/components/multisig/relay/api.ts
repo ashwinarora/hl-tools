@@ -15,6 +15,7 @@ import {
 	type Receipt,
 } from "@hl-tools/core";
 import { receiptText } from "../model/relay/assemble";
+import type { MarkChain } from "../model/relay/away";
 import { isDuplicate, relayIssue } from "../model/relay/errors";
 import type { NicknameRow } from "../model/relay/nicknames";
 import type { PublishRow } from "../model/relay/push";
@@ -22,6 +23,8 @@ import {
 	type EndingKind,
 	type EventRow,
 	eventRows,
+	type MarkRow,
+	markRows,
 	nicknameRows,
 	type Parsed,
 	type ProposalRow,
@@ -288,6 +291,93 @@ export function listViews(
 	);
 }
 
+/**
+ * The signed-in wallet's own markers, newest first: what it has said "Got it"
+ * to. A wallet moves a marker a few times a day; the newest rows cover every
+ * treasury it signs for long before the limit.
+ */
+export function listMarks(
+	client: RelayClient,
+): Promise<Result<Parsed<MarkRow>>> {
+	return read(
+		() =>
+			client
+				.from("read_marks")
+				.select("id,network,treasury,event_id,chain,marked_at")
+				.order("id", { ascending: false })
+				.limit(2000),
+		markRows,
+	);
+}
+
+/** How much history one read of "what happened since" takes. */
+export const NEWS_PAGE = 1000;
+
+/**
+ * History entries after `afterId` across the wallet's treasuries, newest
+ * first: when there are more than a page, it is the oldest that are left out.
+ */
+export function listEventsAfter(
+	client: RelayClient,
+	afterId: number,
+	opts: { limit?: number } = {},
+): Promise<Result<Parsed<EventRow>>> {
+	return read(
+		() =>
+			client
+				.from("events")
+				.select(EVENT)
+				.gt("id", afterId)
+				.order("id", { ascending: false })
+				.limit(opts.limit ?? NEWS_PAGE),
+		eventRows,
+	);
+}
+
+/** Proposals by digest, whichever of the wallet's treasuries they belong to. */
+export async function listProposalsIn(
+	client: RelayClient,
+	digests: readonly Hex[],
+): Promise<Result<Parsed<ProposalRow>>> {
+	const rows: ProposalRow[] = [];
+	let dropped = 0;
+	// a digest is 66 characters: a hundred of them fit a request line comfortably
+	for (let i = 0; i < digests.length; i += 100) {
+		const part = await read(
+			() =>
+				client
+					.from("proposals")
+					.select(PROPOSAL)
+					.in("digest", digests.slice(i, i + 100)),
+			proposalRows,
+		);
+		if (!part.data) return { data: null, issue: part.issue };
+		rows.push(...part.data.rows);
+		dropped += part.data.dropped;
+	}
+	return { data: { rows, dropped }, issue: null };
+}
+
+/** Proposals nobody ended whose signing window closed between two moments. */
+export function listLapsed(
+	client: RelayClient,
+	since: number,
+	now: number = Date.now(),
+): Promise<Result<Parsed<ProposalRow>>> {
+	return read(
+		() =>
+			client
+				.from("proposals")
+				.select(PROPOSAL)
+				.eq("status", "open")
+				.gt("expires_at", new Date(since).toISOString())
+				.lte("expires_at", new Date(now).toISOString())
+				.order("expires_at", { ascending: false })
+				.limit(200),
+		proposalRows,
+	);
+}
+
 /** Every nickname the wallet may read: those of the treasuries it signs for, each under its own treasury. */
 export function listNicknames(
 	client: RelayClient,
@@ -410,6 +500,36 @@ export function recordView(
 	return write(client, as, () => client.from("proposal_views").insert(key), {
 		duplicateIsFine: true,
 	});
+}
+
+/** A marker to write: everything up to `eventId` is read, and what the signer now knows of the chain. */
+export interface MarkWrite {
+	readonly network: Network;
+	readonly treasury: Address;
+	readonly eventId: number;
+	readonly chain: MarkChain;
+}
+
+/**
+ * Move the signed-in wallet's markers ("Got it", "Mark all as read"): one
+ * request for all of them. The relay never moves a marker back.
+ */
+export function markRead(
+	client: RelayClient,
+	as: Address,
+	marks: readonly MarkWrite[],
+): Promise<Result<true>> {
+	if (marks.length === 0) return Promise.resolve({ data: true, issue: null });
+	return write(client, as, () =>
+		client.from("read_marks").insert(
+			marks.map((m) => ({
+				network: m.network,
+				treasury: m.treasury,
+				event_id: m.eventId,
+				chain: m.chain,
+			})),
+		),
+	);
 }
 
 /**

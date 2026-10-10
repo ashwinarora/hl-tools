@@ -56,6 +56,20 @@ export const RELAY_COPY = {
 	// "Seen" marks are shared with the treasury's signers, the reader's own included.
 	seenNote:
 		"\u201cSeen\u201d means that signer opened this page while signed in. Every signer of this treasury sees these marks, including the one next to their own name.",
+	// "While you were away". What a signer has marked as read is not shown to
+	// co-signers; nothing here may say more than that.
+	awayTitle: "While you were away",
+	awayGotIt:
+		"Got it. Your co-signers are not shown what you have marked as read.",
+	awayAll: "Marked as read. It all stays in the Signing log and the tables.",
+	awayDot: "Something changed while you were away",
+	awayChecking: "Checking API wallets and transfers on Hyperliquid…",
+	awayFailed:
+		"Hyperliquid did not answer, so API wallets and transfers could not be checked.",
+	awayNotChecked:
+		"API wallets and transfers are checked when you open this treasury.",
+	awayOthers:
+		"API wallets and transfers were checked for your first ten treasuries. The others are checked when you open them.",
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;

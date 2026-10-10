@@ -31,9 +31,19 @@ import {
 	until,
 	untilWorker,
 } from "#/test/relayStack";
+import { partsText } from "../model/parts";
 import { assembleProposal, removedSigners } from "../model/relay/assemble";
+import {
+	awayItems,
+	awayProposal,
+	firstMark,
+	isEnding,
+	type MarkChain,
+	markAfter,
+} from "../model/relay/away";
 import { acceptNicknames } from "../model/relay/nicknames";
 import { planPush, publishRow } from "../model/relay/push";
+import { latestMarks } from "../model/relay/rows";
 import { buildSignInMessage } from "../model/relay/siwe";
 import {
 	addSignature,
@@ -41,12 +51,17 @@ import {
 	getProposal,
 	getRequest,
 	listEvents,
+	listEventsAfter,
+	listLapsed,
+	listMarks,
 	listNicknames,
 	listOpenProposals,
 	listProposalEvents,
+	listProposalsIn,
 	listReports,
 	listTreasuries,
 	listViews,
+	markRead,
 	type ProposalKey,
 	publishProposal,
 	recordReceipt,
@@ -1200,6 +1215,162 @@ describe("who has seen a proposal", () => {
 		} finally {
 			leave();
 		}
+	});
+});
+
+describe("what a signer has read", () => {
+	// by now the treasury's signers are a, b and c
+	type Mark = NonNullable<Awaited<ReturnType<typeof markOf>>>;
+	const newest = async (w: TestWallet) =>
+		(await listEvents(w.client, NET, treasury, { limit: 1 })).data?.rows[0]
+			?.id ?? 0;
+	const markOf = async (w: TestWallet) =>
+		latestMarks((await listMarks(w.client)).data?.rows ?? []).get(
+			`${NET}:${treasury}`,
+		) ?? null;
+	const write = (w: TestWallet, eventId: number, chain: MarkChain = {}) =>
+		markRead(w.client, w.address, [{ network: NET, treasury, eventId, chain }]);
+	/** What the page reads for the notice, and what the notice then says. */
+	const news = async (w: TestWallet, mark: Mark) => {
+		const events = (
+			(await listEventsAfter(w.client, mark.eventId)).data?.rows ?? []
+		).filter((e) => e.treasury === treasury);
+		const digests = [
+			...new Set(
+				events.filter(isEnding).flatMap((e) => (e.digest ? [e.digest] : [])),
+			),
+		];
+		const rows = [
+			...((await listProposalsIn(w.client, digests)).data?.rows ?? []),
+			...((await listLapsed(w.client, mark.markedAt)).data?.rows ?? []),
+		].filter((r) => r.treasury === treasury);
+		const proposals = [];
+		for (const row of rows) {
+			const x = await assembleProposal(row);
+			if (x.assembled) proposals.push(awayProposal(row, x.assembled.proposal));
+		}
+		return { events, proposals };
+	};
+	const told = async (w: TestWallet) => {
+		const mark = await markOf(w);
+		if (!mark) return null;
+		const n = await news(w, mark);
+		return awayItems({
+			mark,
+			...n,
+			me: w.address,
+			chain: { ledger: null, agents: null },
+			now: Date.now(),
+		}).map((i) => partsText(i.parts));
+	};
+
+	it("starts from now, tells what was carried out without the signer, and stops after 'Got it'", async () => {
+		expect(await told(c)).toBeNull();
+		const start = await newest(c);
+		const first = firstMark({ newestEventId: start, now: Date.now() });
+		expect((await write(c, first.eventId, first.chain)).issue).toBeNull();
+		expect((await write(a, first.eventId, first.chain)).issue).toBeNull();
+		const begun = await markOf(c);
+		expect(begun).toMatchObject({ eventId: start, agents: null });
+		expect(begun?.ledgerTime).toBe(first.chain.ledgerTime);
+		// everything before the first marker is history, not news
+		expect(await told(c)).toEqual([]);
+
+		const p = await proposal("integration: away", [a]);
+		await publishProposal(a.client, a.address, publishRow(p));
+		await addSignature(a.client, a.address, keyOf(p), sigOf(p, a));
+		expect(
+			(await recordReceipt(b.client, b.address, keyOf(p), receipt(true))).issue,
+		).toBeNull();
+
+		const forC = (await told(c)) ?? [];
+		expect(forC).toHaveLength(1);
+		expect(forC[0]).toMatch(
+			/\(“integration: away”\) was carried out\. Signed by 0x.+; you did not sign\.$/,
+		);
+		// the proposer is told its proposal went through
+		expect(((await told(a)) ?? [])[0]).toMatch(
+			/, which you proposed, was carried out\. Submitted by 0x.+\.$/,
+		);
+
+		// "Got it": the marker moves to the newest entry shown, with the API wallets now known
+		const mark = (await markOf(c)) as Mark;
+		const next = markAfter({
+			mark,
+			events: (await news(c, mark)).events,
+			chain: {
+				ledger: null,
+				agents: [{ name: "bot", address: outsider.address, validUntil: 0 }],
+			},
+			ledgerReadAt: null,
+		});
+		expect(next.eventId).toBeGreaterThan(start);
+		expect((await write(c, next.eventId, next.chain)).issue).toBeNull();
+		expect(await told(c)).toEqual([]);
+		const after = await markOf(c);
+		expect(after).toMatchObject({
+			eventId: next.eventId,
+			agents: [outsider.address],
+		});
+		// the ledger was not read, so its time stays where it was
+		expect(after?.ledgerTime).toBe(begun?.ledgerTime);
+		// and a's notice is as it was: a marker is each signer's own
+		expect(await told(a)).toHaveLength(1);
+	});
+
+	it("tells a proposer whose proposal ran out of time", async () => {
+		const p = await proposal("integration: lapsed", [a]);
+		await publishProposal(a.client, a.address, publishRow(p));
+		// after a's marker, before now
+		await sql`update public.proposals set expires_at = now() where digest = ${p.digest}`;
+		const forA = (await told(a)) ?? [];
+		expect(forA.filter((t) => /“integration: lapsed”/.test(t))).toEqual([
+			expect.stringMatching(
+				/, which you proposed, expired before it was submitted\.$/,
+			),
+		]);
+		// c had no part in it
+		expect((await told(c)) ?? []).toEqual([]);
+	});
+
+	it("is the signer's own: nobody else reads it or writes it", async () => {
+		expect(
+			((await listMarks(c.client)).data?.rows ?? []).length,
+		).toBeGreaterThan(0);
+		expect((await listMarks(b.client)).data?.rows).toEqual([]);
+		expect((await listMarks(outsider.client)).data?.rows).toEqual([]);
+		const top = await newest(c);
+		expect(codes((await write(outsider, top)).issue)).toBe("relay.not_allowed");
+		expect(
+			codes(
+				(
+					await markRead(c.client, a.address, [
+						{ network: NET, treasury, eventId: top, chain: {} },
+					])
+				).issue,
+			),
+		).toBe("relay.wrong_wallet");
+	});
+
+	it("only moves forward, never past the newest entry, and takes two at once", async () => {
+		const before = (await markOf(c)) as Mark;
+		const top = await newest(c);
+		expect(codes((await write(c, top + 1000)).issue)).toBe(
+			"relay.mark_invalid",
+		);
+		expect(
+			codes((await write(c, top, { agents: ["nope"] } as never)).issue),
+		).toBe("relay.mark_invalid");
+		// an older "Got it" arriving late from another device is brought level
+		expect((await write(c, 1)).issue).toBeNull();
+		expect((await markOf(c))?.eventId).toBe(before.eventId);
+		// two devices at the same moment: both are taken, nothing comes back
+		const both = await Promise.all([write(c, top), write(c, top - 1)]);
+		expect(both.map((r) => r.issue)).toEqual([null, null]);
+		expect((await markOf(c))?.eventId).toBe(top);
+		expect(await told(c)).toEqual([]);
+		// what the marker knew of the chain is kept by a write that says nothing of it
+		expect((await markOf(c))?.agents).toEqual(before.agents);
 	});
 });
 

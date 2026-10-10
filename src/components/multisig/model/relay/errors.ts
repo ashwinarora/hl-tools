@@ -68,6 +68,10 @@ const REFUSALS: Record<string, Known> = {
 		message: "A treasury keeps at most 500 nicknames.",
 		fix: "Take away one that is no longer needed.",
 	},
+	"relay.mark_invalid": {
+		message: "That could not be marked as read.",
+		fix: "Reload the page and try again.",
+	},
 	"relay.not_proposer": {
 		message: "Only the wallet that proposed it can withdraw a proposal.",
 	},

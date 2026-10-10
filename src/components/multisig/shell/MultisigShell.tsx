@@ -11,6 +11,8 @@ import {
 } from "#/store/multisigPrefsStore";
 import { useNetworkHint } from "#/store/networkHintStore";
 import { useNetwork } from "#/store/networkStore";
+import { AwayKeeper } from "../away/AwayKeeper";
+import { useAway } from "../away/useAway";
 import { RELAY_COPY } from "../model/relay/copy";
 import { countNeeds, countOpen } from "../model/relay/inbox";
 import { shortAddress } from "../model/stage";
@@ -52,6 +54,7 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 				</aside>
 				<main className="min-w-0">
 					{relay.mode === "on" && <NetworkHint />}
+					{relay.mode === "on" && <AwayKeeper />}
 					<MobileBar />
 					<FirstUse />
 					{children}
@@ -73,6 +76,9 @@ function useNav() {
 	const hydrated = usePrefsHydrated();
 	const hidden = useMultisigPrefs((s) => s.hidden);
 	const seen = useMultisigPrefs((s) => s.seen);
+	const away = useAway("none");
+	const unread = (n: Network, a: Address) =>
+		away.groups.some((g) => g.network === n && g.treasury === a);
 	const isHidden = (n: Network, a: Address) =>
 		hydrated && hidden.includes(treasuryKey(n, a));
 	const visible = items.filter((p) => !isHidden(p.network, p.treasury));
@@ -83,6 +89,8 @@ function useNav() {
 			name: nameOf(t.network, t.address),
 			needs: me ? countNeeds(visible, me, t.network, t.address) : 0,
 			open: countOpen(visible, t.network, t.address),
+			// something finished or changed here since the signer's last "Got it"
+			unread: unread(t.network, t.address),
 			// added by someone else and never opened here: say so
 			fresh:
 				hydrated &&
@@ -96,9 +104,22 @@ function useNav() {
 		loading,
 		issue,
 		needs: me ? countNeeds(visible, me, network) : 0,
+		unread: away.groups.length > 0,
 		/** Something needs the wallet on the network that is not selected. */
 		elsewhere: me && countNeeds(visible, me, other) > 0 ? other : null,
 	};
+}
+
+/** The small mark next to a destination where something changed since the signer's last "Got it". */
+function UnreadDot() {
+	return (
+		<span
+			title={RELAY_COPY.awayDot}
+			className="size-2 shrink-0 rounded-full bg-info"
+		>
+			<span className="sr-only">{RELAY_COPY.awayDot}</span>
+		</span>
+	);
 }
 
 /** Signed in: the inbox, then the wallet's treasuries on the header's network. */
@@ -111,7 +132,10 @@ function RailNav() {
 					to="/multisig"
 					exact
 					trailing={
-						<Count n={nav.needs} quiet={nav.needs === 0} label="need you" />
+						<>
+							{nav.unread && <UnreadDot />}
+							<Count n={nav.needs} quiet={nav.needs === 0} label="need you" />
+						</>
 					}
 				>
 					Needs you
@@ -131,13 +155,16 @@ function RailNav() {
 									: "no longer a multi-sig"
 							}`}
 							trailing={
-								t.needs > 0 ? (
-									<Count n={t.needs} label="need you" />
-								) : t.fresh ? (
-									<Tag tone="info">new</Tag>
-								) : t.open > 0 ? (
-									<Count n={t.open} quiet label="pending" />
-								) : null
+								<>
+									{t.unread && <UnreadDot />}
+									{t.needs > 0 ? (
+										<Count n={t.needs} label="need you" />
+									) : t.fresh ? (
+										<Tag tone="info">new</Tag>
+									) : t.open > 0 ? (
+										<Count n={t.open} quiet label="pending" />
+									) : null}
+								</>
 							}
 						>
 							{t.name}
@@ -190,7 +217,10 @@ function MobileSwitcher() {
 			className="h-9 w-full min-w-0 rounded-md border border-border-strong bg-surface px-2.5 text-sm"
 		>
 			{here === "__other" && <option value="__other">Go to…</option>}
-			<option value="">Needs you ({nav.needs})</option>
+			<option value="">
+				Needs you ({nav.needs})
+				{nav.unread ? " · changes while you were away" : ""}
+			</option>
 			{nav.treasuries.map((t) => (
 				<option key={t.address} value={t.address}>
 					{t.name} ·{" "}
@@ -198,6 +228,7 @@ function MobileSwitcher() {
 						? `${t.threshold} of ${t.signers.length}`
 						: "no longer a multi-sig"}
 					{t.needs > 0 ? ` · ${t.needs} need you` : ""}
+					{t.unread ? " · changed while you were away" : ""}
 				</option>
 			))}
 			<option value="__add">+ Add a treasury</option>
