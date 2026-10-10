@@ -36,11 +36,13 @@ import { relayIssue } from "../model/relay/errors";
 import { planPush, publishBlocker, type RelayKnown } from "../model/relay/push";
 import { type CarriedOut, carriedOutOf } from "../model/relay/report";
 import type { EndingKind, ProposalRow } from "../model/relay/rows";
+import type { ViewRow } from "../model/relay/views";
 import {
 	addSignature,
 	endProposal,
 	getProposal,
 	listProposalEvents,
+	listViews,
 	type ProposalKey,
 	publishProposal,
 	recordReceipt,
@@ -66,6 +68,8 @@ export interface RelayView {
 	readonly row: ProposalRow | null;
 	/** What the relay recorded when it closed the proposal as carried out outside the tool. */
 	readonly carriedOut: CarriedOut | null;
+	/** Which signers have opened it; null when the relay does not have it (or could not say). */
+	readonly views: readonly ViewRow[] | null;
 	readonly expired: boolean;
 	/** Signers whose signature is on the relay and verifies. */
 	readonly signers: readonly Address[];
@@ -111,6 +115,8 @@ interface Remote {
 	readonly issues: readonly Issue[];
 	readonly removed: readonly Address[];
 	readonly carriedOut: CarriedOut | null;
+	/** Null when they could not be read: nothing is then said about who has seen it. */
+	readonly views: readonly ViewRow[] | null;
 }
 
 const keyOf = (p: Proposal): ProposalKey => ({
@@ -140,7 +146,9 @@ async function readRemote(client: RelayClient, digest: Hex): Promise<Remote> {
 	}
 	let removed: Address[] = [];
 	let carriedOut: CarriedOut | null = null;
+	let views: readonly ViewRow[] | null = null;
 	if (found) {
+		views = (await listViews(client, keyOf(found.proposal))).data?.rows ?? null;
 		const events = await listProposalEvents(client, keyOf(found.proposal));
 		// without the events nothing is dropped: a signature that verifies stays shown
 		if (events.data) {
@@ -148,7 +156,7 @@ async function readRemote(client: RelayClient, digest: Hex): Promise<Remote> {
 			carriedOut = carriedOutOf(events.data.rows);
 		}
 	}
-	return { found, issues, removed, carriedOut };
+	return { found, issues, removed, carriedOut, views };
 }
 
 export function useProposalDoc(digest: string | undefined): ProposalDoc {
@@ -486,6 +494,7 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 		loading: !!client && !!digest && remote.isPending,
 		row: found?.row ?? null,
 		carriedOut: remoteData?.carriedOut ?? null,
+		views: found ? (remoteData?.views ?? null) : null,
 		expired: !!found && found.row.expiresAt <= Date.now(),
 		signers: found?.proposal.signatures.map((s) => s.signer) ?? [],
 		canPublish: !!client && !found && blocker === null && storedSignerNow,

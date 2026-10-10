@@ -52,6 +52,7 @@ import { SignaturesPanel } from "./SignaturesPanel";
 import { StageCallout } from "./StageCallout";
 import { TellCoSigners } from "./TellCoSigners";
 import type { ProposalDoc } from "./useProposalDoc";
+import { useViewRecorder } from "./useViewRecorder";
 import { YourPart } from "./YourPart";
 
 /** Phases in which signing or finalising can still happen; elsewhere the stage line says it all. */
@@ -213,6 +214,29 @@ export function ProposalView({
 		signer: !!listed && !!relay.wallet && listed.signers.includes(relay.wallet),
 		now: clock,
 	});
+	const mySignerHere =
+		!!listed && !!relay.wallet && listed.signers.includes(relay.wallet);
+	useViewRecorder({
+		network: target.network,
+		treasury: target.address as Address,
+		digest: proposal.digest,
+		known: doc.relay.known,
+		open: row?.status === "open" && !doc.relay.expired,
+		signer: mySignerHere,
+		views: doc.relay.views,
+		proposer: row?.createdBy ?? null,
+	});
+	const seen = useMemo(
+		() =>
+			row && doc.relay.views
+				? {
+						views: doc.relay.views,
+						proposer: row.createdBy,
+						createdAt: row.createdAt,
+					}
+				: null,
+		[row, doc.relay.views],
+	);
 	const carriedTx = doc.relay.carriedOut?.txHash ?? null;
 	const treasuryName = listed
 		? nameOf(target.network, target.address as Address)
@@ -507,6 +531,7 @@ export function ProposalView({
 								counted={ready ? ready.counted : null}
 								me={me}
 								closed={CLOSED.has(stage.phase)}
+								seen={seen}
 							/>
 							<TellCoSigners proposal={proposal} doc={doc} />
 							<SharePanel

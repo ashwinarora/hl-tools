@@ -33,7 +33,9 @@ import {
 	requestRows,
 	type TreasuryRow,
 	treasuryRows,
+	viewRows,
 } from "../model/relay/rows";
+import type { ViewRow } from "../model/relay/views";
 import type { RelayClient } from "./client";
 import { sessionWallet } from "./session";
 
@@ -268,6 +270,24 @@ export function listReports(
 	);
 }
 
+/** Which signers have opened a proposal, and when. */
+export function listViews(
+	client: RelayClient,
+	key: ProposalKey,
+): Promise<Result<Parsed<ViewRow>>> {
+	return read(
+		() =>
+			client
+				.from("proposal_views")
+				.select("signer,seen_at")
+				.eq("network", key.network)
+				.eq("treasury", key.treasury)
+				.eq("digest", key.digest)
+				.order("seen_at"),
+		viewRows,
+	);
+}
+
 /** Every nickname the wallet may read: those of the treasuries it signs for, each under its own treasury. */
 export function listNicknames(
 	client: RelayClient,
@@ -375,6 +395,21 @@ export function reportExecution(
 		() => client.from("execution_reports").insert({ ...key, tx_hash: txHash }),
 		{ duplicateIsFine: true },
 	);
+}
+
+/**
+ * Record that the signed-in wallet has opened a proposal. The relay keeps the
+ * first look only, and none at all for a closed proposal; both come back as
+ * done.
+ */
+export function recordView(
+	client: RelayClient,
+	as: Address,
+	key: ProposalKey,
+): Promise<Result<true>> {
+	return write(client, as, () => client.from("proposal_views").insert(key), {
+		duplicateIsFine: true,
+	});
 }
 
 /**

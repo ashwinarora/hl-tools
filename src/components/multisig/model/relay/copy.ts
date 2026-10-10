@@ -53,6 +53,9 @@ export const RELAY_COPY = {
 	nicknameHint: "Up to 40 characters. A nickname cannot look like an address.",
 	nicknameWhere: "Used only in this treasury.",
 	nicknamePick: "Nicknamed in this treasury:",
+	// "Seen" marks are shared with the treasury's signers, the reader's own included.
+	seenNote:
+		"\u201cSeen\u201d means that signer opened this page while signed in. Every signer of this treasury sees these marks, including the one next to their own name.",
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;

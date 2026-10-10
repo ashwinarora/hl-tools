@@ -1,11 +1,24 @@
 import type { Address, Policy, Proposal } from "@hl-tools/core";
+import { RELAY_COPY } from "../model/relay/copy";
+import { seenBy, seenLabel, type ViewRow } from "../model/relay/views";
+import { localDateTime, utcDateTime } from "../model/time";
 import { Who } from "../names/Names";
 import { Card, PersonRow, Pips, Tag } from "../shell/kit";
+import { useNow } from "../shell/live";
+
+/** What the relay knows about who has opened the proposal. */
+export interface SeenInfo {
+	readonly views: readonly ViewRow[];
+	readonly proposer: Address | null;
+	readonly createdAt: number | null;
+}
 
 /**
  * Who has signed, against the signer set the chain reports now. "Verified"
  * means this browser recovered the signature to that signer; a signature that
  * does not verify is not listed here at all (the details below say why).
+ * For a proposal on the relay, a signer who has not signed is shown as having
+ * opened it or not: the proposer can tell "has not looked" from "looked".
  */
 export function SignaturesPanel({
 	proposal,
@@ -13,6 +26,7 @@ export function SignaturesPanel({
 	counted,
 	me,
 	closed = false,
+	seen = null,
 }: {
 	proposal: Proposal;
 	/** The live signer set; null while unknown. */
@@ -22,7 +36,10 @@ export function SignaturesPanel({
 	me: Address | null;
 	/** Nothing more can be signed (submitted, withdrawn, declined, expired). */
 	closed?: boolean;
+	/** Null when the relay does not have the proposal: nothing is said about who looked. */
+	seen?: SeenInfo | null;
 }) {
+	const now = useNow();
 	const finaliser = proposal.payload.outerSigner;
 	const signers = policy?.authorizedUsers ?? [];
 	const need = policy && policy.threshold > 0 ? policy.threshold : null;
@@ -50,17 +67,35 @@ export function SignaturesPanel({
 				</span>
 			) : (
 				signers.map((a) => {
-					const has = counted?.includes(a) ?? false;
+					const label =
+						counted === null
+							? null
+							: seenLabel(
+									seenBy(a, {
+										counted,
+										views: seen?.views ?? null,
+										proposer: seen?.proposer ?? null,
+										createdAt: seen?.createdAt ?? null,
+									}),
+									{ closed, now },
+								);
 					return (
 						<PersonRow
 							key={a}
 							trailing={
-								counted === null ? (
+								label === null ? (
 									<Tag>checking…</Tag>
-								) : has ? (
-									<Tag tone="ok">signed · verified</Tag>
 								) : (
-									<Tag>{closed ? "did not sign" : "not yet"}</Tag>
+									<Tag
+										tone={label.signed ? "ok" : "gray"}
+										title={
+											label.at === null
+												? undefined
+												: `${localDateTime(label.at)} (${utcDateTime(label.at)})`
+										}
+									>
+										{label.text}
+									</Tag>
 								)
 							}
 						>
@@ -70,6 +105,11 @@ export function SignaturesPanel({
 						</PersonRow>
 					);
 				})
+			)}
+			{seen && !closed && signers.length > 0 && (
+				<p className="mt-2.5 text-xs text-subtle-foreground">
+					{RELAY_COPY.seenNote}
+				</p>
 			)}
 			{former.length > 0 && (
 				<p className="mt-2.5 text-xs text-muted-foreground">

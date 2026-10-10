@@ -7,6 +7,7 @@
  */
 import type { Address, Hex, Network } from "@hl-tools/core";
 import type { NicknameRow } from "./nicknames";
+import type { ViewRow } from "./views";
 
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 const HASH32 = /^0x[0-9a-f]{64}$/;
@@ -342,6 +343,13 @@ export function reportRows(data: unknown): Parsed<ReportRow> {
 		reason: optional(r.reason, text),
 		createdAt: time(r.created_at),
 		finishedAt: optional(r.finished_at, time),
+	}));
+}
+
+export function viewRows(data: unknown): Parsed<ViewRow> {
+	return each(data, (r) => ({
+		signer: address(r.signer),
+		seenAt: time(r.seen_at),
 	}));
 }
 

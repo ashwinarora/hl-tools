@@ -46,9 +46,11 @@ import {
 	listProposalEvents,
 	listReports,
 	listTreasuries,
+	listViews,
 	type ProposalKey,
 	publishProposal,
 	recordReceipt,
+	recordView,
 	removeSignature,
 	reportExecution,
 	requestTreasury,
@@ -1118,6 +1120,86 @@ describe("nicknames", () => {
 		expect(codes((await name(b, second, vendor, "Mine")).issue)).toBe(
 			"relay.not_allowed",
 		);
+	});
+});
+
+describe("who has seen a proposal", () => {
+	// by now the treasury's signers are a, b and c
+	it("keeps a signer's first look, tells every signer once, and takes none for a closed proposal", async () => {
+		const p = await proposal("integration: seen", [a]);
+		expect(
+			(await publishProposal(a.client, a.address, publishRow(p))).issue,
+		).toBeNull();
+		let pings = 0;
+		let state: ChannelState = "joining";
+		const leave = subscribeWallet(
+			a.client,
+			a.address,
+			() => {
+				pings += 1;
+			},
+			(s) => {
+				state = s;
+			},
+		);
+		const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+		const seenBy = async (w: TestWallet) =>
+			(await listViews(w.client, keyOf(p))).data?.rows ?? null;
+		try {
+			await until(() => state === "joined", 10_000);
+			await pause(400);
+			expect(await seenBy(a)).toEqual([]);
+
+			// one view, one ping
+			const before = pings;
+			expect(
+				(await recordView(b.client, b.address, keyOf(p))).issue,
+			).toBeNull();
+			await until(() => pings > before, 2_000);
+			await pause(400);
+			expect(pings - before).toBe(1);
+			const first = await seenBy(a);
+			expect(first?.map((v) => v.signer)).toEqual([b.address]);
+			// the co-signers read the same, the one it is about included
+			expect(await seenBy(b)).toEqual(first);
+			expect(await seenBy(c)).toEqual(first);
+
+			// a second look is done, not an error: no new row, no new time, no ping
+			const after = pings;
+			expect(
+				(await recordView(b.client, b.address, keyOf(p))).issue,
+			).toBeNull();
+			await pause(600);
+			expect(pings).toBe(after);
+			expect(await seenBy(a)).toEqual(first);
+
+			// a wallet that signs for nothing here leaves no mark and reads none
+			expect(
+				codes(
+					(await recordView(outsider.client, outsider.address, keyOf(p))).issue,
+				),
+			).toBe("relay.not_allowed");
+			expect(await seenBy(outsider)).toEqual([]);
+			// nor can a mark be left under another wallet's name
+			expect(
+				codes((await recordView(c.client, b.address, keyOf(p))).issue),
+			).toBe("relay.wrong_wallet");
+
+			// once it is closed, looking leaves nothing
+			expect(
+				(await endProposal(a.client, a.address, keyOf(p), "withdrawn")).issue,
+			).toBeNull();
+			await pause(400);
+			const closed = pings;
+			expect(
+				(await recordView(c.client, c.address, keyOf(p))).issue,
+			).toBeNull();
+			await pause(600);
+			expect(pings).toBe(closed);
+			expect(await seenBy(a)).toEqual(first);
+		} finally {
+			leave();
+		}
 	});
 });
 
