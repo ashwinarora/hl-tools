@@ -8,7 +8,8 @@
  */
 
 import { HttpTransport } from "@nktkas/hyperliquid";
-import { type Observed, observed } from "../identity.ts";
+import { type Observed, observed, toAddress } from "../identity.ts";
+import type { Policy } from "../multisig/types.ts";
 import { type Network, networkConfig } from "../network.ts";
 import {
 	normalizeSettledOutcome,
@@ -34,7 +35,75 @@ export const DEFAULT_TTLS: Readonly<Record<string, number>> = {
 	l2Book: 1_000,
 	// A settled outcome never changes again.
 	settledOutcome: 24 * 60 * 60_000,
+	// Multi-sig policy and account state: short, so a rotation shows up quickly.
+	userToMultiSigSigners: 10_000,
+	userRole: 10_000,
+	extraAgents: 10_000,
+	clearinghouseState: 10_000,
+	spotClearinghouseState: 10_000,
+	openOrders: 10_000,
 };
+
+/** `userRole` info response. A multi-sig user still reports `user`. */
+export type UserRole =
+	| { readonly role: "user" }
+	| { readonly role: "agent"; readonly data: { readonly user: string } }
+	| { readonly role: "vault" }
+	| { readonly role: "subAccount"; readonly data: { readonly master: string } }
+	| { readonly role: "missing" };
+
+/** `extraAgents` entry: an approved API wallet. */
+export interface AgentInfo {
+	readonly name: string;
+	readonly address: string;
+	/** Unix ms; agents expire and must be re-approved. */
+	readonly validUntil: number;
+}
+
+/** The parts of `clearinghouseState` the hub reads. */
+export interface PerpState {
+	readonly marginSummary: {
+		readonly accountValue: string;
+		readonly totalNtlPos: string;
+		readonly totalMarginUsed: string;
+	};
+	readonly withdrawable: string;
+	readonly assetPositions: readonly {
+		readonly position: {
+			readonly coin: string;
+			readonly szi: string;
+			readonly entryPx: string | null;
+			readonly unrealizedPnl: string;
+		};
+	}[];
+	readonly time: number;
+}
+
+/** The parts of `spotClearinghouseState` the hub reads. */
+export interface SpotState {
+	readonly balances: readonly {
+		readonly coin: string;
+		readonly token: number;
+		readonly total: string;
+		readonly hold: string;
+	}[];
+}
+
+/** One `openOrders` entry. */
+export interface OpenOrder {
+	readonly coin: string;
+	readonly side: "A" | "B";
+	readonly limitPx: string;
+	readonly sz: string;
+	readonly oid: number;
+	readonly timestamp: number;
+	readonly origSz: string;
+}
+
+interface RawMultiSigSigners {
+	readonly authorizedUsers: readonly string[];
+	readonly threshold: number;
+}
 
 export class InfoRequestError extends Error {
 	readonly network: Network;
@@ -200,6 +269,61 @@ export class InfoClient<N extends Network> {
 			outcome,
 		});
 		return { ...r, data: normalizeSettledOutcome(this.network, r.data) };
+	}
+
+	/**
+	 * The multi-sig signer set of a user, or null when the user is not a
+	 * multi-sig user. This is the only info request that reveals multi-sig
+	 * status (`userRole` keeps answering `user`).
+	 */
+	async multiSigSigners(user: string): Promise<Observed<Policy | null, N>> {
+		const r = await this.info<RawMultiSigSigners | null>({
+			type: "userToMultiSigSigners",
+			user: user.toLowerCase(),
+		});
+		const data: Policy | null = r.data
+			? {
+					authorizedUsers: [...r.data.authorizedUsers]
+						.map((a) => toAddress(a))
+						.sort(),
+					threshold: r.data.threshold,
+					observedAt: r.observedAt,
+				}
+			: null;
+		return { ...r, data };
+	}
+
+	userRole(user: string): Promise<Observed<UserRole, N>> {
+		return this.info<UserRole>({ type: "userRole", user: user.toLowerCase() });
+	}
+
+	/** Approved API wallets of a user. Agents of a multi-sig user trade without an envelope. */
+	extraAgents(user: string): Promise<Observed<readonly AgentInfo[], N>> {
+		return this.info<readonly AgentInfo[]>({
+			type: "extraAgents",
+			user: user.toLowerCase(),
+		});
+	}
+
+	clearinghouseState(user: string): Promise<Observed<PerpState, N>> {
+		return this.info<PerpState>({
+			type: "clearinghouseState",
+			user: user.toLowerCase(),
+		});
+	}
+
+	spotClearinghouseState(user: string): Promise<Observed<SpotState, N>> {
+		return this.info<SpotState>({
+			type: "spotClearinghouseState",
+			user: user.toLowerCase(),
+		});
+	}
+
+	openOrders(user: string): Promise<Observed<readonly OpenOrder[], N>> {
+		return this.info<readonly OpenOrder[]>({
+			type: "openOrders",
+			user: user.toLowerCase(),
+		});
 	}
 
 	allMids(dex?: string): Promise<Observed<Record<string, string>, N>> {

@@ -4,8 +4,7 @@ import {
 	RainbowKitProvider,
 } from "@rainbow-me/rainbowkit";
 import { type ReactNode, useEffect, useState } from "react";
-import { WagmiProvider } from "wagmi";
-import { config } from "#/lib/wagmiConfig";
+import { type Config, WagmiProvider } from "wagmi";
 
 import "@rainbow-me/rainbowkit/styles.css";
 
@@ -29,8 +28,18 @@ function useMountedTheme(): "light" | "dark" {
 	return theme;
 }
 
-/** Wallet stack for the faucet miner only. */
-export default function WalletProviders({ children }: { children: ReactNode }) {
+/**
+ * Wallet stack, mounted only by the routes that sign: the faucet miner and the
+ * multisig signer. Each passes its own wagmi configuration, so neither section
+ * creates the other's connectors.
+ */
+export default function WalletProviders({
+	config,
+	children,
+}: {
+	config: Config;
+	children: ReactNode;
+}) {
 	const theme = useMountedTheme();
 	return (
 		<WagmiProvider config={config}>

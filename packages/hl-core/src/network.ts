@@ -27,6 +27,8 @@ export interface NetworkConfig<N extends Network = Network> {
 	readonly l1Source: "a" | "b";
 	/** Block explorer for HyperEVM transactions. */
 	readonly evmExplorerTx: (hash: string) => string;
+	/** JSON-RPC-style explorer API (userDetails, txDetails, blockDetails); every request weighs 40. */
+	readonly coreExplorerApiUrl: string;
 	/** HyperCore explorer for addresses. */
 	readonly coreExplorerAddress: (address: string) => string;
 }
@@ -42,6 +44,7 @@ export const NETWORK_CONFIG: { readonly [N in Network]: NetworkConfig<N> } = {
 		hyperliquidChain: "Mainnet",
 		l1Source: "a",
 		evmExplorerTx: (hash) => `https://hyperevmscan.io/tx/${hash}`,
+		coreExplorerApiUrl: "https://rpc.hyperliquid.xyz/explorer",
 		coreExplorerAddress: (address) =>
 			`https://app.hyperliquid.xyz/explorer/address/${address}`,
 	},
@@ -55,6 +58,7 @@ export const NETWORK_CONFIG: { readonly [N in Network]: NetworkConfig<N> } = {
 		hyperliquidChain: "Testnet",
 		l1Source: "b",
 		evmExplorerTx: (hash) => `https://testnet.purrsec.com/tx/${hash}`,
+		coreExplorerApiUrl: "https://rpc.hyperliquid-testnet.xyz/explorer",
 		coreExplorerAddress: (address) =>
 			`https://app.hyperliquid-testnet.xyz/explorer/address/${address}`,
 	},

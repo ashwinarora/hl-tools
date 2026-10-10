@@ -3,11 +3,13 @@ import {
 	Boxes,
 	Droplets,
 	FileSearch,
+	FileSignature,
 	GitCompareArrows,
 	type LucideIcon,
 	Network,
 	PenLine,
 	Radio,
+	UsersRound,
 	Workflow,
 } from "lucide-react";
 
@@ -19,6 +21,8 @@ export type ToolId =
 	| "orders"
 	| "websocket"
 	| "rpc"
+	| "multisig"
+	| "multisig-sign"
 	| "faucet";
 
 export interface ToolSample {
@@ -36,6 +40,8 @@ export interface ToolDef {
 		| "/tools/orders"
 		| "/tools/websocket"
 		| "/tools/rpc"
+		| "/tools/multisig"
+		| "/multisig"
 		| "/faucet-miner";
 	readonly title: string;
 	readonly short: string;
@@ -170,12 +176,45 @@ export const TOOLS: readonly ToolDef[] = [
 		sample: { id: "public", label: "Public mainnet vs testnet" },
 	},
 	{
+		id: "multisig",
+		path: "/tools/multisig",
+		title: "Multisig Inspector",
+		short: "Multisig",
+		description:
+			"Inspect a native multi-sig account — signers, threshold, approved API wallets, balances, health flags and recent actions — or decode a multi-sig request: the action in plain words, every signature attributed, readiness against the live signer set, and why a signature fails.",
+		answers: 'Why does the chain say "Invalid multi-sig inner signer"?',
+		icon: UsersRound,
+		ruleSets: ["multisig", "signing", "errors", "rate-limits"],
+		primarySource: {
+			label: "Multi-sig",
+			url: `${DOCS}/hypercore/multi-sig`,
+		},
+		sample: { id: "lab-treasury", label: "Lab treasury (testnet 2-of-3)" },
+	},
+	{
+		id: "multisig-sign",
+		path: "/multisig",
+		title: "Multisig Signer",
+		short: "Multisig",
+		description:
+			"Propose, sign and submit native multi-sig actions — USDC and spot sends, perps ↔ spot transfers, withdrawals, API-wallet approvals — with your own wallet. Pass a proposal on as a link or a file, or sign in and every signer of a treasury sees it live. Signatures are verified in your browser before anything is sent.",
+		answers: "How do two of three signers get one usdSend onto the chain?",
+		icon: FileSignature,
+		ruleSets: ["multisig", "signing", "errors"],
+		primarySource: {
+			label: "Multi-sig",
+			url: `${DOCS}/hypercore/multi-sig`,
+		},
+		sample: null,
+		writes: true,
+	},
+	{
 		id: "faucet",
 		path: "/faucet-miner",
 		title: "Testnet Faucet Miner",
 		short: "Faucet miner",
 		description:
-			"Chain generated wallets through the testnet faucet to mine testnet USDC. The one tool in the hub that signs and sends — with your wallet, in your browser.",
+			"Chain generated wallets through the testnet faucet to mine testnet USDC. It signs and sends — with your wallet, in your browser.",
 		answers: "How do I get more than one faucet drip of testnet USDC?",
 		icon: Droplets,
 		ruleSets: ["faucet"],

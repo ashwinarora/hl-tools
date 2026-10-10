@@ -16,12 +16,16 @@ export default function Footer() {
 					</div>
 					<p className="text-xs text-subtle-foreground">
 						Independent open-source project; not affiliated with Hyperliquid.
-						Diagnostics are read-only and run in your browser.
+						Diagnostics are read-only and run in your browser; the Multisig
+						section and the faucet miner sign with your own wallet.
 					</p>
 				</div>
 				<div className="flex flex-wrap items-center gap-x-5 gap-y-2">
 					<Link to="/changes" className="hover:text-foreground">
 						Rule changes
+					</Link>
+					<Link to="/privacy" className="hover:text-foreground">
+						Privacy
 					</Link>
 					<a
 						href="https://github.com/ashwinarora/hl-tools"

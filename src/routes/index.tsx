@@ -30,7 +30,8 @@ function Directory() {
 					<div className="max-w-3xl space-y-5">
 						<div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted-foreground">
 							<ShieldCheck className="size-3.5 text-brand" aria-hidden />
-							Read-only · no wallet required · runs in your browser
+							Runs in your browser · read-only unless a card says “Signs &amp;
+							sends”
 						</div>
 						<h1 className="text-balance text-[2rem] font-semibold leading-[1.1] tracking-tight sm:text-5xl">
 							Understand and verify any Hyperliquid action
@@ -167,15 +168,15 @@ function PasteBox() {
 				htmlFor="paste"
 				className="mb-2 block text-xs font-medium text-muted-foreground"
 			>
-				Paste anything — a symbol, tx hash, CoreWriter bytes, signed payload,
-				exchange response or RPC URL
+				Paste anything — a symbol, address, tx hash, CoreWriter bytes, signed
+				payload, multi-sig envelope or proposal, exchange response or RPC URL
 			</label>
 			<div className="flex flex-col gap-2 rounded-lg border border-border-strong bg-surface p-1.5 shadow-sm focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 sm:flex-row sm:items-center">
 				<input
 					id="paste"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
-					placeholder="e.g. HYPE · 0x4b65b9ab…d949 · {&quot;type&quot;:&quot;order&quot;,…}"
+					placeholder="e.g. HYPE · 0xf836…d148 · 0x4b65b9ab…d949 · {&quot;type&quot;:&quot;multiSig&quot;,…}"
 					className="h-10 min-w-0 flex-1 bg-transparent px-2.5 font-mono text-sm outline-none placeholder:text-subtle-foreground focus-visible:outline-none"
 					spellCheck={false}
 					autoComplete="off"

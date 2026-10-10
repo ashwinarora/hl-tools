@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, Droplets, Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
 	DropdownMenu,
@@ -111,14 +111,18 @@ export default function Header() {
 							))}
 						</DropdownMenuContent>
 					</DropdownMenu>
-					<Link
-						to="/faucet-miner"
-						className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
-						activeProps={{ className: "text-foreground" }}
-					>
-						<Droplets className="size-3.5" aria-hidden />
-						Faucet miner
-					</Link>
+					{/* The sections that sign get direct links, outside the read-only list. */}
+					{TOOLS.filter((t) => t.writes).map((t) => (
+						<Link
+							key={t.id}
+							to={t.path}
+							className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+							activeProps={{ className: "bg-surface-2 text-foreground" }}
+						>
+							<t.icon className="size-3.5" aria-hidden />
+							{t.short}
+						</Link>
+					))}
 					<Link
 						to="/changes"
 						className="inline-flex h-8 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"

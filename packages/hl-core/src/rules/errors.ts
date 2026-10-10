@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.0.0",
-	verifiedAt: "2026-09-28",
+	version: "1.2.0",
+	verifiedAt: "2026-10-09",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
 	sources: [
@@ -21,6 +21,16 @@ export const ERROR_RULES = defineRuleSet({
 	],
 	changelog: [
 		{ version: "1.0.0", date: "2026-09-28", note: "Initial catalog." },
+		{
+			version: "1.1.0",
+			date: "2026-10-07",
+			note: "Multi-sig errors (threshold, inner/outer signer, leader, signer-set rules, revert shape), nonce window messages with extracted bounds, network signature mismatch and unregistered vault — all recorded on testnet.",
+		},
+		{
+			version: "1.2.0",
+			date: "2026-10-09",
+			note: '"Insufficient balance for withdrawal." — the answer to a usdSend larger than the withdrawable perps balance (recorded on testnet through a multi-sig envelope; the chain uses the withdrawal wording for sends too).',
+		},
 	],
 });
 
@@ -192,6 +202,16 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		documented: true,
 	},
 	{
+		id: "transfer-balance",
+		pattern: /insufficient balance for withdrawal/i,
+		example: "Insufficient balance for withdrawal.",
+		category: "margin",
+		cause:
+			"The amount is larger than the account's withdrawable perps balance. The chain answers with this wording for a USDC send (usdSend) as well as for a bridge withdrawal (withdraw3).",
+		fix: "Lower the amount, or bring funds into the perps balance first (usdClassTransfer toPerp: true). Margin held by open positions is not withdrawable.",
+		documented: false,
+	},
+	{
 		id: "oracle",
 		pattern: /price too far from oracle/i,
 		example: "Order price too far from oracle",
@@ -217,7 +237,8 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 	{
 		id: "signer-missing",
 		pattern: /user or api wallet 0x[0-9a-f]+ does not exist/i,
-		example: "L1 error: User or API Wallet 0x0123… does not exist.",
+		example:
+			"L1 error: User or API Wallet 0x0123456789012345678901234567890123456789 does not exist.",
 		category: "signing",
 		cause:
 			"The recovered signer is not a known user or approved agent. Almost always the signature was computed over different bytes than the server hashes (field order, trailing zeros, uppercase address, wrong scheme or network), so a different address was recovered.",
@@ -244,6 +265,172 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 			"Address-based action budget exhausted (1 request per 1 USDC traded, 10,000 initial buffer).",
 		fix: "Trade volume to free budget, batch orders, or buy capacity with reserveRequestWeight. Cancels have a larger budget.",
 		documented: false,
+	},
+	{
+		id: "multisig-required",
+		pattern: /^multi-sig required/i,
+		example: "Multi-sig required",
+		category: "account",
+		cause:
+			"The account is a multi-sig user: its own key (and any single-signer request) can no longer send. Every action must be wrapped in a `multiSig` envelope submitted by an authorized leader.",
+		fix: 'Build a proposal, collect `threshold` signatures from authorized users and submit the envelope from the leader. To use the key directly again, revert with `signers: "null"` via the multi-sig.',
+		documented: true,
+	},
+	{
+		id: "multisig-threshold",
+		pattern: /multi-sig threshold not met/i,
+		example: "Multi-sig threshold not met",
+		category: "signing",
+		cause:
+			"Fewer distinct authorized signers than the threshold. Duplicate signatures from one signer count once; signatures from non-authorized or removed signers are rejected earlier.",
+		fix: "Collect signatures from more authorized users over the exact same payload, nonce and leader, then resubmit.",
+		documented: true,
+	},
+	{
+		id: "multisig-inner-signer",
+		pattern: /invalid multi-sig inner signer/i,
+		example: "Invalid multi-sig inner signer",
+		category: "signing",
+		cause:
+			"An inner signature does not recover to an authorized user. Either the signer is not authorized (stranger, the multi-sig user itself, an API wallet), or it signed different bytes: another nonce, action, leader, multi-sig user, vault address, expiry, or the other network's domain.",
+		fix: "Verify each signature locally against the canonical digest and compare with the signer list; re-sign the one that diverged with identical inputs.",
+		documented: true,
+	},
+	{
+		id: "multisig-outer-signer",
+		pattern: /invalid multi-sig outer signer/i,
+		example: "Invalid multi-sig outer signer",
+		category: "signing",
+		cause:
+			"The envelope signature does not recover to an authorized leader. Common causes: the leader is not an authorized user, the `outerSigner` field names someone else, or an inner signature was sent with leading zero bytes (the chain trims them before re-hashing the envelope).",
+		fix: "Make the leader an authorized user, set `outerSigner` to the leader's address, trim inner r/s, then sign the envelope last.",
+		documented: true,
+	},
+	{
+		id: "multisig-leader-not-user",
+		pattern: /multi-sig outer signer must be an l1 user/i,
+		example: "Multi-sig outer signer must be an L1 user.",
+		category: "account",
+		cause:
+			"The leader address has never deposited on Hyperliquid. An API wallet of an authorized user can lead only once the agent address itself holds funds.",
+		fix: "Lead with an authorized user's own key, or send a small deposit to the agent address first.",
+		documented: true,
+	},
+	{
+		id: "multisig-not-multisig",
+		pattern: /invalid multi-sig user/i,
+		example: "Invalid multi-sig user",
+		category: "account",
+		cause:
+			"`payload.multiSigUser` is not a multi-sig user (never converted, or reverted to a normal user).",
+		fix: "Check `userToMultiSigSigners`; a normal user sends actions directly.",
+		documented: true,
+	},
+	{
+		id: "multisig-threshold-invalid",
+		pattern: /invalid multi-sig threshold/i,
+		example: "Invalid multi-sig threshold",
+		category: "payload",
+		cause:
+			"`threshold` is 0, larger than the number of authorized users, or the list is empty.",
+		fix: 'Use 1 ≤ threshold ≤ signers. To revert to a normal user send `"signers": "null"`, not an empty list.',
+		documented: true,
+	},
+	{
+		id: "multisig-signer-missing",
+		pattern: /multi-sig authorized user must exist/i,
+		example: "Multi-sig authorized user must exist on L1",
+		category: "account",
+		cause:
+			"An address in `authorizedUsers` has never received funds on Hyperliquid, so it is not a user yet. This check runs before the 10-signer limit.",
+		fix: "Send each new signer a small deposit (the first transfer to a fresh address costs 1 USDC) and retry.",
+		documented: true,
+	},
+	{
+		id: "multisig-self",
+		pattern: /cannot register self as multi-sig authorized user/i,
+		example: "Cannot register self as multi-sig authorized user",
+		category: "payload",
+		cause: "The account listed its own address among the authorized users.",
+		fix: "Remove the account's own address from the list.",
+		documented: true,
+	},
+	{
+		id: "multisig-too-many",
+		pattern: /too many multi-sig signers/i,
+		example: "Too many multi-sig signers",
+		category: "payload",
+		cause: "More than 10 authorized users.",
+		fix: "Keep the list to at most 10 addresses.",
+		documented: true,
+	},
+	{
+		id: "nonce-mismatch",
+		pattern: /^nonce mismatch/i,
+		example: "Nonce mismatch.",
+		category: "signing",
+		cause:
+			"A user-signed action's own `nonce`/`time` field differs from the request nonce (for a multi-sig envelope: from the envelope nonce).",
+		fix: "Set the action's `nonce` or `time` to the same millisecond value as the envelope nonce before signing.",
+		documented: true,
+	},
+	{
+		id: "nonce-low",
+		pattern: /nonce too low (\d+) < (\d+)/i,
+		example: "Invalid nonce: nonce too low 1791140676851 < 1791227196699",
+		category: "signing",
+		cause:
+			"The nonce is older than the allowed window (about 2 days before block time), or not above the smallest of the signer's 100 highest nonces.",
+		fix: "Create a fresh proposal with a current nonce; every signer must sign again.",
+		documented: true,
+	},
+	{
+		id: "nonce-high",
+		pattern: /nonce too high (\d+) > (\d+)/i,
+		example: "Invalid nonce: nonce too high 1791572677029 > 1791486156858",
+		category: "signing",
+		cause: "The nonce is more than about 1 day ahead of block time.",
+		fix: "Use a nonce no further than 1 day in the future.",
+		documented: true,
+	},
+	{
+		id: "nonce-duplicate",
+		pattern: /duplicate nonce (\d+)/i,
+		example: "Invalid nonce: duplicate nonce 1791399877207",
+		category: "signing",
+		cause:
+			"The leader already used this nonce (the same envelope was submitted twice, or two proposals share a nonce). Nonce sets are per leader.",
+		fix: "If the first submission succeeded, nothing to do. Otherwise re-propose with a new nonce.",
+		documented: true,
+	},
+	{
+		id: "network-signature",
+		pattern: /mainnet and testnet require different signature/i,
+		example: "Mainnet and testnet require different signature.",
+		category: "signing",
+		cause:
+			'A user-signed action carried `hyperliquidChain` for the other network ("Mainnet" sent to testnet or vice versa).',
+		fix: "Set `hyperliquidChain` to the network you are sending to and sign again.",
+		documented: true,
+	},
+	{
+		id: "revert-shape",
+		pattern: /unexpected error \(code=148\)/i,
+		example: "Unexpected error (code=148)",
+		category: "payload",
+		cause:
+			"`convertToMultiSigUser.signers` did not deserialise: typically `authorizedUsers` is missing.",
+		fix: 'Send `{"authorizedUsers":[…],"threshold":n}` as a JSON string, or the literal string `"null"` to revert.',
+		documented: true,
+	},
+	{
+		id: "vault-unregistered",
+		pattern: /vault not registered: (0x[0-9a-f]+)/i,
+		example: "Vault not registered: 0x1111…",
+		category: "account",
+		cause: "`vaultAddress` is not a vault or sub-account.",
+		fix: "Check the address; for a sub-account use its `subAccountUser` address.",
+		documented: true,
 	},
 	{
 		id: "nonce",
