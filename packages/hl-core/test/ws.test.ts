@@ -101,6 +101,7 @@ describe("recorded sessions", () => {
 		"testnet-account-fills",
 		"testnet-account-order-history",
 		"testnet-account-ledger",
+		"testnet-account-fundings",
 	]) {
 		it(`${name}: parses, acks, reduces and is sanitised`, () => {
 			const parsed = parseSessionFile(loadText(`ws/${name}.json`));

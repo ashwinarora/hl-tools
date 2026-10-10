@@ -26,6 +26,7 @@ export * from "./samples/multisig.ts";
 export * from "./samples/signing.ts";
 export * from "./signing.ts";
 export * from "./trace/trace.ts";
+export * from "./ws/account.ts";
 export * from "./ws/session.ts";
 export * from "./ws/state.ts";
 export * from "./ws/subscription.ts";
