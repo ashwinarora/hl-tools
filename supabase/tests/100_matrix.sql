@@ -70,6 +70,7 @@ select throws_ok($$ select tests.end_it(3, 10, 1, 'withdrawn') $$, '42501', null
 select throws_ok($$ select tests.receipt(3, 10, 1, '{}') $$, '42501', null, 'removed signer: cannot record a result');
 select throws_ok($$ select tests.request(3, 'check', 'testnet', 10) $$, '42501', null, 'removed signer: cannot ask for a re-check');
 select throws_ok($$ select tests.report(3, 10, 1, 900) $$, '42501', null, 'removed signer: cannot report a transaction');
+select throws_ok($$ select tests.nick(3, 10, tests.addr(9000), 'Mine') $$, '42501', null, 'removed signer: cannot give a nickname');
 select tests.claims(3);
 delete from public.signatures where signer = tests.addr(3);
 select tests.claims(1);
@@ -106,7 +107,7 @@ reset role;
 set local role anon;
 select throws_ok(format('select 1 from public.%I', t), '42501', null, 'anon cannot read ' || t)
 from unnest(array['treasuries', 'treasury_signers', 'treasury_requests', 'events', 'proposals', 'signatures', 'endings', 'receipts',
-	'execution_reports']) t;
+	'execution_reports', 'nicknames', 'nickname_changes']) t;
 select throws_ok($$ select tests.sign(1, 10, 1) $$, '42501', null, 'anon cannot sign, whatever claims it carries');
 reset role;
 
@@ -130,7 +131,7 @@ select set_eq(
 	   where grantee = 'authenticated' and table_schema in ('public', 'private') $$,
 	array['treasuries:SELECT', 'treasury_signers:SELECT', 'treasury_requests:SELECT', 'events:SELECT',
 		'proposals:SELECT', 'signatures:SELECT', 'signatures:DELETE', 'endings:SELECT', 'receipts:SELECT',
-		'execution_reports:SELECT'],
+		'execution_reports:SELECT', 'nicknames:SELECT', 'nickname_changes:SELECT'],
 	'authenticated holds exactly these table privileges: SELECT everywhere, DELETE on its own signatures');
 
 select set_eq(
@@ -141,7 +142,8 @@ select set_eq(
 		'signatures:digest,network,r,s,treasury,v',
 		'endings:digest,kind,network,treasury',
 		'receipts:digest,http_status,network,outer_r,outer_s,outer_v,response,signature_chain_id,submitted_at,treasury',
-		'execution_reports:digest,network,treasury,tx_hash'],
+		'execution_reports:digest,network,treasury,tx_hash',
+		'nickname_changes:address,name,network,treasury'],
 	'and may insert exactly these columns: never who acted, never a status');
 
 select is_empty(

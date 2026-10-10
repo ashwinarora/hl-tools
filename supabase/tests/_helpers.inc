@@ -216,3 +216,18 @@ language sql as $$
 	where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
 $$;
 
+
+-- ---------------------------------------------------------------------- nicknames
+-- Wallet n names address `p_address` in treasury n_treasury (null takes the name away).
+create function tests.nick(n int, n_treasury int, p_address public.address, p_name text, p_network public.network default 'testnet') returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.nickname_changes (network, treasury, address, name)
+	values (p_network, tests.addr(n_treasury), p_address, p_name);
+end $$;
+
+create function tests.nick_of(n_treasury int, p_address public.address) returns text
+language sql as $$
+	select name from public.nicknames where treasury = tests.addr(n_treasury) and address = p_address
+$$;
