@@ -84,6 +84,8 @@ export const RELAY_COPY = {
 	registerSelfBody:
 		"Register it so that its signers find it in their list. You will not see it here yourself: sign in as one of its signers for that.",
 	registerSelfButton: "Register it",
+	selfSeesNothing:
+		"Its proposals and its signing log are shown to its signers, not to the account itself. If they do not find it in their list:",
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;

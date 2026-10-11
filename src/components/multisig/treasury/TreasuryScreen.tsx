@@ -18,11 +18,14 @@ import {
 } from "#/store/networkStore";
 import { AwayNotice } from "../inbox/AwayNotice";
 import { useChainMatch } from "../live/useChainMatch";
+import { useSelfTreasury } from "../live/useSelfTreasury";
+import { RELAY_COPY } from "../model/relay/copy";
 import {
 	compareSigners,
 	livePolicy,
 	nextRecheck,
 } from "../model/relay/signers";
+import { isItself } from "../model/selfTreasury";
 import { shortAddress } from "../model/stage";
 import type { TreasuryTab } from "../model/tabs";
 import { TreasuryNames, useNames } from "../names/Names";
@@ -36,6 +39,8 @@ import { Card, linkButton, NetTag, SignsTag, TabList, Tag } from "../shell/kit";
 import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
+import { SwitchToSigner } from "../shell/SwitchToSigner";
+import { useShellWallet } from "../shell/WalletBox";
 import { defaultTreasuryName, useTreasuryName } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
 import { ChainTab } from "./ChainTab";
@@ -107,6 +112,12 @@ export function TreasuryScreen({
 	);
 	const open = useOpenProposals();
 	const me = relay.wallet;
+	// The connected wallet is this very account: its signers see the treasury
+	// here, the account itself does not, and its key cannot act for it.
+	const connected = useShellWallet().address;
+	const itself = valid && isItself(connected, address);
+	const self = useSelfTreasury(network, itself ? address : null);
+	const selfSigners = itself ? (self.policy?.authorizedUsers ?? null) : null;
 
 	// The address in the URL names its network: the header follows it.
 	useEffect(() => {
@@ -121,7 +132,9 @@ export function TreasuryScreen({
 	// the relay: for a listed treasury, and for a signed-in wallet whose relay
 	// has stopped answering.
 	const unreachable = relay.mode === "unreachable";
-	const watching = valid && (!!treasury || unreachable);
+	const watching =
+		valid &&
+		(!!treasury || unreachable || (relay.mode === "on" && !!selfSigners));
 	const target = useMemo<AccountTarget | null>(
 		() => (watching ? { address, network } : null),
 		[watching, address, network],
@@ -273,6 +286,9 @@ export function TreasuryScreen({
 					this page keeps trying by itself. What the treasury holds and who
 					controls it come straight from Hyperliquid and stay current.
 				</Callout>
+				{selfSigners && (
+					<SwitchToSigner signers={selfSigners} className="mb-4" />
+				)}
 				<OverviewTab
 					network={network}
 					address={address}
@@ -296,7 +312,52 @@ export function TreasuryScreen({
 					</>
 				}
 			>
+				{selfSigners && (
+					<SwitchToSigner signers={selfSigners} className="mb-4" />
+				)}
 				<SignInGate what="this treasury" />
+			</ShellPage>
+		);
+	}
+
+	if (!treasury && selfSigners) {
+		return (
+			<ShellPage
+				title={defaultTreasuryName(address)}
+				meta={
+					<>
+						<span
+							className="inline-flex items-center gap-1 font-mono"
+							title={address}
+						>
+							{shortAddress(address)}
+							<CopyButton value={address} size="xs" />
+						</span>
+						<NetTag network={network} />
+						<SignsTag />
+					</>
+				}
+			>
+				<Card className="mb-4">
+					<SwitchToSigner signers={selfSigners} />
+					<p className="mt-2 text-[13px] text-muted-foreground">
+						{RELAY_COPY.selfSeesNothing}{" "}
+						<Link
+							to="/multisig/add"
+							className="text-brand underline underline-offset-2"
+						>
+							{RELAY_COPY.registerSelfButton}
+						</Link>
+					</p>
+				</Card>
+				<OverviewTab
+					network={network}
+					address={address}
+					state={live}
+					me={me}
+					treasury={null}
+					proposals={known.proposals}
+				/>
 			</ShellPage>
 		);
 	}

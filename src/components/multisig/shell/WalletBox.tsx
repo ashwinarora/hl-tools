@@ -6,11 +6,15 @@ import { useAccount, useDisconnect } from "wagmi";
 import { short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
+import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 import { useWalletBusy } from "#/store/walletBusyStore";
+import { useSelfTreasury } from "../live/useSelfTreasury";
 import { chainLabel } from "../model/chains";
 import { RELAY_COPY } from "../model/relay/copy";
+import { selfTag } from "../model/selfTreasury";
 import { useRelay } from "../relay/useRelay";
-import { Btn } from "./kit";
+import { Help } from "./Help";
+import { Btn, Tag } from "./kit";
 
 /** True after the first client render: the server cannot know the wallet. */
 export function useMounted(): boolean {
@@ -59,7 +63,43 @@ export function SmallPrint({ className }: { className?: string }) {
 	);
 }
 
+/**
+ * Said under the wallet when it is itself a treasury on the header's network:
+ * its own key cannot act for it there. One read per wallet and network.
+ */
+function SelfTag({ address }: { address: string }) {
+	const network = useNetwork();
+	const hydrated = useNetworkHydrated();
+	const self = useSelfTreasury(network, address, hydrated);
+	if (!self.policy) return null;
+	return (
+		<span className="flex items-center gap-1">
+			<Tag>{selfTag(self.policy)}</Tag>
+			<Help k="treasuryAccount" />
+		</span>
+	);
+}
+
 function WalletRow({
+	address,
+	sub,
+	title,
+	action,
+}: {
+	address: string;
+	sub: ReactNode;
+	title?: string;
+	action: ReactNode;
+}) {
+	return (
+		<>
+			<WalletLine address={address} sub={sub} title={title} action={action} />
+			<SelfTag address={address} />
+		</>
+	);
+}
+
+function WalletLine({
 	address,
 	sub,
 	title,

@@ -519,6 +519,28 @@ describe("deriveStage", () => {
 		expect((await stage(p)).role).toBe("disconnected");
 	});
 
+	it("tells a wallet that is the treasury itself to switch to a signer", async () => {
+		const p = await signAs(makeProposal(), 1);
+		const self = await stage(p, { wallet: TREASURY });
+		expect(self.role).toBe("treasury");
+		expect([self.canSign, self.canExecute]).toEqual([false, false]);
+		expect(self.signReason).toBe(
+			`You are connected as the treasury itself. Switch to one of its signers: ${POLICY.authorizedUsers.map(shortAddress).join(", ")}.`,
+		);
+		// not before the signer set is read, and not for an account that is no multi-sig
+		expect(
+			(await stage(p, { wallet: TREASURY, policy: null, judged: false })).role,
+		).toBe("unknown");
+		expect(
+			(
+				await stage(p, {
+					wallet: TREASURY,
+					policy: { ...POLICY, authorizedUsers: [], threshold: 0 },
+				})
+			).role,
+		).toBe("outsider");
+	});
+
 	it("says a send cannot be submitted once a newer send of the treasury was carried out", async () => {
 		// two signatures, the finaliser's wallet connected: it would be "ready"
 		const p = await signAs(await signAs(makeProposal(), 1), 2);

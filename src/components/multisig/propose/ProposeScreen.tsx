@@ -68,6 +68,7 @@ import {
 } from "../model/nonce";
 import { RELAY_COPY } from "../model/relay/copy";
 import { publishRow } from "../model/relay/push";
+import { isItself } from "../model/selfTreasury";
 import { costLine, spotAvailable } from "../model/send";
 import { linkTransport } from "../model/transport";
 import { TreasuryNames, useNames } from "../names/Names";
@@ -77,6 +78,7 @@ import { useRelay } from "../relay/useRelay";
 import { Help } from "../shell/Help";
 import { NetTag, SignsTag, backLink as shellBack } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
+import { SwitchToSigner } from "../shell/SwitchToSigner";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useKnownProposals } from "../treasury/useKnownProposals";
 import { useTreasuryNames } from "../treasuryName";
@@ -271,6 +273,8 @@ export function ProposeScreen({
 	const iAmSigner =
 		me !== null && !!state.policy?.authorizedUsers.some((a) => a === me);
 	const ready = state.isMultiSig === true;
+	// the wallet is the treasury account itself: it can draft, never sign
+	const itself = ready && isItself(me, address);
 
 	const create = async (sign: boolean) => {
 		setAttempted(true);
@@ -685,13 +689,18 @@ export function ProposeScreen({
 											Create without signing
 										</Button>
 									</div>
-									{ready && !iAmSigner && (
+									{itself ? (
+										<SwitchToSigner
+											signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
+											className="text-xs"
+										/>
+									) : ready && !iAmSigner ? (
 										<p className="text-xs text-muted-foreground">
 											{wallet.address
 												? `${short(wallet.address)} is not in the signer set, so it can draft a proposal but not sign it.`
 												: "Connect a signer's wallet to sign on the spot, or create the proposal unsigned and pass it on."}
 										</p>
-									)}
+									) : null}
 									{attempted && !draft.input && (
 										<Callout tone="danger" title="Not created yet">
 											Fix the fields marked on the left.

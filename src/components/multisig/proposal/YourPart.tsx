@@ -15,6 +15,7 @@ import { type Stage, shortAddress } from "../model/stage";
 import { useOpenProposals } from "../relay/openProposals";
 import { Help } from "../shell/Help";
 import { Btn, Card, Tag } from "../shell/kit";
+import { SwitchToSigner } from "../shell/SwitchToSigner";
 import type { WalletSigner } from "../useWalletSigner";
 import {
 	finalise,
@@ -43,6 +44,7 @@ export function YourPart({
 	doc,
 	have,
 	need,
+	signers,
 }: {
 	proposal: Proposal;
 	stage: Stage;
@@ -51,6 +53,8 @@ export function YourPart({
 	/** Verified signatures of current signers, and how many are needed (null while unknown). */
 	have: number;
 	need: number | null;
+	/** The treasury's signers as Hyperliquid reports them now. */
+	signers: readonly Address[];
 }) {
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
 	const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -180,6 +184,8 @@ export function YourPart({
 									? `You signed this. It needs ${waiting} more.`
 									: "You signed this."
 							: (stage.signReason ?? stage.executeReason ?? "");
+	// the wallet is the treasury account: the same sentence as on its own page
+	const itself = stage.role === "treasury" && note === stage.signReason;
 
 	// Older sends of this treasury still waiting: submitting this one first
 	// would shut them out (Hyperliquid takes USDC sends only in order).
@@ -303,7 +309,9 @@ export function YourPart({
 					)}
 				</div>
 			)}
-			{note && (
+			{itself ? (
+				<SwitchToSigner signers={signers} className={any ? "mt-2.5" : ""} />
+			) : note ? (
 				<p
 					className={
 						any
@@ -319,7 +327,7 @@ export function YourPart({
 						</>
 					)}
 				</p>
-			)}
+			) : null}
 			{stage.networkMismatch && (
 				<div className="mt-3">
 					<Btn size="sm" variant="outline" onClick={() => setNetwork(network)}>

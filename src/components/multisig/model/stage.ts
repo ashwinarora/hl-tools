@@ -17,13 +17,28 @@ import {
 } from "@hl-tools/core";
 import { chainIdToNumber, chainLabel } from "./chains";
 import { describeWindow, type WindowInfo } from "./nonce";
-import { joinParts, type Part, partsText, say } from "./parts";
+import {
+	joinParts,
+	type Part,
+	partsText,
+	say,
+	shortAddress,
+	whoPart,
+} from "./parts";
+import { switchSentence } from "./selfTreasury";
 
-/** `unknown`: a wallet is connected, but the signer set has not been read yet. */
+export { shortAddress };
+
+/**
+ * `unknown`: a wallet is connected, but the signer set has not been read yet.
+ * `treasury`: the wallet is the treasury account itself, whose own key cannot
+ * act for it.
+ */
 export type WalletRole =
 	| "disconnected"
 	| "unknown"
 	| "outsider"
+	| "treasury"
 	| "signer"
 	| "finaliser"
 	| "signer-finaliser";
@@ -117,8 +132,6 @@ export interface Stage {
 	readonly detailParts: readonly Part[];
 }
 
-export const shortAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-
 function policyChanged(p: Proposal, live: Policy | null): boolean {
 	const then = p.meta.policyAtCreation;
 	if (!then || !live) return false;
@@ -181,9 +194,12 @@ export function deriveStage(input: StageInput): Stage {
 				: isLeader
 					? "finaliser"
 					: // "not a signer" is a verdict: not before the signer set is known
-						policy
-						? "outsider"
-						: "unknown";
+						!policy
+						? "unknown"
+						: wallet === p.payload.multiSigUser &&
+								policy.authorizedUsers.length > 0
+							? "treasury"
+							: "outsider";
 	const hasSigned =
 		wallet !== null && !!r && r.counted.some((a) => a === wallet);
 
@@ -208,7 +224,7 @@ export function deriveStage(input: StageInput): Stage {
 		p.meta.kind === "user-signed" &&
 		(p.payload.vaultAddress !== null || p.payload.expiresAfter !== null);
 
-	const who = (a: string): Part => ({ text: shortAddress(a), who: a });
+	const who = whoPart;
 	let phase: Phase;
 	let head: Part[];
 	let body: Part[];
@@ -317,11 +333,13 @@ export function deriveStage(input: StageInput): Stage {
 					? wrongNetwork
 					: role === "disconnected"
 						? "Connect a wallet to sign."
-						: !isSigner
-							? `${shortAddress(wallet ?? "")} is not in the signer set.`
-							: hasSigned
-								? "You signed this."
-								: null;
+						: role === "treasury"
+							? partsText(switchSentence(policy?.authorizedUsers ?? []))
+							: !isSigner
+								? `${shortAddress(wallet ?? "")} is not in the signer set.`
+								: hasSigned
+									? "You signed this."
+									: null;
 	const canSign = signReason === null;
 
 	const need = r?.need ?? null;

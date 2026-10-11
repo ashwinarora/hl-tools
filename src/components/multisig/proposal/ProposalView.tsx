@@ -118,6 +118,7 @@ const ROLE: Record<WalletRole, string | null> = {
 	disconnected: null,
 	unknown: null,
 	outsider: "not a signer",
+	treasury: "the treasury itself",
 	signer: "signer",
 	finaliser: "finaliser",
 	"signer-finaliser": "signer · finaliser",
@@ -390,7 +391,13 @@ export function ProposalView({
 							</span>
 						)}
 						{role && (
-							<Tag tone={stage.role === "outsider" ? "gray" : "you"}>
+							<Tag
+								tone={
+									stage.role === "outsider" || stage.role === "treasury"
+										? "gray"
+										: "you"
+								}
+							>
 								you: {role}
 							</Tag>
 						)}
@@ -620,6 +627,7 @@ export function ProposalView({
 									doc={doc}
 									have={ready?.have ?? 0}
 									need={ready?.need ?? null}
+									signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
 								/>
 							)}
 						</div>

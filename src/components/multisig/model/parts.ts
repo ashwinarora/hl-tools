@@ -18,6 +18,12 @@ export interface Part {
 
 export const part = (text: string): Part => ({ text });
 
+/** How an address reads where there is no room for all of it. */
+export const shortAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+/** An address as a part: a screen may show its nickname next to it. */
+export const whoPart = (a: string): Part => ({ text: shortAddress(a), who: a });
+
 export function partsText(parts: readonly Part[]): string {
 	return parts.map((p) => p.text).join("");
 }
