@@ -43,6 +43,30 @@ export const HELP = {
 		title: "API wallet",
 		body: "A separate key the treasury has allowed to act for it, usually for a bot. Without the signers it can trade with everything the treasury holds and move it into vaults. It cannot send funds to another account or withdraw them. Approve one only for a bot you trust.",
 	},
+	treasuryAccount: {
+		title: "Treasury account",
+		body: "The wallet you are connected with is itself a treasury. Its own key can no longer act for it on Hyperliquid. To use that treasury, switch to one of its signers in your wallet.",
+	},
+	ownKey: {
+		title: "The account's own key",
+		body: "The key of the treasury account itself. While the account is a treasury that key cannot act for it on Hyperliquid. It still controls the same address on other networks, and it gets the account back if the signers convert it back.",
+	},
+	changeSigners: {
+		title: "Change signers",
+		body: "Replaces the list of signers and the number that must sign, in one step. The current signers decide, by the current number. It takes effect the moment Hyperliquid accepts it.",
+	},
+	convertBack: {
+		title: "Convert back",
+		body: "Turns the treasury into a normal account again. From then on whoever holds the account's own key controls it alone, and the signers decide nothing. If nobody holds that key, the account is locked for good.",
+	},
+	stolenLost: {
+		title: "Stolen and lost keys",
+		body: "The number that must sign trades two risks. A higher number means more keys have to be stolen before the money can be taken. It also means fewer keys can be lost before nobody can act at all.",
+	},
+	lastSigned: {
+		title: "Last signed",
+		body: "When this signer last signed one of this treasury's proposals here. “No signature here yet” does not mean they cannot sign. It only means none has been seen.",
+	},
 	movable: {
 		title: "Can be moved now",
 		body: "What a payment can use right now. In a manual account it is the part of the perps balance not tied up as margin for open positions. In a unified account it is the balance less what positions and waiting orders reserve.",

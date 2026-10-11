@@ -72,6 +72,15 @@ export const RELAY_COPY = {
 		"API wallets and transfers are checked when you open this treasury.",
 	awayOthers:
 		"API wallets and transfers were checked for your first ten treasuries. The others are checked when you open them.",
+	// Creating a treasury: the account that was converted registers itself.
+	createSignIn:
+		"Sign in with the wallet whose account you want to convert into a treasury.",
+	registering: "Adding it to its signers' lists…",
+	registered: "Its signers find it in their list when they sign in.",
+	registerFailed:
+		"The account is converted, but it could not be added to its signers' lists just now. Any signer can add it under “Add an existing one”.",
+	registeredByAccount:
+		"Registered by the account itself when it was converted.",
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;
