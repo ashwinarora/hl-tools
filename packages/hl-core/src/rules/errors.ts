@@ -3,7 +3,7 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.3.0",
+	version: "1.4.0",
 	verifiedAt: "2026-10-11",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
@@ -35,6 +35,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.3.0",
 			date: "2026-10-11",
 			note: '"Nonce already used." — the answer to a usdSend whose `time` is older than a usdSend the account has already carried out, even though that number was never used (recorded on testnet through multi-sig envelopes, with the same and with another leader). Not the leader\'s duplicate check, which reads "Invalid nonce: duplicate nonce N". Also "User has pending agent removal": a second API wallet removal sent a second after the first.',
+		},
+		{
+			version: "1.4.0",
+			date: "2026-10-11",
+			note: 'From the order lab (fixtures/multisig/nonce-order.json). "Nonce already used." is also the answer to a bridge withdrawal older than a carried-out send, and plain accounts get it like multi-sigs. A refused envelope uses up its number: "Multi-sig threshold not met" no longer says "resubmit". Replacing an API wallet counts as a removal for "User has pending agent removal". New: "Too many extra agents for cumulative volume traded", "Action disabled when unified account is active" (a usdSend from an account in unified mode), "Error withdrawing from bridge".',
 		},
 	],
 });
@@ -288,7 +293,7 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		category: "signing",
 		cause:
 			"Fewer distinct authorized signers than the threshold. Duplicate signatures from one signer count once; signatures from non-authorized or removed signers are rejected earlier.",
-		fix: "Collect signatures from more authorized users over the exact same payload, nonce and leader, then resubmit.",
+		fix: 'Collect signatures from more authorized users before submitting. The refused envelope has used up its number for that leader (sending it again is answered "duplicate nonce"), so it has to be proposed again with a new one.',
 		documented: true,
 	},
 	{
@@ -414,8 +419,8 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		example: "Nonce already used.",
 		category: "signing",
 		cause:
-			"The account has already carried out a USDC send (usdSend) with this `time` or a later one. Hyperliquid takes an account's USDC sends only in increasing order of their `time`: once a newer send has gone through, an older one is refused, whoever submits it and although its number was never used.",
-		fix: "Check the ledger: if this send is there, nothing is left to do. Otherwise propose it again, so that it gets a new number; every signer signs again.",
+			'The account has already carried out a USDC send (usdSend) with this `time` or a later one. Hyperliquid takes an account\'s USDC sends, and its bridge withdrawals (withdraw3), only after its latest send: once a newer send has gone through, an older send or withdrawal is refused, whoever submits it and although its number was never used. The same holds for a plain account signing with its own key. A send dated ahead counts from the moment it is carried out, so sends dated "now" are refused until the clock has passed it.',
+		fix: "Check the ledger: if this action is there, nothing is left to do. Otherwise propose it again, so that it gets a new number; every signer signs again.",
 		documented: false,
 	},
 	{
@@ -424,8 +429,39 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		example: "User has pending agent removal",
 		category: "account",
 		cause:
-			"The account removed another API wallet a moment ago and Hyperliquid has not finished with it. It takes one removal at a time (recorded on testnet: two removals one second apart, the second refused).",
-		fix: "Wait a little and send the removal again. For a multi-sig that means proposing it again, since the refused one cannot be reused.",
+			"The account removed or replaced another API wallet a moment ago and Hyperliquid has not finished with it. It takes one removal at a time, and approving a new address under a name in use removes the old one (recorded on testnet: refused a second after a removal, accepted 75 seconds after).",
+		fix: "Wait a minute or two and send it again. For a multi-sig that means proposing it again, since the refused one cannot be reused.",
+		documented: false,
+	},
+	{
+		id: "agent-limit",
+		pattern: /too many extra agents/i,
+		example:
+			"Too many extra agents for cumulative volume traded. Current limit is 3",
+		category: "account",
+		cause:
+			"The account already has as many named API wallets as Hyperliquid allows it (three for an account with little traded volume). Approving one more under a new name is refused.",
+		fix: "Remove an API wallet that is no longer used, or approve the new address under a name already in use, which replaces that wallet.",
+		documented: false,
+	},
+	{
+		id: "unified-disabled",
+		pattern: /disabled when unified account is active/i,
+		example: "Action disabled when unified account is active",
+		category: "account",
+		cause:
+			"The account is in unified account mode, where perps and spot share one balance. A USDC send from the perps balance (usdSend) is switched off there (recorded on testnet).",
+		fix: "Send it as a spot send or with sendAsset instead, or leave unified account mode first.",
+		documented: false,
+	},
+	{
+		id: "bridge-withdraw",
+		pattern: /error withdrawing from bridge/i,
+		example: "Error withdrawing from bridge",
+		category: "margin",
+		cause:
+			"The bridge withdrawal (withdraw3) could not be made: recorded on testnet for an amount far above the account's balance.",
+		fix: "Check the amount against the withdrawable perps balance, the one-dollar fee included.",
 		documented: false,
 	},
 	{

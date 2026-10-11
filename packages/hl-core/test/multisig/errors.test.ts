@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	explainExchangeError,
 	MULTISIG_ERROR_IDS,
+	numberSpent,
 } from "../../src/multisig/index.ts";
 import { ERROR_CATALOG } from "../../src/rules/errors.ts";
 
@@ -48,6 +49,16 @@ describe("explainExchangeError: every recorded string", () => {
 		["Nonce already used.", "nonce-used", {}],
 		// recorded 2026-10-11: the second of two API wallet removals sent a second apart
 		["User has pending agent removal", "agent-removal-pending", {}],
+		// recorded 2026-10-11 (the order lab): a fourth named API wallet for the lab treasury
+		[
+			"Too many extra agents for cumulative volume traded. Current limit is 3",
+			"agent-limit",
+			{},
+		],
+		// a usdSend from an account switched to unified account mode
+		["Action disabled when unified account is active", "unified-disabled", {}],
+		// a bridge withdrawal asking for far more than the account holds
+		["Error withdrawing from bridge", "bridge-withdraw", {}],
 		["Action already expired", "expired", {}],
 		[
 			"Mainnet and testnet require different signature.",
@@ -106,6 +117,10 @@ describe("explainExchangeError: every recorded string", () => {
 				422,
 			).fix,
 		).toContain("payload action");
+	});
+	it("no longer tells anyone to resubmit a refused envelope", () => {
+		expect(err("Multi-sig threshold not met").fix).not.toMatch(/resubmit/i);
+		expect(err("Multi-sig threshold not met").fix).toMatch(/proposed again/);
 	});
 	it("every catalogue example maps to its own entry (first match wins, so order matters)", () => {
 		for (const entry of ERROR_CATALOG) {
@@ -233,5 +248,63 @@ describe("explainExchangeError: response shapes", () => {
 				200,
 			).id,
 		).toBe("ok");
+	});
+});
+
+describe("numberSpent: can the same proposal be sent again?", () => {
+	it("no, once Hyperliquid took the envelope and refused it, whatever the reason", () => {
+		// each of these was sent again on testnet and answered "duplicate nonce"
+		for (const message of [
+			"Multi-sig threshold not met",
+			"Invalid multi-sig inner signer",
+			"Insufficient balance for withdrawal.",
+			"Invalid nonce: nonce too low 1791451926162 < 1791538445932",
+			"Invalid nonce: nonce too high 1791883926162 > 1791797417377",
+			"Invalid nonce: duplicate nonce 1791711113574",
+			"Nonce already used.",
+			"User has pending agent removal",
+			"Some refusal nobody has seen yet",
+		])
+			expect(numberSpent(err(message)), message).toBe(true);
+	});
+	it("yes, when the answer never reached the leader's account", () => {
+		// the envelope's signature recovered to some other address
+		expect(
+			numberSpent(
+				err(
+					"L1 error: User or API Wallet 0x0123456789012345678901234567890123456789 does not exist.",
+				),
+			),
+		).toBe(false);
+		expect(
+			numberSpent(
+				err(
+					"Must deposit before performing actions. User: 0x008d90fc2bebe284380f32bd9632f6922b701bc5",
+				),
+			),
+		).toBe(false);
+		// the request was not taken at all
+		expect(numberSpent(explainExchangeError("rate limited", 429))).toBe(false);
+		expect(
+			numberSpent(
+				explainExchangeError(
+					"Failed to deserialize the JSON body into the target type",
+					422,
+				),
+			),
+		).toBe(false);
+		expect(
+			numberSpent(explainExchangeError("<html>bad gateway</html>", 502)),
+		).toBe(false);
+	});
+	it("and an accepted one is not a refusal", () => {
+		expect(
+			numberSpent(
+				explainExchangeError(
+					{ status: "ok", response: { type: "default" } },
+					200,
+				),
+			),
+		).toBe(false);
 	});
 });

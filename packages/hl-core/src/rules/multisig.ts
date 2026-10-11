@@ -8,10 +8,10 @@ export const NKTKAS_SIGNING: RuleSource = {
 export const MULTISIG_RULES = defineRuleSet({
 	id: "multisig",
 	title: "Native multi-sig",
-	version: "1.1.0",
+	version: "1.2.0",
 	verifiedAt: "2026-10-11",
 	summary:
-		"A multi-sig user is an ordinary account whose own key can no longer send; up to 10 authorized users sign, a leader (an authorized user, or a funded API wallet of one) collects at least `threshold` distinct signatures and submits a `multiSig` envelope. Inner L1 actions are hashed as `[multiSigUser, outerSigner, action]` with the envelope's nonce, vault and expiry; inner user-signed actions gain `payloadMultiSigUser` and `outerSigner` after `hyperliquidChain`. The leader signs `HyperliquidTransaction:SendMultiSig{hyperliquidChain, multiSigActionHash, nonce}` over the envelope with inner signatures trimmed. Only the leader's nonce set is used; the multi-sig user's rate limit is charged. An account's USDC sends (`usdSend`) are taken only in increasing order of their `time`: once a newer one is carried out, an older pending one is refused.",
+		"A multi-sig user is an ordinary account whose own key can no longer send; up to 10 authorized users sign, a leader (an authorized user, or a funded API wallet of one) collects at least `threshold` distinct signatures and submits a `multiSig` envelope. Inner L1 actions are hashed as `[multiSigUser, outerSigner, action]` with the envelope's nonce, vault and expiry; inner user-signed actions gain `payloadMultiSigUser` and `outerSigner` after `hyperliquidChain`. The leader signs `HyperliquidTransaction:SendMultiSig{hyperliquidChain, multiSigActionHash, nonce}` over the envelope with inner signatures trimmed. Only the leader's nonce set is used; the multi-sig user's rate limit is charged. An envelope Hyperliquid refuses still uses up its number for that leader, so a refused proposal has to be made again. An account's USDC sends (`usdSend`) are taken only in increasing order of their `time`: once a newer one is carried out, an older pending send or bridge withdrawal is refused. Every other kind of action is taken in any order.",
 	sources: [
 		docs("hypercore/multi-sig", "Multi-sig"),
 		docs("for-developers/api/nonces-and-api-wallets", "Nonces and API wallets"),
@@ -29,15 +29,32 @@ export const MULTISIG_RULES = defineRuleSet({
 			date: "2026-10-11",
 			note: 'USDC sends are ordered: after an account carried out a `usdSend`, a `usdSend` with an older `time` is refused with "Nonce already used.", whoever leads and whatever the destination (12 pairs recorded on testnet through multi-sig envelopes). `usdClassTransfer`, `spotSend` and `approveAgent` are taken in any order; a failed attempt does not move the mark. Not documented by Hyperliquid.',
 		},
+		{
+			version: "1.2.0",
+			date: "2026-10-11",
+			note: "The order lab: 247 questions put to a plain account and to a multi-sig on testnet (fixtures/multisig/nonce-order.json), 27 kinds of action. Only `usdSend` is ordered, on a plain account exactly as through an envelope, and its mark stays with the account when it becomes a multi-sig or a plain account again. The mark is the highest `time` carried out: a send dated ahead shuts out every send dated earlier until the clock has passed it. A bridge withdrawal (`withdraw3`) older than the mark is refused the same way; whether a withdrawal moves the mark was not measured (no withdrawal is made in testing). `sendAsset`, `spotSend`, `usdClassTransfer`, approvals, staking, account settings and every L1 kind tried are taken in any order, before or after a send. The order check comes before the balance check. Separately: an envelope that was refused (threshold not met, a stranger's signature, an action that failed, a number outside the window) is answered \"duplicate nonce\" when sent again, so a refused proposal cannot be retried; and the leader's 100 highest numbers bound what it can still lead.",
+		},
 	],
 });
 
 /**
  * Kinds of action an account's chain state takes only in increasing order of
- * their own number (`time`): a later one carried out shuts the earlier ones
- * out. Measured, not documented; see `multisig/order.ts`.
+ * their own number (`time`), each with the kinds that shut it out: once one
+ * of those is carried out, an action with a number that is not greater is
+ * refused. Measured, not documented; see `multisig/order.ts`.
+ *
+ *   usdSend    shut out by a later usdSend
+ *   withdraw3  shut out by a later usdSend. Whether a withdrawal moves the
+ *              mark itself, and so shuts sends out, is not known: no
+ *              withdrawal is made in testing.
  */
-export const ORDERED_ACTION_TYPES: readonly string[] = ["usdSend"];
+export const SHUT_OUT_BY: Readonly<Record<string, readonly string[]>> = {
+	usdSend: ["usdSend"],
+	withdraw3: ["usdSend"],
+};
+
+/** The kinds above: every other kind is taken in any order. */
+export const ORDERED_ACTION_TYPES: readonly string[] = Object.keys(SHUT_OUT_BY);
 
 /** The chain rejects an 11th authorized user (`Too many multi-sig signers`). */
 export const MAX_SIGNERS = 10;
