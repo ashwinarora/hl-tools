@@ -8,6 +8,7 @@ export * from "./digest.ts";
 export * from "./envelope.ts";
 export * from "./errors.ts";
 export * from "./order.ts";
+export * from "./plain.ts";
 export * from "./proposal.ts";
 export * from "./readiness.ts";
 export * from "./signature.ts";

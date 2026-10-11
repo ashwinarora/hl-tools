@@ -121,7 +121,12 @@ export function exchangeRequestBody(
 	return body as PlainObject;
 }
 
-async function signTyped(
+/**
+ * Ask a signer for an EIP-712 signature and bring it to document form (32-byte
+ * r and s). A signer that throws, or answers with something that is not a
+ * signature, gives issues instead.
+ */
+export async function signTyped(
 	signer: TypedDataSigner,
 	typedData: TypedDataPayload,
 	path: string,
