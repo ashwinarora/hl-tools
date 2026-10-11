@@ -363,7 +363,7 @@ Verified 2026-10-09 in the user's own Brave instance through the Chrome DevTools
 |---|---|---|
 | a document whose nonce is older than the window | "Expired"; "Re-propose" opens the form pre-filled (destination, amount, finaliser, title) under "Re-proposing · … This is a new proposal with a new nonce: signatures do not carry over."; the new document records the old digest in `meta.supersedes` | ✅ |
 | same | no dead controls | ❌ → fixed. "Your signature" and "Finalise" each repeated "Expired"; they now render only in phases where they can act. |
-| 100 USDC with 24 withdrawable: S2 proposes and signs, S1 (finaliser) signs and submits | the chain answers HTTP 200 `{"status":"err","response":"Insufficient balance for withdrawal."}`; the page shows "The last submission was rejected: …" with cause and fix, steps done · done · failed, the button still enabled, the receipt kept, history "rejected", stage still "Ready · 2 of 2 signatures" | ✅ |
+| 100 USDC with 24 withdrawable: S2 proposes and signs, S1 (finaliser) signs and submits | the chain answers HTTP 200 `{"status":"err","response":"Insufficient balance for withdrawal."}`; the page shows "The last submission was rejected: …" with cause and fix, steps done · done · failed, the button still enabled, the receipt kept, history "rejected", stage still "Ready · 2 of 2 signatures" | ✅ (Since §11 a refused proposal ends instead: the button could only be answered "duplicate nonce".) |
 | same | the message is explained | ❌ → fixed in core. It was "Not in the error catalogue"; errors 1.2.0 adds `transfer-balance` with a test. |
 | proposal page with a wallet outside the signer set | role "not in the signer set"; "Only the finaliser 0x… can submit."; no sign or submit button | ✅ |
 | `approveAgent` with a 17,000-character name (17,905 bytes) | input note `proposal.large`; link dialog "24108 characters." with `transport.oversize`: "The document is 17905 bytes; chat apps and browsers may cut links over 16384." Fix: "Send the file instead of the link." | ✅ |
@@ -426,7 +426,7 @@ Who plays whom. The browser is one Rabby account, **S1** (also **S2** for the ru
 | Adding a treasury | Stored for a signer, visible to every co-signer without adding; done at once when already listed; refused for a non-signer and for a normal account; one treasury when two signers add it at the same moment |
 | Sharing and signing | Publish then sign in the planned order; a co-signer reads it and verifies digest and signature in their own client; sharing or signing twice is "done", not an error; two signers signing at once keep both signatures; a stored signature that does not verify is ignored by the reader; a document filed under a digest it does not carry is refused; taking a signature back is recorded |
 | Live updates | Every signer's channel is pinged within two seconds of a change and nobody else's; joining another wallet's channel is refused |
-| Ending and results | Only the proposer withdraws, only the finaliser declines; a rejection stays retryable and an acceptance closes; only the finaliser may report; an accepted signer change is looked up ahead of everything |
+| Ending and results | Only the proposer withdraws, only the finaliser declines; a rejection leaves the row open (the page ends it, see §11) and an acceptance closes; only the finaliser may report; an accepted signer change is looked up ahead of everything |
 | A signer removed on chain | Loses the treasury and everything in it once the copy is refreshed, by the sweep or by a co-signer's re-check request |
 | Relay unreachable | Every call answers with an "unreachable" issue instead of throwing |
 
@@ -487,7 +487,7 @@ With the two environment variables unset the section has no sign-in anywhere and
 | the reverse: lab A proposes, S1 is finaliser | "Sign and submit" opens two Rabby prompts (the `UsdSend` typed data with treasury, finaliser, destination and amount; then `SendMultiSig`), both read back from the extension page before approval; accepted; receipt on the relay | ✅ |
 | no scripts, treasury T: S1 proposes with S2 as finaliser, Rabby switches to S2 | suspended; "Sign in as S2" (one prompt); T is listed without adding; "Sign and submit" (two prompts); accepted | ✅ balance 24.0 → 23.0 |
 | the outsider script | 21 checks: empty reads on every table, every insert, update and delete refused, joining S1's channel refused, add rejected `not_a_signer` | ✅ 21 of 21 |
-| a send of 100 USDC from a treasury holding 10.8 | Hyperliquid's "Insufficient balance for withdrawal." stored as a rejected receipt and explained; the proposal stays open with "Submit" (one prompt) | ✅ |
+| a send of 100 USDC from a treasury holding 10.8 | Hyperliquid's "Insufficient balance for withdrawal." stored as a rejected receipt and explained; the proposal stays open with "Submit" (one prompt) | ✅ (Since §11: "Refused by Hyperliquid · cannot be sent again", see the order lab.) |
 
 Small things the milestone turned up: a signer with no signature read "not yet" on a finished proposal (now "did not sign"); the propose screen's back link went to the start page instead of the treasury it came from.
 
@@ -541,7 +541,7 @@ Verified 2026-10-11 against the local Supabase stack and Hyperliquid testnet, in
 
 | Suite | Command | Result |
 |---|---|---|
-| Core and app unit tests | `bun --bun run test` | 68 files, 1,461 tests (core 866, app 595), all passing |
+| Core and app unit tests | `bun --bun run test` | 68 files, 1,742 tests (core 1,132, app 610), all passing |
 | Core coverage | `cd packages/hl-core && bunx vitest run --coverage` | 100 % statements, branches, functions and lines for `adapter`, `multisig` and `rules` |
 | Database (pgTAP) | `bun run db:reset && bun run db:test` | 14 files, 784 assertions, all passing |
 | Relay integration | `bun run test:relay` | 48 tests, all passing |
@@ -571,6 +571,53 @@ New pgTAP files:
 | A transfer and its proposal | S1 finalises a send through the page | ✅ the row appears live with a link to its proposal |
 | A send made by script | no proposal exists | ✅ "none on record" |
 | "View more" | opens Hyperliquid's own page for that account, on the right host per network | ✅ |
+
+### Switching treasuries (browser, 2026-10-11)
+
+The question: with several treasuries in the rail, is anything still subscribed to or fetched for the one just left? Measured in the isolated lab-signer context with a script that records every WebSocket frame the page sends and receives and every request to Hyperliquid, against the dev server and against the production build (`bun --bun run build`, served on another port).
+
+| Check | Expected | Result |
+|---|---|---|
+| Click from treasury A to treasury B | B's subscriptions asked for, A's unsubscribed, on the same socket, at once | ✅ 53 ms after the click: 4 subscribes for B, then 4 unsubscribes for A; one socket, never closed. Before the fix A stayed subscribed for the three-second grace period |
+| Messages for A after the switch | none | ✅ the last one arrived before the click |
+| HTTP after the switch (99 s watched) | only B: signers and API wallets at once and a minute later, one ledger read | ✅ nothing for A; a request for A still in flight is cancelled (`net::ERR_ABORTED`) |
+| Six clicks through the rail in 1.2 s | never two treasuries subscribed at the end | ✅ 20 subscribes, 17 unsubscribes, the three live channels belong to the last treasury |
+| Treasury page → its own proposal → back | no frames at all | ✅ the grace period still spares the same treasury |
+| A proposal of one treasury → the other treasury → browser back, twice | a full swap each time | ✅ |
+| What a proposal page follows | holdings and the ledger, not the trades | ✅ 4 subscriptions (was 7): perps, spot, open orders, ledger |
+| "On Hyperliquid" tab | adds fills, order history and funding; leaving the tab drops them and keeps the ledger a pending proposal needs | ✅ +3, then −3 within the grace period |
+| Leaving the treasury for the inbox | everything unsubscribed after the grace period, socket closed | ✅ 3.06 s |
+| Signers and API wallets read on page load | once each | ✅ in the production build. The dev server shows each twice, the first cancelled after 9 ms: React StrictMode mounts every component twice in development (`@tanstack/react-start`'s client entry), which a production build does not do |
+
+Known and deliberate: the home screen's "While you were away" reads the API wallets and the ledger of each of the wallet's first ten treasuries, one at a time, at most once in five minutes each (two `info` requests per treasury). A treasury's own page reads only itself.
+
+### The order lab (testnet, 2026-10-11)
+
+"When does Hyperliquid refuse an action because of its number?", asked of every kind of action a small testnet account can run, on a plain account (its own key) and through the lab 2-of-3 (lab keys only; `labs/multisig/41`, `43`; 385 recorded runs joined with their requests into `fixtures/multisig/nonce-order.json`, 247 questions). Each pair sends the action with the newer number first, then one with an older number that was never used. No bridge withdrawal was made: every `withdraw3` asked for 9,999,999 USDC, so it could only be refused, and the wording of the refusal says whether its number was acceptable.
+
+| Question | Answer |
+|---|---|
+| Which kinds are refused when an older one follows a newer one of the same kind? | Only `usdSend` ("Nonce already used."), on the plain account and through the envelope alike. Accepted out of order: `spotSend`, `usdClassTransfer`, `sendAsset` (to a user, to the account's own spot), `approveAgent`, `approveBuilderFee`, `cDeposit`, `cWithdraw`, `tokenDelegate`, `convertToMultiSigUser`, `userSetAbstraction`, `userDexAbstraction`, `noop`, `order`, `cancel`, `cancelByCloid`, `modify`, `batchModify`, `twapOrder`, `twapCancel`, `updateLeverage`, `updateIsolatedMargin`, `evmUserModify`, `spotUser`, `setDisplayName`, `reserveRequestWeight`, `vaultTransfer` |
+| Does a USDC send invalidate older numbers of other kinds? | No. After a newer send, an older action of each kind above was accepted (24 kinds on the plain account, the two mode switches on throwaway accounts, 16 kinds through the envelope). Only an older send, or an older bridge withdrawal, is refused |
+| Does a newer action of another kind invalidate an older send? | No, for every kind above (after `userSetAbstraction` the older send was refused for its balance, which comes after the order check) |
+| The other fund-moving kinds against each other | all 12 ordered pairs of spot send, class transfer and the two `sendAsset` forms accepted, on both accounts |
+| What exactly is the mark? | The highest `time` among the sends carried out (sent 3000, 1000, 2000, 4000, 3500: only 3000 and 4000 went through). One millisecond older is refused; the same number with another leader is refused too. A send that failed for balance does not move it. The order check comes before the balance check |
+| A send dated ahead | Dated 40 s ahead: accepted, a send dated "now" refused until the clock passed it, then accepted. Dated 23 hours ahead on a throwaway account: for the rest of the day `sendAsset`, class transfer, spot send and `noop` dated "now" were accepted, a USDC send and a withdrawal dated "now" were refused, a send dated 1 ms after the mark was accepted |
+| Bridge withdrawals | A `withdraw3` older than the latest send: "Nonce already used." A `withdraw3` 1 ms newer, or after a newer action of any other kind: "Error withdrawing from bridge" (its number was fine). A refused withdrawal does not move the mark. Not measured: whether a withdrawal that goes through moves it |
+| Does the mark belong to the account or to the signer? | The account. A plain account sent, became a multi-sig, and was refused an older send through the envelope; a multi-sig sent, became a plain account again, and was refused an older send with its own key |
+| Is a refused request's number free again? | No. An envelope refused for "Multi-sig threshold not met", for "Invalid multi-sig inner signer", or whose action failed for balance, and a plain request outside the window, were each answered "Invalid nonce: duplicate nonce" when sent again, at once, 60 s later and 3 minutes later, also with what was wrong put right. The same number led by another signer was accepted (number sets are per signer) |
+| The window and the "100 highest" rule | On accounts that had used few numbers: 3 days old "nonce too low" (the bound is two days before block time), 47 hours old accepted, 23 hours ahead accepted, 2 days ahead "nonce too high" (one day after block time). After one old number and 100 current ones, another old number was refused with the bound equal to the smallest of the account's 100 highest numbers, 5 ms above it accepted, 5 ms below it refused. Through the envelope the set is the leader's: 47 hours old was refused with leader A (hundreds of numbers used that day) and accepted with leader B |
+| Kinds that could not be run | Refused for the account's size or state, in both orders: `scheduleCancel`, `createSubAccount`, `registerReferrer` (volume), `userPortfolioMargin` (account value), `claimRewards`, `setReferrer`, `topUpIsolatedOnlyMargin`, `borrowLend`. Not sent at all: `sendToEvmWithData` and a real `withdraw3` (they move funds off HyperCore), `linkStakingUser` (permanent), vault, deployer, validator and sub-account management, and the two agent-only kinds |
+
+What changed in the tool because of it:
+
+| Check | Expected | Result |
+|---|---|---|
+| The recorded answers | the core's `overtakenBy` predicts every step of every question | ✅ 247 of 247 (`order.test.ts`) |
+| A send proposed after one that was dated ahead | numbered just after it, with a sentence saying so; a transfer between perps and spot or a spot send is left alone; a withdrawal is raised too | ✅ browser: the second proposal's number is the first's plus one; "70 h left" instead of 48 |
+| The longer signing window on a USDC send | a sentence about what dating it ahead does | ✅ |
+| A proposal Hyperliquid refused (a send of 9,999 USDC from the lab treasury, submitted by lab B) | "Refused by Hyperliquid · cannot be sent again", the reason, "Re-propose", no submit button; "Cannot be finished" in the inbox | ✅ co-signer's page and inbox. Until this round the page kept offering "Submit", which could only be answered "duplicate nonce" |
+| New refusal texts | explained from the catalogue | ✅ "Too many extra agents for cumulative volume traded", "Action disabled when unified account is active", "Error withdrawing from bridge" (errors 1.4.0) |
 
 ### Carried out elsewhere, cannot be finished
 
