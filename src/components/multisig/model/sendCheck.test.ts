@@ -141,6 +141,31 @@ describe("checkBeforeSubmit", () => {
 		expect(await codes(asset("", "5"), { mode: 7 })).toEqual([]);
 	});
 
+	it("stops a send from the treasury into the same balance of itself, whatever its mode", async () => {
+		const toItself = { ...asset(""), destination: TREASURY };
+		expect(await codes(toItself)).toEqual(["send-invalid"]);
+		// also when the mode could not be read
+		expect(await codes(toItself, { mode: new Error("timeout") })).toEqual([
+			"send-invalid",
+		]);
+		expect(
+			await codes({
+				type: "usdSend",
+				destination: TREASURY,
+				amount: "1",
+				time: 1,
+			}),
+		).toEqual(["self-transfer"]);
+		// from one of its balances into the other is taken
+		expect(
+			await codes({
+				...asset("spot"),
+				destination: TREASURY,
+				destinationDex: "",
+			}),
+		).toEqual([]);
+	});
+
 	describe("a change of signers", () => {
 		const change = (signers: string): PlainObject => ({
 			type: "convertToMultiSigUser",

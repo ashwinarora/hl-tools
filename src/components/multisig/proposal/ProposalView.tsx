@@ -310,7 +310,7 @@ export function ProposalView({
 	// The treasury's mode can rule the action out whatever else holds: said
 	// here, before anyone signs, with the way out.
 	const blocked = COSTED.has(stage.phase)
-		? modeRefusal(treasury.mode, proposal.payload.action)
+		? modeRefusal(treasury.mode, proposal.payload.action, target.address)
 		: null;
 	const cost =
 		blocked || lookup.state === "idle"

@@ -23,6 +23,7 @@ import {
 	type Policy,
 	type ProposalInput,
 	sendRefusal,
+	sendShape,
 	signingFamilyFor,
 	stringifyJson,
 	toPlain,
@@ -32,6 +33,7 @@ import {
 import { ADDRESS_RE } from "#/components/tools/multisig/model";
 import { chainChoiceFor, type InnerChain } from "./chains";
 import type { NonceMode } from "./nonce";
+import { selfRefusal } from "./selfSend";
 import {
 	judgeSet,
 	type SignerCheck,
@@ -381,6 +383,29 @@ function warnAboutSend(
 	ctx: BuildContext,
 	issues: Issue[],
 ): void {
+	const treasury = ctx.multiSigUser.toLowerCase();
+	const toItself = selfRefusal(treasury, action);
+	if (toItself) {
+		issues.push(
+			issue(
+				"action.self_refused",
+				"error",
+				toItself === "self-transfer"
+					? "This sends from the treasury to itself, and Hyperliquid refuses that kind of send to oneself."
+					: "This sends from one of the treasury's balances into the same balance of itself, and Hyperliquid refuses that. To move USDC between its perps and spot balances, use Perps ↔ spot.",
+				{ path: "action.destination" },
+			),
+		);
+	} else if (sendShape(action)?.destination === treasury) {
+		issues.push(
+			issue(
+				"action.self_send",
+				"warning",
+				"The destination is the treasury itself: this only moves money between its own balances.",
+				{ path: "action.destination" },
+			),
+		);
+	}
 	const refusal = ctx.mode ? sendRefusal(ctx.mode, action) : null;
 	if (refusal === "unified-disabled" || refusal === "unified-spot-only") {
 		issues.push(
@@ -457,25 +482,10 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 		sketch: action,
 		issues,
 	});
-	const destination = () => {
-		const d = addressField(
-			form.destination,
-			"action.destination",
-			"Destination",
-			issues,
-		);
-		if (d && d === treasury) {
-			issues.push(
-				issue(
-					"action.self_send",
-					"warning",
-					"The destination is the multi-sig account itself.",
-					{ path: "action.destination" },
-				),
-			);
-		}
-		return d;
-	};
+	// what a destination that is the treasury itself means is said where the
+	// action is known: a send (`warnAboutSend`), a withdrawal (below)
+	const destination = () =>
+		addressField(form.destination, "action.destination", "Destination", issues);
 
 	switch (form.kind) {
 		case "sendUsdc": {
@@ -529,6 +539,16 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 		}
 		case "withdraw3": {
 			const dest = destination();
+			if (dest && dest === treasury) {
+				issues.push(
+					issue(
+						"withdraw.own_address",
+						"warning",
+						"The destination is the treasury's own address. On Arbitrum that address is controlled by the account's own key, not by the signers.",
+						{ path: "action.destination" },
+					),
+				);
+			}
 			const amount = amountField(form.amount, USDC_DECIMALS, USDC, issues);
 			if (amount)
 				warnOverBalance(

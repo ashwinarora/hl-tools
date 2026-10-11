@@ -65,6 +65,7 @@ export async function checkBeforeSubmit(
 		perpsUsdc: withdrawable,
 		spot,
 		receiver: role === null ? null : receiverOf(role, receiverMode),
+		self: multiSigUser,
 	});
 }
 

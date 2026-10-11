@@ -332,9 +332,46 @@ describe("buildAction / buildProposalInput", () => {
 		expect(
 			codes(send("51d3aaa37dc88af4d4ef846629e7e7f201b47fd9").issues),
 		).toEqual(["address.invalid"]);
+		// to itself into the same balance: Hyperliquid answers "Invalid send"
 		const self = send(TREASURY.toUpperCase().replace("0X", "0x"));
-		expect(codes(self.issues)).toEqual(["action.self_send"]);
-		expect(self.action).not.toBeNull();
+		expect(codes(self.issues)).toEqual(["action.self_refused"]);
+		expect(self.action).toBeNull();
+		expect(fieldOf(self.issues[0] as Issue)).toBe("destination");
+		// from its spot balance into its perps balance is taken: it only moves money inside
+		const inside = buildAction(
+			form({
+				kind: "sendUsdc",
+				destination: TREASURY,
+				amount: "1",
+				fromPocket: "spot",
+				toPocket: "perps",
+			}),
+			ctx(),
+		);
+		expect(codes(inside.issues)).toEqual(["action.self_send"]);
+		expect(inside.action).not.toBeNull();
+		// the older sends are refused to oneself whatever they name ("Cannot self-transfer.")
+		const old = buildAction(
+			form({
+				kind: "raw",
+				raw: JSON.stringify({
+					type: "usdSend",
+					destination: TREASURY,
+					amount: "1",
+				}),
+			}),
+			ctx(),
+		);
+		expect(codes(old.issues)).toContain("action.self_refused");
+		expect(old.action).toBeNull();
+		// a withdrawal to the same address is another matter: it leaves Hyperliquid
+		const out = buildAction(
+			form({ kind: "withdraw3", destination: TREASURY, amount: "5" }),
+			ctx(),
+		);
+		expect(codes(out.issues)).toEqual(["withdraw.own_address"]);
+		expect(out.issues[0]?.message).toContain("not by the signers");
+		expect(out.action).not.toBeNull();
 		const agent = buildAction(
 			form({ kind: "approveAgent", agentAddress: TREASURY }),
 			ctx(),

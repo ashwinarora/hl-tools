@@ -19,6 +19,7 @@ import {
 	sendShape,
 } from "@hl-tools/core";
 import type { Receiver } from "./actions";
+import { selfRefusal } from "./selfSend";
 
 export interface SendFacts {
 	/** The treasury's mode; null when it could not be read. */
@@ -37,6 +38,8 @@ export interface SendFacts {
 	readonly receiver: Receiver | null;
 	/** Sends the treasury has carried out, as far as the page knows them. */
 	readonly done?: readonly { readonly action: unknown }[];
+	/** The treasury's own address: Hyperliquid refuses some sends to oneself. */
+	readonly self?: string;
 }
 
 /** What can be sent of a spot token: its total less what is held. Null when not known. */
@@ -109,12 +112,18 @@ const MODE_REFUSALS: Readonly<Record<string, string>> = {
 		"This treasury is a unified account now: it sends only from its one balance, and this action takes the money from the perps balance. Propose it again.",
 	"token-invalid":
 		"Only USDC moves into or out of a perps balance. Hyperliquid refuses any other token there.",
+	"self-transfer":
+		"This sends from the treasury to itself, and Hyperliquid refuses that kind of send to oneself. Propose it again with another destination.",
+	"send-invalid":
+		"This sends from one of the treasury's balances into the same balance of itself, and Hyperliquid refuses that. To move USDC between its perps and spot balances, propose Perps ↔ spot.",
 };
 
 const MODE_TITLES: Readonly<Record<string, string>> = {
 	"unified-disabled": "Cannot be sent while the treasury is a unified account",
 	"unified-spot-only": "Cannot be sent while the treasury is a unified account",
 	"token-invalid": "Hyperliquid refuses this token in a perps balance",
+	"self-transfer": "Hyperliquid refuses a send from an account to itself",
+	"send-invalid": "Hyperliquid refuses a send into the balance it comes from",
 };
 
 /**
@@ -125,8 +134,12 @@ const MODE_TITLES: Readonly<Record<string, string>> = {
 export function modeRefusal(
 	mode: AccountMode | null,
 	action: PlainObject,
+	/** The sending account: a send to itself is refused whatever the mode. */
+	self?: string,
 ): (Refusal & { readonly title: string }) | null {
-	const refusal = mode ? sendRefusal(mode, action) : null;
+	const refusal =
+		(mode ? sendRefusal(mode, action) : null) ??
+		(self ? selfRefusal(self, action) : null);
 	return refusal
 		? {
 				code: refusal,
@@ -143,7 +156,7 @@ export function modeRefusal(
  */
 export function preflight(action: PlainObject, facts: SendFacts): Refusal[] {
 	const out: Refusal[] = [];
-	const blocked = modeRefusal(facts.mode, action);
+	const blocked = modeRefusal(facts.mode, action, facts.self);
 	const refusal = blocked?.code ?? null;
 	if (blocked) out.push({ code: blocked.code, message: blocked.message });
 
