@@ -9,6 +9,7 @@
  */
 import {
 	type AccountMode,
+	accountMode,
 	activationCharge,
 	Decimal,
 	landsIn,
@@ -49,6 +50,36 @@ export function spotAvailable(
 	const total = Decimal.tryParse(b.total);
 	const hold = Decimal.tryParse(b.hold ?? "0");
 	return total && hold ? total.sub(hold).toString() : null;
+}
+
+/**
+ * What Hyperliquid's two answers about an address make of it as a receiver:
+ * `userRole` (is it new, an account, an API wallet…) and `userAbstraction`
+ * (its mode; an address never used answers `default`).
+ */
+export function receiverOf(role: unknown, modeRaw: unknown): Receiver {
+	const r =
+		role && typeof role === "object"
+			? (role as { role?: unknown; data?: { user?: unknown } })
+			: {};
+	const mode = typeof modeRaw === "string" ? accountMode(modeRaw) : null;
+	switch (r.role) {
+		case "missing":
+			return { status: "new", mode };
+		case "user":
+			return { status: "active", mode };
+		case "agent":
+			return {
+				status: "agent",
+				mode,
+				agentOf: typeof r.data?.user === "string" ? r.data.user : null,
+			};
+		case "vault":
+		case "subAccount":
+			return { status: "other", mode };
+		default:
+			return { status: "unknown", mode };
+	}
 }
 
 export interface Refusal {

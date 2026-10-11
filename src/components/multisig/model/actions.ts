@@ -394,6 +394,12 @@ function warnAboutSend(
 
 export interface BuiltAction {
 	readonly action: PlainObject | null;
+	/**
+	 * The action as far as the form goes, also while it still has errors (an
+	 * amount not typed yet). Only for saying what a send will cost before it is
+	 * complete: never signed, never stored.
+	 */
+	readonly sketch: PlainObject | null;
 	readonly issues: readonly Issue[];
 }
 
@@ -407,6 +413,7 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 	const treasury = ctx.multiSigUser.toLowerCase();
 	const done = (action: PlainObject | null): BuiltAction => ({
 		action: hasErrors(issues) ? null : action,
+		sketch: action,
 		issues,
 	});
 	const destination = () => {
@@ -557,7 +564,8 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 						"mode.one_balance",
 						"error",
 						"This treasury is a unified account: it has one balance, so there is nothing to move between perps and spot.",
-						{ path: "action" },
+						// not a field of this form: shown with the general notes
+						{ path: "mode" },
 					),
 				);
 			}
@@ -744,10 +752,38 @@ export function actionTypeOf(
 	}
 }
 
+/**
+ * The Hyperliquid account a form pays, lowercased, once it is a whole
+ * address: the one whose being new or in use decides what the send costs.
+ * Null for what pays nobody on Hyperliquid (a withdrawal goes to Arbitrum).
+ */
+export function destinationOf(
+	form: Pick<ActionForm, "kind" | "destination" | "raw">,
+): string | null {
+	let value = "";
+	if (form.kind === "sendUsdc" || form.kind === "sendToken")
+		value = form.destination;
+	else if (form.kind === "raw") {
+		const parsed = tryParseJson(form.raw.trim());
+		const plain = parsed.ok ? toPlain(parsed.node) : null;
+		const o =
+			plain && typeof plain === "object" && !Array.isArray(plain)
+				? (plain as PlainObject)
+				: null;
+		// the ways of sending to an account; a withdrawal names an Arbitrum address
+		if (o && ["usdSend", "spotSend", "sendAsset"].includes(str(o.type)))
+			value = str(o.destination);
+	}
+	const address = value.trim().toLowerCase();
+	return ADDRESS_RE.test(address) ? address : null;
+}
+
 export interface Draft {
 	/** Null while the form has errors. */
 	readonly input: ProposalInput | null;
 	readonly action: PlainObject | null;
+	/** See `BuiltAction.sketch`. */
+	readonly sketch: PlainObject | null;
 	readonly issues: readonly Issue[];
 }
 
@@ -783,9 +819,10 @@ export function buildProposalInput(form: ActionForm, ctx: BuildContext): Draft {
 		);
 	}
 	if (!built.action || hasErrors(issues))
-		return { input: null, action: built.action, issues };
+		return { input: null, action: built.action, sketch: built.sketch, issues };
 	return {
 		action: built.action,
+		sketch: built.sketch,
 		issues,
 		input: {
 			network: ctx.network,

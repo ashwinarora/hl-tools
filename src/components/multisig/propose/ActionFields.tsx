@@ -1,4 +1,4 @@
-import { MULTISIG_FACTS, type Network } from "@hl-tools/core";
+import { type AccountMode, MULTISIG_FACTS, type Network } from "@hl-tools/core";
 import type { ReactNode } from "react";
 import {
 	Field,
@@ -8,8 +8,10 @@ import {
 	TextInput,
 } from "#/components/hub/layout";
 import { Callout } from "#/components/hub/status";
-import type { ActionForm } from "../model/actions";
+import { cn } from "#/lib/utils";
+import type { ActionForm, PocketChoice, Receiver } from "../model/actions";
 import { RELAY_COPY } from "../model/relay/copy";
+import type { CostLine } from "../model/send";
 import { shortAddress } from "../model/stage";
 import { useNames, Who } from "../names/Names";
 import { Help } from "../shell/Help";
@@ -90,6 +92,36 @@ function DestinationNames({
 	);
 }
 
+const COST_TONE: Record<CostLine["tone"], string> = {
+	plain: "border-border bg-surface-2 text-muted-foreground",
+	fee: "border-info/30 bg-info-soft text-foreground",
+	warn: "border-warning/35 bg-warning-soft text-foreground",
+	muted: "border-border bg-surface-2 text-subtle-foreground",
+};
+
+/** Under a destination: what sending to it costs (see the model's `costLine`). */
+export function CostNote({ line }: { line: CostLine | null }) {
+	if (!line) return null;
+	return (
+		<p
+			aria-live="polite"
+			data-cost={line.tone}
+			className={cn(
+				"mt-2 rounded-md border px-2.5 py-2 text-xs leading-relaxed",
+				COST_TONE[line.tone],
+			)}
+		>
+			{line.text}
+			{(line.tone === "fee" || line.tone === "warn") && (
+				<>
+					{" "}
+					<Help k="activationFee" />
+				</>
+			)}
+		</p>
+	);
+}
+
 /** The inputs of the chosen action. Errors come from the model, keyed by field. */
 export function ActionFields({
 	form,
@@ -99,6 +131,11 @@ export function ActionFields({
 	tokens,
 	held,
 	tokensLoading,
+	mode,
+	receiver,
+	cost,
+	from,
+	movable,
 }: {
 	form: ActionForm;
 	set: <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => void;
@@ -108,7 +145,18 @@ export function ActionFields({
 	/** Token indexes the treasury holds, listed first: a network can have thousands. */
 	held: readonly number[];
 	tokensLoading: boolean;
+	/** The treasury's account mode; null while it is not read. */
+	mode: AccountMode | null;
+	/** What is known about the destination; null while it is not. */
+	receiver: Receiver | null;
+	/** What sending to the destination costs. */
+	cost: CostLine | null;
+	/** The balance a USDC send is taken from, as the model resolved it. */
+	from: PocketChoice;
+	/** What can be moved now from each balance; null while not read. */
+	movable: { readonly perps: string | null; readonly spotUsdc: string | null };
 }) {
+	const unified = mode?.kind === "unified";
 	const destination = (hint: ReactNode) => (
 		<Field
 			label="Destination"
@@ -130,6 +178,7 @@ export function ActionFields({
 				value={form.destination}
 				onPick={(a) => set("destination", a)}
 			/>
+			<CostNote line={cost} />
 		</Field>
 	);
 	const amount = (unit: string, hint: ReactNode) => (
@@ -160,7 +209,48 @@ export function ActionFields({
 					)}
 					{amount(
 						"USDC",
-						"Leaves the perps balance. Written exactly as typed, never rounded.",
+						unified
+							? `Leaves this treasury's balance${movable.spotUsdc !== null ? ` (${movable.spotUsdc} USDC can be moved now)` : ""}. Written exactly as typed, never rounded.`
+							: "Written exactly as typed, never rounded.",
+					)}
+					{!unified && (
+						<Field
+							label="Taken from"
+							trailing={<Help k="pockets" />}
+							hint="The balance of this treasury the payment leaves."
+						>
+							<Segmented<PocketChoice>
+								label="Taken from"
+								value={from}
+								onChange={(v) => set("fromPocket", v)}
+								options={[
+									{
+										value: "perps",
+										label: `Perps${movable.perps !== null ? ` · ${movable.perps} USDC` : ""}`,
+									},
+									{
+										value: "spot",
+										label: `Spot${movable.spotUsdc !== null ? ` · ${movable.spotUsdc} USDC` : ""}`,
+									},
+								]}
+							/>
+						</Field>
+					)}
+					{receiver?.mode?.kind !== "unified" && (
+						<Field
+							label="Arrives in"
+							hint="The balance of the receiver the payment lands in."
+						>
+							<Segmented<PocketChoice>
+								label="Arrives in"
+								value={form.toPocket}
+								onChange={(v) => set("toPocket", v)}
+								options={[
+									{ value: "perps", label: "Their perps balance" },
+									{ value: "spot", label: "Their spot balance" },
+								]}
+							/>
+						</Field>
 					)}
 				</>
 			);
@@ -210,7 +300,9 @@ export function ActionFields({
 					</Field>
 					{amount(
 						form.token.split(":")[0] || "token",
-						"Leaves the spot balance.",
+						unified
+							? "Leaves this treasury's balance and arrives in the receiver's spot balance."
+							: "Leaves the spot balance and arrives in the receiver's spot balance.",
 					)}
 				</>
 			);

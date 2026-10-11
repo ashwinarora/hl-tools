@@ -9,7 +9,13 @@ import { describe, expect, it } from "vitest";
 import { RECIPIENT, TREASURY } from "#/test/keys";
 import type { Receiver } from "./actions";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
-import { costLine, preflight, type SendFacts, spotAvailable } from "./send";
+import {
+	costLine,
+	preflight,
+	receiverOf,
+	type SendFacts,
+	spotAvailable,
+} from "./send";
 
 const USDC = "USDC:0xeb62eee3685fc4c43992febcd9e75443";
 const PURR = "PURR:0xc4bf3f870c0e9465323c0b6ed28096c2";
@@ -61,6 +67,37 @@ describe("spotAvailable", () => {
 	it("is unknown when the balances were not read or cannot be", () => {
 		expect(spotAvailable(null, "USDC")).toBeNull();
 		expect(spotAvailable([{ coin: "USDC", total: "n/a" }], "USDC")).toBeNull();
+	});
+});
+
+describe("receiverOf", () => {
+	it("reads Hyperliquid's two answers about an address", () => {
+		expect(receiverOf({ role: "missing" }, "default")).toEqual({
+			status: "new",
+			mode: MANUAL,
+		});
+		expect(receiverOf({ role: "user" }, "unifiedAccount")).toEqual({
+			status: "active",
+			mode: UNIFIED,
+		});
+		expect(
+			receiverOf({ role: "agent", data: { user: TREASURY } }, "default"),
+		).toEqual({ status: "agent", mode: MANUAL, agentOf: TREASURY });
+		expect(receiverOf({ role: "agent" }, "default").agentOf).toBeNull();
+		expect(receiverOf({ role: "vault" }, "default").status).toBe("other");
+		expect(
+			receiverOf({ role: "subAccount", data: { master: TREASURY } }, "default")
+				.status,
+		).toBe("other");
+	});
+	it("claims nothing about an answer it cannot read", () => {
+		for (const role of [null, undefined, "user", {}, { role: "somethingNew" }])
+			expect(receiverOf(role, "default").status).toBe("unknown");
+		// the mode could not be read: the role still stands
+		expect(receiverOf({ role: "user" }, null)).toEqual({
+			status: "active",
+			mode: null,
+		});
 	});
 });
 

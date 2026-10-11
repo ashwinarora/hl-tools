@@ -24,6 +24,7 @@ import {
 	buildAction,
 	buildProposalInput,
 	DEFAULT_FORM,
+	destinationOf,
 	fieldOf,
 	formFromAction,
 	sourcePocket,
@@ -597,6 +598,8 @@ describe("what the treasury's mode and a new receiver make of an action", () => 
 		);
 		expect(codes(r.issues)).toEqual(["mode.one_balance"]);
 		expect(r.action).toBeNull();
+		// shown with the general notes: the form has no field for it
+		expect(fieldOf(r.issues[0] as Issue)).toBeNull();
 		expect(
 			buildAction(
 				form({ kind: "usdClassTransfer", amount: "5" }),
@@ -677,6 +680,52 @@ describe("what the treasury's mode and a new receiver make of an action", () => 
 			{ receiver: fresh, balances: held("50", "50") },
 		);
 		expect(real(tiny.issues)).toEqual(["fee.below"]);
+	});
+});
+
+describe("destinationOf: the account whose being new decides the fee", () => {
+	it("is the destination of a send, once it is a whole address", () => {
+		const of = (f: Partial<ActionForm>) => destinationOf(form(f));
+		expect(of({ kind: "sendUsdc", destination: ` ${UPPER} ` })).toBe(RECIPIENT);
+		expect(of({ kind: "sendToken", destination: RECIPIENT })).toBe(RECIPIENT);
+		expect(of({ kind: "sendUsdc", destination: "0x1234" })).toBeNull();
+		expect(of({ kind: "sendUsdc", destination: "" })).toBeNull();
+		for (const type of ["usdSend", "spotSend", "sendAsset"])
+			expect(
+				of({ kind: "raw", raw: JSON.stringify({ type, destination: UPPER }) }),
+			).toBe(RECIPIENT);
+	});
+	it("is nobody for what does not pay a Hyperliquid account", () => {
+		const of = (f: Partial<ActionForm>) => destinationOf(form(f));
+		// a withdrawal names an address on Arbitrum
+		expect(of({ kind: "withdraw3", destination: RECIPIENT })).toBeNull();
+		expect(
+			of({
+				kind: "raw",
+				raw: JSON.stringify({ type: "withdraw3", destination: RECIPIENT }),
+			}),
+		).toBeNull();
+		expect(of({ kind: "usdClassTransfer" })).toBeNull();
+		expect(of({ kind: "approveAgent", agentAddress: RECIPIENT })).toBeNull();
+		for (const raw of ["", "nope", "[]", '{"type":"usdSend"}'])
+			expect(of({ kind: "raw", raw })).toBeNull();
+	});
+	it("a form that does not build yet still gives a sketch to say the cost from", () => {
+		const r = buildProposalInput(
+			form({ kind: "sendUsdc", destination: RECIPIENT, amount: "" }),
+			ctx(),
+		);
+		expect(r.action).toBeNull();
+		expect(r.sketch).toMatchObject({
+			type: "sendAsset",
+			destination: RECIPIENT,
+			amount: "",
+		});
+		const whole = buildProposalInput(
+			form({ kind: "sendUsdc", destination: RECIPIENT, amount: "2" }),
+			ctx(),
+		);
+		expect(whole.sketch).toEqual(whole.action);
 	});
 });
 

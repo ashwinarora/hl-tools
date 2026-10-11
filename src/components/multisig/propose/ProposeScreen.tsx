@@ -44,6 +44,7 @@ import {
 import { Button } from "#/components/ui/button";
 import { errorMessage } from "#/hooks/useHyperliquid";
 import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
+import { useReceiver } from "../live/useReceiver";
 import {
 	ACTION_KINDS,
 	type ActionForm,
@@ -51,8 +52,10 @@ import {
 	actionTypeOf,
 	buildProposalInput,
 	DEFAULT_FORM,
+	destinationOf,
 	fieldOf,
 	formFromAction,
+	sourcePocket,
 } from "../model/actions";
 import { type InnerChain, innerChain } from "../model/chains";
 import { loadProposal, saveProposal } from "../model/history";
@@ -65,6 +68,7 @@ import {
 } from "../model/nonce";
 import { RELAY_COPY } from "../model/relay/copy";
 import { publishRow } from "../model/relay/push";
+import { costLine, spotAvailable } from "../model/send";
 import { linkTransport } from "../model/transport";
 import { TreasuryNames, useNames } from "../names/Names";
 import { addSignature, publishProposal } from "../relay/api";
@@ -174,6 +178,10 @@ export function ProposeScreen({
 		ordered && actionType ? orderFloor(actionType, known.proposals) : null;
 	const orderUnknown = ordered && known.state === "loading";
 
+	// Who is being paid: new to Hyperliquid (the first send costs 1 USDC) or in
+	// use, and which of its balances the money lands in.
+	const lookup = useReceiver(network, hydrated ? destinationOf(form) : null);
+
 	const chain = innerChain(network, form.chain);
 	const context = (nonce: number) => ({
 		network,
@@ -186,6 +194,7 @@ export function ProposeScreen({
 			spot: state.spot ?? undefined,
 		},
 		mode: state.mode,
+		receiver: lookup.receiver,
 		createdBy: wallet.address,
 		supersedes: superseded?.digest ?? null,
 		policyAtCreation: state.policy,
@@ -217,6 +226,25 @@ export function ProposeScreen({
 	);
 	const action = prepared?.action ?? null;
 	const flags = prepared?.flags ?? [];
+	const unified = state.mode?.kind === "unified";
+	const movable = {
+		perps: state.perp?.withdrawable ?? null,
+		spotUsdc: spotAvailable(state.spot, "USDC"),
+	};
+	const cost =
+		lookup.state === "idle"
+			? null
+			: costLine({
+					action: draft.sketch,
+					receiver: lookup.state === "loading" ? "loading" : lookup.receiver,
+					mode: state.mode,
+					perpsUsdc: movable.perps,
+					spot: state.spot,
+				});
+	// a unified treasury has one balance: nothing to move between perps and spot
+	const kinds = ACTION_KINDS.filter(
+		(k) => !(unified && k.kind === "usdClassTransfer"),
+	);
 	const window = describeWindow(previewNonce, previewNow);
 
 	// With the relay in use and this wallet in its copy of the signer list, a new
@@ -400,7 +428,7 @@ export function ProposeScreen({
 										label="Action"
 										value={form.kind}
 										onChange={(v) => set("kind", v)}
-										options={ACTION_KINDS.map((k) => ({
+										options={kinds.map((k) => ({
 											value: k.kind,
 											label: k.label,
 										}))}
@@ -418,6 +446,11 @@ export function ProposeScreen({
 												.filter((t): t is number => t !== null) ?? []
 										}
 										tokensLoading={universe.isFetching}
+										mode={state.mode}
+										receiver={lookup.receiver}
+										cost={cost}
+										from={sourcePocket(form, context(previewNonce))}
+										movable={movable}
 									/>
 								</div>
 							</Panel>
