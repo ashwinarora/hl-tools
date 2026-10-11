@@ -32,9 +32,11 @@ import {
 	sameSet,
 	signerCheck,
 	signerRows,
+	signersField,
 	thresholdLines,
 	toLookUp,
 	waitingProposals,
+	wantedSet,
 } from "./signerSet";
 
 const D = "0x00000000000000000000000000000000000000dd" as Address;
@@ -597,5 +599,53 @@ describe("the sentences", () => {
 			expect(t).toMatch(/^[A-Z].*\.$/);
 			for (const claim of FORBIDDEN_CLAIMS) expect(t).not.toMatch(claim);
 		}
+	});
+});
+
+describe("the form's one field", () => {
+	const NOW_SET = { authorizedUsers: [A, B, C].sort(), threshold: 2 };
+
+	it("stands for the treasury's own signers while it is untouched", () => {
+		expect(wantedSet("", NOW_SET)).toEqual({
+			revert: false,
+			entries: NOW_SET.authorizedUsers,
+			threshold: 2,
+		});
+		// nothing read yet: nothing to start from
+		expect(wantedSet("  ", null)).toEqual({
+			revert: false,
+			entries: [],
+			threshold: null,
+		});
+	});
+
+	it("reads back exactly what it wrote, lowercased, sorted, each address once", () => {
+		const upper = `0x${D.slice(2).toUpperCase()}`;
+		const field = signersField([C, upper, A, D], 3);
+		expect(field).toBe(
+			JSON.stringify({ authorizedUsers: [A, C, D].sort(), threshold: 3 }),
+		);
+		expect(wantedSet(field, NOW_SET)).toEqual({
+			revert: false,
+			entries: [A, C, D].sort(),
+			threshold: 3,
+		});
+	});
+
+	it("keeps a cleared number cleared", () => {
+		const field = signersField([A, B], null);
+		expect(field).toContain('"threshold":0');
+		expect(wantedSet(field, NOW_SET).threshold).toBeNull();
+	});
+
+	it("knows the conversion back, and starts over from a string no form made", () => {
+		expect(wantedSet("null", NOW_SET)).toEqual({
+			revert: true,
+			entries: [],
+			threshold: null,
+		});
+		expect(wantedSet("{not json", NOW_SET).entries).toEqual(
+			NOW_SET.authorizedUsers,
+		);
 	});
 });

@@ -32,6 +32,12 @@ import {
 import { ADDRESS_RE } from "#/components/tools/multisig/model";
 import { chainChoiceFor, type InnerChain } from "./chains";
 import type { NonceMode } from "./nonce";
+import {
+	judgeSet,
+	type SignerCheck,
+	signersField,
+	wantedSet,
+} from "./signerSet";
 
 /**
  * `sendUsdc` and `sendToken` both build a `sendAsset`: the one way of sending
@@ -45,6 +51,7 @@ export type ActionKind =
 	| "usdClassTransfer"
 	| "withdraw3"
 	| "approveAgent"
+	| "changeSigners"
 	| "raw";
 
 export const ACTION_KINDS: readonly {
@@ -77,6 +84,12 @@ export const ACTION_KINDS: readonly {
 		label: "Approve API wallet",
 		description:
 			"Let another key act for this account without the signers: trade, and move its money into vaults.",
+	},
+	{
+		kind: "changeSigners",
+		label: "Change signers",
+		description:
+			"Replace the list of signers and how many of them must sign, in one step.",
 	},
 	{
 		kind: "raw",
@@ -121,6 +134,12 @@ export interface ActionForm {
 	readonly toPerp: "perp" | "spot";
 	readonly agentAddress: string;
 	readonly agentName: string;
+	/**
+	 * A change of signers, as the action itself carries it (see `wantedSet`):
+	 * "" while untouched, the signer set as a JSON string, or "null" for the
+	 * conversion back to a normal account.
+	 */
+	readonly signers: string;
 	readonly raw: string;
 	/** The leader: the signer expected to complete and submit. */
 	readonly finaliser: string;
@@ -140,6 +159,7 @@ export const DEFAULT_FORM: ActionForm = {
 	toPerp: "perp",
 	agentAddress: "",
 	agentName: "",
+	signers: "",
 	raw: "",
 	finaliser: "",
 	chain: "hyperevm",
@@ -174,10 +194,14 @@ export interface BuildContext {
 	readonly mode?: AccountMode | null;
 	/** What is known about the destination; null or absent while it is not. */
 	readonly receiver?: Receiver | null;
+	/** What Hyperliquid said about the addresses that would be new signers. */
+	readonly signerChecks?: ReadonlyMap<string, SignerCheck>;
 	readonly createdBy?: string | null;
 	readonly supersedes?: Hex | null;
 	readonly policyAtCreation?: Policy | null;
 }
+
+const NO_CHECKS: ReadonlyMap<string, SignerCheck> = new Map();
 
 /** Perps USDC is accounted in 1e6. */
 const USDC_DECIMALS = 6;
@@ -640,6 +664,46 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				nonce: ctx.nonce,
 			});
 		}
+		case "changeSigners": {
+			const path = "action.signers";
+			const current = ctx.policyAtCreation ?? null;
+			if (!current || current.authorizedUsers.length === 0) {
+				issues.push(
+					issue(
+						"signers.unread",
+						"error",
+						"The treasury's signers have not been read yet.",
+						{ path },
+					),
+				);
+				return done(null);
+			}
+			const wanted = wantedSet(form.signers, current);
+			const convert = (signers: string): PlainObject => ({
+				type: "convertToMultiSigUser",
+				...head,
+				signers,
+				nonce: ctx.nonce,
+			});
+			// nothing to choose and nothing Hyperliquid would refuse: the signers decide
+			if (wanted.revert) return done(convert("null"));
+			const judged = judgeSet({
+				entries: wanted.entries,
+				threshold: wanted.threshold,
+				self: treasury,
+				checks: ctx.signerChecks ?? NO_CHECKS,
+				current,
+				me: ctx.createdBy ?? null,
+				leader: form.finaliser.trim() || null,
+			});
+			const stop = (code: string, message: string) =>
+				issues.push(issue(code, "error", message, { path }));
+			if (judged.unchanged) stop("signers.unchanged", "Nothing changes yet.");
+			else if (judged.blockedBy) stop("signers.blocked", judged.blockedBy);
+			else if (judged.pending)
+				stop("signers.checking", "Checking the new signers on Hyperliquid…");
+			return done(convert(signersField(wanted.entries, wanted.threshold)));
+		}
 		case "raw": {
 			const action = rawAction(form.raw, head, ctx.nonce, issues);
 			if (action) warnAboutSend(action, ctx, issues);
@@ -726,8 +790,8 @@ function rawAction(
 			issue(
 				"raw.convert_out_of_scope",
 				"error",
-				"Changing the signer set needs its own guarded flow (lock-out checks) and is not offered as raw JSON.",
-				{ path },
+				"Changing the signers has its own form, which checks the new list and says what the change does to waiting proposals.",
+				{ path, fix: "Choose “Change signers” above." },
 			),
 		);
 		return null;
@@ -767,6 +831,8 @@ export function actionTypeOf(
 		case "sendUsdc":
 		case "sendToken":
 			return "sendAsset";
+		case "changeSigners":
+			return "convertToMultiSigUser";
 		case "raw": {
 			const parsed = tryParseJson(form.raw.trim());
 			const plain = parsed.ok ? toPlain(parsed.node) : null;
@@ -958,6 +1024,9 @@ export function formFromAction(
 				agentAddress: str(action.agentAddress),
 				agentName: str(action.agentName),
 			};
+		// the form's field is the action's own value: nothing to translate
+		case "convertToMultiSigUser":
+			return { ...base, kind: "changeSigners", signers: str(action.signers) };
 		default:
 			return rawForm(action, base);
 	}
@@ -993,6 +1062,8 @@ export function fieldOf(i: Issue): keyof ActionForm | null {
 			return "agentAddress";
 		case "action.agentName":
 			return "agentName";
+		case "action.signers":
+			return "signers";
 		case "action":
 		case "action.type":
 			return "raw";

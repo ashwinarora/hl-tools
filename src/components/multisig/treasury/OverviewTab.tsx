@@ -29,6 +29,7 @@ import {
 	sizeOf,
 } from "../model/chain/columns";
 import { approvalOf } from "../model/chain/match";
+import { CHANGE } from "../model/change";
 import { balanceView, modeLabel } from "../model/mode";
 import { RELAY_COPY } from "../model/relay/copy";
 import type { TreasuryRow } from "../model/relay/rows";
@@ -36,7 +37,7 @@ import { fromNow } from "../model/time";
 import { Who } from "../names/Names";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
-import { ago, Btn, Card, PersonRow, Tag } from "../shell/kit";
+import { ago, Btn, Card, linkButtonSm, PersonRow, Tag } from "../shell/kit";
 import { Figure, SourceLine, toneOf, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
 import type { KnownProposal } from "./useKnownProposals";
@@ -427,10 +428,22 @@ export function OverviewTab({
 					}
 					actions={
 						threshold !== null && signers.length > 0 ? (
-							<Tag>
-								{threshold} of {signers.length}{" "}
-								{frozen ? "had to sign" : "must sign"}
-							</Tag>
+							<>
+								<Tag>
+									{threshold} of {signers.length}{" "}
+									{frozen ? "had to sign" : "must sign"}
+								</Tag>
+								{/* a change is a proposal like any other: its signers make it */}
+								{!frozen && me && signers.includes(me) && (
+									<Link
+										to="/multisig/propose"
+										search={{ treasury: address, kind: "changeSigners" }}
+										className={linkButtonSm}
+									>
+										{CHANGE.linkLabel}
+									</Link>
+								)}
+							</>
 						) : null
 					}
 					footer={<Checked state={state} now={now} what="the signers" />}

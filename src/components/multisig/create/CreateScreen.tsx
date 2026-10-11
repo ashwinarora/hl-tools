@@ -10,7 +10,7 @@ import {
 } from "@hl-tools/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Ban, Check, Loader2, TriangleAlert, X } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 import {
 	type ReactNode,
 	useCallback,
@@ -20,7 +20,6 @@ import {
 	useState,
 } from "react";
 import { CopyButton } from "#/components/hub/CopyButton";
-import { TextInput } from "#/components/hub/layout";
 import { Callout } from "#/components/hub/status";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { modeQueryOptions } from "#/components/tools/multisig/policyQuery";
@@ -46,8 +45,6 @@ import { registerStep } from "../model/relay/register";
 import {
 	addEntries,
 	judgeSet,
-	type Level,
-	type Line,
 	parsePasted,
 	SIGNERS_MAX,
 	type SignerRow,
@@ -65,54 +62,14 @@ import { Btn, Card, linkButton, NetTag, SignsTag } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
 import { useMounted, useShellWallet } from "../shell/WalletBox";
+import {
+	HowMany,
+	LevelLine,
+	Lines,
+	PasteBox,
+	ThresholdMeaning,
+} from "../signers/parts";
 import { useWalletSigner } from "../useWalletSigner";
-
-const TONE: Record<Level, string> = {
-	blocked: "text-danger",
-	warning: "text-warning",
-	shown: "text-muted-foreground",
-};
-
-/** One line of the three levels: what stops the conversion, what to know, a plain fact. */
-function LevelLine({ line }: { line: Line }) {
-	const Icon =
-		line.level === "blocked"
-			? Ban
-			: line.level === "warning"
-				? TriangleAlert
-				: null;
-	return (
-		<li
-			className={cn("flex items-start gap-1.5 text-[13px]", TONE[line.level])}
-		>
-			{Icon && <Icon className="mt-[3px] size-3.5 shrink-0" aria-hidden />}
-			<span>
-				{line.level === "blocked" && (
-					<span className="sr-only">Stops this: </span>
-				)}
-				{line.level === "warning" && <span className="sr-only">Note: </span>}
-				{line.text}
-			</span>
-		</li>
-	);
-}
-
-function Lines({
-	lines,
-	className,
-}: {
-	lines: readonly Line[];
-	className?: string;
-}) {
-	if (lines.length === 0) return null;
-	return (
-		<ul className={cn("flex flex-col gap-1", className)}>
-			{lines.map((l) => (
-				<LevelLine key={l.code} line={l} />
-			))}
-		</ul>
-	);
-}
 
 /** The head every state of the screen shares. */
 function Page({
@@ -247,7 +204,6 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 
 	// ---- 2 · who signs
 	const [entries, setEntries] = useState<readonly string[]>([]);
-	const [input, setInput] = useState("");
 	const [pasteNote, setPasteNote] = useState("");
 	const [threshold, setThreshold] = useState<number | null>(null);
 	const wanted = useMemo(() => toLookUp(entries, account), [entries, account]);
@@ -270,7 +226,6 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 		setPasteNote(
 			CREATE.pasted(added.duplicates, added.overMax, pasted.rejected),
 		);
-		setInput("");
 	};
 	const remove = (address: string) => {
 		const next = entries.filter((e) => e.toLowerCase() !== address);
@@ -632,46 +587,7 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 				}
 			>
 				<div className="flex flex-col gap-3">
-					<form
-						className="flex flex-wrap items-start gap-2"
-						onSubmit={(e) => {
-							e.preventDefault();
-							if (input.trim()) add(input);
-						}}
-					>
-						<TextInput
-							mono
-							name="signer-address"
-							aria-label="Signer address"
-							placeholder="0x…"
-							value={input}
-							disabled={busy}
-							className="min-w-0 flex-1 basis-[280px]"
-							onChange={(e) => setInput(e.target.value)}
-							onPaste={(e) => {
-								// a pasted list goes straight into the rows
-								const text = e.clipboardData.getData("text");
-								if (parsePasted(text).addresses.length === 0) return;
-								e.preventDefault();
-								add(text);
-							}}
-						/>
-						<Btn
-							type="submit"
-							variant="outline"
-							disabled={busy || !input.trim()}
-						>
-							Add
-						</Btn>
-					</form>
-					<p className="-mt-1.5 text-xs text-muted-foreground">
-						{CREATE.pasteHint}
-					</p>
-					{pasteNote && (
-						<output className="block text-[13px] text-warning">
-							{pasteNote}
-						</output>
-					)}
+					<PasteBox disabled={busy} note={pasteNote} onAdd={add} />
 					{rows.length === 0 ? (
 						<p className="text-[13px] text-muted-foreground">
 							{CREATE.noSigners}
@@ -709,24 +625,7 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 					) : (
 						<HowMany n={n} value={k} disabled={busy} onChange={setThreshold} />
 					)}
-					{lines && (
-						<div className="flex flex-col gap-1 text-[13px]">
-							<p className="font-medium">{lines.summary}</p>
-							<p className="text-muted-foreground">{lines.stolen}</p>
-							<p className="text-muted-foreground">{lines.lost}</p>
-							{lines.warning && (
-								<ul>
-									<LevelLine
-										line={{
-											level: "warning",
-											code: "threshold",
-											text: lines.warning,
-										}}
-									/>
-								</ul>
-							)}
-						</div>
-					)}
+					{lines && <ThresholdMeaning lines={lines} />}
 					<p className="text-xs text-subtle-foreground">{CREATE.later}</p>
 				</div>
 			</Card>
@@ -884,71 +783,5 @@ function SignerLine({
 				</Btn>
 			</span>
 		</li>
-	);
-}
-
-/**
- * "How many must sign": one button per possible number, none chosen until
- * the reader chooses. (A default would silently decide 2 of 2.)
- */
-function HowMany({
-	n,
-	value,
-	disabled,
-	onChange,
-}: {
-	n: number;
-	value: number | null;
-	disabled: boolean;
-	onChange(k: number): void;
-}) {
-	const numbers = Array.from({ length: n }, (_, i) => i + 1);
-	return (
-		<div
-			role="radiogroup"
-			aria-label={`${CREATE.howManyTitle}, out of ${n}`}
-			className="flex flex-wrap items-center gap-1.5"
-			onKeyDown={(e) => {
-				if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-				e.preventDefault();
-				const at = value ?? (e.key === "ArrowRight" ? 0 : n + 1);
-				const next = Math.min(
-					n,
-					Math.max(1, at + (e.key === "ArrowRight" ? 1 : -1)),
-				);
-				onChange(next);
-				(
-					e.currentTarget.querySelector(
-						`[data-k="${next}"]`,
-					) as HTMLElement | null
-				)?.focus();
-			}}
-		>
-			{numbers.map((i) => (
-				// biome-ignore lint/a11y/useSemanticElements: the ARIA radio pattern on buttons, as in the hub's Segmented
-				<button
-					key={i}
-					type="button"
-					role="radio"
-					data-k={i}
-					aria-checked={value === i}
-					// with nothing chosen the first number takes the focus
-					tabIndex={value === i || (value === null && i === 1) ? 0 : -1}
-					disabled={disabled}
-					onClick={() => onChange(i)}
-					className={cn(
-						"h-8 min-w-9 rounded-md border px-2.5 font-mono text-[13px] tabular-nums transition-colors disabled:opacity-60",
-						value === i
-							? "border-brand bg-brand-soft font-semibold text-brand"
-							: "border-border-strong bg-surface text-foreground hover:bg-surface-2",
-					)}
-				>
-					{i}
-				</button>
-			))}
-			<span className="text-[13px] text-muted-foreground">
-				of {n} {n === 1 ? "signer" : "signers"}
-			</span>
-		</div>
 	);
 }

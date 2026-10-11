@@ -91,6 +91,36 @@ export const RELAY_COPY = {
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;
 
+/**
+ * What to check in the wallet before signing a proposal, by what the action
+ * is: the prompt shows the treasury and the finaliser every time, and then
+ * the fields of the action itself.
+ */
+const SIGN_HINTS: Readonly<Record<string, string>> = {
+	convertToMultiSigUser:
+		"Your wallet will show the treasury, the finaliser and the new list of signers with the number that must sign. Check them there.",
+	approveAgent:
+		"Your wallet will show the treasury, the finaliser and the address of the API wallet. Check them there.",
+	usdClassTransfer:
+		"Your wallet will show the treasury, the finaliser, the amount and the direction. Check them there.",
+};
+
+/** The actions that pay someone: the prompt names a destination and an amount. */
+const PAYS = ["sendAsset", "usdSend", "spotSend", "withdraw3"];
+const SIGN_HINT_OTHER =
+	"Your wallet will show the treasury, the finaliser and every field of the action. Check them there.";
+
+export function signHint(actionType: unknown): string {
+	if (typeof actionType !== "string") return SIGN_HINT_OTHER;
+	if (PAYS.includes(actionType)) return RELAY_COPY.underSign;
+	return SIGN_HINTS[actionType] ?? SIGN_HINT_OTHER;
+}
+
+export const SIGN_HINT_TEXTS: readonly string[] = [
+	...Object.values(SIGN_HINTS),
+	SIGN_HINT_OTHER,
+];
+
 /** Wording that must never appear in relay-era copy. */
 export const FORBIDDEN_CLAIMS: readonly RegExp[] = [
 	/\bprivate\b(?! key)/i,

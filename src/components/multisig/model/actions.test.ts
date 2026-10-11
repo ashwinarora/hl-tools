@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
 	A,
 	B,
+	C,
 	NONCE,
 	NOW,
 	OUTSIDER,
@@ -29,6 +30,7 @@ import {
 	formFromAction,
 	sourcePocket,
 } from "./actions";
+import { type SignerCheck, signersField } from "./signerSet";
 
 const PURR = {
 	name: "PURR",
@@ -206,16 +208,41 @@ const VALID: Record<string, { form: ActionForm; action: object }> = {
 			nonce: NONCE,
 		},
 	},
+	"changeSigners: another number": {
+		form: form({
+			kind: "changeSigners",
+			signers: signersField(POLICY.authorizedUsers, 3),
+		}),
+		action: {
+			type: "convertToMultiSigUser",
+			...HEAD,
+			signers: JSON.stringify({
+				authorizedUsers: POLICY.authorizedUsers,
+				threshold: 3,
+			}),
+			nonce: NONCE,
+		},
+	},
+	"changeSigners: back to a normal account": {
+		form: form({ kind: "changeSigners", signers: "null" }),
+		action: {
+			type: "convertToMultiSigUser",
+			...HEAD,
+			signers: "null",
+			nonce: NONCE,
+		},
+	},
 };
 
 describe("buildAction / buildProposalInput", () => {
-	it("lists the six kinds once each", () => {
+	it("lists the seven kinds once each", () => {
 		expect(ACTION_KINDS.map((k) => k.kind)).toEqual([
 			"sendUsdc",
 			"sendToken",
 			"usdClassTransfer",
 			"withdraw3",
 			"approveAgent",
+			"changeSigners",
 			"raw",
 		]);
 	});
@@ -833,6 +860,98 @@ describe("formFromAction: the older ways of sending come back as the send that r
 			expect(f.raw).toContain('"type": "sendAsset"');
 			expect(f.raw).not.toContain("nonce");
 		}
+	});
+});
+
+describe("changeSigners", () => {
+	const change = (signers: string, over: Partial<BuildContext> = {}) =>
+		buildAction(form({ kind: "changeSigners", signers }), ctx(over));
+	const swapped = signersField([A, B, OUTSIDER], 2);
+	const inUse = new Map<string, SignerCheck>([
+		[OUTSIDER, { state: "ready", role: "user", multiSig: null }],
+	]);
+
+	it("is a convertToMultiSigUser, whatever the form holds", () => {
+		expect(actionTypeOf(form({ kind: "changeSigners" }))).toBe(
+			"convertToMultiSigUser",
+		);
+	});
+
+	it("has nothing to propose while the list and the number are untouched", () => {
+		for (const signers of ["", signersField(POLICY.authorizedUsers, 2)]) {
+			const r = change(signers);
+			expect(codes(r.issues)).toEqual(["signers.unchanged"]);
+			expect(r.issues[0]?.message).toBe("Nothing changes yet.");
+			expect(r.action).toBeNull();
+			expect(fieldOf(r.issues[0] as Issue)).toBe("signers");
+		}
+	});
+
+	it("waits for the look-up of a new signer, then builds the whole new set", () => {
+		expect(codes(change(swapped).issues)).toEqual(["signers.checking"]);
+		const r = change(swapped, { signerChecks: inUse });
+		expect(r.issues).toEqual([]);
+		expect(r.action).toEqual({
+			type: "convertToMultiSigUser",
+			...HEAD,
+			signers: JSON.stringify({
+				authorizedUsers: [A, B, OUTSIDER].sort(),
+				threshold: 2,
+			}),
+			nonce: NONCE,
+		});
+	});
+
+	it("is stopped by what Hyperliquid would refuse, naming the address", () => {
+		const never = new Map<string, SignerCheck>([
+			[OUTSIDER, { state: "ready", role: "missing", multiSig: null }],
+		]);
+		const r = change(swapped, { signerChecks: never });
+		expect(codes(r.issues)).toEqual(["signers.blocked"]);
+		expect(r.issues[0]?.message).toContain(OUTSIDER.slice(0, 6));
+		expect(r.issues[0]?.message).toContain("Never used on Hyperliquid");
+		// the treasury cannot sign for itself
+		expect(codes(change(signersField([A, B, TREASURY], 2)).issues)).toEqual([
+			"signers.blocked",
+		]);
+		// a number that was cleared
+		expect(change(signersField([A, B], null)).issues[0]?.message).toBe(
+			"Choose how many must sign.",
+		);
+	});
+
+	it("only warns, in the form itself, about what is merely risky", () => {
+		// all keys required, and the proposer taking themself out
+		const r = change(signersField([B, C], 2), { createdBy: A });
+		expect(r.issues).toEqual([]);
+		expect(r.action).not.toBeNull();
+	});
+
+	it("needs the treasury's signers to have been read", () => {
+		const r = change(swapped, { policyAtCreation: null });
+		expect(codes(r.issues)).toEqual(["signers.unread"]);
+		expect(r.action).toBeNull();
+	});
+
+	it("is not taken as raw JSON, and says where it lives", () => {
+		const r = buildAction(
+			form({
+				kind: "raw",
+				raw: '{"type":"convertToMultiSigUser","signers":"null"}',
+			}),
+			ctx(),
+		);
+		expect(r.issues[0]?.fix).toContain("Change signers");
+	});
+
+	it("opens a re-proposed change in the form, with the action's own value", () => {
+		const built = change(swapped, { signerChecks: inUse }).action;
+		if (!built) throw new Error("does not build");
+		expect(formFromAction(built, "testnet")).toEqual({
+			chain: "hyperevm",
+			kind: "changeSigners",
+			signers: built.signers,
+		});
 	});
 });
 

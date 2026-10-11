@@ -18,7 +18,9 @@ import {
 	nonceWindow,
 	type Policy,
 	type Proposal,
+	parseSignersString,
 	type SignerSet,
+	signersString,
 	validateSignerSet,
 } from "@hl-tools/core";
 import { ADDRESS_RE } from "#/components/tools/multisig/model";
@@ -575,6 +577,61 @@ export function sameSet(
 		[...a.authorizedUsers].sort().join() ===
 			[...b.authorizedUsers].sort().join()
 	);
+}
+
+// ---------------------------------------------------------------- the form's one field
+
+/**
+ * What the "Change signers" form holds is the action's own `signers` value,
+ * and nothing beside it:
+ *   ""        untouched: the list and the number are the treasury's own
+ *   "null"    convert back to a normal account
+ *   a string  the signer set wanted, as Hyperliquid takes it
+ * A number that was cleared (signers were removed until it no longer fitted)
+ * is written as threshold 0, which no treasury can have.
+ */
+export interface Wanted {
+	/** The form asks for the conversion back to a normal account. */
+	readonly revert: boolean;
+	/** The signers wanted, lowercased. */
+	readonly entries: readonly Address[];
+	/** Null while no number is chosen. */
+	readonly threshold: number | null;
+}
+
+export function wantedSet(
+	signers: string,
+	current: Pick<Policy, "authorizedUsers" | "threshold"> | null,
+): Wanted {
+	const text = signers.trim();
+	const untouched: Wanted = {
+		revert: false,
+		entries: current?.authorizedUsers ?? [],
+		threshold: current ? current.threshold : null,
+	};
+	if (text === "") return untouched;
+	const parsed = parseSignersString(text);
+	if (parsed.revert) return { revert: true, entries: [], threshold: null };
+	// a string nobody could have made with the form: start from what there is
+	if (!parsed.set) return untouched;
+	return {
+		revert: false,
+		entries: parsed.set.authorizedUsers,
+		threshold: parsed.set.threshold >= 1 ? parsed.set.threshold : null,
+	};
+}
+
+/** The form's value for a list and a number (null: none chosen). */
+export function signersField(
+	entries: readonly string[],
+	threshold: number | null,
+): string {
+	return signersString({
+		authorizedUsers: [
+			...new Set(entries.map((e) => e.toLowerCase() as Address)),
+		],
+		threshold: threshold ?? 0,
+	});
 }
 
 // ---------------------------------------------------------------- waiting proposals

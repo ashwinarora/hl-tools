@@ -9,7 +9,7 @@ import { Check } from "lucide-react";
 import { useState } from "react";
 import { Callout, IssueList } from "#/components/hub/status";
 import { useNetworkStore } from "#/store/networkStore";
-import { RELAY_COPY } from "../model/relay/copy";
+import { RELAY_COPY, signHint } from "../model/relay/copy";
 import { relayActions } from "../model/relay/status";
 import { type Stage, shortAddress } from "../model/stage";
 import { useOpenProposals } from "../relay/openProposals";
@@ -153,7 +153,7 @@ export function YourPart({
 					})}
 				</ol>
 				<p className="mt-3 text-[13px] text-muted-foreground">
-					{RELAY_COPY.underSign}
+					{signHint(proposal.payload.action.type)}
 				</p>
 			</Card>
 		);
@@ -176,7 +176,7 @@ export function YourPart({
 						? "Your signature completes the threshold. Two wallet prompts, then it is sent."
 						: "One wallet prompt, then it is sent."
 					: stage.canSign
-						? `${RELAY_COPY.underSign}${chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
+						? `${signHint(proposal.payload.action.type)}${chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
 						: stage.hasSigned
 							? stage.phase === "ready"
 								? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to submit.`

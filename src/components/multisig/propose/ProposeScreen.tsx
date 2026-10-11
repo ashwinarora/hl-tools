@@ -45,6 +45,7 @@ import { Button } from "#/components/ui/button";
 import { errorMessage } from "#/hooks/useHyperliquid";
 import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 import { useReceiver } from "../live/useReceiver";
+import { useSignerChecks } from "../live/useSignerChecks";
 import {
 	ACTION_KINDS,
 	type ActionForm,
@@ -70,6 +71,7 @@ import { RELAY_COPY } from "../model/relay/copy";
 import { publishRow } from "../model/relay/push";
 import { isItself } from "../model/selfTreasury";
 import { costLine, spotAvailable } from "../model/send";
+import { toLookUp, wantedSet } from "../model/signerSet";
 import { linkTransport } from "../model/transport";
 import { TreasuryNames, useNames } from "../names/Names";
 import { addSignature, publishProposal } from "../relay/api";
@@ -85,6 +87,7 @@ import { useTreasuryNames } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
 import { ActionFields } from "./ActionFields";
+import { ChangeSignersFields } from "./ChangeSignersFields";
 
 /** Shown only once the user has tried to create: an untouched form is not an error. */
 const REQUIRED = new Set(["field.required", "finaliser.required"]);
@@ -100,16 +103,22 @@ const backLink =
 export function ProposeScreen({
 	treasury,
 	supersedes,
+	kind,
 }: {
 	treasury?: string;
 	supersedes?: string;
+	/** The kind of action the form opens on, when a link asks for one. */
+	kind?: string;
 }) {
 	const network = useNetwork();
 	const hydrated = useNetworkHydrated();
 	const navigate = useNavigate();
 	const client = useQueryClient();
 	const wallet = useWalletSigner();
-	const [form, setForm] = useState<ActionForm>(DEFAULT_FORM);
+	const [form, setForm] = useState<ActionForm>(() => {
+		const asked = ACTION_KINDS.find((k) => k.kind === kind)?.kind;
+		return asked ? { ...DEFAULT_FORM, kind: asked } : DEFAULT_FORM;
+	});
 	const [attempted, setAttempted] = useState(false);
 	const [failure, setFailure] = useState<{
 		title: string;
@@ -184,6 +193,21 @@ export function ProposeScreen({
 	// use, and which of its balances the money lands in.
 	const lookup = useReceiver(network, hydrated ? destinationOf(form) : null);
 
+	// A change of signers: what Hyperliquid says about the addresses that would
+	// be new, asked once each (the signers of now are signers already).
+	const wantedSigners = useMemo(
+		() =>
+			form.kind === "changeSigners" && address && state.policy
+				? toLookUp(
+						wantedSet(form.signers, state.policy).entries,
+						address,
+						state.policy.authorizedUsers,
+					)
+				: NO_SIGNERS,
+		[form.kind, form.signers, address, state.policy],
+	);
+	const signerLookups = useSignerChecks(network, wantedSigners);
+
 	const chain = innerChain(network, form.chain);
 	const context = (nonce: number) => ({
 		network,
@@ -198,6 +222,7 @@ export function ProposeScreen({
 		// absent while it is on its way; null once the read has failed
 		mode: !hydrated || state.modePending ? undefined : state.mode,
 		receiver: lookup.receiver,
+		signerChecks: signerLookups.checks,
 		createdBy: wallet.address,
 		supersedes: superseded?.digest ?? null,
 		policyAtCreation: state.policy,
@@ -439,25 +464,38 @@ export function ProposeScreen({
 											label: k.label,
 										}))}
 									/>
-									<ActionFields
-										form={form}
-										set={set}
-										error={error}
-										network={network}
-										tokens={universe.data?.tokens ?? null}
-										held={
-											state.spot
-												?.filter((b) => Number(b.total) !== 0)
-												.map((b) => b.token)
-												.filter((t): t is number => t !== null) ?? []
-										}
-										tokensLoading={universe.isFetching}
-										mode={state.mode}
-										receiver={lookup.receiver}
-										cost={cost}
-										from={sourcePocket(form, context(previewNonce))}
-										movable={movable}
-									/>
+									{form.kind === "changeSigners" ? (
+										<ChangeSignersFields
+											signers={form.signers}
+											onChange={(v) => set("signers", v)}
+											current={state.policy}
+											treasury={address as Address}
+											checks={signerLookups.checks}
+											recheck={signerLookups.recheck}
+											me={me}
+											finaliser={form.finaliser}
+										/>
+									) : (
+										<ActionFields
+											form={form}
+											set={set}
+											error={error}
+											network={network}
+											tokens={universe.data?.tokens ?? null}
+											held={
+												state.spot
+													?.filter((b) => Number(b.total) !== 0)
+													.map((b) => b.token)
+													.filter((t): t is number => t !== null) ?? []
+											}
+											tokensLoading={universe.isFetching}
+											mode={state.mode}
+											receiver={lookup.receiver}
+											cost={cost}
+											from={sourcePocket(form, context(previewNonce))}
+											movable={movable}
+										/>
+									)}
 								</div>
 							</Panel>
 							<Panel
