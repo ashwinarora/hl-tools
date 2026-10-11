@@ -705,6 +705,84 @@ A second unknown answer turned up while cleaning up: `User has pending agent rem
 - "More than ten treasuries" and "live updates refused" have no browser run: the first needs eleven real multi-sigs listing one wallet, the second a limit Hyperliquid does not enforce.
 - The committed captures of "On Hyperliquid" are of a tall viewport, not of the full page (see DECISIONS.md).
 
+## 12. Multisig — sends as `sendAsset`, account modes, the fee notice
+
+Verified 2026-10-11 against Hyperliquid testnet and the local Supabase stack, in the same two browsers as §11: the user's Brave with Rabby as the account **S1** (every wallet prompt read before it was approved; no key read, typed or stored), and the isolated context signed in as lab signer **A** with a stand-in wallet that cannot sign. Treasuries: **T2**, the manual 2-of-3 of S1, A and B; **TU**, a 2-of-3 of the same three in unified account mode, made for this round; the **lab treasury** (manual, lab keys A, B, C); and **TUL**, a unified 2-of-3 of lab keys only, made for the committed captures. No migration changed in this round, so the database tests were not run again.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 73 files, 1,968 tests (core 1,288, app 680), all passing |
+| Core coverage | `cd packages/hl-core && bunx vitest run --coverage` | 100 % statements, branches, functions and lines for `adapter`, `multisig` and `rules` |
+| Relay integration | `bun run test:relay` | 48 tests, all passing (unchanged) |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean; the relay client is still one lazy chunk, imported only by the Multisig layout |
+
+New test files: `test/multisig/transfer.test.ts` (core: every recorded send replayed against `sendRefusal`, `landsIn` and `activationCharge`), `model/send.test.ts`, `model/sendCheck.test.ts`, `model/mode.test.ts` (app), `src/store/hydrated.test.ts` (a jsdom hydration test).
+
+### What was measured first (testnet, lab keys, scripts)
+
+Recorded into `fixtures/multisig/send-modes.json` (78 sends, 6 mode switches) and `activation-fee.json` (49 sends). No bridge withdrawal was made.
+
+| Question | Answer |
+|---|---|
+| Which ways of sending does a manual account have? (`default` and `disabled` behave alike) | All of them: `usdSend` (perps to perps), `spotSend` (spot to spot), `sendAsset` between any two balances, `usdClassTransfer` between its own two |
+| And a unified account? | `usdSend`, `spotSend`, `usdClassTransfer`: "Action disabled when unified account is active". `sendAsset` from perps: "Unified account only supports sending assets through spot". Only `sendAsset` from spot goes through |
+| Does the receiver's mode ever refuse a send? | No. A manual receiver gets it in the balance named; a unified one in its single balance, whatever was named |
+| A token that is not USDC, into a perps balance | Refused ("Invalid token") |
+| The same through a multi-sig | The same answers. An account keeps its mode when it becomes a multi-sig |
+| First send to an address never used, by `usdSend` | 1 USDC is taken out of the amount: 5 sent, 4 arrive. An amount of 1 or less is refused ("Usd transfer is smaller than fee.") |
+| The same by `spotSend` or `sendAsset` | The receiver gets the whole amount. The sender pays 1 USDC on top: from its spot USDC when what is left there covers it, from perps otherwise; if neither can, "Insufficient USDC balance for token transfer gas." |
+| A send to an address in use | Costs nothing, by every method |
+| An API wallet address that never held funds | Charged like a new address, and stays an API wallet |
+| A unified account with a position and a resting order: how much can be sent? | Exactly the USDC total less `hold`. One cent more was refused, and so was the "after maintenance" figure Hyperliquid also reports |
+
+### The send form, the mode, the check before submitting (browser)
+
+| Check | Expected | Result |
+|---|---|---|
+| The mode is read and shown | T2 "manual account", TU "unified account", with the signer set and API wallets | ✅ three `info` requests on load and three a minute, none after leaving the page |
+| A mode changed elsewhere | noticed within a minute | ✅ (the answer was replaced in the page; the tag, the balances shown and the choices offered followed at the next read) |
+| Send USDC on a manual treasury | "Taken from" with each balance, "Arrives in", the action a `sendAsset` | ✅ |
+| Send USDC on a unified treasury | no "Taken from", no "Perps ↔ spot", taken from the one balance (`sourceDex: "spot"`) | ✅ |
+| The fee line | "costs nothing" for an address in use; "costs 1 USDC, once", who pays and from where, for a new one; "one balance" for a unified receiver | ✅ all three, and "cannot pay both" when the balances do not cover amount plus fee |
+| A send to a new address, end to end | S1 proposes 0.5 USDC from T2, Rabby shows `HyperliquidTransaction:SendAsset`, lab B signs, S1 submits | ✅ accepted. T2's perps balance 2.3 → 0.8 (0.5 and the 1 USDC fee), the receiver's 0 → 0.5; "On Hyperliquid" shows the row with fee 1 USDC, tied to the proposal |
+| The check before submitting | an old-style `usdSend` proposed for TU by script, signed by A and B, S1 presses Submit | ✅ "Not submitted. Nothing was signed or sent…": five fresh `info` reads, no wallet prompt, no request to the exchange. The page already said "Cannot be sent while the treasury is a unified account" with "Re-propose" |
+| Re-propose from there | the new form, as Send USDC from the one balance | ✅ |
+| The Overview of a unified treasury | TU with a 0.0002 BTC long and a resting buy placed by script | ✅ Balance 24.29, Can be moved now 21.97, In use 2.32, against Hyperliquid's total 24.287578 and hold 2.315777. The form warned at 23 USDC: less than the balance, more than can be moved |
+| A manual treasury | three figures as before | ✅ |
+
+### Negative matrix
+
+| Case | Expected | Result |
+|---|---|---|
+| Two sends pending, the newer submitted first | both go through; no ordering warning | ✅ S1 submitted the newer (nonce …917741), then the older (…905151): both accepted |
+| An old `usdSend` still pending, a newer one carried out | the newer one's page warns that it shuts the older out; the older reads "Cannot be submitted any more"; "Re-propose" opens the new form | ✅ and the check before submitting let the valid old-style send through |
+| A new address the treasury cannot pay the fee for | warning in the form; the check stops the submission | ✅ 0.5 USDC with 0.6 in the treasury: `transfer-gas`, nothing signed or sent |
+| The address comes into use before submitting | the fee line says "costs nothing"; the same proposal goes through | ✅ accepted, 0.6 → 0.1, no fee. ❌ → fixed first: a page left open kept announcing the fee; it now asks again every minute while the address is new |
+| A send from perps proposed for a unified treasury | the form warns; the proposal's page says it cannot be sent, with "Re-propose" | ✅ |
+| A manual treasury whose money sits in spot | the form defaults to Spot | ✅ (the lab treasury, moved by script and back) |
+| A unified receiver | no "Arrives in" question | ✅ |
+| The receiver look-up fails, or is slow | "could not be checked", creating still possible; "Checking…" then the answer | ✅ |
+| The mode cannot be read | both balances offered, with a warning | ❌ → fixed: the form said nothing. It now warns that a unified treasury would be refused a payment from perps (`actions.test.ts`) |
+| `portfolioMargin`, `dexAbstraction`, an unknown value | like unified and labelled not tested; like manual and labelled; both balances with a caution | ✅ (answers replaced in the page) |
+| Send spot token | decimals per token (PURR 5, HYPE 8), USDC allowed, spot to spot | ✅. ❌ → fixed: a token the treasury holds none of gave no balance warning |
+| A send written as raw JSON | the fee line under the JSON box | ❌ → fixed: it was shown under the Destination field only |
+| Relay not configured; signed out; relay unreachable | mode, balances, fee line and creating work from Hyperliquid alone | ✅ all three (a second dev server without the relay variables; another origin; requests to the relay refused in the page) |
+| Switching between treasuries of different modes | only the one on screen is read | ✅ recorded for a minute each: three control reads for the treasury on screen, none for the one left; its four subscriptions dropped on the same socket |
+| Opening `/multisig/propose` directly | no hydration warning | ❌ → fixed: an occasional mismatch, from the network store's "restored" flag (`hydrated.test.ts`); two reloads clean afterwards |
+| Phone width, both themes | no sideways scroll on the form, the proposal page and the Overview | ✅ `scrollWidth` = 375 |
+| The newest row of "On Hyperliquid" | tied to its proposal first | ❌ → fixed: rows were looked up oldest first (`match.test.ts`) |
+
+### Not run, and limits of what was run
+
+- Everything ran on testnet and the local stack. Nothing was signed or submitted on mainnet.
+- Portfolio margin and the discontinued DEX abstraction were not measured (an account cannot simply be put into them); the page treats them by the documentation and says so.
+- No bridge withdrawal was made, so nothing is known about a withdrawal from a unified account. "Withdraw" is unchanged.
+- A treasury's mode was not switched through the page: the tool does not offer it. TU and TUL were switched as plain accounts before they became multi-sigs.
+- `sendAsset` to another perps market run by a builder, to a sub-account or to HyperEVM is not built by the form and was not tried through it.
+- The read-only Multisig Inspector still shows a unified account with a perps and a spot balance.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
@@ -802,11 +880,13 @@ Also verified at the end: `bun --bun run test` (277 passing after this round), `
 | Multisig Inspector — account (2026-10-09) | [view](docs/screenshots/multisig-dark-desktop.jpeg) | [view](docs/screenshots/multisig-light-desktop.jpeg) | [view](docs/screenshots/multisig-dark-mobile.jpeg) | [view](docs/screenshots/multisig-light-mobile.jpeg) |
 | Multisig Inspector — envelope (2026-10-09) | [view](docs/screenshots/multisig-envelope-dark-desktop.jpeg) | [view](docs/screenshots/multisig-envelope-light-desktop.jpeg) | [view](docs/screenshots/multisig-envelope-dark-mobile.jpeg) | [view](docs/screenshots/multisig-envelope-light-mobile.jpeg) |
 | Multisig Signer — start, `/multisig/open` (2026-10-10, new shell) | [view](docs/screenshots/multisig-sign-dark-desktop.jpeg) | [view](docs/screenshots/multisig-sign-light-desktop.jpeg) | [view](docs/screenshots/multisig-sign-dark-mobile.jpeg) | [view](docs/screenshots/multisig-sign-light-mobile.jpeg) |
-| Multisig Signer — propose (2026-10-10, new shell) | [view](docs/screenshots/multisig-propose-dark-desktop.jpeg) | [view](docs/screenshots/multisig-propose-light-desktop.jpeg) | [view](docs/screenshots/multisig-propose-dark-mobile.jpeg) | [view](docs/screenshots/multisig-propose-light-mobile.jpeg) |
+| Multisig — propose, the send form on a manual treasury (2026-10-11) | [view](docs/screenshots/multisig-propose-dark-desktop.jpeg) | [view](docs/screenshots/multisig-propose-light-desktop.jpeg) | [view](docs/screenshots/multisig-propose-dark-mobile.jpeg) | [view](docs/screenshots/multisig-propose-light-mobile.jpeg) |
+| Multisig — propose, the send form on a unified treasury (2026-10-11) | [view](docs/screenshots/multisig-propose-unified-dark-desktop.jpeg) | [view](docs/screenshots/multisig-propose-unified-light-desktop.jpeg) | [view](docs/screenshots/multisig-propose-unified-dark-mobile.jpeg) | [view](docs/screenshots/multisig-propose-unified-light-mobile.jpeg) |
 | Multisig — proposal, with "seen" marks (2026-10-11) | [view](docs/screenshots/multisig-proposal-dark-desktop.jpeg) | [view](docs/screenshots/multisig-proposal-light-desktop.jpeg) | [view](docs/screenshots/multisig-proposal-dark-mobile.jpeg) | [view](docs/screenshots/multisig-proposal-light-mobile.jpeg) |
 | Multisig — landing, signed out (2026-10-10) | [view](docs/screenshots/multisig-landing-dark-desktop.jpeg) | [view](docs/screenshots/multisig-landing-light-desktop.jpeg) | [view](docs/screenshots/multisig-landing-dark-mobile.jpeg) | [view](docs/screenshots/multisig-landing-light-mobile.jpeg) |
 | Multisig — Needs you, with "While you were away" (2026-10-11) | [view](docs/screenshots/multisig-inbox-dark-desktop.jpeg) | [view](docs/screenshots/multisig-inbox-light-desktop.jpeg) | [view](docs/screenshots/multisig-inbox-dark-mobile.jpeg) | [view](docs/screenshots/multisig-inbox-light-mobile.jpeg) |
 | Multisig — treasury, Overview (2026-10-11) | [view](docs/screenshots/multisig-overview-dark-desktop.jpeg) | [view](docs/screenshots/multisig-overview-light-desktop.jpeg) | [view](docs/screenshots/multisig-overview-dark-mobile.jpeg) | [view](docs/screenshots/multisig-overview-light-mobile.jpeg) |
+| Multisig — treasury, Overview of a unified account (2026-10-11) | [view](docs/screenshots/multisig-overview-unified-dark-desktop.jpeg) | [view](docs/screenshots/multisig-overview-unified-light-desktop.jpeg) | [view](docs/screenshots/multisig-overview-unified-dark-mobile.jpeg) | [view](docs/screenshots/multisig-overview-unified-light-mobile.jpeg) |
 | Multisig — treasury, On Hyperliquid (2026-10-11, top of the table) | [view](docs/screenshots/multisig-onchain-dark-desktop.jpeg) | [view](docs/screenshots/multisig-onchain-light-desktop.jpeg) | [view](docs/screenshots/multisig-onchain-dark-mobile.jpeg) | [view](docs/screenshots/multisig-onchain-light-mobile.jpeg) |
 | Multisig — treasury, Signing log (2026-10-11) | [view](docs/screenshots/multisig-treasury-dark-desktop.jpeg) | [view](docs/screenshots/multisig-treasury-light-desktop.jpeg) | [view](docs/screenshots/multisig-treasury-dark-mobile.jpeg) | [view](docs/screenshots/multisig-treasury-light-mobile.jpeg) |
 | Multisig — nickname dialog (2026-10-11) | [view](docs/screenshots/multisig-nickname-dark-desktop.jpeg) | [view](docs/screenshots/multisig-nickname-light-desktop.jpeg) | [view](docs/screenshots/multisig-nickname-dark-mobile.jpeg) | [view](docs/screenshots/multisig-nickname-light-mobile.jpeg) |
