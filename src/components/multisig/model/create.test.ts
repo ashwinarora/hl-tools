@@ -139,6 +139,12 @@ describe("the wizard's sentences", () => {
 			"Not addresses: a, b, c and 2 more.",
 		);
 	});
+	it("open with a sentence that also holds where nobody signs in", () => {
+		// a build without a relay shows the same page for a merely connected wallet
+		expect(CREATE.meta).not.toMatch(/sign(ed)? in/i);
+		expect(CREATE.otherAccountNoRelay).not.toMatch(/sign (in|out)/i);
+		expect(CREATE.switchNowNoRelay).not.toMatch(/sign (in|out)/i);
+	});
 	it("say what changes, with the numbers in them", () => {
 		expect(CREATE.headline(TREASURY)).toContain("your own account, 0x");
 		expect(CREATE.before(TREASURY, 2, 3)).toContain(

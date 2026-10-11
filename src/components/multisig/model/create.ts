@@ -18,7 +18,8 @@ const plural = (n: number, one: string, many: string) =>
 
 export const CREATE = {
 	title: "Create a treasury",
-	meta: "Turn the account you are signed in with into a treasury that its signers control together.",
+	/** Also read in a build without a relay, where nobody signs in. */
+	meta: "Turn this wallet's own account into a treasury that its signers control together.",
 	/** The first thing on the page: which account this is about. */
 	headline: (account: string) =>
 		`You are converting your own account, ${shortAddress(account)}.`,
