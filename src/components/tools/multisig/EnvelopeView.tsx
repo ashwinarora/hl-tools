@@ -49,7 +49,7 @@ export const FLAG_TEXT: Record<
 	{ label: string; tone: "warning" | "danger" | "info" }
 > = {
 	agent_bypass: {
-		label: "approves an API wallet (trading becomes single-key)",
+		label: "approves an API wallet (one key acts for the account)",
 		tone: "warning",
 	},
 	destructive: { label: "reverts to a normal user", tone: "danger" },

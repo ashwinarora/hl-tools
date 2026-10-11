@@ -10,6 +10,7 @@ import {
 import { Callout } from "#/components/hub/status";
 import { cn } from "#/lib/utils";
 import type { ActionForm, PocketChoice, Receiver } from "../model/actions";
+import { API_WALLET_PROPOSE } from "../model/apiWallet";
 import { RELAY_COPY } from "../model/relay/copy";
 import type { CostLine } from "../model/send";
 import { shortAddress } from "../model/stage";
@@ -326,10 +327,9 @@ export function ActionFields({
 		case "approveAgent":
 			return (
 				<>
-					<Callout tone="warning" title="Trading becomes single-key">
-						{MULTISIG_FACTS.find((f) => f.id === "agent-bypass")?.text} Whoever
-						holds this key can place and cancel orders with the treasury's funds
-						on their own. It cannot withdraw or send.
+					<Callout tone="warning" title="One key will act for the treasury">
+						{MULTISIG_FACTS.find((f) => f.id === "agent-bypass")?.text}{" "}
+						{API_WALLET_PROPOSE}
 					</Callout>
 					<Field
 						label="API wallet address"

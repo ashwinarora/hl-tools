@@ -8,6 +8,7 @@ import {
 } from "#/components/hub/status";
 import { AddressLine, short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
+import { API_WALLET_ROW } from "./model/apiWallet";
 import { balanceView, modeLabel } from "./model/mode";
 import { When } from "./shell/live";
 import type { TreasuryState } from "./useTreasuryState";
@@ -103,7 +104,7 @@ export function TreasuryStrip({
 								),
 							},
 							{
-								label: "API wallets (trade without the multi-sig)",
+								label: API_WALLET_ROW,
 								value:
 									state.agents === null ? (
 										"could not be loaded"

@@ -41,7 +41,7 @@ export const HELP = {
 	},
 	apiWallet: {
 		title: "API wallet",
-		body: "A separate key the treasury has allowed to trade for it, usually for a bot. It places and cancels orders by itself, without the signers. It cannot withdraw funds. Approve one only for a bot you trust.",
+		body: "A separate key the treasury has allowed to act for it, usually for a bot. Without the signers it can trade with everything the treasury holds and move it into vaults. It cannot send funds to another account or withdraw them. Approve one only for a bot you trust.",
 	},
 	movable: {
 		title: "Can be moved now",

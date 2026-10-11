@@ -76,7 +76,7 @@ export const ACTION_KINDS: readonly {
 		kind: "approveAgent",
 		label: "Approve API wallet",
 		description:
-			"Let another key trade for this account without the multi-sig.",
+			"Let another key act for this account without the signers: trade, and move its money into vaults.",
 	},
 	{
 		kind: "raw",

@@ -372,7 +372,7 @@ describe("awayItems: API wallets", () => {
 			chain: { ledger: null, agents: agents(["rebalancer", BOT]) },
 		});
 		expect(got.map((x) => partsText(x.parts))).toEqual([
-			`An API wallet was approved with no proposal on record: “rebalancer” ${short(BOT)}. It can trade for this treasury.`,
+			`An API wallet was approved with no proposal on record: “rebalancer” ${short(BOT)}. It can trade with everything this treasury holds and move it into vaults.`,
 			`An API wallet is no longer approved: ${short(BOT2)}. It was removed, replaced, or it expired.`,
 		]);
 		expect(got.every((x) => x.at === null)).toBe(true);
@@ -429,7 +429,7 @@ describe("awayItems: API wallets", () => {
 		});
 		expect(named).toContain(`“${"x".repeat(40)}…” ${short(BOT)}`);
 		expect(unnamed).toBe(
-			`An API wallet was approved with no proposal on record: ${short(BOT2)}. It can trade for this treasury.`,
+			`An API wallet was approved with no proposal on record: ${short(BOT2)}. It can trade with everything this treasury holds and move it into vaults.`,
 		);
 	});
 });

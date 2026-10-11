@@ -341,7 +341,7 @@ export function awayItems(i: {
 			out.push({
 				key: `agent+:${address}`,
 				at: null,
-				parts: say`An API wallet was approved with no proposal on record: ${agentName(a.name)}${{ text: shortAddress(address), who: address }}. It can trade for this treasury.`,
+				parts: say`An API wallet was approved with no proposal on record: ${agentName(a.name)}${{ text: shortAddress(address), who: address }}. It can trade with everything this treasury holds and move it into vaults.`,
 				go: { kind: "tab", tab: "overview" },
 			});
 		}

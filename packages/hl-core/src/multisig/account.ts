@@ -56,7 +56,7 @@ function roleSummary(role: UserRole | null): string {
 		case "user":
 			return "A normal user: its own key signs every action. It may have been a multi-sig user before (load recent actions to see conversions).";
 		case "agent":
-			return `An API wallet (agent) of ${role.data.user}. Agents sign L1 actions for their master and cannot be multi-sig users or inner signers.`;
+			return `An API wallet (agent) of ${role.data.user}. Agents sign L1 actions for their master and cannot sign a multi-sig's inner actions for it. An API wallet address that has received funds can itself be listed as a signer.`;
 		case "vault":
 			return "A vault. Vaults are driven by their leader's account; multi-sig applies to the leader, not the vault address.";
 		case "subAccount":

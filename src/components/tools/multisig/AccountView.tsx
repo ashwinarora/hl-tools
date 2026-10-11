@@ -142,7 +142,7 @@ export function AccountView({
 					<EmptyState
 						icon={UsersRound}
 						title="Look up a multi-sig account"
-						description="Signers and threshold, approved API wallets (which bypass the multi-sig for trading), balances, open orders, health flags and recent actions."
+						description="Signers and threshold, approved API wallets (which act for the account without the multi-sig), balances, open orders, health flags and recent actions."
 						sample="0xf8365a35694f401a554e4ffa51b5afe3b203d148"
 						action={
 							<Button size="sm" variant="outline" onClick={onSample}>
