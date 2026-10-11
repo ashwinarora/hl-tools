@@ -274,7 +274,7 @@ export function ProposalView({
 	const lookup = useReceiver(
 		target.network,
 		COSTED.has(stage.phase) ? payee : null,
-		{ settleMs: 0 },
+		{ settleMs: 0, recheckMs: CONTROL_REFRESH_MS },
 	);
 	// The treasury's mode can rule the action out whatever else holds: said
 	// here, before anyone signs, with the way out.

@@ -82,6 +82,20 @@ export function receiverOf(role: unknown, modeRaw: unknown): Receiver {
 	}
 }
 
+/**
+ * How soon to ask about a receiver again on a page that stays open: only an
+ * address that was new (or could not be told) can turn into one in use, and
+ * an address in use stays so. False: never.
+ */
+export function receiverRecheckMs(
+	receiver: Receiver | null | undefined,
+	everyMs: number,
+): number | false {
+	return receiver?.status === "new" || receiver?.status === "unknown"
+		? everyMs
+		: false;
+}
+
 export interface Refusal {
 	/** The error catalogue's id for what Hyperliquid would answer. */
 	readonly code: string;

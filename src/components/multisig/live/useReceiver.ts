@@ -2,7 +2,7 @@ import { infoClient, type Network } from "@hl-tools/core";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type { Receiver } from "../model/actions";
-import { receiverOf } from "../model/send";
+import { receiverOf, receiverRecheckMs } from "../model/send";
 
 /**
  * What Hyperliquid knows about an address a send names: whether it was ever
@@ -53,12 +53,24 @@ export function useReceiver(
 	network: Network,
 	/** A whole, lowercased address, or null. */
 	destination: string | null,
-	options: { readonly settleMs?: number } = {},
+	options: {
+		readonly settleMs?: number;
+		/**
+		 * On a page that stays open: ask again this often while the address is
+		 * still new, so the fee stops being announced once it has come into use.
+		 */
+		readonly recheckMs?: number;
+	} = {},
 ): ReceiverLookup {
 	const settled = useSettled(destination, options.settleMs ?? 400);
+	const recheckMs = options.recheckMs;
 	const query = useQuery({
 		...receiverQueryOptions(network, settled ?? ""),
 		enabled: settled !== null,
+		refetchInterval: recheckMs
+			? (q) => receiverRecheckMs(q.state.data, recheckMs)
+			: false,
+		refetchIntervalInBackground: false,
 	});
 	if (destination === null) return { state: "idle", receiver: null };
 	// typed a moment ago: not asked yet

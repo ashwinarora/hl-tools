@@ -14,6 +14,7 @@ import {
 	modeRefusal,
 	preflight,
 	receiverOf,
+	receiverRecheckMs,
 	type SendFacts,
 	spotAvailable,
 } from "./send";
@@ -99,6 +100,20 @@ describe("receiverOf", () => {
 			status: "active",
 			mode: null,
 		});
+	});
+});
+
+describe("receiverRecheckMs", () => {
+	it("asks again only about an address that can still come into use", () => {
+		expect(receiverRecheckMs(FRESH, 60_000)).toBe(60_000);
+		expect(receiverRecheckMs({ status: "unknown", mode: null }, 60_000)).toBe(
+			60_000,
+		);
+		for (const status of ["active", "agent", "other"] as const)
+			expect(receiverRecheckMs({ status, mode: MANUAL }, 60_000)).toBe(false);
+		// not read yet: the first read is on its way, no second one beside it
+		expect(receiverRecheckMs(null, 60_000)).toBe(false);
+		expect(receiverRecheckMs(undefined, 60_000)).toBe(false);
 	});
 });
 
