@@ -381,6 +381,8 @@ export function ActionFields({
 						aria-invalid={!!error("raw")}
 						data-private
 					/>
+					{/* a send written by hand pays somebody too: the same line as under a destination */}
+					<CostNote line={cost} />
 				</Field>
 			);
 	}

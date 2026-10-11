@@ -226,6 +226,7 @@ export function ProposeScreen({
 		(i) => i.severity !== "error" || fieldOf(i) === null,
 	);
 	const action = prepared?.action ?? null;
+	const described = action ? describeAction(action) : null;
 	const flags = prepared?.flags ?? [];
 	const unified = state.mode?.kind === "unified";
 	const movable = {
@@ -556,12 +557,23 @@ export function ProposeScreen({
 								}
 								description="What signers will be asked to sign. The nonce and the digest are fixed when you create."
 							>
-								{action ? (
+								{action && described ? (
 									<div className="space-y-4">
 										<div>
 											<p className="text-base font-medium [overflow-wrap:anywhere]">
-												{describeAction(action).headline}
+												{described.headline}
 											</p>
+											{described.lines.length > 0 && (
+												// what the proposal's page will say under the headline:
+												// which balance it leaves, where it arrives
+												<ul className="mt-1.5 space-y-0.5 text-sm text-muted-foreground">
+													{described.lines.map((line) => (
+														<li key={line} className="[overflow-wrap:anywhere]">
+															{line}
+														</li>
+													))}
+												</ul>
+											)}
 											<div className="mt-2 flex flex-wrap gap-2">
 												{flags.map((f) => (
 													<Pill key={f} tone={FLAG_TEXT[f]?.tone ?? "info"}>
