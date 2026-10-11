@@ -227,6 +227,52 @@ export function listEvents(
 	}, eventRows);
 }
 
+/**
+ * The newest signatures given for a treasury's proposals: who, and when.
+ * Fewer rows than `limit` means there are no older ones.
+ */
+export function listSignatureEvents(
+	client: RelayClient,
+	network: Network,
+	treasury: Address,
+	limit: number,
+): Promise<Result<Parsed<EventRow>>> {
+	return read(
+		() =>
+			client
+				.from("events")
+				.select(EVENT)
+				.eq("network", network)
+				.eq("treasury", treasury)
+				.eq("kind", "signature_added")
+				.order("id", { ascending: false })
+				.limit(limit),
+		eventRows,
+	);
+}
+
+/** One signer's newest signature for a treasury; null when there is none on record. */
+export function lastSignatureOf(
+	client: RelayClient,
+	network: Network,
+	treasury: Address,
+	signer: Address,
+): Promise<Result<EventRow | null>> {
+	return read(
+		() =>
+			client
+				.from("events")
+				.select(EVENT)
+				.eq("network", network)
+				.eq("treasury", treasury)
+				.eq("kind", "signature_added")
+				.eq("actor", signer)
+				.order("id", { ascending: false })
+				.limit(1),
+		(data) => eventRows(data).rows[0] ?? null,
+	);
+}
+
 /** The events of one proposal (who signed, who took a signature back, how it ended). */
 export function listProposalEvents(
 	client: RelayClient,

@@ -32,8 +32,9 @@ import { approvalOf } from "../model/chain/match";
 import { CHANGE } from "../model/change";
 import { balanceView, modeLabel } from "../model/mode";
 import { RELAY_COPY } from "../model/relay/copy";
+import { type LastSigned, lastSignedText } from "../model/relay/lastSigned";
 import type { TreasuryRow } from "../model/relay/rows";
-import { fromNow } from "../model/time";
+import { fromNow, localDateTime } from "../model/time";
 import { Who } from "../names/Names";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
@@ -41,6 +42,11 @@ import { ago, Btn, Card, linkButtonSm, PersonRow, Tag } from "../shell/kit";
 import { Figure, SourceLine, toneOf, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
 import type { KnownProposal } from "./useKnownProposals";
+import { useLastSigned } from "./useLastSigned";
+
+/** The exact moment behind "last signed 2 days ago", for the hover. */
+const signedTitle = (l: LastSigned | undefined) =>
+	l?.kind === "signed" ? localDateTime(l.at) : undefined;
 
 const DAY = 86_400_000;
 /** An API wallet this close to its expiry is pointed out. */
@@ -271,6 +277,8 @@ export function OverviewTab({
 	// and for an account that is no longer a multi-sig
 	const frozen = treasury ? treasury.frozenAt !== null : false;
 	const signers = state.policy?.authorizedUsers ?? treasury?.signers ?? [];
+	// from the relay's history: only where the relay lists the treasury for this wallet
+	const signed = useLastSigned(network, address, signers, !!treasury);
 	const threshold = state.policy?.threshold ?? treasury?.threshold ?? null;
 	const active = state.agents?.filter((g) => g.validUntil > now).length ?? null;
 
@@ -424,6 +432,11 @@ export function OverviewTab({
 					title={
 						<span className="inline-flex items-center gap-1.5">
 							{frozen ? "Last known signers" : "Signers"} <Help k="signer" />
+							{signed && (
+								<span className="inline-flex items-center gap-1 text-xs font-normal text-subtle-foreground">
+									· last signed <Help k="lastSigned" />
+								</span>
+							)}
 						</span>
 					}
 					actions={
@@ -463,6 +476,14 @@ export function OverviewTab({
 								trailing={a === me ? <Tag tone="you">you</Tag> : null}
 							>
 								<Who address={a} editable className="text-[13px]" />
+								{lastSignedText(signed?.get(a), now) && (
+									<span
+										className="block text-xs text-subtle-foreground"
+										title={signedTitle(signed?.get(a))}
+									>
+										{lastSignedText(signed?.get(a), now)}
+									</span>
+								)}
 							</PersonRow>
 						))
 					)}

@@ -51,6 +51,7 @@ import {
 	endProposal,
 	getProposal,
 	getRequest,
+	lastSignatureOf,
 	listCarriedOutAfter,
 	listEvents,
 	listEventsAfter,
@@ -61,6 +62,7 @@ import {
 	listProposalEvents,
 	listProposalsIn,
 	listReports,
+	listSignatureEvents,
 	listTreasuries,
 	listViews,
 	markRead,
@@ -560,6 +562,38 @@ describe("sharing and signing a proposal", () => {
 		expect(seen.signers.sort()).toEqual([a.address, b.address].sort());
 		expect(seen.issues.map((i) => i.code)).toEqual(["relay.signature_dropped"]);
 		await removeSignature(c.client, c.address, keyOf(p));
+	});
+
+	it("says who signed last, to the treasury's signers only", async () => {
+		const treasury = p.payload.multiSigUser as Address;
+		const all = await listSignatureEvents(a.client, NET, treasury, 500);
+		const rows = all.data?.rows ?? [];
+		expect(rows.every((r) => r.kind === "signature_added")).toBe(true);
+		const actors = new Set(rows.map((r) => r.actor));
+		expect([actors.has(a.address), actors.has(b.address)]).toEqual([
+			true,
+			true,
+		]);
+		// newest first, so a full window is the newest part of the history
+		const ids = rows.map((r) => r.id);
+		expect(ids).toEqual([...ids].sort((x, y) => y - x));
+		expect(
+			(await listSignatureEvents(a.client, NET, treasury, 1)).data?.rows,
+		).toHaveLength(1);
+		// one signer by itself: the row a full window could not reach
+		const one = await lastSignatureOf(a.client, NET, treasury, b.address);
+		expect(one.data?.actor).toBe(b.address);
+		expect(
+			await lastSignatureOf(a.client, NET, treasury, outsider.address),
+		).toEqual({ data: null, issue: null });
+		// a wallet that signs for nothing reads none of it
+		expect(
+			(await listSignatureEvents(outsider.client, NET, treasury, 500)).data
+				?.rows,
+		).toEqual([]);
+		expect(
+			(await lastSignatureOf(outsider.client, NET, treasury, a.address)).data,
+		).toBeNull();
 	});
 
 	it("hides it from a wallet that signs for nothing, and refuses that wallet every write", async () => {
