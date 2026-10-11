@@ -1,17 +1,24 @@
-import type { AgentInfo, Policy } from "@hl-tools/core";
+import {
+	type AccountMode,
+	type AgentInfo,
+	accountMode,
+	type Policy,
+} from "@hl-tools/core";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import {
 	agentsQueryOptions,
+	modeQueryOptions,
 	policyQueryOptions,
 } from "#/components/tools/multisig/policyQuery";
 import { errorMessage } from "#/hooks/useHyperliquid";
 
 /**
  * How often an open page asks who controls the account. Hyperliquid pushes
- * money over the WebSocket, but has no channel for the signer set or the API
- * wallets, so those two are asked for: two requests (weight 20 each) a minute.
+ * money over the WebSocket, but has no channel for the signer set, the API
+ * wallets or the account mode, so those three are asked for: three requests
+ * (weight 20 each) a minute.
  */
 export const CONTROL_REFRESH_MS = 60_000;
 
@@ -26,6 +33,8 @@ export interface Control {
 	/** Null while unknown or unreadable. */
 	readonly agents: readonly AgentInfo[] | null;
 	readonly agentsError: string | null;
+	/** How the account keeps its money; null while unknown or unreadable. */
+	readonly mode: AccountMode | null;
 	/** When both lists were last read from Hyperliquid (the older of the two). */
 	readonly checkedAt: number | null;
 	/** A read is under way. */
@@ -57,12 +66,23 @@ export function useControl(target: AccountTarget | null): Control {
 		...agentsQueryOptions(network, address),
 		...shared,
 	});
+	const mode = useQuery({
+		...modeQueryOptions(network, address),
+		...shared,
+	});
 	const refetchPolicy = policy.refetch;
 	const refetchAgents = agents.refetch;
+	const refetchMode = mode.refetch;
 	const refetch = useCallback(() => {
 		void refetchPolicy();
 		void refetchAgents();
-	}, [refetchPolicy, refetchAgents]);
+		void refetchMode();
+	}, [refetchPolicy, refetchAgents, refetchMode]);
+	const modeRaw = mode.data?.data;
+	const modeRead = useMemo(
+		() => (modeRaw === undefined ? null : accountMode(modeRaw)),
+		[modeRaw],
+	);
 	const known = policy.data !== undefined;
 	const read = [policy.dataUpdatedAt, agents.dataUpdatedAt].filter(
 		(t) => t > 0,
@@ -77,8 +97,9 @@ export function useControl(target: AccountTarget | null): Control {
 			agents.data === undefined && agents.isError
 				? errorMessage(agents.error)
 				: null,
+		mode: modeRead,
 		checkedAt: read.length === 2 ? Math.min(...read) : null,
-		checking: policy.isFetching || agents.isFetching,
+		checking: policy.isFetching || agents.isFetching || mode.isFetching,
 		failed: policy.isError || agents.isError,
 		refetch,
 	};

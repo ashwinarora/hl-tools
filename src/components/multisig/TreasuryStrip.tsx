@@ -8,6 +8,7 @@ import {
 } from "#/components/hub/status";
 import { AddressLine, short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
+import { modeLabel } from "./model/mode";
 import { When } from "./shell/live";
 import type { TreasuryState } from "./useTreasuryState";
 
@@ -32,6 +33,7 @@ export function TreasuryStrip({
 		state.spot?.filter((b) => b.coin !== "USDC" && Number(b.total) !== 0)
 			.length ?? 0;
 	const now = Date.now();
+	const mode = state.mode ? modeLabel(state.mode) : null;
 	return (
 		<Panel
 			title={
@@ -127,6 +129,23 @@ export function TreasuryStrip({
 										</span>
 									),
 							},
+							...(mode
+								? [
+										{
+											label: "Account mode",
+											value: (
+												<span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+													<Pill tone={mode.caution ? "warning" : "neutral"}>
+														{mode.tag}
+													</Pill>
+													<span className="text-muted-foreground">
+														{mode.text}
+													</span>
+												</span>
+											),
+										},
+									]
+								: []),
 							{
 								label: "Perps (account value · withdrawable)",
 								value: state.perp

@@ -8,7 +8,7 @@
  *                            the WebSocket, signers and API wallets asked for
  *                            once a minute.
  */
-import type { AgentInfo, Policy } from "@hl-tools/core";
+import type { AccountMode, AgentInfo, Policy } from "@hl-tools/core";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useAccount } from "#/components/tools/multisig/useAccount";
 import { CONTROL_REFRESH_MS, useControl } from "./live/useControl";
@@ -38,6 +38,11 @@ export interface TreasuryState {
 				readonly hold: string;
 		  }[]
 		| null;
+	/**
+	 * How the account keeps its money (manual: perps and spot apart; unified:
+	 * one balance). Null while not read: only a page that stays open reads it.
+	 */
+	readonly mode: AccountMode | null;
 	/** When the signer set and API wallets were read. */
 	readonly observedAt: number | null;
 	/** How this was observed, for the line under the figures. */
@@ -74,6 +79,7 @@ export function useTreasuryState(target: AccountTarget | null): TreasuryState {
 				}
 			: null,
 		spot: d?.spot.ok ? d.spot.observed.data.balances : null,
+		mode: null,
 		observedAt: d?.observedAt ?? null,
 		source: `${requests} info requests · weight ${weight}`,
 		money: "once",
@@ -118,6 +124,7 @@ export function useLiveTreasuryState(
 		agentsError: control.agentsError,
 		perp: live.perp,
 		spot: live.spot,
+		mode: control.mode,
 		observedAt: control.checkedAt,
 		source: liveSource(live.status),
 		money: live.status,

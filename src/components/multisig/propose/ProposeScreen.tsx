@@ -185,6 +185,7 @@ export function ProposeScreen({
 			perpWithdrawable: state.perp?.withdrawable,
 			spot: state.spot ?? undefined,
 		},
+		mode: state.mode,
 		createdBy: wallet.address,
 		supersedes: superseded?.digest ?? null,
 		policyAtCreation: state.policy,

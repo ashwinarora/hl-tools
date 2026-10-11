@@ -28,6 +28,7 @@ import {
 	sizeOf,
 } from "../model/chain/columns";
 import { approvalOf } from "../model/chain/match";
+import { modeLabel } from "../model/mode";
 import { RELAY_COPY } from "../model/relay/copy";
 import type { TreasuryRow } from "../model/relay/rows";
 import { fromNow } from "../model/time";
@@ -256,6 +257,7 @@ export function OverviewTab({
 	);
 	const positions = live.perp?.positions ?? [];
 	const orders = live.openOrders ?? [];
+	const mode = state.mode ? modeLabel(state.mode) : null;
 	const reading = "Reading from Hyperliquid…";
 
 	// who signs: the chain's list once it is read; the relay's copy until then,
@@ -302,6 +304,16 @@ export function OverviewTab({
 					<span className="inline-flex items-center gap-1.5">
 						Balances <Help k="perpsSpot" />
 					</span>
+				}
+				actions={
+					mode ? (
+						<span className="inline-flex items-center gap-1.5">
+							<Tag tone={mode.caution ? "warn" : "gray"} title={mode.text}>
+								{mode.tag}
+							</Tag>
+							<Help k="accountMode" />
+						</span>
+					) : null
 				}
 				flush
 			>
