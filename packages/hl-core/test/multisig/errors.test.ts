@@ -57,6 +57,12 @@ describe("explainExchangeError: every recorded string", () => {
 		],
 		// a usdSend from an account switched to unified account mode
 		["Action disabled when unified account is active", "unified-disabled", {}],
+		// a sendAsset from the perps balance of an account in unified account mode
+		[
+			"Unified account only supports sending assets through spot",
+			"unified-spot-only",
+			{},
+		],
 		// a bridge withdrawal asking for far more than the account holds
 		["Error withdrawing from bridge", "bridge-withdraw", {}],
 		["Action already expired", "expired", {}],
@@ -117,6 +123,11 @@ describe("explainExchangeError: every recorded string", () => {
 				422,
 			).fix,
 		).toContain("payload action");
+	});
+	it("does not send a unified account to a spot send: that is switched off there too", () => {
+		const fix = err("Action disabled when unified account is active").fix;
+		expect(fix).toMatch(/sendAsset/);
+		expect(fix).not.toMatch(/spot send/i);
 	});
 	it("no longer tells anyone to resubmit a refused envelope", () => {
 		expect(err("Multi-sig threshold not met").fix).not.toMatch(/resubmit/i);

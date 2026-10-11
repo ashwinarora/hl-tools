@@ -541,7 +541,7 @@ Verified 2026-10-11 against the local Supabase stack and Hyperliquid testnet, in
 
 | Suite | Command | Result |
 |---|---|---|
-| Core and app unit tests | `bun --bun run test` | 68 files, 1,742 tests (core 1,132, app 610), all passing |
+| Core and app unit tests | `bun --bun run test` | 68 files, 1,744 tests (core 1,134, app 610), all passing |
 | Core coverage | `cd packages/hl-core && bunx vitest run --coverage` | 100 % statements, branches, functions and lines for `adapter`, `multisig` and `rules` |
 | Database (pgTAP) | `bun run db:reset && bun run db:test` | 14 files, 784 assertions, all passing |
 | Relay integration | `bun run test:relay` | 48 tests, all passing |
@@ -607,6 +607,7 @@ Known and deliberate: the home screen's "While you were away" reads the API wall
 | Does the mark belong to the account or to the signer? | The account. A plain account sent, became a multi-sig, and was refused an older send through the envelope; a multi-sig sent, became a plain account again, and was refused an older send with its own key |
 | Is a refused request's number free again? | No. An envelope refused for "Multi-sig threshold not met", for "Invalid multi-sig inner signer", or whose action failed for balance, and a plain request outside the window, were each answered "Invalid nonce: duplicate nonce" when sent again, at once, 60 s later and 3 minutes later, also with what was wrong put right. The same number led by another signer was accepted (number sets are per signer) |
 | The window and the "100 highest" rule | On accounts that had used few numbers: 3 days old "nonce too low" (the bound is two days before block time), 47 hours old accepted, 23 hours ahead accepted, 2 days ahead "nonce too high" (one day after block time). After one old number and 100 current ones, another old number was refused with the bound equal to the smallest of the account's 100 highest numbers, 5 ms above it accepted, 5 ms below it refused. Through the envelope the set is the leader's: 47 hours old was refused with leader A (hundreds of numbers used that day) and accepted with leader B |
+| An account in unified account mode (`labs/multisig/45`) | `usdSend`, `spotSend` and `usdClassTransfer`: "Action disabled when unified account is active". `sendAsset` from the spot balance to another account's spot or perps: accepted. `sendAsset` from the perps balance: "Unified account only supports sending assets through spot". A withdrawal still reaches the bridge check. In standard mode `sendAsset` also moved USDC from spot straight into another account's perps |
 | Kinds that could not be run | Refused for the account's size or state, in both orders: `scheduleCancel`, `createSubAccount`, `registerReferrer` (volume), `userPortfolioMargin` (account value), `claimRewards`, `setReferrer`, `topUpIsolatedOnlyMargin`, `borrowLend`. Not sent at all: `sendToEvmWithData` and a real `withdraw3` (they move funds off HyperCore), `linkStakingUser` (permanent), vault, deployer, validator and sub-account management, and the two agent-only kinds |
 
 What changed in the tool because of it:
@@ -617,7 +618,7 @@ What changed in the tool because of it:
 | A send proposed after one that was dated ahead | numbered just after it, with a sentence saying so; a transfer between perps and spot or a spot send is left alone; a withdrawal is raised too | ✅ browser: the second proposal's number is the first's plus one; "70 h left" instead of 48 |
 | The longer signing window on a USDC send | a sentence about what dating it ahead does | ✅ |
 | A proposal Hyperliquid refused (a send of 9,999 USDC from the lab treasury, submitted by lab B) | "Refused by Hyperliquid · cannot be sent again", the reason, "Re-propose", no submit button; "Cannot be finished" in the inbox | ✅ co-signer's page and inbox. Until this round the page kept offering "Submit", which could only be answered "duplicate nonce" |
-| New refusal texts | explained from the catalogue | ✅ "Too many extra agents for cumulative volume traded", "Action disabled when unified account is active", "Error withdrawing from bridge" (errors 1.4.0) |
+| New refusal texts | explained from the catalogue | ✅ "Too many extra agents for cumulative volume traded", "Action disabled when unified account is active", "Unified account only supports sending assets through spot", "Error withdrawing from bridge" (errors 1.4.1) |
 
 ### Carried out elsewhere, cannot be finished
 

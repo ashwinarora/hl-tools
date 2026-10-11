@@ -3,7 +3,7 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.4.0",
+	version: "1.4.1",
 	verifiedAt: "2026-10-11",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
@@ -40,6 +40,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.4.0",
 			date: "2026-10-11",
 			note: 'From the order lab (fixtures/multisig/nonce-order.json). "Nonce already used." is also the answer to a bridge withdrawal older than a carried-out send, and plain accounts get it like multi-sigs. A refused envelope uses up its number: "Multi-sig threshold not met" no longer says "resubmit". Replacing an API wallet counts as a removal for "User has pending agent removal". New: "Too many extra agents for cumulative volume traded", "Action disabled when unified account is active" (a usdSend from an account in unified mode), "Error withdrawing from bridge".',
+		},
+		{
+			version: "1.4.1",
+			date: "2026-10-11",
+			note: 'Unified account mode, measured on testnet: usdSend, spotSend and usdClassTransfer are all answered "Action disabled when unified account is active" (1.4.0 wrongly suggested a spot send), sendAsset works when its source is the spot balance, and with the perps balance as source it is answered "Unified account only supports sending assets through spot" (new entry).',
 		},
 	],
 });
@@ -450,8 +455,18 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		example: "Action disabled when unified account is active",
 		category: "account",
 		cause:
-			"The account is in unified account mode, where perps and spot share one balance. A USDC send from the perps balance (usdSend) is switched off there (recorded on testnet).",
-		fix: "Send it as a spot send or with sendAsset instead, or leave unified account mode first.",
+			"The account is in unified account mode, where perps and spot share one balance. Three actions are switched off there: a USDC send from the perps balance (usdSend), a spot send (spotSend) and a transfer between perps and spot (usdClassTransfer). Recorded on testnet for all three.",
+		fix: 'Send it with sendAsset from the spot balance (sourceDex "spot"), which works in this mode, or leave unified account mode first.',
+		documented: false,
+	},
+	{
+		id: "unified-spot-only",
+		pattern: /unified account only supports sending assets through spot/i,
+		example: "Unified account only supports sending assets through spot",
+		category: "account",
+		cause:
+			"A sendAsset named the perps balance as its source, and the account is in unified account mode, where everything is held in the spot balance (recorded on testnet).",
+		fix: 'Set sourceDex to "spot". The destination can still be another account\'s perps or spot balance.',
 		documented: false,
 	},
 	{
