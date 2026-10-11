@@ -79,8 +79,11 @@ export const RELAY_COPY = {
 	registered: "Its signers find it in their list when they sign in.",
 	registerFailed:
 		"The account is converted, but it could not be added to its signers' lists just now. Any signer can add it under “Add an existing one”.",
-	registeredByAccount:
-		"Registered by the account itself when it was converted.",
+	registeredByAccount: "Registered by the account itself when it was converted",
+	registerSelfTitle: "this is the wallet you are signed in with",
+	registerSelfBody:
+		"Register it so that its signers find it in their list. You will not see it here yourself: sign in as one of its signers for that.",
+	registerSelfButton: "Register it",
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;

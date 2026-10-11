@@ -238,6 +238,14 @@ describe("buildTimeline", () => {
 		expect(texts([eventRow("treasury_added", { actor: B, data: {} })])).toEqual(
 			[`Treasury added by ${short(B)}.`],
 		);
+		// the account that was converted registered itself: nobody added it
+		const self = eventRow("treasury_added", {
+			actor: C,
+			data: { signers: [A, B], threshold: 2 },
+		});
+		expect(texts([{ ...self, treasury: C }])).toEqual([
+			`Treasury registered by the account itself when it was converted. Signers: you, ${short(B)}. Threshold 2.`,
+		]);
 		expect(
 			texts([
 				eventRow("signers_changed", {

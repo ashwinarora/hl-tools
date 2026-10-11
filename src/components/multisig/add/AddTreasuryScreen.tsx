@@ -70,6 +70,8 @@ export function AddTreasuryScreen() {
 				(t) => t.network === current.network && t.address === current.address,
 			)
 		: undefined;
+	// the wallet that converted its own account: not a signer, but it may register it
+	const isSelf = !!me && !!current && current.address === me;
 	const who = (a: Address) => (a === me ? "you" : shortAddress(a));
 
 	// the worker answered
@@ -215,13 +217,38 @@ export function AddTreasuryScreen() {
 							state.isMultiSig &&
 							state.policy &&
 							!known &&
-							!isSigner && (
+							!isSigner &&
+							!isSelf && (
 								<Callout
 									tone="warning"
 									title="This account is a multi-sig, but your wallet is not one of its signers"
 								>
-									Only a signer can add a treasury. Ask a signer to add it, or
-									switch wallets.
+									Only a signer, or the account itself, can add a treasury. Ask
+									a signer to add it, or switch wallets.
+								</Callout>
+							)}
+						{current &&
+							state.isMultiSig &&
+							state.policy &&
+							!known &&
+							isSelf && (
+								<Callout
+									tone="success"
+									title={`${state.policy.threshold} of ${signers.length} multi-sig · ${RELAY_COPY.registerSelfTitle}`}
+									action={
+										<Btn
+											size="sm"
+											variant="brand"
+											type="button"
+											disabled={waiting}
+											onClick={() => void add()}
+										>
+											{waiting ? "Registering…" : RELAY_COPY.registerSelfButton}
+										</Btn>
+									}
+								>
+									Signers: {signers.map(who).join(", ")}.{" "}
+									{RELAY_COPY.registerSelfBody}
 								</Callout>
 							)}
 						{current &&

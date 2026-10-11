@@ -425,6 +425,60 @@ describe("adding a treasury", () => {
 	});
 });
 
+describe("an account that registers itself", () => {
+	// the wallet that converted its own account into a multi-sig: signed in as
+	// that account, and not one of its signers
+	let own: TestWallet;
+
+	it("is stored once Hyperliquid names its signers, and they all see it", async () => {
+		own = await newWallet();
+		stub.answer(own.address, {
+			signers: [a.address, b.address],
+			threshold: 2,
+		});
+		expect(await add(own, own.address)).toEqual({
+			status: "done",
+			reason: null,
+		});
+		for (const w of [a, b]) {
+			const mine = (await listTreasuries(w.client)).data?.rows ?? [];
+			const row = mine.find((t) => t.address === own.address);
+			expect(row).toMatchObject({
+				network: NET,
+				threshold: 2,
+				addedBy: own.address,
+				frozenAt: null,
+			});
+			expect(row?.signers).toEqual([a.address, b.address].sort());
+		}
+	});
+
+	it("still reads nothing of its treasury itself", async () => {
+		expect((await listTreasuries(own.client)).data?.rows).toEqual([]);
+		expect((await listEvents(own.client, NET, own.address)).data?.rows).toEqual(
+			[],
+		);
+		// its signers read the first history entry, which names the account
+		const seen = (await listEvents(a.client, NET, own.address)).data?.rows;
+		expect(seen?.map((e) => [e.kind, e.actor])).toEqual([
+			["treasury_added", own.address],
+		]);
+	});
+
+	it("is refused while Hyperliquid does not show it as a multi-sig", async () => {
+		const early = await newWallet();
+		expect(await add(early, early.address)).toEqual({
+			status: "rejected",
+			reason: "not_multisig",
+		});
+		// and somebody who is neither the account nor a signer is refused as before
+		expect(await add(outsider, own.address)).toEqual({
+			status: "rejected",
+			reason: "not_a_signer",
+		});
+	});
+});
+
 describe("sharing and signing a proposal", () => {
 	let p: Proposal;
 

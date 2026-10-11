@@ -86,9 +86,14 @@ export function buildTimeline(
 			case "treasury_added": {
 				const signers = addressList(e.data.signers).map((a) => [object(a)]);
 				const threshold = Number(e.data.threshold);
+				// the account that was converted registers itself: nobody "added" it
+				const origin =
+					e.actor !== null && e.actor === e.treasury
+						? say`Treasury registered by the account itself when it was converted.`
+						: say`Treasury added by ${object(e.actor)}.`;
 				out.push(
 					entry(
-						say`Treasury added by ${object(e.actor)}.${
+						say`${origin}${
 							signers.length ? say` Signers: ${joinParts(signers, ", ")}.` : ""
 						}${Number.isFinite(threshold) ? ` Threshold ${threshold}.` : ""}`,
 					),

@@ -55,6 +55,13 @@ select is(tests.pinged(), tests.addrs(1, 4, 5)::text[],
 	'the answer pings both askers (one accepted, one refused) and the co-signer who never asked');
 select tests.forget_pings();
 
+-- a treasury registered by the account itself: its signers hear of it
+select tests.request(5, 'add', 'testnet', 5);
+select private.apply_lookup('testnet', tests.addr(5), 'policy', tests.addrs(1, 2), 2);
+select is(tests.pinged(), tests.addrs(1, 2, 5)::text[],
+	'the account that asked hears the answer, and both signers hear of their new treasury');
+select tests.forget_pings();
+
 -- ------------------------------------------------------------ joining a channel
 -- Realtime evaluates the policy as the joining user, with the topic in a setting.
 select realtime.send('{}'::jsonb, 'changed', 'wallet:' || tests.addr(1), true);

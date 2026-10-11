@@ -87,7 +87,8 @@ reset role;
 
 -- a view goes with its proposal
 delete from public.proposals where digest = tests.digest(1);
-select is_empty($$ select 1 from public.proposal_views $$, 'views are removed with their proposal');
+-- (only this test's proposal: the local database may hold real views)
+select is_empty($$ select 1 from public.proposal_views where digest = tests.digest(1) $$, 'views are removed with their proposal');
 
 -- ---------------------------------------------------------------------- marks
 select tests.forget_pings();

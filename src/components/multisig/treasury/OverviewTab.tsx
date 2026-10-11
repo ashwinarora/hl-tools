@@ -533,12 +533,18 @@ export function OverviewTab({
 			{treasury && (
 				<div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3 text-xs text-muted-foreground">
 					<span>
-						Added to this tool by{" "}
-						{treasury.addedBy === me ? (
-							<span className="text-foreground">you</span>
+						{treasury.addedBy === address ? (
+							`${RELAY_COPY.registeredByAccount}, `
 						) : (
-							<Who address={treasury.addedBy} className="text-foreground" />
-						)}{" "}
+							<>
+								Added to this tool by{" "}
+								{treasury.addedBy === me ? (
+									<span className="text-foreground">you</span>
+								) : (
+									<Who address={treasury.addedBy} className="text-foreground" />
+								)}{" "}
+							</>
+						)}
 						on <When at={treasury.createdAt} />.
 						{treasury.addedBy !== me && ` ${RELAY_COPY.addedByOther}`}
 					</span>
