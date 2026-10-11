@@ -50,7 +50,7 @@ The app project (`src/**/*.test.ts`, node environment, `fake-indexeddb` where st
 | `src/lib/idb.test.ts` | Fresh database gets both stores; a version-1 database upgrades and keeps its WebSocket sessions; sessions list newest first, stay bounded to 20, delete; a failed request and a missing IndexedDB reject with a reason |
 | `src/lib/signerWallets.test.ts` | The signer's wallet list never contains RainbowKit's generic WalletConnect entry, whose modal reports the page URL to a third party |
 | `src/lib/detect.test.ts` | Proposal documents and signer links route to the Multisig Signer; envelopes and addresses stay with the inspector; other share links and URLs are not mistaken for proposals; every earlier rule still holds |
-| `multisig/model/actions.test.ts` | Each of the six kinds builds an action `createProposal` accepts; title, note, proposer and superseded digest carried; amounts canonical and never rounded (`1.0` → `1`, precision errors); address checks and the self-send warning; spot token against the network's list and its decimals; balance excess warns and never blocks; raw JSON limited to user-signed types (L1 and `convertToMultiSigUser` refused, overridden fields noted); finaliser required and from the current signer set; `formFromAction` rebuilds the same action; issue paths map to form fields |
+| `multisig/model/actions.test.ts` | Each of the seven kinds builds an action `createProposal` accepts; title, note, proposer and superseded digest carried; amounts canonical and never rounded (`1.0` → `1`, precision errors); address checks and the self-send warning; spot token against the network's list and its decimals; balance excess warns and never blocks; raw JSON limited to user-signed types (L1 and `convertToMultiSigUser` refused, overridden fields noted); finaliser required and from the current signer set; `formFromAction` rebuilds the same action; issue paths map to form fields |
 | `multisig/model/chains.test.ts` | Hex id ↔ number ↔ viem chain for the four offered ids; malformed ids refused; labels for known and unknown chains; a stored id mapped back to the offered choice on its network |
 | `multisig/model/nonce.test.ts` | Nonce now or 23 hours ahead; two days and almost three, both submittable at once; closed and not-yet-open windows in words |
 | `multisig/model/transport.test.ts` | Link carries the whole document in the fragment of `/multisig/proposal` and round-trips; oversize warning above 16 KiB; only fragments made for proposals are read; fragment parser accepts v1 with or without `#`; file name states network, digest and signature count, body is pretty JSON; `openText` accepts a document, a pretty document and a pasted link, and explains what it cannot open |
@@ -783,6 +783,98 @@ Recorded into `fixtures/multisig/send-modes.json` (78 sends, 6 mode switches) an
 - `sendAsset` to another perps market run by a builder, to a sub-account or to HyperEVM is not built by the form and was not tried through it.
 - The read-only Multisig Inspector still shows a unified account with a perps and a spot balance.
 
+## 13. Multisig — creating and changing a treasury
+
+Verified 2026-10-12 against Hyperliquid testnet and the local Supabase stack, in two browsers: the user's Brave with Rabby (the wallet accounts **S1** and **S3**; every prompt read before it was approved; no key read, typed or stored, and the accounts' addresses stay out of the repository), and an isolated context with a stand-in wallet for lab accounts whose keys stay in a local process (see DECISIONS.md, Testing). Lab accounts used as throwaway treasuries: x5 `0x67e7…f105`, outsider `0xed95…c915`, x4 `0xf398…7c8d`; signers lab A `0x5e7c…7216`, B `0xb70c…36ee`, C `0x41e8…55b9`, D `0xb037…db15`. All of them, and S3, are normal accounts again.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 86 files, 2,166 tests (core 1,337, app 829), all passing |
+| Core coverage | `cd packages/hl-core && bunx vitest run --coverage` | 100 % statements, branches, functions and lines for `adapter`, `multisig` and `rules` |
+| Relay database | `bun run db:reset && bun run db:test` | 14 files, 807 pgTAP tests, all passing; `supabase db advisors --local`: no issues |
+| Relay integration | `bun run test:relay` | 52 tests, all passing |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean; the relay client is still one lazy chunk imported only by the Multisig layout; the wizard is its own chunk and names no host |
+
+New test files. Core: `test/multisig/plain.test.ts` (a conversion signed by the account itself: byte-identical to the `@nktkas/hyperliquid` SDK, every recorded conversion recovers to its account), `test/multisig/agentReach.test.ts`. App: `model/signerSet.test.ts`, `create.test.ts`, `change.test.ts`, `convert.test.ts`, `lookups.test.ts`, `selfTreasury.test.ts`, `apiWallet.test.ts`, `relay/register.test.ts`, `relay/lastSigned.test.ts`, `live/useSelfTreasury.test.ts`, `src/lib/wording.test.ts`. Extended: `actions`, `stage`, `sendCheck`, `relay/copy`, `relay/timeline`, `relay.itest.ts`, and the pgTAP files `040_apply_lookup`, `110_live`.
+
+### What was measured first (testnet, lab keys, scripts)
+
+| Question | Answer | Where it lives |
+|---|---|---|
+| Can an account that never received funds convert itself? | No: "Must deposit before performing actions." | blocked in the wizard; `plain-convert.json` |
+| Is an address never used accepted as a signer? | No: "Multi-sig authorized user must exist on L1" | blocked on its row |
+| A vault or a sub-account as a signer? | No: "Multi-sig authorized user cannot be vault or sub-account" | blocked; errors 1.6.0 |
+| An API wallet as a signer? | Only when the address holds funds itself; `userRole` cannot tell | warning |
+| Another multi-sig as a signer? | Yes; its own key signs, not its signers | warning |
+| Which signing chains does a plain conversion accept? | HyperEVM (both networks' ids), Arbitrum One, Arbitrum Sepolia, Ethereum | the wizard keeps the wallet's chain |
+| How soon is the new signer list readable? | about 0.3 s after the answer, which takes about 0.85 s | read back before "done" |
+| A send from an account to itself | `usdSend`, `spotSend`: "Cannot self-transfer."; `sendAsset` into the same balance: "Invalid send"; into the other balance: accepted | `self-send.json`, transfers 1.1.0 |
+| What can an API wallet of a multi-sig do without the signers? | deposit into a vault, move between the account's own balances; not send to another account, not withdraw | `agent-reach.json`, multisig 1.3.0 |
+| Does a signer that converts its own account keep signing elsewhere? | Yes, and it can still lead there | multisig 1.3.0, `convert-own-key` |
+
+### The milestone: a treasury from nothing (Brave + Rabby, 2026-10-12)
+
+| Step | Result |
+|---|---|
+| S1 signed in, Rabby switched to S3, `/multisig/create` opened | the sign-in gate: "The connected wallet is not the one signed in…", no wizard |
+| "Sign in" as S3 | the wizard: "You are converting your own account", its mode and balances |
+| Three signers pasted (S1, lab A, lab B) | each "In use on Hyperliquid." within about a second |
+| "2" chosen | "Any 2 of the 3 signers can act." with the stolen and lost lines; the button names the account and "2-of-3" |
+| Rabby's prompt | primary type `HyperliquidTransaction:ConvertToMultiSigUser`, Testnet, the three addresses and threshold 2, signed by S3 |
+| After the signature | success screen 1.5 s later, read back from Hyperliquid; "Its signers find it in their list" 1.3 s after that; the wallet box shows "treasury account · 2 of 3" |
+| "Sign out and open the treasury", Rabby back to S1, sign in | the treasury is in S1's list, its Pending tab says "Create your first proposal"; lab A sees it marked "new", "Registered by the account itself when it was converted" |
+| Time | 47 s from the first click to registered; 81 s until S1 had it in the list, wallet switches included |
+
+The same flow with a lab account and the stand-in wallet: sent at 0.1 s, read back at 1.2 s, success screen at 1.4 s, registered at 2.6 s.
+
+### Change signers, waiting proposals, convert back (testnet)
+
+| Check | Result |
+|---|---|
+| Replace a signer through one proposal (lab treasury x5, lab keys) | accepted 1.5 s after "Submit"; the relay's signer copy followed one second later |
+| Two waiting sends, then "replace lab B by lab C" proposed by S1 (the treasury S3 had become) | listed before anything was created: one "can no longer be submitted: 0xb70c…36ee was to submit it", one "loses the signature of 0xb70c…36ee: 0 of 2 left" |
+| Rabby's prompt for the change | the treasury, the finaliser, the new list with threshold 2: what the hint under "Your part" says |
+| After lab A signed and submitted | the first send read "Cannot be finished", the second "Collecting signatures · 0 of 2": as listed |
+| The carried-out change opened from a plain link in a fresh browser context | "In effect · The treasury's signers on Hyperliquid are the ones this proposal asks for." and no "Your part" |
+| A change that lowers the number and removes its own proposer and submitter (lab D on x5) | "You are removing yourself…", "The signer who will submit this proposal is removed by it. They can still submit it.", "W1 … becomes ready to submit: 1 of 1"; after D submitted the page said "Submitted" and the treasury left D's list within 5 s; W1 then read "Ready · 1 of 1" |
+| The number raised again | "W1 … no longer has enough signatures: 1 of 2" |
+| Convert back, from the Signers card (S1 with Rabby, lab A finalising) | the guided form listed both waiting sends as "can no longer be submitted"; Rabby showed `"signers": "null"`; accepted in 1.5 s; Hyperliquid reported no signers at once; the relay marked the treasury "no longer a multi-sig" 32 s later, and S1's list, the page head and the Signing log said so |
+| "Last signed" (lab A's view) | "last signed 14 minutes ago" for two signers, "no signature here yet" for one who had not signed there; the exact time on hover |
+| Connected as a treasury account | the tag on every page of the section; the sentence with the signers' addresses on that treasury's page (signed in and signed out), in "Your part" and on the propose form; not on the home screen |
+
+### Negative matrix
+
+| Case | Result |
+|---|---|
+| The wallet's account is switched while the wizard is open | ✅ the sign-in gate replaces it; no prompt opens |
+| The wallet signs with another key (stand-in signing as lab D for another account) | ✅ "Not converted. Nothing was sent: the wallet signed with 0xb037…db15, not with 0xed95…c915." Both accounts untouched on Hyperliquid |
+| Rejected in the wallet | ✅ the form stays as it was. ❌ → fixed: the sentence quoted the core ("The signer refused or failed: …"); it now reads "Nothing was signed or sent. You declined in the wallet." |
+| The account has never been used | ✅ button off: "…has never received anything on Hyperliquid, so it cannot send the conversion yet." |
+| The account is already a multi-sig | ✅ button off with the reason; "Register it" offered and answered |
+| 14 things pasted: 12 addresses, a duplicate, the own address, a bad checksum, a non-address | ✅ ten kept, "2 addresses were left out…", "Not an address: not-an-address.", own address blocked, checksum amber |
+| A signer never used, then funded, then "Check again" | ✅ blocked, then "In use on Hyperliquid." and the button on |
+| A signer look-up fails | ✅ amber "Could not be checked…", the button stays on; "Check again" answers |
+| The request never leaves; the answer is lost | ✅ "Not converted … the account is not a treasury. You can try again."; and the success screen from the read-back |
+| The relay's add limit is reached | ✅ "The account is converted, but it could not be added to its signers' lists just now. Any signer can add it under “Add an existing one”.", with "Register it" again |
+| A signer signs in afterwards | ✅ the treasury is in the list, marked new, "Registered by the account itself when it was converted" |
+| A document whose unsigned note of the signers was rewritten | ✅ "What changes" unchanged: "Compared with the signers Hyperliquid reports for this treasury now." |
+| A signer change pasted as raw JSON | ✅ refused. ❌ → fixed: the way out was in a part of the message the field does not show; the sentence now says "choose “Change signers” above" |
+| A withdrawn change, "Re-propose" | ✅ opens in Change signers with the same list, number and "what changes" |
+| A send from the treasury into the same balance of itself | ❌ → fixed (found while wiring the measured rule): the form only warned; it now stops with the reason, as do the check before submitting and the proposal's page |
+| No relay configured (a second dev server) | ✅ the wizard works on the connected wallet, contacts only Hyperliquid and registers nothing. ❌ → fixed: its opening sentence said "the account you are signed in with" |
+| Phone width, both themes, console | ✅ wizard, Change signers and Convert back at 375 px without sideways scroll; console empty on direct loads |
+
+### Not run, and limits of what was run
+
+- Nothing on mainnet. No hosted Supabase project: the local stack only.
+- S3's own key was not used again after the conversion back (the tool offers no action for it). That an account's own key acts again was measured with a lab account, which converted itself a second time afterwards.
+- The relay answering "not a multi-sig" a moment too early could not be provoked; the retry rule is unit-tested.
+- A signer whose last signature is older than the newest 500 is covered by a unit test of the window and an integration test of the one-row read, not by a treasury with that much history.
+- Signers that are API wallets, vaults or sub-accounts were tried by script (above), not through the form on a live conversion.
+- The wizard was not run with a hardware wallet or with WalletConnect.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
@@ -885,9 +977,12 @@ Also verified at the end: `bun --bun run test` (277 passing after this round), `
 | Multisig — proposal, with "seen" marks (2026-10-11) | [view](docs/screenshots/multisig-proposal-dark-desktop.jpeg) | [view](docs/screenshots/multisig-proposal-light-desktop.jpeg) | [view](docs/screenshots/multisig-proposal-dark-mobile.jpeg) | [view](docs/screenshots/multisig-proposal-light-mobile.jpeg) |
 | Multisig — landing, signed out (2026-10-10) | [view](docs/screenshots/multisig-landing-dark-desktop.jpeg) | [view](docs/screenshots/multisig-landing-light-desktop.jpeg) | [view](docs/screenshots/multisig-landing-dark-mobile.jpeg) | [view](docs/screenshots/multisig-landing-light-mobile.jpeg) |
 | Multisig — Needs you, with "While you were away" (2026-10-11) | [view](docs/screenshots/multisig-inbox-dark-desktop.jpeg) | [view](docs/screenshots/multisig-inbox-light-desktop.jpeg) | [view](docs/screenshots/multisig-inbox-dark-mobile.jpeg) | [view](docs/screenshots/multisig-inbox-light-mobile.jpeg) |
-| Multisig — treasury, Overview (2026-10-11) | [view](docs/screenshots/multisig-overview-dark-desktop.jpeg) | [view](docs/screenshots/multisig-overview-light-desktop.jpeg) | [view](docs/screenshots/multisig-overview-dark-mobile.jpeg) | [view](docs/screenshots/multisig-overview-light-mobile.jpeg) |
+| Multisig — treasury, Overview with "last signed" (2026-10-12) | [view](docs/screenshots/multisig-overview-dark-desktop.jpeg) | [view](docs/screenshots/multisig-overview-light-desktop.jpeg) | [view](docs/screenshots/multisig-overview-dark-mobile.jpeg) | [view](docs/screenshots/multisig-overview-light-mobile.jpeg) |
 | Multisig — treasury, Overview of a unified account (2026-10-11) | [view](docs/screenshots/multisig-overview-unified-dark-desktop.jpeg) | [view](docs/screenshots/multisig-overview-unified-light-desktop.jpeg) | [view](docs/screenshots/multisig-overview-unified-dark-mobile.jpeg) | [view](docs/screenshots/multisig-overview-unified-light-mobile.jpeg) |
 | Multisig — treasury, On Hyperliquid (2026-10-11, top of the table) | [view](docs/screenshots/multisig-onchain-dark-desktop.jpeg) | [view](docs/screenshots/multisig-onchain-light-desktop.jpeg) | [view](docs/screenshots/multisig-onchain-dark-mobile.jpeg) | [view](docs/screenshots/multisig-onchain-light-mobile.jpeg) |
 | Multisig — treasury, Signing log (2026-10-11) | [view](docs/screenshots/multisig-treasury-dark-desktop.jpeg) | [view](docs/screenshots/multisig-treasury-light-desktop.jpeg) | [view](docs/screenshots/multisig-treasury-dark-mobile.jpeg) | [view](docs/screenshots/multisig-treasury-light-mobile.jpeg) |
 | Multisig — nickname dialog (2026-10-11) | [view](docs/screenshots/multisig-nickname-dark-desktop.jpeg) | [view](docs/screenshots/multisig-nickname-light-desktop.jpeg) | [view](docs/screenshots/multisig-nickname-dark-mobile.jpeg) | [view](docs/screenshots/multisig-nickname-light-mobile.jpeg) |
 | Multisig — add a treasury (2026-10-10) | [view](docs/screenshots/multisig-add-dark-desktop.jpeg) | [view](docs/screenshots/multisig-add-light-desktop.jpeg) | [view](docs/screenshots/multisig-add-dark-mobile.jpeg) | [view](docs/screenshots/multisig-add-light-mobile.jpeg) |
+| Multisig — create a treasury (2026-10-12) | [view](docs/screenshots/multisig-create-dark-desktop.jpeg) | [view](docs/screenshots/multisig-create-light-desktop.jpeg) | [view](docs/screenshots/multisig-create-dark-mobile.jpeg) | [view](docs/screenshots/multisig-create-light-mobile.jpeg) |
+| Multisig — change signers (2026-10-12) | [view](docs/screenshots/multisig-change-signers-dark-desktop.jpeg) | [view](docs/screenshots/multisig-change-signers-light-desktop.jpeg) | [view](docs/screenshots/multisig-change-signers-dark-mobile.jpeg) | [view](docs/screenshots/multisig-change-signers-light-mobile.jpeg) |
+| Multisig — convert back to a normal account (2026-10-12) | [view](docs/screenshots/multisig-convert-back-dark-desktop.jpeg) | [view](docs/screenshots/multisig-convert-back-light-desktop.jpeg) | [view](docs/screenshots/multisig-convert-back-dark-mobile.jpeg) | [view](docs/screenshots/multisig-convert-back-light-mobile.jpeg) |
