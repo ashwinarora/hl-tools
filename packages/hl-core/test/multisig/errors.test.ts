@@ -65,6 +65,13 @@ describe("explainExchangeError: every recorded string", () => {
 		],
 		// a bridge withdrawal asking for far more than the account holds
 		["Error withdrawing from bridge", "bridge-withdraw", {}],
+		// recorded 2026-10-11 while measuring sends to addresses never used
+		["Usd transfer is smaller than fee.", "transfer-below-fee", {}],
+		["Insufficient USDC balance for token transfer gas.", "transfer-gas", {}],
+		// a sendAsset above what a unified balance can release
+		["Insufficient balance for token transfer", "token-balance", {}],
+		// HYPE sent into the perps balance
+		["Invalid token", "token-invalid", {}],
 		["Action already expired", "expired", {}],
 		[
 			"Mainnet and testnet require different signature.",

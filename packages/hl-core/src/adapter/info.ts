@@ -38,6 +38,7 @@ export const DEFAULT_TTLS: Readonly<Record<string, number>> = {
 	// Multi-sig policy and account state: short, so a rotation shows up quickly.
 	userToMultiSigSigners: 10_000,
 	userRole: 10_000,
+	userAbstraction: 10_000,
 	extraAgents: 10_000,
 	clearinghouseState: 10_000,
 	spotClearinghouseState: 10_000,
@@ -302,8 +303,29 @@ export class InfoClient<N extends Network> {
 		return { ...r, data };
 	}
 
-	userRole(user: string): Promise<Observed<UserRole, N>> {
-		return this.info<UserRole>({ type: "userRole", user: user.toLowerCase() });
+	userRole(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<UserRole, N>> {
+		return this.info<UserRole>(
+			{ type: "userRole", user: user.toLowerCase() },
+			options,
+		);
+	}
+
+	/**
+	 * The account's mode: `default`, `disabled`, `unifiedAccount`,
+	 * `portfolioMargin` or `dexAbstraction` (see rules/transfers.ts and the
+	 * core's `accountMode`). An address never used answers `default`.
+	 */
+	userAbstraction(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<string, N>> {
+		return this.info<string>(
+			{ type: "userAbstraction", user: user.toLowerCase() },
+			options,
+		);
 	}
 
 	/** Approved API wallets of a user. Agents of a multi-sig user trade without an envelope. */

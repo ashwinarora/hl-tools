@@ -32,6 +32,7 @@ describe("InfoClient account methods", () => {
 				role: "agent",
 				data: { user: "0x5e7c3420160987d04db5e8ed6d5bc14f61237216" },
 			},
+			userAbstraction: "unifiedAccount",
 			extraAgents: [
 				{
 					name: "lab",
@@ -80,6 +81,7 @@ describe("InfoClient account methods", () => {
 			role: "agent",
 			data: { user: "0x5e7c3420160987d04db5e8ed6d5bc14f61237216" },
 		});
+		expect((await client.userAbstraction(USER)).data).toBe("unifiedAccount");
 		expect((await client.extraAgents(USER)).data[0]?.name).toBe("lab");
 		expect((await client.clearinghouseState(USER)).data.withdrawable).toBe(
 			"1.0",
@@ -91,13 +93,19 @@ describe("InfoClient account methods", () => {
 		expect(
 			seen.every((b) => (b as { user: string }).user === USER.toLowerCase()),
 		).toBe(true);
-		expect(seen.length).toBe(6);
+		expect(seen.length).toBe(7);
 		// within the TTL nothing is re-fetched; after it everything is
 		await client.extraAgents(USER);
-		expect(seen.length).toBe(6);
+		await client.userAbstraction(USER);
+		await client.userRole(USER);
+		expect(seen.length).toBe(7);
+		// unless the caller wants what the chain says now
+		await client.userAbstraction(USER, { fresh: true });
+		await client.userRole(USER, { fresh: true });
+		expect(seen.length).toBe(9);
 		now += 10_001;
 		await client.extraAgents(USER);
-		expect(seen.length).toBe(7);
+		expect(seen.length).toBe(10);
 	});
 	it("`fresh` asks the network whatever is cached, and later readers get the new answer", async () => {
 		const answers: Record<string, unknown> = {

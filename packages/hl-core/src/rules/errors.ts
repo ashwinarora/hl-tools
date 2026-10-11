@@ -3,7 +3,7 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.4.1",
+	version: "1.5.0",
 	verifiedAt: "2026-10-11",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
@@ -45,6 +45,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.4.1",
 			date: "2026-10-11",
 			note: 'Unified account mode, measured on testnet: usdSend, spotSend and usdClassTransfer are all answered "Action disabled when unified account is active" (1.4.0 wrongly suggested a spot send), sendAsset works when its source is the spot balance, and with the perps balance as source it is answered "Unified account only supports sending assets through spot" (new entry).',
+		},
+		{
+			version: "1.5.0",
+			date: "2026-10-11",
+			note: 'Refusals met while measuring sends (fixtures/multisig/activation-fee.json, send-modes.json): "Usd transfer is smaller than fee." (a usdSend of 1 USDC or less to an address never used), "Insufficient USDC balance for token transfer gas." (neither balance can pay the 1 USDC for a new address), "Insufficient balance for token transfer" (a sendAsset above what the balance can release) and "Invalid token" (a token that is not the collateral sent into perps).',
 		},
 	],
 });
@@ -467,6 +472,46 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		cause:
 			"A sendAsset named the perps balance as its source, and the account is in unified account mode, where everything is held in the spot balance (recorded on testnet).",
 		fix: 'Set sourceDex to "spot". The destination can still be another account\'s perps or spot balance.',
+		documented: false,
+	},
+	{
+		id: "transfer-below-fee",
+		pattern: /usd transfer is smaller than fee/i,
+		example: "Usd transfer is smaller than fee.",
+		category: "margin",
+		cause:
+			"A USDC send (usdSend) to an address that was never used on Hyperliquid pays the one-time 1 USDC activation fee out of the amount sent, and this amount is 1 USDC or less.",
+		fix: "Send more than 1 USDC (the receiver gets the amount minus 1), or use sendAsset, which charges the fee on top and delivers the full amount.",
+		documented: false,
+	},
+	{
+		id: "transfer-gas",
+		pattern: /insufficient usdc balance for token transfer gas/i,
+		example: "Insufficient USDC balance for token transfer gas.",
+		category: "margin",
+		cause:
+			"The destination was never used on Hyperliquid, so the send costs 1 USDC on top of the amount, and neither the spot USDC left after the send nor the perps balance can pay it.",
+		fix: "Lower the amount by 1 USDC, or bring 1 USDC more into the account first.",
+		documented: false,
+	},
+	{
+		id: "token-balance",
+		pattern: /insufficient balance for token transfer/i,
+		example: "Insufficient balance for token transfer",
+		category: "margin",
+		cause:
+			"The sendAsset asks for more than the source balance can release. For an account in unified mode that is the spot total minus what positions and resting orders hold.",
+		fix: "Lower the amount to what can be moved now, or free margin first (close positions, cancel resting orders).",
+		documented: false,
+	},
+	{
+		id: "token-invalid",
+		pattern: /^invalid token/i,
+		example: "Invalid token",
+		category: "account",
+		cause:
+			"A sendAsset names a token the balance it is taken from or sent to cannot hold: only the collateral token (USDC on the first perp dex) moves into or out of a perps balance.",
+		fix: "Send a spot token from spot to spot. To move its value into perps, sell it for USDC first.",
 		documented: false,
 	},
 	{

@@ -12,4 +12,5 @@ export * from "./proposal.ts";
 export * from "./readiness.ts";
 export * from "./signature.ts";
 export * from "./signerSet.ts";
+export * from "./transfer.ts";
 export * from "./types.ts";
