@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.5.0",
-	verifiedAt: "2026-10-11",
+	version: "1.6.0",
+	verifiedAt: "2026-10-12",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
 	sources: [
@@ -50,6 +50,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.5.0",
 			date: "2026-10-11",
 			note: 'Refusals met while measuring sends (fixtures/multisig/activation-fee.json, send-modes.json): "Usd transfer is smaller than fee." (a usdSend of 1 USDC or less to an address never used), "Insufficient USDC balance for token transfer gas." (neither balance can pay the 1 USDC for a new address), "Insufficient balance for token transfer" (a sendAsset above what the balance can release) and "Invalid token" (a token that is not the collateral sent into perps).',
+		},
+		{
+			version: "1.6.0",
+			date: "2026-10-12",
+			note: 'Recorded on testnet (fixtures/multisig/self-send.json, agent-reach.json, plain-convert.json): "Cannot self-transfer." (a usdSend or spotSend to the sender itself), "Invalid send" (a sendAsset to the sender itself into the same balance), "Multi-sig authorized user cannot be vault or sub-account", and "Agent can only send asset to same user or their sub-accounts." (an API wallet trying to send to another account).',
 		},
 	],
 });
@@ -367,6 +372,16 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		documented: true,
 	},
 	{
+		id: "multisig-signer-kind",
+		pattern: /authorized user cannot be vault or sub-?account/i,
+		example: "Multi-sig authorized user cannot be vault or sub-account",
+		category: "account",
+		cause:
+			"An address in `authorizedUsers` is a vault or a sub-account. Neither has a key of its own, so neither can sign (recorded on testnet for a vault).",
+		fix: "Name the account that leads the vault or owns the sub-account, or another signer.",
+		documented: false,
+	},
+	{
 		id: "multisig-self",
 		pattern: /cannot register self as multi-sig authorized user/i,
 		example: "Cannot register self as multi-sig authorized user",
@@ -502,6 +517,36 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		cause:
 			"The sendAsset asks for more than the source balance can release. For an account in unified mode that is the spot total minus what positions and resting orders hold.",
 		fix: "Lower the amount to what can be moved now, or free margin first (close positions, cancel resting orders).",
+		documented: false,
+	},
+	{
+		id: "self-transfer",
+		pattern: /cannot self-transfer/i,
+		example: "Cannot self-transfer.",
+		category: "account",
+		cause:
+			"A usdSend or spotSend names the sending account itself as its destination (recorded on testnet).",
+		fix: "To move USDC between the account's own perps and spot balances use usdClassTransfer, or a sendAsset to itself with different source and destination balances.",
+		documented: false,
+	},
+	{
+		id: "send-invalid",
+		pattern: /^invalid send\.?$/i,
+		example: "Invalid send",
+		category: "account",
+		cause:
+			"A sendAsset names the sending account itself and the same balance as source and destination, so nothing would move (recorded on testnet, plain and through a multi-sig).",
+		fix: "Send to another account, or to the account's other balance.",
+		documented: false,
+	},
+	{
+		id: "agent-send-scope",
+		pattern: /agent can only send asset to same user/i,
+		example: "Agent can only send asset to same user or their sub-accounts.",
+		category: "account",
+		cause:
+			"An API wallet signed an agentSendAsset whose destination is another account. An API wallet can move money only between the balances of the account it acts for (recorded on testnet).",
+		fix: "Send to another account with a user-signed sendAsset from the account itself (for a multi-sig, a proposal).",
 		documented: false,
 	},
 	{

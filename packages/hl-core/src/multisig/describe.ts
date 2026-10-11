@@ -320,7 +320,7 @@ export function describeAction(
 			return done(
 				`Approve API wallet ${s(action.agentAddress)}${action.agentName ? ` named "${s(action.agentName)}"` : " as the main (unnamed) agent"}`,
 				[
-					"This wallet will trade for the account without multi-sig signatures until it expires or is replaced.",
+					"This wallet will act for the account without multi-sig signatures until it expires or is replaced: it can trade with everything the account holds and move it into vaults, but cannot send it to another account or withdraw it.",
 				],
 			);
 		case "approveBuilderFee":

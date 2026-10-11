@@ -8,8 +8,8 @@ export const NKTKAS_SIGNING: RuleSource = {
 export const MULTISIG_RULES = defineRuleSet({
 	id: "multisig",
 	title: "Native multi-sig",
-	version: "1.2.0",
-	verifiedAt: "2026-10-11",
+	version: "1.3.0",
+	verifiedAt: "2026-10-12",
 	summary:
 		"A multi-sig user is an ordinary account whose own key can no longer send; up to 10 authorized users sign, a leader (an authorized user, or a funded API wallet of one) collects at least `threshold` distinct signatures and submits a `multiSig` envelope. Inner L1 actions are hashed as `[multiSigUser, outerSigner, action]` with the envelope's nonce, vault and expiry; inner user-signed actions gain `payloadMultiSigUser` and `outerSigner` after `hyperliquidChain`. The leader signs `HyperliquidTransaction:SendMultiSig{hyperliquidChain, multiSigActionHash, nonce}` over the envelope with inner signatures trimmed. Only the leader's nonce set is used; the multi-sig user's rate limit is charged. An envelope Hyperliquid refuses still uses up its number for that leader, so a refused proposal has to be made again. An account's USDC sends (`usdSend`) are taken only in increasing order of their `time`: once a newer one is carried out, an older pending send or bridge withdrawal is refused. Every other kind of action is taken in any order.",
 	sources: [
@@ -34,6 +34,11 @@ export const MULTISIG_RULES = defineRuleSet({
 			date: "2026-10-11",
 			note: "The order lab: 247 questions put to a plain account and to a multi-sig on testnet (fixtures/multisig/nonce-order.json), 27 kinds of action. Only `usdSend` is ordered, on a plain account exactly as through an envelope, and its mark stays with the account when it becomes a multi-sig or a plain account again. The mark is the highest `time` carried out: a send dated ahead shuts out every send dated earlier until the clock has passed it. A bridge withdrawal (`withdraw3`) older than the mark is refused the same way; whether a withdrawal moves the mark was not measured (no withdrawal is made in testing). `sendAsset`, `spotSend`, `usdClassTransfer`, approvals, staking, account settings and every L1 kind tried are taken in any order, before or after a send. The order check comes before the balance check. Separately: an envelope that was refused (threshold not met, a stranger's signature, an action that failed, a number outside the window) is answered \"duplicate nonce\" when sent again, so a refused proposal cannot be retried; and the leader's 100 highest numbers bound what it can still lead.",
 		},
+		{
+			version: "1.3.0",
+			date: "2026-10-12",
+			note: "What an API wallet reaches, and who can be a signer (fixtures/multisig/agent-reach.json, plain-convert.json). An API wallet approved for an account, a multi-sig included, can with no signer deposit the account's USDC into a vault (`vaultTransfer`) and move it between the account's own balances (`agentSendAsset`); it cannot send to another account, and a user-signed action it signs counts as coming from the API wallet's own account. So \"trades, cannot withdraw\" was true but left out the vaults. As authorized users Hyperliquid accepts ordinary accounts, other multi-sig users and API wallet addresses that have received funds; it refuses an API wallet that never received funds, a vault and a sub-account. An account that is already a signer elsewhere can convert itself and keeps signing and leading for the others. The first conversion is accepted under any signing chain, and an account that never received funds cannot send it. Not measured: a vault other than the testnet HLP vault, an API wallet's vault withdrawal after the lock-up, sub-accounts.",
+		},
 	],
 });
 
@@ -55,6 +60,24 @@ export const SHUT_OUT_BY: Readonly<Record<string, readonly string[]>> = {
 
 /** The kinds above: every other kind is taken in any order. */
 export const ORDERED_ACTION_TYPES: readonly string[] = Object.keys(SHUT_OUT_BY);
+
+/**
+ * What an approved API wallet may do with the account's money, by action
+ * type: measured, see fixtures/multisig/agent-reach.json. `own` means only
+ * inside the same account. Kinds not listed that are user-signed are refused
+ * to it; trading kinds (orders, cancels, leverage) are what it is for.
+ */
+export const API_WALLET_REACH: Readonly<
+	Record<string, "any" | "own" | "never">
+> = {
+	vaultTransfer: "any",
+	agentSendAsset: "own",
+	usdClassTransfer: "never",
+	usdSend: "never",
+	spotSend: "never",
+	sendAsset: "never",
+	withdraw3: "never",
+};
 
 /** The chain rejects an 11th authorized user (`Too many multi-sig signers`). */
 export const MAX_SIGNERS = 10;
@@ -135,7 +158,19 @@ export const MULTISIG_FACTS: readonly {
 	},
 	{
 		id: "agent-bypass",
-		text: "An API wallet approved through the multi-sig trades for the account directly, without an envelope, and survives a revert. It cannot perform user-signed actions.",
+		text: "An API wallet approved through the multi-sig acts for the account directly, without an envelope, and survives a revert. It can trade with everything the account holds and move it into vaults; it cannot send it to another account or withdraw it.",
+	},
+	{
+		id: "agent-reach",
+		text: "With no signer an API wallet may deposit the account's USDC into a vault (`vaultTransfer`) and move it between the account's own balances (`agentSendAsset`, so money kept in spot is within its reach). Sending to another account is refused (`Agent can only send asset to same user or their sub-accounts.`), and a user-signed action signed by it counts as coming from the API wallet's own account.",
+	},
+	{
+		id: "signer-kinds",
+		text: "As authorized users Hyperliquid accepts ordinary accounts, other multi-sig users and API wallet addresses that have received funds. It refuses an API wallet that never received funds (`Multi-sig authorized user must exist on L1`) and vaults and sub-accounts (`Multi-sig authorized user cannot be vault or sub-account`).",
+	},
+	{
+		id: "convert-own-key",
+		text: "The first conversion is a user-signed action sent by the account's own key, accepted under any signing chain. An account that never received funds cannot send it (`Must deposit before performing actions`).",
 	},
 	{
 		id: "distinct-signers",
@@ -163,7 +198,7 @@ export const MULTISIG_FACTS: readonly {
 	},
 	{
 		id: "nested-nominal",
-		text: "A multi-sig user may be an authorized user of another; its raw key signs and leads regardless of its own policy.",
+		text: "A multi-sig user may be an authorized user of another, whichever came first; its raw key signs and leads regardless of its own policy.",
 	},
 	{
 		id: "no-signer-trail",

@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const TRANSFER_RULES = defineRuleSet({
 	id: "transfers",
 	title: "Account modes, transfers and the activation fee",
-	version: "1.0.0",
-	verifiedAt: "2026-10-11",
+	version: "1.1.0",
+	verifiedAt: "2026-10-12",
 	summary:
 		"An account is in one mode (`userAbstraction`): `default` and `disabled` keep a perps and a spot balance apart, `unifiedAccount` has one balance, reported as spot. A manual account can send with `usdSend` (perps to perps), `spotSend` (spot to spot) and `sendAsset` (any pocket to any pocket). A unified account can send only with `sendAsset` from the spot balance. The receiver's mode never refuses a send: a manual receiver gets it in the pocket named, a unified one in its single balance. Sending to an address never used costs 1 USDC once: `usdSend` takes it out of the amount, `spotSend` and `sendAsset` charge it on top. Sending to an address in use costs nothing.",
 	sources: [
@@ -20,6 +20,11 @@ export const TRANSFER_RULES = defineRuleSet({
 			version: "1.0.0",
 			date: "2026-10-11",
 			note: "Measured on testnet (fixtures/multisig/send-modes.json, activation-fee.json): three sender modes against three receiver modes for six ways of sending, own-account moves, a token that is not the collateral, the same through a multi-sig; and sends to addresses never used, per method. Beyond the docs: `default` behaves as `disabled`; in unified mode `usdSend`, `spotSend` and `usdClassTransfer` are switched off and `sendAsset` works only from spot; what a unified account can send is its spot total minus `hold`; the 1 USDC for a new address comes out of the amount for `usdSend` and on top for the others, from spot USDC when what is left there covers it and from perps otherwise. Not measured: portfolio margin, the discontinued DEX abstraction, mainnet.",
+		},
+		{
+			version: "1.1.0",
+			date: "2026-10-12",
+			note: 'Sends of an account to itself (fixtures/multisig/self-send.json): into the same balance every way is refused ("Cannot self-transfer." for usdSend and spotSend, "Invalid send" for sendAsset), on a plain account and through a multi-sig. Between a manual account\'s two balances a sendAsset to itself moves the money; on a unified account a sendAsset to itself from spot to perps is accepted and changes nothing.',
 		},
 	],
 });

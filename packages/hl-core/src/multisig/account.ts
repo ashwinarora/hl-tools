@@ -79,7 +79,7 @@ export function assessAccount(input: AccountInput): AccountAssessment {
 			issue(
 				"account.agents_unknown",
 				"warning",
-				"Approved API wallets could not be loaded; an agent would trade for this account without the multi-sig.",
+				"Approved API wallets could not be loaded; an agent would act for this account without the multi-sig.",
 			),
 		);
 	}
@@ -89,9 +89,9 @@ export function assessAccount(input: AccountInput): AccountAssessment {
 			issue(
 				"account.agents_bypass",
 				"warning",
-				`${live.length} approved API wallet${live.length > 1 ? "s" : ""} (${live.map((a) => a.name || "main").join(", ")}) can place and cancel orders for this account without any multi-sig signatures. Agents cannot move funds, and they survive a revert to a normal user.`,
+				`${live.length} approved API wallet${live.length > 1 ? "s" : ""} (${live.map((a) => a.name || "main").join(", ")}) can act for this account without any multi-sig signatures: trade with everything it holds and move it into vaults. Agents cannot send funds to another account or withdraw them, and they survive a revert to a normal user.`,
 				{
-					fix: "Treat every approveAgent proposal as 'make trading single-key'; revoke agents you do not recognise.",
+					fix: "Treat every approveAgent proposal as 'one key can trade and fill vaults with all of it'; revoke agents you do not recognise.",
 				},
 			),
 		);

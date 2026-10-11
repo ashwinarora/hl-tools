@@ -115,16 +115,23 @@ export function sendShape(action: unknown): SendShape | null {
 export type SendRefusal =
 	| "unified-disabled"
 	| "unified-spot-only"
-	| "token-invalid";
+	| "token-invalid"
+	| "self-transfer"
+	| "send-invalid";
+
+const samePocket = (a: Pocket, b: Pocket): boolean =>
+	typeof a === "string" || typeof b === "string" ? a === b : a.dex === b.dex;
 
 /**
- * The refusal this action meets because of the sender's mode or of what it
- * moves where; null when neither stands in its way (balances are another
- * matter: see `activationCharge`).
+ * The refusal this action meets because of the sender's mode, of what it
+ * moves where, or (when `self`, the sending account, is given) of sending to
+ * itself; null when none stands in its way (balances are another matter: see
+ * `activationCharge`).
  */
 export function sendRefusal(
 	sender: AccountMode,
 	action: unknown,
+	self?: string,
 ): SendRefusal | null {
 	const shape = sendShape(action);
 	if (!shape) return null;
@@ -139,6 +146,11 @@ export function sendRefusal(
 		(shape.from === "perps" || shape.to === "perps")
 	)
 		return "token-invalid";
+	// to itself: the two older sends never, sendAsset only into another balance
+	if (self && shape.destination === self.toLowerCase()) {
+		if (shape.type !== "sendAsset") return "self-transfer";
+		if (samePocket(shape.from, shape.to)) return "send-invalid";
+	}
 	return null;
 }
 

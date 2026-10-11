@@ -281,6 +281,92 @@ describe("the mode matrix: every recorded send, and what the rules say to it", (
 	});
 });
 
+describe("sends of an account to itself, as testnet answered them", () => {
+	interface SelfSend {
+		about: string;
+		senderMode: string;
+		senderIs: string;
+		account: string;
+		action: Record<string, unknown>;
+		answer: Answer;
+	}
+	const self = fixture<{ sends: SelfSend[] }>("self-send");
+	it("covers a plain account, a manual multi-sig and a unified one", () => {
+		expect(self.sends).toHaveLength(8);
+		expect(
+			new Set(self.sends.map((s) => `${s.senderIs} ${s.senderMode}`)),
+		).toEqual(
+			new Set([
+				"plain default",
+				"multi-sig default",
+				"multi-sig unifiedAccount",
+			]),
+		);
+		for (const s of self.sends) expect(s.action.destination).toBe(s.account);
+	});
+	it.each(
+		self.sends.map(
+			(s) => [`${s.senderIs} ${s.senderMode} · ${s.about}`, s] as const,
+		),
+	)("%s", (_name, s) => {
+		expect(refusalOf(s.answer)).toBe(
+			sendRefusal(accountMode(s.senderMode), s.action, s.account),
+		);
+	});
+	it("is asked only when the sender is given, and reads its address in any case", () => {
+		const me = "0x00000000000000000000000000000000000000BB";
+		const manual = accountMode("default");
+		const toMe = { ...asset("", ""), destination: me.toLowerCase() };
+		expect(sendRefusal(manual, toMe)).toBeNull();
+		expect(sendRefusal(manual, toMe, me)).toBe("send-invalid");
+		expect(
+			sendRefusal(
+				manual,
+				{ ...asset("xyz", "xyz"), destination: me.toLowerCase() },
+				me,
+			),
+		).toBe("send-invalid");
+		expect(
+			sendRefusal(
+				manual,
+				{ ...asset("xyz", "abc"), destination: me.toLowerCase() },
+				me,
+			),
+		).toBeNull();
+		expect(
+			sendRefusal(
+				manual,
+				{ ...asset("", "spot"), destination: me.toLowerCase() },
+				me,
+			),
+		).toBeNull();
+		expect(
+			sendRefusal(manual, { ...usdSend(), destination: me.toLowerCase() }, me),
+		).toBe("self-transfer");
+		expect(
+			sendRefusal(manual, { ...spotSend(), destination: me.toLowerCase() }, me),
+		).toBe("self-transfer");
+		// somebody else: nothing to say
+		expect(sendRefusal(manual, asset("", ""), me)).toBeNull();
+		// a move between the account's own balances has no destination at all
+		expect(
+			sendRefusal(
+				manual,
+				{ type: "usdClassTransfer", amount: "1", toPerp: true },
+				me,
+			),
+		).toBeNull();
+		// the mode's own refusal comes first
+		expect(
+			sendRefusal(
+				accountMode("unifiedAccount"),
+				{ ...usdSend(), destination: me.toLowerCase() },
+				me,
+			),
+		).toBe("unified-disabled");
+	});
+});
+
 describe("sendRefusal", () => {
 	const unified = accountMode("unifiedAccount");
 	const manual = accountMode("default");
