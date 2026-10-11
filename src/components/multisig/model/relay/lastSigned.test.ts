@@ -65,5 +65,9 @@ describe("last signed, next to each signer", () => {
 		expect(none).not.toMatch(/cannot|never|inactive/i);
 		for (const claim of FORBIDDEN_CLAIMS) expect(none).not.toMatch(claim);
 		expect(lastSignedText(undefined, NOW)).toBe("");
+		// a relay clock a little ahead of this one is still the past
+		expect(lastSignedText({ kind: "signed", at: NOW + 90_000 }, NOW)).toBe(
+			"last signed less than a minute ago",
+		);
 	});
 });

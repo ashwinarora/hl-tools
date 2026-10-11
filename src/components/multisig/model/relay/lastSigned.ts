@@ -85,7 +85,8 @@ export function missedByWindow(
 /** The words under a signer's name; empty when nothing is known. */
 export function lastSignedText(l: LastSigned | undefined, now: number): string {
 	if (!l || l.kind === "unknown") return "";
+	// the relay's clock may run a little ahead of the reader's: never "in 2 minutes"
 	return l.kind === "none"
 		? "no signature here yet"
-		: `last signed ${fromNow(l.at, now)}`;
+		: `last signed ${fromNow(Math.min(l.at, now - 1), now)}`;
 }
