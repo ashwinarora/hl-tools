@@ -345,6 +345,16 @@ describe("outcomeText", () => {
 		expect(all[1]?.body).toBe(
 			"Nothing was signed or sent. The wallet refused.",
 		);
+		// as the core reports a wallet that said no (seen in the browser): said without its "the signer"
+		expect(
+			outcomeText(
+				{
+					kind: "not-signed",
+					reason: "The signer refused or failed: You declined in the wallet.",
+				},
+				TREASURY,
+			).body,
+		).toBe("Nothing was signed or sent. You declined in the wallet.");
 		expect(all[2]?.body).toContain(
 			"Nothing was sent: the wallet signed with 0x",
 		);

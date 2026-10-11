@@ -246,7 +246,8 @@ export function outcomeText(o: ConvertOutcome, account: string): OutcomeText {
 			return {
 				tone: "danger",
 				title: "Not converted",
-				body: `Nothing was signed or sent. ${o.reason}`,
+				// the core says who failed ("the signer"); here that is the reader's own wallet
+				body: `Nothing was signed or sent. ${o.reason.replace(/^The signer refused or failed: /, "")}`,
 			};
 		case "wrong-key":
 			return {
