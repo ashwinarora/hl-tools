@@ -20,6 +20,7 @@ import {
 	usdSend,
 } from "#/test/keys";
 import {
+	changeInEffect,
 	deriveStage,
 	finaliserLeft,
 	refusedForGood,
@@ -517,6 +518,79 @@ describe("deriveStage", () => {
 		expect((await stage(p, { wallet: A })).role).toBe("signer");
 		expect((await stage(p, { wallet: OUTSIDER })).role).toBe("outsider");
 		expect((await stage(p)).role).toBe("disconnected");
+	});
+
+	describe("a change of signers that is in effect", () => {
+		const change = (signers: string) =>
+			makeProposal({
+				action: {
+					type: "convertToMultiSigUser",
+					signatureChainId: "0x3e6",
+					hyperliquidChain: "Testnet",
+					signers,
+					nonce: NONCE,
+				},
+			});
+		const NEXT: Policy = {
+			authorizedUsers: [A, C, OUTSIDER].sort(),
+			threshold: 2,
+			observedAt: NOW,
+		};
+		const asked = JSON.stringify({
+			authorizedUsers: NEXT.authorizedUsers,
+			threshold: 2,
+		});
+
+		it("reads In effect once Hyperliquid reports the signers it asks for", async () => {
+			// signed by A and B under the old set; B (its finaliser) is gone under the new
+			const p = await signAs(await signAs(change(asked), 1), 2);
+			expect(changeInEffect(p, POLICY)).toBe(false);
+			expect((await stage(p)).phase).toBe("ready");
+			expect(changeInEffect(p, NEXT)).toBe(true);
+			const after = await stage(p, { policy: NEXT, wallet: C });
+			expect(after.phase).toBe("in-effect");
+			expect(after.headline).toBe("In effect");
+			// nothing to sign and nothing to submit, whoever looks
+			expect([after.canSign, after.canExecute]).toEqual([false, false]);
+			expect(after.signReason).toBe("In effect");
+		});
+
+		it("does not take a different number, or a different list, for the same change", () => {
+			const p = change(asked);
+			expect(changeInEffect(p, { ...NEXT, threshold: 3 })).toBe(false);
+			expect(
+				changeInEffect(p, { ...NEXT, authorizedUsers: [A, B, C].sort() }),
+			).toBe(false);
+			expect(changeInEffect(p, null)).toBe(false);
+		});
+
+		it("reads the conversion back as in effect when no signers are reported", async () => {
+			const p = change("null");
+			expect(changeInEffect(p, POLICY)).toBe(false);
+			const none = { authorizedUsers: [], threshold: 0, observedAt: NOW };
+			const s = await stage(p, { policy: none });
+			expect(s.phase).toBe("in-effect");
+			expect(s.detail).toContain("a normal account again");
+		});
+
+		it("keeps what was recorded: an accepted submission, a withdrawal", async () => {
+			const p = change(asked);
+			expect((await stage({ ...p, receipt: OK }, { policy: NEXT })).phase).toBe(
+				"submitted",
+			);
+			expect(
+				(
+					await stage(p, {
+						policy: NEXT,
+						ended: { kind: "withdrawn", by: A },
+					})
+				).phase,
+			).toBe("withdrawn");
+		});
+
+		it("is about signer changes only", () => {
+			expect(changeInEffect(makeProposal(), POLICY)).toBe(false);
+		});
 	});
 
 	it("tells a wallet that is the treasury itself to switch to a signer", async () => {

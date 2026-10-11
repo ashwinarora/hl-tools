@@ -1,6 +1,6 @@
 import type { PlainObject } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
-import { RECIPIENT, TREASURY } from "#/test/keys";
+import { A, B, C, OUTSIDER, RECIPIENT, TREASURY } from "#/test/keys";
 import { checkBeforeSubmit, type SendReads } from "./sendCheck";
 
 const USDC = "USDC:0xeb62eee3685fc4c43992febcd9e75443";
@@ -36,6 +36,7 @@ function reads(over: Partial<Record<keyof SendReads, unknown>> = {}) {
 		withdrawable: answer("withdrawable", "100"),
 		spot: answer("spot", [{ coin: "USDC", total: "100", hold: "0" }]),
 		role: answer("role", { role: "user" }),
+		signers: answer("signers", [A, B, C]),
 	};
 	return { r, asked };
 }
@@ -138,5 +139,68 @@ describe("checkBeforeSubmit", () => {
 		).toEqual([]);
 		// an answer that is not a mode at all
 		expect(await codes(asset("", "5"), { mode: 7 })).toEqual([]);
+	});
+
+	describe("a change of signers", () => {
+		const change = (signers: string): PlainObject => ({
+			type: "convertToMultiSigUser",
+			signers,
+			nonce: 1,
+		});
+		const set = (users: readonly string[], threshold = 2) =>
+			JSON.stringify({ authorizedUsers: users, threshold });
+
+		it("asks only about the signers that would be new, and lets a sound change through", async () => {
+			const { r, asked } = reads();
+			expect(
+				await checkBeforeSubmit(payload(change(set([A, B, OUTSIDER]))), r),
+			).toEqual([]);
+			// the treasury's signers, then the one address that is not among them
+			expect(asked).toEqual(["signers treasury", "role receiver"]);
+		});
+
+		it("stops a change that adds an address never used, or a vault", async () => {
+			const never = await checkBeforeSubmit(
+				payload(change(set([A, B, OUTSIDER]))),
+				reads({ role: { role: "missing" } }).r,
+			);
+			expect(never.map((x) => x.code)).toEqual(["multisig-signer-missing"]);
+			expect(never[0]?.message).toContain(OUTSIDER.slice(0, 6));
+			expect(
+				await codes(change(set([A, B, OUTSIDER])), { role: { role: "vault" } }),
+			).toEqual(["multisig-signer-kind"]);
+			expect(
+				await codes(change(set([A, B, OUTSIDER])), {
+					role: { role: "subAccount", data: { master: A } },
+				}),
+			).toEqual(["multisig-signer-kind"]);
+		});
+
+		it("lets an API wallet and an unread answer through: nothing is claimed", async () => {
+			expect(
+				await codes(change(set([A, B, OUTSIDER])), {
+					role: { role: "agent", data: { user: A } },
+				}),
+			).toEqual([]);
+			expect(
+				await codes(change(set([A, B, OUTSIDER])), { role: new Error("429") }),
+			).toEqual([]);
+		});
+
+		it("checks every signer when the treasury's own list could not be read", async () => {
+			const { r, asked } = reads({ signers: new Error("timeout") });
+			await checkBeforeSubmit(payload(change(set([A, B]))), r);
+			expect(asked.filter((a) => a.startsWith("role"))).toHaveLength(2);
+		});
+
+		it("asks nothing for a change that only removes, or the conversion back", async () => {
+			for (const signers of [set([A, B]), "null", "{not json"]) {
+				const { r, asked } = reads();
+				expect(await checkBeforeSubmit(payload(change(signers)), r)).toEqual(
+					[],
+				);
+				expect(asked.filter((a) => a.startsWith("role"))).toEqual([]);
+			}
+		});
 	});
 });

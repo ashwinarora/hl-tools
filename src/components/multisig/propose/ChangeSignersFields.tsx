@@ -1,6 +1,6 @@
 import type { Address, Policy, SignerSet } from "@hl-tools/core";
 import { Check, Loader2, X } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "#/lib/utils";
 import { CHANGE } from "../model/change";
 import { CREATE } from "../model/create";
@@ -8,6 +8,7 @@ import {
 	addEntries,
 	changeSummary,
 	judgeSet,
+	type OnRecord,
 	parsePasted,
 	SIGNERS_MAX,
 	type SignerCheck,
@@ -22,6 +23,7 @@ import { Who } from "../names/Names";
 import { Sentence } from "../names/Sentence";
 import { Help } from "../shell/Help";
 import { Btn, Tag } from "../shell/kit";
+import { AffectedList } from "../signers/AffectedList";
 import {
 	HowMany,
 	LevelLine,
@@ -29,6 +31,8 @@ import {
 	PasteBox,
 	ThresholdMeaning,
 } from "../signers/parts";
+import { useAffected } from "../signers/useAffected";
+import type { KnownState } from "../treasury/useKnownProposals";
 
 /**
  * "Change signers": the treasury's list and number as they are, to be edited
@@ -45,6 +49,9 @@ export function ChangeSignersFields({
 	recheck,
 	me,
 	finaliser,
+	known,
+	knownState,
+	relayInUse,
 }: {
 	signers: string;
 	onChange(signers: string): void;
@@ -57,10 +64,28 @@ export function ChangeSignersFields({
 	me: string | null;
 	/** Who will submit the proposal, to say when the change removes them. */
 	finaliser: string;
+	/** The treasury's proposals on record, to say which waiting ones the change touches. */
+	known: readonly OnRecord[];
+	knownState: KnownState;
+	relayInUse: boolean;
 }) {
 	// as typed, for the checksum check only: the form itself holds lowercase
 	const [typed, setTyped] = useState<Readonly<Record<string, string>>>({});
 	const [pasteNote, setPasteNote] = useState("");
+	// before the early return below: hooks run on every render
+	const change = useMemo<SignerSet | null>(() => {
+		const asked = wantedSet(signers, current);
+		if (
+			!current ||
+			asked.threshold === null ||
+			asked.entries.length === 0 ||
+			asked.threshold > asked.entries.length
+		)
+			return null;
+		const set = { authorizedUsers: asked.entries, threshold: asked.threshold };
+		return sameSet(current, set) ? null : set;
+	}, [signers, current]);
+	const touched = useAffected(known, current, change);
 
 	if (!current || current.authorizedUsers.length === 0) {
 		return (
@@ -289,6 +314,14 @@ export function ChangeSignersFields({
 							l.code !== "lockout.all_keys_required",
 					)}
 				/>
+				{change && !judged.blockedBy && (
+					<AffectedList
+						affected={touched.affected}
+						computing={touched.computing}
+						state={knownState}
+						relayInUse={relayInUse}
+					/>
+				)}
 				<p className="text-xs text-muted-foreground">
 					{CHANGE.whoDecides(current.threshold, now.length)}{" "}
 					{CHANGE.takesEffect}

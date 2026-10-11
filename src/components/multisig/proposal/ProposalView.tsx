@@ -6,6 +6,8 @@ import {
 	orderMark,
 	overtakenBy,
 	type Proposal,
+	parseSignersString,
+	type SignerSet,
 	sendShape,
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
@@ -27,8 +29,10 @@ import { CONTROL_REFRESH_MS } from "../live/useControl";
 import { useReceiver } from "../live/useReceiver";
 import { explorerTxUrl } from "../model/chain/columns";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
+import { CHANGE } from "../model/change";
 import { RELAY_COPY } from "../model/relay/copy";
 import { costLine, modeRefusal } from "../model/send";
+import { changeSummary } from "../model/signerSet";
 import {
 	deriveStage,
 	type Phase,
@@ -36,6 +40,7 @@ import {
 	type WalletRole,
 } from "../model/stage";
 import { TreasuryNames, Who } from "../names/Names";
+import { Sentence } from "../names/Sentence";
 import { CostNote } from "../propose/ActionFields";
 import { useTreasuries } from "../relay/queries";
 import { useExecutionReporter } from "../relay/useExecutionReporter";
@@ -51,6 +56,8 @@ import {
 } from "../shell/kit";
 import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
+import { AffectedList } from "../signers/AffectedList";
+import { useAffected } from "../signers/useAffected";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useKnownProposals } from "../treasury/useKnownProposals";
 import { useTreasuryNames } from "../treasuryName";
@@ -86,6 +93,7 @@ const COSTED: ReadonlySet<Phase> = new Set([
 const CLOSED: ReadonlySet<Phase> = new Set([
 	"submitted",
 	"carried-out",
+	"in-effect",
 	"closed",
 	"withdrawn",
 	"declined",
@@ -196,10 +204,17 @@ export function ProposalView({
 	);
 	const settled =
 		status === "accepted" || status === "carried_out" || status === "unknown";
+	// A change of signers touches the other proposals still waiting: the same
+	// record says which.
+	const changeTo = useMemo<SignerSet | "revert" | null>(() => {
+		if (proposal.payload.action.type !== "convertToMultiSigUser") return null;
+		const asked = parseSignersString(proposal.payload.action.signers);
+		return asked.revert ? "revert" : asked.set;
+	}, [proposal.payload.action]);
 	const known = useKnownProposals(
 		target.network,
 		target.address as Address,
-		ordered && !settled,
+		(ordered || changeTo !== null) && !settled,
 	);
 	const overtakenOnRecord = useMemo(
 		() =>
@@ -268,6 +283,21 @@ export function ProposalView({
 	// While it can still be signed or sent: who is being paid, and what that
 	// costs now (an address that was new when this was proposed may be in use
 	// by the time it is submitted).
+	// For a change of signers still to be decided: what it does, against the
+	// signers Hyperliquid reports now (never the document's unsigned note of
+	// who they were when it was made).
+	const liveSet =
+		COSTED.has(stage.phase) &&
+		state.policy &&
+		state.policy.authorizedUsers.length > 0
+			? state.policy
+			: null;
+	const touched = useAffected(
+		known.proposals,
+		liveSet,
+		changeTo,
+		proposal.digest,
+	);
 	const payee = useMemo(
 		() => sendShape(proposal.payload.action)?.destination || null,
 		[proposal.payload.action],
@@ -495,7 +525,8 @@ export function ProposalView({
 							{blocked.message}
 						</Callout>
 					)}
-					{stage.policyChanged && (
+					{/* once nobody signs any more, how signatures are counted is moot */}
+					{stage.policyChanged && !CLOSED.has(stage.phase) && (
 						<Callout
 							tone="warning"
 							title="The signer set changed since this was proposed"
@@ -612,6 +643,30 @@ export function ProposalView({
 									)}
 								</dl>
 								<CostNote line={cost} />
+								{changeTo && liveSet && (
+									<div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3">
+										<h3 className="text-xs font-medium">
+											{CHANGE.whatChanges}
+										</h3>
+										<p className="text-sm [overflow-wrap:anywhere]">
+											<Sentence
+												parts={changeSummary(
+													liveSet,
+													changeTo === "revert" ? null : changeTo,
+												)}
+											/>
+										</p>
+										<p className="text-xs text-muted-foreground">
+											{CHANGE.againstNow}
+										</p>
+										<AffectedList
+											affected={touched.affected}
+											computing={touched.computing}
+											state={known.state}
+											relayInUse={relay.mode === "on"}
+										/>
+									</div>
+								)}
 								{(proposal.meta.title || proposal.meta.note) && (
 									<p className="mt-3 text-xs text-subtle-foreground">
 										The title and note are not signed: whoever shared the

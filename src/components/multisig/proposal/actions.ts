@@ -123,6 +123,9 @@ export async function finalise(i: {
 				.balances,
 		role: async (address) =>
 			(await client.userRole(address, { fresh: true })).data,
+		signers: async (user) =>
+			(await client.multiSigSigners(user, { fresh: true })).data
+				?.authorizedUsers ?? null,
 	});
 	if (refusals.length > 0) {
 		return stop(

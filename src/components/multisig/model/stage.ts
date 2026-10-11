@@ -13,6 +13,7 @@ import {
 	numberSpent,
 	type Policy,
 	type Proposal,
+	parseSignersString,
 	type Readiness,
 } from "@hl-tools/core";
 import { chainIdToNumber, chainLabel } from "./chains";
@@ -48,6 +49,7 @@ export type Phase =
 	| "unsupported"
 	| "submitted"
 	| "carried-out"
+	| "in-effect"
 	| "closed"
 	| "stuck"
 	| "overtaken"
@@ -172,6 +174,25 @@ export function refusedForGood(p: Proposal): boolean {
 	);
 }
 
+/**
+ * A change of signers whose result is what Hyperliquid reports now: the signer
+ * list it asks for, or (for the conversion back) no signer list at all. Then
+ * it has been carried out, whoever recorded that and whoever did not. Without
+ * this a co-signer opening it from a link would see its signatures judged
+ * against the signers it installed, and read "cannot be finished".
+ */
+export function changeInEffect(p: Proposal, live: Policy | null): boolean {
+	if (p.payload.action.type !== "convertToMultiSigUser" || !live) return false;
+	const asked = parseSignersString(p.payload.action.signers);
+	if (asked.revert) return live.authorizedUsers.length === 0;
+	if (!asked.set) return false;
+	return (
+		live.threshold === asked.set.threshold &&
+		live.authorizedUsers.length === asked.set.authorizedUsers.length &&
+		asked.set.authorizedUsers.every((a) => live.authorizedUsers.includes(a))
+	);
+}
+
 export function deriveStage(input: StageInput): Stage {
 	const { proposal: p, readiness: r, policy } = input;
 	const now = input.now ?? Date.now();
@@ -249,6 +270,15 @@ export function deriveStage(input: StageInput): Stage {
 		phase = "declined";
 		head = say`Declined by the finaliser, ${who(input.ended.by)}`;
 		body = say`It will not be submitted. Re-propose it with a different finaliser if it is still wanted.`;
+	} else if (changeInEffect(p, policy)) {
+		// before anything about signatures: they would be counted against the
+		// signers this very proposal put in place
+		phase = "in-effect";
+		head = say`In effect`;
+		body =
+			policy && policy.authorizedUsers.length === 0
+				? say`Hyperliquid reports no signers for this account any more: it is a normal account again, as this proposal asks. Nothing more to sign.`
+				: say`The treasury's signers on Hyperliquid are the ones this proposal asks for. Nothing more to sign.`;
 	} else if (p.meta.kind === "l1") {
 		phase = "unsupported";
 		head = say`An L1 action: inspect only`;

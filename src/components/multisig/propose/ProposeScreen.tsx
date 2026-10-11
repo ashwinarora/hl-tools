@@ -183,7 +183,8 @@ export function ProposeScreen({
 	const known = useKnownProposals(
 		network,
 		(address ?? ZERO_ADDRESS) as Address,
-		hydrated && !!address && ordered,
+		// a change of signers says which waiting proposals it touches
+		hydrated && !!address && (ordered || form.kind === "changeSigners"),
 	);
 	const floor =
 		ordered && actionType ? orderFloor(actionType, known.proposals) : null;
@@ -474,6 +475,9 @@ export function ProposeScreen({
 											recheck={signerLookups.recheck}
 											me={me}
 											finaliser={form.finaliser}
+											known={known.proposals}
+											knownState={known.state}
+											relayInUse={relay.mode === "on"}
 										/>
 									) : (
 										<ActionFields

@@ -27,4 +27,17 @@ export const CHANGE = {
 		}. Someone who is being removed can still sign it.`,
 	takesEffect:
 		"It takes effect the moment Hyperliquid accepts the proposal. Until then nothing changes.",
+	/** On the proposal's page: what the comparison is made with. */
+	againstNow:
+		"Compared with the signers Hyperliquid reports for this treasury now.",
+	// What the change does to the proposals still waiting.
+	affectedTitle: "Waiting proposals this changes",
+	affectedNone: "No waiting proposal is affected.",
+	affectedReading: "Reading the waiting proposals…",
+	/** The record kept with the relay could not be read. */
+	affectedPartial:
+		"Only the proposals kept in this browser could be checked. The others could not be read just now.",
+	/** Nothing but this browser's copies exists to check (links and files). */
+	affectedLocal:
+		"Checked against the proposals this browser has opened. One that was passed around as a link or a file and never opened here is not known.",
 } as const;
