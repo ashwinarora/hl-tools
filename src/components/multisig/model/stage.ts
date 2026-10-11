@@ -10,6 +10,7 @@ import {
 	explainExchangeError,
 	type Hex,
 	type Network,
+	numberSpent,
 	type Policy,
 	type Proposal,
 	type Readiness,
@@ -35,6 +36,7 @@ export type Phase =
 	| "closed"
 	| "stuck"
 	| "overtaken"
+	| "refused"
 	| "withdrawn"
 	| "declined"
 	| "expired"
@@ -144,6 +146,19 @@ export function finaliserLeft(p: Proposal, live: Policy | null): boolean {
 	);
 }
 
+/**
+ * Hyperliquid took this proposal's envelope and refused it. That uses up the
+ * proposal's number for its finaliser, whatever the reason was (measured: see
+ * the core's `numberSpent`), so it can never be sent again: it has to be
+ * proposed again.
+ */
+export function refusedForGood(p: Proposal): boolean {
+	return (
+		!!p.receipt &&
+		numberSpent(explainExchangeError(p.receipt.response, p.receipt.httpStatus))
+	);
+}
+
 export function deriveStage(input: StageInput): Stage {
 	const { proposal: p, readiness: r, policy } = input;
 	const now = input.now ?? Date.now();
@@ -226,6 +241,15 @@ export function deriveStage(input: StageInput): Stage {
 		phase = "unsupported";
 		head = say`This document sets a vault address or an expiry`;
 		body = say`Signers of a user-signed action do not sign those two fields, so anyone could have added them. This page will not sign or submit it.`;
+	} else if (
+		failedAttempt &&
+		failedAttempt.id !== "nonce-used" &&
+		numberSpent(failedAttempt)
+	) {
+		// before anything about signatures: no signature changes it any more
+		phase = "refused";
+		head = say`Refused by Hyperliquid · cannot be sent again`;
+		body = say`Hyperliquid refused this proposal when it was submitted, and a refused submission still uses up the proposal's number. Sending it again would only be answered "duplicate nonce". Propose it again: it gets a new number, and the signers sign once more.`;
 	} else if (!r) {
 		phase = "judging";
 		head = say`Checking signatures…`;

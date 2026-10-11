@@ -21,7 +21,8 @@ export interface InboxEntry {
 	readonly frozen: boolean;
 	/**
 	 * It cannot be submitted, whoever signs: its finaliser is no longer a signer,
-	 * or it is a USDC send and a newer send of the treasury has been carried out.
+	 * it is a USDC send and a newer send of the treasury has been carried out,
+	 * or Hyperliquid refused it once, which used up its number.
 	 */
 	readonly stuck: boolean;
 }

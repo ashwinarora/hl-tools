@@ -161,7 +161,7 @@ export function YourPart({
 			? actions.withdraw
 				? "It cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again with another finaliser."
 				: "It cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it."
-			: stage.phase === "overtaken"
+			: stage.phase === "overtaken" || stage.phase === "refused"
 				? actions.withdraw
 					? "It cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again."
 					: actions.decline

@@ -16,7 +16,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { assembleProposal, countedSigners } from "../model/relay/assemble";
 import type { InboxEntry } from "../model/relay/inbox";
 import type { ProposalRow } from "../model/relay/rows";
-import { finaliserLeft } from "../model/stage";
+import { finaliserLeft, refusedForGood } from "../model/stage";
 import { listCarriedOutAfter, listOpenProposals } from "./api";
 import { treasuriesQuery, unwrap } from "./queries";
 import { queryIssue, useRelay } from "./useRelay";
@@ -105,6 +105,8 @@ export function useOpenProposals() {
 					open: row.status === "open" && row.expiresAt > now,
 					frozen: stored.frozenAt !== null,
 					stuck:
+						// refused once: its number is used up, whoever signs now
+						refusedForGood(p) ||
 						finaliserLeft(p, {
 							authorizedUsers: stored.signers,
 							threshold: stored.threshold,

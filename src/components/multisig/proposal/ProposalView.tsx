@@ -70,6 +70,7 @@ const ACTIONABLE: ReadonlySet<Phase> = new Set([
 	// nothing to sign, but its proposer can still withdraw it and a signer take a signature back
 	"stuck",
 	"overtaken",
+	"refused",
 ]);
 /** Phases after which nobody signs any more. */
 const CLOSED: ReadonlySet<Phase> = new Set([
@@ -84,6 +85,7 @@ const CLOSED: ReadonlySet<Phase> = new Set([
 const REPROPOSABLE: ReadonlySet<Phase> = new Set([
 	"stuck",
 	"overtaken",
+	"refused",
 	"expired",
 	"withdrawn",
 	"declined",

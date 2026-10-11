@@ -22,6 +22,7 @@ import {
 import {
 	deriveStage,
 	finaliserLeft,
+	refusedForGood,
 	type StageInput,
 	shortAddress,
 } from "./stage";
@@ -212,7 +213,7 @@ describe("deriveStage", () => {
 		expect(unknown.canExecute).toBe(false);
 	});
 
-	it("is finished once the chain accepted it, and offers a retry after a rejection", async () => {
+	it("is finished once the chain accepted it, and over once the chain refused it", async () => {
 		const p = await signAs(await signAs(makeProposal(), 1), 2);
 		const done = await stage({ ...p, receipt: OK }, { wallet: B });
 		expect(done.phase).toBe("submitted");
@@ -220,15 +221,69 @@ describe("deriveStage", () => {
 		expect([done.canSign, done.canExecute]).toEqual([false, false]);
 		expect(done.executeReason).toBe("Submitted · accepted by Hyperliquid");
 
+		// a refused envelope has used up its number: sending it again is answered
+		// "duplicate nonce" (measured on testnet), so no button offers it
 		const failed = await stage({ ...p, receipt: ERR }, { wallet: B });
-		expect(failed.phase).toBe("ready");
+		expect(failed.phase).toBe("refused");
+		expect(failed.headline).toBe(
+			"Refused by Hyperliquid · cannot be sent again",
+		);
+		expect(failed.detail).toContain("Propose it again");
 		expect(failed.failedAttempt?.id).not.toBe("ok");
-		expect(failed.canExecute).toBe(true);
+		expect([failed.canSign, failed.canExecute]).toEqual([false, false]);
+		expect(failed.executeReason).toBe(failed.headline);
+		expect(refusedForGood({ ...p, receipt: ERR })).toBe(true);
+		// known at once, before any signature is checked
+		expect(
+			deriveStage({
+				proposal: { ...p, receipt: ERR },
+				readiness: null,
+				policy: null,
+				wallet: B,
+				walletChainId: null,
+				now: NOW,
+			}).phase,
+		).toBe("refused");
+
+		// an answer that never reached Hyperliquid's books leaves it as it was
 		const http = await stage(
 			{ ...p, receipt: receipt("Bad Gateway", 502) },
 			{ wallet: B },
 		);
 		expect(http.failedAttempt?.source).toBe("http");
+		expect(http.phase).toBe("ready");
+		expect(http.canExecute).toBe(true);
+		expect(refusedForGood({ ...p, receipt: receipt("Bad Gateway", 502) })).toBe(
+			false,
+		);
+		// and so does an envelope whose own signature recovered to another address
+		const stray = receipt({
+			status: "err",
+			response:
+				"L1 error: User or API Wallet 0x0123456789012345678901234567890123456789 does not exist.",
+		});
+		expect((await stage({ ...p, receipt: stray }, { wallet: B })).phase).toBe(
+			"ready",
+		);
+		expect(refusedForGood({ ...p, receipt: OK })).toBe(false);
+		expect(refusedForGood(p)).toBe(false);
+	});
+
+	it("says what ended it first: accepted elsewhere, withdrawn or declined, before 'refused'", async () => {
+		const p = {
+			...(await signAs(await signAs(makeProposal(), 1), 2)),
+			receipt: ERR,
+		};
+		expect(
+			(await stage(p, { wallet: B, carriedOut: { txHash: null } })).phase,
+		).toBe("carried-out");
+		expect(
+			(await stage(p, { wallet: B, ended: { kind: "withdrawn", by: A } }))
+				.phase,
+		).toBe("withdrawn");
+		expect(
+			(await stage(p, { wallet: B, ended: { kind: "declined", by: B } })).phase,
+		).toBe("declined");
 	});
 
 	it("refuses L1 actions and documents that set unsigned fields", async () => {
@@ -491,9 +546,9 @@ describe("deriveStage", () => {
 		const s = await stage(p, { wallet: B });
 		expect(s.phase).toBe("overtaken");
 		expect(s.failedAttempt?.id).toBe("nonce-used");
-		// another rejection is still only a failed attempt: it can be retried
+		// any other refusal ends it too, with its own sentence
 		const other = await stage({ ...p, receipt: ERR }, { wallet: B });
-		expect(other.phase).toBe("ready");
+		expect(other.phase).toBe("refused");
 	});
 
 	it("keeps what ended a proposal ahead of 'overtaken': accepted, withdrawn, expired", async () => {
