@@ -1,7 +1,7 @@
 import { isNetwork, type Network } from "@hl-tools/core";
-import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { usePersistHydrated } from "./hydrated";
 
 interface NetworkState {
 	network: Network;
@@ -49,27 +49,7 @@ export function useNetwork(): Network {
  * on mount (e.g. a sample tied to a network) must wait for this.
  */
 export function useNetworkHydrated(): boolean {
-	// On the server localStorage is unavailable, so zustand attaches no
-	// `persist` API at all; treat that as "not hydrated yet".
-	const [hydrated, setHydrated] = useState(
-		() => useNetworkStore.persist?.hasHydrated() ?? false,
-	);
-	useEffect(() => {
-		const api = useNetworkStore.persist;
-		if (!api) return;
-		if (api.hasHydrated()) {
-			setHydrated(true);
-			return;
-		}
-		const unsubscribe = api.onFinishHydration(() => setHydrated(true));
-		// Don't depend solely on the root layout's rehydrate call: rehydrating
-		// is an idempotent localStorage read, and it guarantees this listener
-		// fires even if the root's call happened on a different module instance
-		// (Vite can load two copies after a hot update).
-		void api.rehydrate();
-		return unsubscribe;
-	}, []);
-	return hydrated;
+	return usePersistHydrated(useNetworkStore.persist);
 }
 
 /** Pre-hydration script: mirrors the stored network onto <html data-network>. */

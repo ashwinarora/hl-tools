@@ -1,7 +1,7 @@
 import type { Address, Network } from "@hl-tools/core";
-import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { usePersistHydrated } from "./hydrated";
 
 /**
  * What the Multisig section remembers in this browser only: that the
@@ -93,19 +93,5 @@ export const useMultisigPrefs = create<PrefsState>()(
 
 /** True once the stored preferences are in; until then nothing depending on them is shown. */
 export function usePrefsHydrated(): boolean {
-	const [hydrated, setHydrated] = useState(
-		() => useMultisigPrefs.persist?.hasHydrated() ?? false,
-	);
-	useEffect(() => {
-		const api = useMultisigPrefs.persist;
-		if (!api) return;
-		if (api.hasHydrated()) {
-			setHydrated(true);
-			return;
-		}
-		const unsubscribe = api.onFinishHydration(() => setHydrated(true));
-		void api.rehydrate();
-		return unsubscribe;
-	}, []);
-	return hydrated;
+	return usePersistHydrated(useMultisigPrefs.persist);
 }
