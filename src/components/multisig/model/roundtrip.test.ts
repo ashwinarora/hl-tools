@@ -44,7 +44,7 @@ async function proposedByA() {
 	const draft = buildProposalInput(
 		{
 			...DEFAULT_FORM,
-			kind: "usdSend",
+			kind: "sendUsdc",
 			destination: RECIPIENT,
 			amount: "1",
 			finaliser: B,
@@ -55,6 +55,13 @@ async function proposedByA() {
 			multiSigUser: TREASURY,
 			nonce: NONCE,
 			signatureChainId: chain.hex,
+			tokens: [
+				{
+					name: "USDC",
+					tokenId: "0xeb62eee3685fc4c43992febcd9e75443",
+					weiDecimals: 8,
+				},
+			],
 			createdBy: A,
 			policyAtCreation: POLICY,
 		},
@@ -147,12 +154,16 @@ describe("propose → sign → pass on → sign → execute", () => {
 		expect(body.action.signatureChainId).toBe("0x3e6");
 		expect(body.action.signatures).toHaveLength(2);
 		expect(body.action.payload.action).toEqual({
-			type: "usdSend",
+			type: "sendAsset",
 			signatureChainId: "0x3e6",
 			hyperliquidChain: "Testnet",
 			destination: RECIPIENT,
+			sourceDex: "",
+			destinationDex: "",
+			token: "USDC:0xeb62eee3685fc4c43992febcd9e75443",
 			amount: "1",
-			time: NONCE,
+			fromSubAccount: "",
+			nonce: NONCE,
 		});
 		expect(body.nonce).toBe(NONCE);
 		expect(body.vaultAddress).toBeNull();

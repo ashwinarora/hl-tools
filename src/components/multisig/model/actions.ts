@@ -8,7 +8,9 @@
  * with too many decimals is an error, not a silent truncation.
  */
 import {
+	type AccountMode,
 	type Address,
+	activationCharge,
 	Decimal,
 	fromPlain,
 	type Hex,
@@ -20,6 +22,7 @@ import {
 	type PlainObject,
 	type Policy,
 	type ProposalInput,
+	sendRefusal,
 	signingFamilyFor,
 	stringifyJson,
 	toPlain,
@@ -30,9 +33,15 @@ import { ADDRESS_RE } from "#/components/tools/multisig/model";
 import { chainChoiceFor, type InnerChain } from "./chains";
 import type { NonceMode } from "./nonce";
 
+/**
+ * `sendUsdc` and `sendToken` both build a `sendAsset`: the one way of sending
+ * that Hyperliquid takes in any order, from an account in any mode, and that
+ * delivers the full amount to an address never used (see the core's
+ * rules/transfers). A `usdSend` or `spotSend` can still be written as raw JSON.
+ */
 export type ActionKind =
-	| "usdSend"
-	| "spotSend"
+	| "sendUsdc"
+	| "sendToken"
 	| "usdClassTransfer"
 	| "withdraw3"
 	| "approveAgent"
@@ -44,12 +53,12 @@ export const ACTION_KINDS: readonly {
 	readonly description: string;
 }[] = [
 	{
-		kind: "usdSend",
+		kind: "sendUsdc",
 		label: "Send USDC",
-		description: "USDC from the perps balance to another Hyperliquid account.",
+		description: "USDC to another Hyperliquid account.",
 	},
 	{
-		kind: "spotSend",
+		kind: "sendToken",
 		label: "Send spot token",
 		description: "A spot token to another Hyperliquid account.",
 	},
@@ -76,12 +85,38 @@ export const ACTION_KINDS: readonly {
 	},
 ];
 
+/** One of the two balances of a manual account. */
+export type PocketChoice = "perps" | "spot";
+
+/** What is known about a destination when the form is filled in. */
+export interface Receiver {
+	/**
+	 * new      never used on Hyperliquid: the first send to it costs 1 USDC
+	 * active   an account in use: sending to it costs nothing
+	 * agent    an API wallet's address: whether the fee applies cannot be told
+	 * other    a vault or a sub-account
+	 * unknown  could not be read
+	 */
+	readonly status: "new" | "active" | "agent" | "other" | "unknown";
+	/** Its account mode; null when not read. */
+	readonly mode: AccountMode | null;
+	/** For an API wallet: the account it trades for. */
+	readonly agentOf?: string | null;
+}
+
 /** Flat strings, as the inputs hold them. */
 export interface ActionForm {
 	readonly kind: ActionKind;
 	readonly destination: string;
 	readonly amount: string;
-	/** `NAME:tokenId`, as the spot send action carries it. */
+	/**
+	 * Which of the treasury's balances a USDC send is taken from. `auto`: the
+	 * one that holds the money (see `sourcePocket`). A unified treasury has one.
+	 */
+	readonly fromPocket: PocketChoice | "auto";
+	/** Which of the receiver's balances a USDC send arrives in. */
+	readonly toPocket: PocketChoice;
+	/** `NAME:tokenId`, as the action carries it. */
 	readonly token: string;
 	readonly toPerp: "perp" | "spot";
 	readonly agentAddress: string;
@@ -96,9 +131,11 @@ export interface ActionForm {
 }
 
 export const DEFAULT_FORM: ActionForm = {
-	kind: "usdSend",
+	kind: "sendUsdc",
 	destination: "",
 	amount: "",
+	fromPocket: "auto",
+	toPocket: "perps",
 	token: "",
 	toPerp: "perp",
 	agentAddress: "",
@@ -129,8 +166,14 @@ export interface BuildContext {
 		readonly spot?: readonly {
 			readonly coin: string;
 			readonly total: string;
+			/** Held by positions and resting orders; what can be sent is total − hold. */
+			readonly hold?: string;
 		}[];
 	};
+	/** The treasury's account mode; null or absent while it is not known. */
+	readonly mode?: AccountMode | null;
+	/** What is known about the destination; null or absent while it is not. */
+	readonly receiver?: Receiver | null;
 	readonly createdBy?: string | null;
 	readonly supersedes?: Hex | null;
 	readonly policyAtCreation?: Policy | null;
@@ -138,6 +181,7 @@ export interface BuildContext {
 
 /** Perps USDC is accounted in 1e6. */
 const USDC_DECIMALS = 6;
+const USDC = "USDC";
 const TOKEN_RE = /^[^:\s]+:0x[0-9a-f]{32}$/;
 
 function addressField(
@@ -243,6 +287,111 @@ function warnOverBalance(
 	}
 }
 
+/** What the treasury can send of a spot token now: its total less what is held. */
+function spotFree(ctx: BuildContext, coin: string): string | undefined {
+	const b = ctx.balances?.spot?.find((x) => x.coin === coin);
+	if (!b) return undefined;
+	const total = Decimal.tryParse(b.total);
+	const hold = Decimal.tryParse(b.hold ?? "0");
+	return total && hold ? total.sub(hold).toString() : b.total;
+}
+
+const positive = (v: string | undefined): boolean =>
+	!!v && (Decimal.tryParse(v)?.isPositive() ?? false);
+
+/**
+ * The balance a USDC send is taken from. A unified treasury has one, reported
+ * as spot. A manual one: the pocket the form names, or, left on `auto`, the
+ * one that holds the money (perps when both do, or when neither is known to).
+ */
+export function sourcePocket(
+	form: Pick<ActionForm, "fromPocket">,
+	ctx: Pick<BuildContext, "mode" | "balances">,
+): PocketChoice {
+	if (ctx.mode?.kind === "unified") return "spot";
+	if (form.fromPocket !== "auto") return form.fromPocket;
+	return !positive(ctx.balances?.perpWithdrawable) &&
+		positive(spotFree(ctx as BuildContext, USDC))
+		? "spot"
+		: "perps";
+}
+
+/**
+ * The balance of the receiver a USDC send arrives in: the pocket the form
+ * names. A unified receiver has one balance, so the question is not asked and
+ * the action names spot, where that balance is reported.
+ */
+export function arrivalPocket(
+	form: Pick<ActionForm, "toPocket">,
+	ctx: Pick<BuildContext, "receiver">,
+): PocketChoice {
+	return ctx.receiver?.mode?.kind === "unified" ? "spot" : form.toPocket;
+}
+
+const dexOf = (p: PocketChoice): string => (p === "perps" ? "" : "spot");
+
+/**
+ * Warnings about a finished action that moves money: what the treasury's mode
+ * or the receiver being new will make of it. Balances are read a moment ago,
+ * so nothing here blocks: the check before submitting does.
+ */
+function warnAboutSend(
+	action: PlainObject,
+	ctx: BuildContext,
+	issues: Issue[],
+): void {
+	const refusal = ctx.mode ? sendRefusal(ctx.mode, action) : null;
+	if (refusal === "unified-disabled" || refusal === "unified-spot-only") {
+		issues.push(
+			issue(
+				"mode.refuses",
+				"warning",
+				refusal === "unified-disabled"
+					? "This treasury is a unified account, and Hyperliquid switches this action off there. Use Send USDC or Send spot token instead."
+					: "This treasury is a unified account: it can only send from its one balance, which Hyperliquid calls spot.",
+				{ path: "action" },
+			),
+		);
+	}
+	if (refusal === "token-invalid") {
+		issues.push(
+			issue(
+				"token.not_collateral",
+				"warning",
+				"Only USDC moves into or out of a perps balance. Hyperliquid refuses any other token there.",
+				{ path: "action.token" },
+			),
+		);
+	}
+	if (ctx.receiver?.status !== "new") return;
+	const charge = activationCharge({
+		action,
+		receiverNew: true,
+		spotUsdc: spotFree(ctx, USDC) ?? null,
+		perpsUsdc: ctx.balances?.perpWithdrawable ?? null,
+	});
+	if (charge.refusal === "transfer-below-fee") {
+		issues.push(
+			issue(
+				"fee.below",
+				"warning",
+				"The destination is new, and this kind of send pays the 1 USDC fee out of the amount: Hyperliquid refuses an amount of 1 USDC or less.",
+				{ path: "action.amount" },
+			),
+		);
+	}
+	if (charge.refusal === "transfer-gas") {
+		issues.push(
+			issue(
+				"fee.not_covered",
+				"warning",
+				"The destination is new, so this costs 1 USDC on top of the amount, and the balances observed just now do not cover both. The chain will reject it unless funds arrive first.",
+				{ path: "action.amount" },
+			),
+		);
+	}
+}
+
 export interface BuiltAction {
 	readonly action: PlainObject | null;
 	readonly issues: readonly Issue[];
@@ -281,10 +430,52 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 	};
 
 	switch (form.kind) {
-		case "usdSend":
+		case "sendUsdc": {
+			const dest = destination();
+			const amount = amountField(form.amount, USDC_DECIMALS, USDC, issues);
+			const usdc = ctx.tokens?.find((t) => t.name === USDC);
+			if (!usdc) {
+				issues.push(
+					issue(
+						"token.list_missing",
+						"error",
+						`The token list of ${ctx.network} is not loaded yet, and the action has to name USDC by its id.`,
+						// not a field of this form: shown with the general notes
+						{ path: "tokens" },
+					),
+				);
+			}
+			const from = sourcePocket(form, ctx);
+			if (amount)
+				warnOverBalance(
+					amount,
+					from === "perps"
+						? ctx.balances?.perpWithdrawable
+						: spotFree(ctx, USDC),
+					ctx.mode?.kind === "unified"
+						? "balance that can be moved"
+						: from === "perps"
+							? "withdrawable perps balance"
+							: "USDC spot balance",
+					issues,
+				);
+			const action: PlainObject = {
+				type: "sendAsset",
+				...head,
+				destination: dest ?? "",
+				sourceDex: dexOf(from),
+				destinationDex: dexOf(arrivalPocket(form, ctx)),
+				token: usdc ? `${usdc.name}:${usdc.tokenId}` : "",
+				amount: amount?.toString() ?? "",
+				fromSubAccount: "",
+				nonce: ctx.nonce,
+			};
+			warnAboutSend(action, ctx, issues);
+			return done(action);
+		}
 		case "withdraw3": {
 			const dest = destination();
-			const amount = amountField(form.amount, USDC_DECIMALS, "USDC", issues);
+			const amount = amountField(form.amount, USDC_DECIMALS, USDC, issues);
 			if (amount)
 				warnOverBalance(
 					amount,
@@ -293,14 +484,14 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 					issues,
 				);
 			return done({
-				type: form.kind,
+				type: "withdraw3",
 				...head,
 				destination: dest ?? "",
 				amount: amount?.toString() ?? "",
 				time: ctx.nonce,
 			});
 		}
-		case "spotSend": {
+		case "sendToken": {
 			const dest = destination();
 			const token = form.token.trim();
 			const listed = ctx.tokens?.find(
@@ -341,28 +532,41 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 			if (amount)
 				warnOverBalance(
 					amount,
-					ctx.balances?.spot?.find((b) => b.coin === name)?.total,
+					spotFree(ctx, name),
 					`${name} spot balance`,
 					issues,
 				);
-			return done({
-				type: "spotSend",
+			const action: PlainObject = {
+				type: "sendAsset",
 				...head,
 				destination: dest ?? "",
+				sourceDex: "spot",
+				destinationDex: "spot",
 				token,
 				amount: amount?.toString() ?? "",
-				time: ctx.nonce,
-			});
+				fromSubAccount: "",
+				nonce: ctx.nonce,
+			};
+			warnAboutSend(action, ctx, issues);
+			return done(action);
 		}
 		case "usdClassTransfer": {
+			if (ctx.mode?.kind === "unified") {
+				issues.push(
+					issue(
+						"mode.one_balance",
+						"error",
+						"This treasury is a unified account: it has one balance, so there is nothing to move between perps and spot.",
+						{ path: "action" },
+					),
+				);
+			}
 			const toPerp = form.toPerp === "perp";
 			const amount = amountField(form.amount, USDC_DECIMALS, "USDC", issues);
 			if (amount)
 				warnOverBalance(
 					amount,
-					toPerp
-						? ctx.balances?.spot?.find((b) => b.coin === "USDC")?.total
-						: ctx.balances?.perpWithdrawable,
+					toPerp ? spotFree(ctx, USDC) : ctx.balances?.perpWithdrawable,
 					toPerp ? "USDC spot balance" : "withdrawable perps balance",
 					issues,
 				);
@@ -399,8 +603,11 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				nonce: ctx.nonce,
 			});
 		}
-		case "raw":
-			return done(rawAction(form.raw, head, ctx.nonce, issues));
+		case "raw": {
+			const action = rawAction(form.raw, head, ctx.nonce, issues);
+			if (action) warnAboutSend(action, ctx, issues);
+			return done(action);
+		}
 	}
 }
 
@@ -511,6 +718,32 @@ function rawAction(
 	return { ...obj, ...forced };
 }
 
+/**
+ * The action type a form will produce, known before the action can be built
+ * (the nonce it needs depends on the type: sends and withdrawals are numbered
+ * after the ones on record). Null when raw JSON does not say.
+ */
+export function actionTypeOf(
+	form: Pick<ActionForm, "kind" | "raw">,
+): string | null {
+	switch (form.kind) {
+		case "sendUsdc":
+		case "sendToken":
+			return "sendAsset";
+		case "raw": {
+			const parsed = tryParseJson(form.raw.trim());
+			const plain = parsed.ok ? toPlain(parsed.node) : null;
+			const type =
+				plain && typeof plain === "object" && !Array.isArray(plain)
+					? (plain as PlainObject).type
+					: null;
+			return typeof type === "string" ? type : null;
+		}
+		default:
+			return form.kind;
+	}
+}
+
 export interface Draft {
 	/** Null while the form has errors. */
 	readonly input: ProposalInput | null;
@@ -582,21 +815,67 @@ export function formFromAction(
 	const chain =
 		chainChoiceFor(str(action.signatureChainId), network) ?? undefined;
 	const base = chain ? { chain } : {};
+	const pocket = (dex: unknown): PocketChoice | null =>
+		dex === "" ? "perps" : dex === "spot" ? "spot" : null;
+	const isUsdc = (token: unknown) => str(token).split(":")[0] === USDC;
 	switch (action.type) {
+		// the two older ways of sending come back as the send that replaces them
 		case "usdSend":
+			return {
+				...base,
+				kind: "sendUsdc",
+				destination: str(action.destination),
+				amount: str(action.amount),
+				fromPocket: "perps",
+				toPocket: "perps",
+			};
+		case "spotSend":
+			return isUsdc(action.token)
+				? {
+						...base,
+						kind: "sendUsdc",
+						destination: str(action.destination),
+						amount: str(action.amount),
+						fromPocket: "spot",
+						toPocket: "spot",
+					}
+				: {
+						...base,
+						kind: "sendToken",
+						destination: str(action.destination),
+						token: str(action.token),
+						amount: str(action.amount),
+					};
+		case "sendAsset": {
+			const from = pocket(action.sourceDex);
+			const to = pocket(action.destinationDex);
+			// another perp dex or a sub-account is beyond the two forms
+			if (from && to && str(action.fromSubAccount) === "") {
+				if (isUsdc(action.token))
+					return {
+						...base,
+						kind: "sendUsdc",
+						destination: str(action.destination),
+						amount: str(action.amount),
+						fromPocket: from,
+						toPocket: to,
+					};
+				if (from === "spot" && to === "spot")
+					return {
+						...base,
+						kind: "sendToken",
+						destination: str(action.destination),
+						token: str(action.token),
+						amount: str(action.amount),
+					};
+			}
+			return rawForm(action, base);
+		}
 		case "withdraw3":
 			return {
 				...base,
-				kind: action.type,
+				kind: "withdraw3",
 				destination: str(action.destination),
-				amount: str(action.amount),
-			};
-		case "spotSend":
-			return {
-				...base,
-				kind: "spotSend",
-				destination: str(action.destination),
-				token: str(action.token),
 				amount: str(action.amount),
 			};
 		case "usdClassTransfer":
@@ -613,21 +892,26 @@ export function formFromAction(
 				agentAddress: str(action.agentAddress),
 				agentName: str(action.agentName),
 			};
-		default: {
-			// the three fields this page sets are left out so the paste is not "overridden" at once
-			const nonceField =
-				userSignedSpec(str(action.type))?.nonceField ?? "nonce";
-			const rest = Object.fromEntries(
-				Object.entries(action).filter(
-					([k]) =>
-						k !== "signatureChainId" &&
-						k !== "hyperliquidChain" &&
-						k !== nonceField,
-				),
-			);
-			return { ...base, kind: "raw", raw: stringifyJson(fromPlain(rest), 2) };
-		}
+		default:
+			return rawForm(action, base);
 	}
+}
+
+/** The action as raw JSON, without the three fields this page sets, so the paste is not "overridden" at once. */
+function rawForm(
+	action: PlainObject,
+	base: Partial<ActionForm>,
+): Partial<ActionForm> {
+	const nonceField = userSignedSpec(str(action.type))?.nonceField ?? "nonce";
+	const rest = Object.fromEntries(
+		Object.entries(action).filter(
+			([k]) =>
+				k !== "signatureChainId" &&
+				k !== "hyperliquidChain" &&
+				k !== nonceField,
+		),
+	);
+	return { ...base, kind: "raw", raw: stringifyJson(fromPlain(rest), 2) };
 }
 
 /** Which form field an issue belongs under, if any. */

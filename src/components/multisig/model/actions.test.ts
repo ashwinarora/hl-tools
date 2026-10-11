@@ -1,4 +1,9 @@
-import { createProposal, hasErrors, type Issue } from "@hl-tools/core";
+import {
+	accountMode,
+	createProposal,
+	hasErrors,
+	type Issue,
+} from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import {
 	A,
@@ -13,12 +18,15 @@ import {
 import {
 	ACTION_KINDS,
 	type ActionForm,
+	actionTypeOf,
+	arrivalPocket,
 	type BuildContext,
 	buildAction,
 	buildProposalInput,
 	DEFAULT_FORM,
 	fieldOf,
 	formFromAction,
+	sourcePocket,
 } from "./actions";
 
 const PURR = {
@@ -26,15 +34,23 @@ const PURR = {
 	tokenId: "0xc4bf3f870c0e9465323c0b6ed28096c2",
 	weiDecimals: 5,
 };
+const USDC = {
+	name: "USDC",
+	tokenId: "0xeb62eee3685fc4c43992febcd9e75443",
+	weiDecimals: 8,
+};
+const USDC_ID = `USDC:${USDC.tokenId}`;
 const ctx = (over: Partial<BuildContext> = {}): BuildContext => ({
 	network: "testnet",
 	multiSigUser: TREASURY,
 	nonce: NONCE,
 	signatureChainId: "0x3e6",
 	policyAtCreation: POLICY,
-	tokens: [PURR],
+	tokens: [PURR, USDC],
 	...over,
 });
+const UNIFIED = accountMode("unifiedAccount");
+const MANUAL = accountMode("default");
 const form = (over: Partial<ActionForm>): ActionForm => ({
 	...DEFAULT_FORM,
 	finaliser: B,
@@ -45,14 +61,58 @@ const HEAD = { signatureChainId: "0x3e6", hyperliquidChain: "Testnet" };
 const UPPER = `0x${RECIPIENT.slice(2).toUpperCase()}`;
 
 const VALID: Record<string, { form: ActionForm; action: object }> = {
-	usdSend: {
-		form: form({ kind: "usdSend", destination: UPPER, amount: "1.0" }),
+	sendUsdc: {
+		form: form({ kind: "sendUsdc", destination: UPPER, amount: "1.0" }),
 		action: {
-			type: "usdSend",
+			type: "sendAsset",
 			...HEAD,
 			destination: RECIPIENT,
+			sourceDex: "",
+			destinationDex: "",
+			token: USDC_ID,
 			amount: "1",
-			time: NONCE,
+			fromSubAccount: "",
+			nonce: NONCE,
+		},
+	},
+	"sendUsdc from spot into spot": {
+		form: form({
+			kind: "sendUsdc",
+			destination: RECIPIENT,
+			amount: "2.5",
+			fromPocket: "spot",
+			toPocket: "spot",
+		}),
+		action: {
+			type: "sendAsset",
+			...HEAD,
+			destination: RECIPIENT,
+			sourceDex: "spot",
+			destinationDex: "spot",
+			token: USDC_ID,
+			amount: "2.5",
+			fromSubAccount: "",
+			nonce: NONCE,
+		},
+	},
+	"sendUsdc from spot into perps": {
+		form: form({
+			kind: "sendUsdc",
+			destination: RECIPIENT,
+			amount: "3",
+			fromPocket: "spot",
+			toPocket: "perps",
+		}),
+		action: {
+			type: "sendAsset",
+			...HEAD,
+			destination: RECIPIENT,
+			sourceDex: "spot",
+			destinationDex: "",
+			token: USDC_ID,
+			amount: "3",
+			fromSubAccount: "",
+			nonce: NONCE,
 		},
 	},
 	withdraw3: {
@@ -65,20 +125,23 @@ const VALID: Record<string, { form: ActionForm; action: object }> = {
 			time: NONCE,
 		},
 	},
-	spotSend: {
+	sendToken: {
 		form: form({
-			kind: "spotSend",
+			kind: "sendToken",
 			destination: RECIPIENT,
 			token: `PURR:${PURR.tokenId}`,
 			amount: "0.00001",
 		}),
 		action: {
-			type: "spotSend",
+			type: "sendAsset",
 			...HEAD,
 			destination: RECIPIENT,
+			sourceDex: "spot",
+			destinationDex: "spot",
 			token: `PURR:${PURR.tokenId}`,
 			amount: "0.00001",
-			time: NONCE,
+			fromSubAccount: "",
+			nonce: NONCE,
 		},
 	},
 	"usdClassTransfer to perps": {
@@ -147,8 +210,8 @@ const VALID: Record<string, { form: ActionForm; action: object }> = {
 describe("buildAction / buildProposalInput", () => {
 	it("lists the six kinds once each", () => {
 		expect(ACTION_KINDS.map((k) => k.kind)).toEqual([
-			"usdSend",
-			"spotSend",
+			"sendUsdc",
+			"sendToken",
 			"usdClassTransfer",
 			"withdraw3",
 			"approveAgent",
@@ -181,7 +244,7 @@ describe("buildAction / buildProposalInput", () => {
 	it("carries title, note, proposer and the superseded digest", () => {
 		const digest = `0x${"ab".repeat(32)}` as const;
 		const draft = buildProposalInput(
-			form({ ...VALID.usdSend?.form, title: " rent ", note: "" }),
+			form({ ...VALID.sendUsdc?.form, title: " rent ", note: "" }),
 			ctx({
 				createdBy: A.toUpperCase().replace("0X", "0x"),
 				supersedes: digest,
@@ -194,7 +257,7 @@ describe("buildAction / buildProposalInput", () => {
 			supersedes: digest,
 		});
 		const bare = buildProposalInput(
-			form({ ...VALID.usdSend?.form }),
+			form({ ...VALID.sendUsdc?.form }),
 			ctx({ policyAtCreation: undefined }),
 		);
 		expect(bare.input).toMatchObject({
@@ -208,7 +271,7 @@ describe("buildAction / buildProposalInput", () => {
 	it("writes amounts canonically and never rounds", () => {
 		const amount = (a: string, c = ctx()) =>
 			buildAction(
-				form({ kind: "usdSend", destination: RECIPIENT, amount: a }),
+				form({ kind: "sendUsdc", destination: RECIPIENT, amount: a }),
 				c,
 			);
 		expect((amount("1.0").action as { amount: string }).amount).toBe("1");
@@ -235,7 +298,7 @@ describe("buildAction / buildProposalInput", () => {
 
 	it("checks addresses and flags a send to the account itself", () => {
 		const send = (destination: string) =>
-			buildAction(form({ kind: "usdSend", destination, amount: "1" }), ctx());
+			buildAction(form({ kind: "sendUsdc", destination, amount: "1" }), ctx());
 		expect(codes(send("").issues)).toEqual(["field.required"]);
 		expect(codes(send("0x1234").issues)).toEqual(["address.invalid"]);
 		expect(
@@ -256,7 +319,7 @@ describe("buildAction / buildProposalInput", () => {
 		const spot = (over: Partial<ActionForm>, c = ctx()) =>
 			buildAction(
 				form({
-					kind: "spotSend",
+					kind: "sendToken",
 					destination: RECIPIENT,
 					token: `PURR:${PURR.tokenId}`,
 					amount: "1",
@@ -292,12 +355,12 @@ describe("buildAction / buildProposalInput", () => {
 		const c = ctx({ balances });
 		const over = (f: Partial<ActionForm>) => buildProposalInput(form(f), c);
 		for (const f of [
-			{ kind: "usdSend", destination: RECIPIENT, amount: "30" },
+			{ kind: "sendUsdc", destination: RECIPIENT, amount: "30" },
 			{ kind: "withdraw3", destination: RECIPIENT, amount: "25.000001" },
 			{ kind: "usdClassTransfer", amount: "6", toPerp: "perp" },
 			{ kind: "usdClassTransfer", amount: "26", toPerp: "spot" },
 			{
-				kind: "spotSend",
+				kind: "sendToken",
 				destination: RECIPIENT,
 				token: `PURR:${PURR.tokenId}`,
 				amount: "3",
@@ -311,19 +374,19 @@ describe("buildAction / buildProposalInput", () => {
 			expect(r.input).not.toBeNull();
 		}
 		expect(
-			over({ kind: "usdSend", destination: RECIPIENT, amount: "25" }).issues,
+			over({ kind: "sendUsdc", destination: RECIPIENT, amount: "25" }).issues,
 		).toEqual([]);
 		// an unreadable or absent balance says nothing
 		expect(
 			buildAction(
-				form({ kind: "usdSend", destination: RECIPIENT, amount: "99" }),
+				form({ kind: "sendUsdc", destination: RECIPIENT, amount: "99" }),
 				ctx({ balances: { perpWithdrawable: "n/a" } }),
 			).issues,
 		).toEqual([]);
 		expect(
 			buildAction(
 				form({
-					kind: "spotSend",
+					kind: "sendToken",
 					destination: RECIPIENT,
 					token: `PURR:${PURR.tokenId}`,
 					amount: "99",
@@ -396,7 +459,7 @@ describe("buildAction / buildProposalInput", () => {
 
 	it("requires a finaliser from the current signer set", () => {
 		const f = (finaliser: string, c = ctx()) =>
-			buildProposalInput(form({ ...VALID.usdSend?.form, finaliser }), c);
+			buildProposalInput(form({ ...VALID.sendUsdc?.form, finaliser }), c);
 		for (const [who, code] of [
 			["", "finaliser.required"],
 			["0x12", "address.invalid"],
@@ -417,8 +480,286 @@ describe("buildAction / buildProposalInput", () => {
 		).toBe(OUTSIDER);
 		// an action that does not build leaves no input even with a good finaliser
 		expect(
-			buildProposalInput(form({ kind: "usdSend", amount: "1" }), ctx()).input,
+			buildProposalInput(form({ kind: "sendUsdc", amount: "1" }), ctx()).input,
 		).toBeNull();
+	});
+});
+
+describe("where a USDC send is taken from and where it arrives", () => {
+	const usdc = (total: string, hold = "0") => ({ coin: "USDC", total, hold });
+	it("a manual treasury sends from the pocket that holds the money, perps when both do", () => {
+		const auto = (perpWithdrawable?: string, spot?: string) =>
+			sourcePocket(
+				{ fromPocket: "auto" },
+				{
+					mode: MANUAL,
+					balances: { perpWithdrawable, spot: spot ? [usdc(spot)] : [] },
+				},
+			);
+		expect(auto("10", "5")).toBe("perps");
+		expect(auto("10", undefined)).toBe("perps");
+		expect(auto("0", "5")).toBe("spot");
+		expect(auto("0.0", "5")).toBe("spot");
+		// nothing known, or nothing anywhere: perps, as a USDC send always was
+		expect(auto(undefined, undefined)).toBe("perps");
+		expect(auto("0", "0")).toBe("perps");
+		expect(sourcePocket({ fromPocket: "auto" }, {})).toBe("perps");
+		// spot money that is all on hold is not money that can be sent
+		expect(
+			sourcePocket(
+				{ fromPocket: "auto" },
+				{ balances: { perpWithdrawable: "0", spot: [usdc("5", "5")] } },
+			),
+		).toBe("perps");
+	});
+	it("the form's choice wins for a manual treasury, and a unified one has only one balance", () => {
+		const balances = { perpWithdrawable: "10", spot: [usdc("5")] };
+		expect(
+			sourcePocket({ fromPocket: "spot" }, { mode: MANUAL, balances }),
+		).toBe("spot");
+		expect(sourcePocket({ fromPocket: "perps" }, { balances })).toBe("perps");
+		for (const fromPocket of ["auto", "perps", "spot"] as const)
+			expect(sourcePocket({ fromPocket }, { mode: UNIFIED, balances })).toBe(
+				"spot",
+			);
+	});
+	it("arrives in the pocket named, or in a unified receiver's one balance", () => {
+		expect(arrivalPocket({ toPocket: "perps" }, {})).toBe("perps");
+		expect(
+			arrivalPocket(
+				{ toPocket: "spot" },
+				{ receiver: { status: "active", mode: MANUAL } },
+			),
+		).toBe("spot");
+		expect(
+			arrivalPocket(
+				{ toPocket: "perps" },
+				{ receiver: { status: "active", mode: UNIFIED } },
+			),
+		).toBe("spot");
+		expect(
+			arrivalPocket(
+				{ toPocket: "perps" },
+				{ receiver: { status: "new", mode: null } },
+			),
+		).toBe("perps");
+	});
+	it("builds the action accordingly", () => {
+		const built = (c: Partial<BuildContext>, f: Partial<ActionForm> = {}) =>
+			buildAction(
+				form({ kind: "sendUsdc", destination: RECIPIENT, amount: "1", ...f }),
+				ctx(c),
+			).action as { sourceDex: string; destinationDex: string };
+		// a unified treasury: from its one balance, whatever the form says
+		expect(built({ mode: UNIFIED }, { fromPocket: "perps" })).toMatchObject({
+			sourceDex: "spot",
+			destinationDex: "",
+		});
+		// a unified receiver: named as spot
+		expect(
+			built({ receiver: { status: "active", mode: UNIFIED } }),
+		).toMatchObject({ sourceDex: "", destinationDex: "spot" });
+		// money only in spot: sent from there without being told
+		expect(
+			built({
+				mode: MANUAL,
+				balances: { perpWithdrawable: "0", spot: [usdc("9")] },
+			}),
+		).toMatchObject({ sourceDex: "spot", destinationDex: "" });
+	});
+	it("needs the token list to name USDC by its id", () => {
+		const r = buildAction(
+			form({ kind: "sendUsdc", destination: RECIPIENT, amount: "1" }),
+			ctx({ tokens: undefined }),
+		);
+		expect(codes(r.issues)).toEqual(["token.list_missing"]);
+		expect(r.action).toBeNull();
+		// shown with the general notes: this form has no token field
+		expect(fieldOf(r.issues[0] as Issue)).toBeNull();
+	});
+});
+
+describe("what the treasury's mode and a new receiver make of an action", () => {
+	const send = (c: Partial<BuildContext>, f: Partial<ActionForm> = {}) =>
+		buildAction(
+			form({ kind: "sendUsdc", destination: RECIPIENT, amount: "5", ...f }),
+			ctx(c),
+		);
+	const raw = (action: object, c: Partial<BuildContext>) =>
+		buildAction(form({ kind: "raw", raw: JSON.stringify(action) }), ctx(c));
+	const real = (issues: readonly Issue[]) =>
+		codes(issues.filter((i) => i.severity !== "info"));
+
+	it("a unified treasury has nothing to move between perps and spot", () => {
+		const r = buildAction(
+			form({ kind: "usdClassTransfer", amount: "5" }),
+			ctx({ mode: UNIFIED }),
+		);
+		expect(codes(r.issues)).toEqual(["mode.one_balance"]);
+		expect(r.action).toBeNull();
+		expect(
+			buildAction(
+				form({ kind: "usdClassTransfer", amount: "5" }),
+				ctx({ mode: MANUAL }),
+			).issues,
+		).toEqual([]);
+	});
+	it("warns when raw JSON names something a unified treasury is refused", () => {
+		const usdSend = { type: "usdSend", destination: RECIPIENT, amount: "5" };
+		expect(real(raw(usdSend, { mode: UNIFIED }).issues)).toEqual([
+			"mode.refuses",
+		]);
+		expect(raw(usdSend, { mode: UNIFIED }).action).not.toBeNull();
+		expect(real(raw(usdSend, { mode: MANUAL }).issues)).toEqual([]);
+		expect(real(raw(usdSend, {}).issues)).toEqual([]);
+		const fromPerps = {
+			type: "sendAsset",
+			destination: RECIPIENT,
+			sourceDex: "",
+			destinationDex: "spot",
+			token: USDC_ID,
+			amount: "5",
+			fromSubAccount: "",
+		};
+		const r = raw(fromPerps, { mode: UNIFIED });
+		expect(real(r.issues)).toEqual(["mode.refuses"]);
+		expect(r.issues.find((i) => i.code === "mode.refuses")?.message).toContain(
+			"one balance",
+		);
+		// the guided send never trips it
+		expect(send({ mode: UNIFIED }).issues).toEqual([]);
+	});
+	it("warns when a token that is not USDC is sent into perps", () => {
+		const r = raw(
+			{
+				type: "sendAsset",
+				destination: RECIPIENT,
+				sourceDex: "spot",
+				destinationDex: "",
+				token: `PURR:${PURR.tokenId}`,
+				amount: "1",
+				fromSubAccount: "",
+			},
+			{ mode: MANUAL },
+		);
+		expect(real(r.issues)).toEqual(["token.not_collateral"]);
+	});
+	it("a new receiver costs 1 USDC on top: warns when the balances cannot cover both", () => {
+		const fresh = { status: "new", mode: null } as const;
+		const held = (perps: string, spot: string) => ({
+			perpWithdrawable: perps,
+			spot: [{ coin: "USDC", total: spot, hold: "0" }],
+		});
+		// 5 from perps, the fee from spot
+		expect(send({ receiver: fresh, balances: held("5", "1") }).issues).toEqual(
+			[],
+		);
+		// 5 from perps, spot too small: the fee from perps too
+		expect(
+			send({ receiver: fresh, balances: held("6", "0.5") }).issues,
+		).toEqual([]);
+		const short = send({ receiver: fresh, balances: held("5.5", "0.5") });
+		expect(codes(short.issues)).toEqual(["fee.not_covered"]);
+		expect(short.issues[0]?.severity).toBe("warning");
+		expect(short.action).not.toBeNull();
+		// the same balances and an address in use: nothing to say
+		expect(
+			send({
+				receiver: { status: "active", mode: MANUAL },
+				balances: held("5.5", "0.5"),
+			}).issues,
+		).toEqual([]);
+		// balances not known: nothing is claimed
+		expect(send({ receiver: fresh }).issues).toEqual([]);
+		// an older send written by hand pays the fee out of the amount
+		const tiny = raw(
+			{ type: "usdSend", destination: RECIPIENT, amount: "1" },
+			{ receiver: fresh, balances: held("50", "50") },
+		);
+		expect(real(tiny.issues)).toEqual(["fee.below"]);
+	});
+});
+
+describe("actionTypeOf", () => {
+	it("is known before the action can be built", () => {
+		const of = (f: Partial<ActionForm>) => actionTypeOf(form(f));
+		expect(of({ kind: "sendUsdc" })).toBe("sendAsset");
+		expect(of({ kind: "sendToken" })).toBe("sendAsset");
+		expect(of({ kind: "withdraw3" })).toBe("withdraw3");
+		expect(of({ kind: "usdClassTransfer" })).toBe("usdClassTransfer");
+		expect(of({ kind: "approveAgent" })).toBe("approveAgent");
+		expect(of({ kind: "raw", raw: ' {"type":"usdSend","amount":"1"} ' })).toBe(
+			"usdSend",
+		);
+		for (const raw of ["", "not json", "[1]", "7", '{"type":5}', "{}"])
+			expect(of({ kind: "raw", raw }), raw).toBeNull();
+	});
+});
+
+describe("formFromAction: the older ways of sending come back as the send that replaces them", () => {
+	const refill = (action: object) => formFromAction(action as never, "testnet");
+	it("a usdSend becomes Send USDC from perps into perps", () => {
+		expect(
+			refill({ type: "usdSend", destination: RECIPIENT, amount: "12.5" }),
+		).toEqual({
+			kind: "sendUsdc",
+			destination: RECIPIENT,
+			amount: "12.5",
+			fromPocket: "perps",
+			toPocket: "perps",
+		});
+	});
+	it("a spotSend becomes Send USDC from spot into spot, or Send spot token", () => {
+		expect(
+			refill({
+				type: "spotSend",
+				destination: RECIPIENT,
+				token: USDC_ID,
+				amount: "3",
+			}),
+		).toMatchObject({ kind: "sendUsdc", fromPocket: "spot", toPocket: "spot" });
+		expect(
+			refill({
+				type: "spotSend",
+				destination: RECIPIENT,
+				token: `PURR:${PURR.tokenId}`,
+				amount: "3",
+			}),
+		).toEqual({
+			kind: "sendToken",
+			destination: RECIPIENT,
+			token: `PURR:${PURR.tokenId}`,
+			amount: "3",
+		});
+	});
+	it("a sendAsset the two forms cannot express stays raw JSON", () => {
+		const asset = {
+			type: "sendAsset",
+			destination: RECIPIENT,
+			sourceDex: "",
+			destinationDex: "spot",
+			token: USDC_ID,
+			amount: "1",
+			fromSubAccount: "",
+			nonce: 5,
+		};
+		expect(refill(asset)).toMatchObject({
+			kind: "sendUsdc",
+			fromPocket: "perps",
+			toPocket: "spot",
+		});
+		for (const odd of [
+			{ ...asset, destinationDex: "xyz" },
+			{ ...asset, sourceDex: "xyz" },
+			{ ...asset, fromSubAccount: A },
+			// another token can only go spot to spot
+			{ ...asset, token: `PURR:${PURR.tokenId}` },
+		]) {
+			const f = refill(odd);
+			expect(f.kind, JSON.stringify(odd)).toBe("raw");
+			expect(f.raw).toContain('"type": "sendAsset"');
+			expect(f.raw).not.toContain("nonce");
+		}
 	});
 });
 
@@ -458,9 +799,14 @@ describe("formFromAction", () => {
 		);
 		// missing fields become empty strings; an unknown type becomes raw JSON
 		expect(formFromAction({ type: "spotSend" }, "testnet")).toMatchObject({
-			kind: "spotSend",
+			kind: "sendToken",
 			destination: "",
 			token: "",
+			amount: "",
+		});
+		expect(formFromAction({ type: "withdraw3" }, "testnet")).toEqual({
+			kind: "withdraw3",
+			destination: "",
 			amount: "",
 		});
 		expect(

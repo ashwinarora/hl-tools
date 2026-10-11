@@ -47,6 +47,18 @@ export const HELP = {
 		title: "Can be moved now",
 		body: "The part of the perps balance that is not tied up as margin for open positions. It is what a payment can use right now.",
 	},
+	accountMode: {
+		title: "Account mode",
+		body: "How Hyperliquid keeps this account's money. A manual account has two balances, perps and spot. A unified account has one. The mode decides which ways of sending work, and this page follows it.",
+	},
+	pockets: {
+		title: "From and into",
+		body: "A manual account holds USDC in two places: the perps balance, which backs positions, and the spot balance. Choose which one the payment is taken from and which one the receiver gets it in. A unified account has one balance, so there is nothing to choose.",
+	},
+	activationFee: {
+		title: "First send to a new address",
+		body: "Hyperliquid charges 1 USDC the first time anything is sent to an address it has never seen. The receiver still gets the full amount. The 1 USDC is taken from the treasury on top, once. Sending to an address already in use costs nothing.",
+	},
 	perpsSpot: {
 		title: "Perps and spot",
 		body: "Hyperliquid keeps two balances per account. Perps holds the USDC that backs futures positions. Spot holds tokens owned outright. Money is moved between the two with a proposal.",

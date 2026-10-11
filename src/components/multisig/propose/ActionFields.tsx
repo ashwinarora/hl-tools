@@ -152,7 +152,7 @@ export function ActionFields({
 	);
 
 	switch (form.kind) {
-		case "usdSend":
+		case "sendUsdc":
 			return (
 				<>
 					{destination(
@@ -176,7 +176,7 @@ export function ActionFields({
 					)}
 				</>
 			);
-		case "spotSend":
+		case "sendToken":
 			return (
 				<>
 					{destination("Another Hyperliquid account.")}

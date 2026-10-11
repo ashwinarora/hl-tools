@@ -48,6 +48,7 @@ import {
 	ACTION_KINDS,
 	type ActionForm,
 	type ActionKind,
+	actionTypeOf,
 	buildProposalInput,
 	DEFAULT_FORM,
 	fieldOf,
@@ -153,19 +154,24 @@ export function ProposeScreen({
 		queryFn: () => infoClient(network).universe(),
 		staleTime: 5 * 60_000,
 		retry: 1,
-		enabled: hydrated && form.kind === "spotSend",
+		// both sends name their token by its id
+		enabled:
+			hydrated && (form.kind === "sendUsdc" || form.kind === "sendToken"),
 	});
 
 	// Hyperliquid carries out an account's sends and withdrawals only in the
 	// order of their numbers, so a new one is numbered after every one on record
 	// (one dated ahead yesterday is still ahead of the clock today).
-	const ordered = ORDERED_ACTION_TYPES.includes(form.kind);
+	const actionType = actionTypeOf(form);
+	const ordered =
+		actionType !== null && ORDERED_ACTION_TYPES.includes(actionType);
 	const known = useKnownProposals(
 		network,
 		(address ?? ZERO_ADDRESS) as Address,
 		hydrated && !!address && ordered,
 	);
-	const floor = ordered ? orderFloor(form.kind, known.proposals) : null;
+	const floor =
+		ordered && actionType ? orderFloor(actionType, known.proposals) : null;
 	const orderUnknown = ordered && known.state === "loading";
 
 	const chain = innerChain(network, form.chain);
@@ -464,7 +470,7 @@ export function ProposeScreen({
 									<Field
 										label="Signing window"
 										trailing={<Help k="signingWindow" />}
-										hint={`If created now: ${window.text}. After that the chain rejects it and it must be re-proposed.${numbered.raised ? ` ${NUMBERED_AFTER}` : ""}${form.kind === "usdSend" && form.nonceMode === "extended" ? ` ${DATED_AHEAD}` : ""}`}
+										hint={`If created now: ${window.text}. After that the chain rejects it and it must be re-proposed.${numbered.raised ? ` ${NUMBERED_AFTER}` : ""}${actionType === "usdSend" && form.nonceMode === "extended" ? ` ${DATED_AHEAD}` : ""}`}
 									>
 										<Segmented<NonceMode>
 											label="Signing window"
