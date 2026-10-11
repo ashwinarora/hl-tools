@@ -810,8 +810,8 @@ function rawAction(
 			issue(
 				"raw.convert_out_of_scope",
 				"error",
-				"Changing the signers has its own form, which checks the new list and says what the change does to waiting proposals.",
-				{ path, fix: "Choose “Change signers” above." },
+				"Changing the signers has its own form: choose “Change signers” above. It checks the new list and says what the change does to waiting proposals.",
+				{ path },
 			),
 		);
 		return null;

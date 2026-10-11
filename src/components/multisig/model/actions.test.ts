@@ -978,7 +978,8 @@ describe("changeSigners", () => {
 			}),
 			ctx(),
 		);
-		expect(r.issues[0]?.fix).toContain("Change signers");
+		// the field shows the message alone, so the way out is in it
+		expect(r.issues[0]?.message).toContain("choose “Change signers” above");
 	});
 
 	it("opens a re-proposed change in the form, with the action's own value", () => {
