@@ -9,6 +9,7 @@
  * and plain facts.
  */
 import { API_WALLET_CAN } from "./apiWallet";
+import type { ConvertOutcome } from "./convert";
 import type { Line } from "./signerSet";
 import { shortAddress } from "./stage";
 
@@ -182,3 +183,74 @@ export function refusalText(id: string, message: string): string {
 }
 
 export const REFUSAL_IDS: readonly string[] = Object.keys(REFUSED);
+
+export interface OutcomeText {
+	/** danger: it did not happen; warning: look again; success: done. */
+	readonly tone: "danger" | "warning" | "success";
+	readonly title: string;
+	readonly body: string;
+}
+
+/** What the page says once the conversion has run, whichever way it went. */
+export function outcomeText(o: ConvertOutcome, account: string): OutcomeText {
+	switch (o.kind) {
+		case "converted":
+			return {
+				tone: "success",
+				title: CREATE.doneTitle,
+				body: CREATE.done(
+					account,
+					o.policy.threshold,
+					o.policy.authorizedUsers.length,
+				),
+			};
+		case "not-signed":
+			return {
+				tone: "danger",
+				title: "Not converted",
+				body: `Nothing was signed or sent. ${o.reason}`,
+			};
+		case "wrong-key":
+			return {
+				tone: "danger",
+				title: "Not converted",
+				body: `Nothing was sent: the wallet signed with ${o.signedBy ? shortAddress(o.signedBy) : "another key"}, not with ${shortAddress(account)}. Hyperliquid would have converted the account that signed.`,
+			};
+		case "refused":
+			return {
+				tone: "danger",
+				title: "Hyperliquid refused the conversion",
+				body: `${refusalText(o.id, o.message)} Nothing changed.`,
+			};
+		case "unconfirmed":
+			return {
+				tone: "warning",
+				title: "Accepted, not confirmed yet",
+				body: "Hyperliquid accepted the conversion, but its signer list did not show it while this page waited. Check again in a moment before doing anything else.",
+			};
+		case "unanswered":
+			return o.converted === true
+				? {
+						tone: "success",
+						title: CREATE.doneTitle,
+						body: "The request got no answer, so the signer list was read from Hyperliquid: the account is converted.",
+					}
+				: o.converted === false
+					? {
+							tone: "danger",
+							title: "Not converted",
+							body: "The request got no answer, so the signer list was read from Hyperliquid: the account is not a treasury. You can try again.",
+						}
+					: {
+							tone: "warning",
+							title: "It is not known whether the account was converted",
+							body: "The request got no answer, and the signer list could not be read either. Check again before trying a second time.",
+						};
+		case "invalid":
+			return {
+				tone: "danger",
+				title: "Not converted",
+				body: `Nothing was signed or sent. ${o.issues[0]?.message ?? "The action could not be built."}`,
+			};
+	}
+}
