@@ -1,8 +1,8 @@
-import type { Address, Policy, SignerSet } from "@hl-tools/core";
+import type { Address, AgentInfo, Policy, SignerSet } from "@hl-tools/core";
 import { Check, Loader2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "#/lib/utils";
-import { CHANGE } from "../model/change";
+import { CHANGE, convertBackLines } from "../model/change";
 import { CREATE } from "../model/create";
 import {
 	addEntries,
@@ -52,6 +52,7 @@ export function ChangeSignersFields({
 	known,
 	knownState,
 	relayInUse,
+	agents,
 }: {
 	signers: string;
 	onChange(signers: string): void;
@@ -68,6 +69,8 @@ export function ChangeSignersFields({
 	known: readonly OnRecord[];
 	knownState: KnownState;
 	relayInUse: boolean;
+	/** The treasury's API wallets, for the conversion back; null when not read. */
+	agents: readonly AgentInfo[] | null;
 }) {
 	// as typed, for the checksum check only: the form itself holds lowercase
 	const [typed, setTyped] = useState<Readonly<Record<string, string>>>({});
@@ -85,7 +88,10 @@ export function ChangeSignersFields({
 		const set = { authorizedUsers: asked.entries, threshold: asked.threshold };
 		return sameSet(current, set) ? null : set;
 	}, [signers, current]);
-	const touched = useAffected(known, current, change);
+	const revert = signers.trim() === "null";
+	const touched = useAffected(known, current, revert ? "revert" : change);
+	// read once when the form opens: only for "this approval has run out"
+	const [openedAt] = useState(() => Date.now());
 
 	if (!current || current.authorizedUsers.length === 0) {
 		return (
@@ -96,6 +102,55 @@ export function ChangeSignersFields({
 				<Loader2 className="size-4 animate-spin" aria-hidden />
 				Reading the treasury's signers…
 			</p>
+		);
+	}
+
+	if (revert) {
+		// nothing to fill in: what it means, what comes along, and the way back
+		return (
+			<div className="flex flex-col gap-4">
+				<section className="flex flex-col gap-2.5">
+					<h3 className="flex items-center gap-1.5 text-sm font-semibold">
+						{CHANGE.backTitle}
+						<Help k="convertBack" />
+					</h3>
+					<p className="text-sm">{CHANGE.backLead}</p>
+					<Lines lines={convertBackLines({ agents, now: openedAt })} />
+				</section>
+				<section className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3">
+					<AffectedList
+						affected={touched.affected}
+						computing={touched.computing}
+						state={knownState}
+						relayInUse={relayInUse}
+					/>
+					{touched.affected.length > 0 && (
+						<ul>
+							<LevelLine
+								line={{
+									level: "warning",
+									code: "back.waiting",
+									text: CHANGE.backWaiting(touched.affected.length),
+								}}
+							/>
+						</ul>
+					)}
+					<p className="text-xs text-muted-foreground">
+						{CHANGE.whoDecides(
+							current.threshold,
+							current.authorizedUsers.length,
+						)}{" "}
+						{CHANGE.takesEffect}
+					</p>
+				</section>
+				<button
+					type="button"
+					onClick={() => onChange("")}
+					className="self-start text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+				>
+					{CHANGE.backUndo}
+				</button>
+			</div>
 		);
 	}
 
@@ -324,9 +379,19 @@ export function ChangeSignersFields({
 				)}
 				<p className="text-xs text-muted-foreground">
 					{CHANGE.whoDecides(current.threshold, now.length)}{" "}
+					{rows.some((r) => r.kind === "removed") &&
+						`${CHANGE.removedCanSign} `}
 					{CHANGE.takesEffect}
 				</p>
 			</section>
+
+			<button
+				type="button"
+				onClick={() => onChange("null")}
+				className="self-start text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+			>
+				{CHANGE.backLink}
+			</button>
 		</div>
 	);
 }

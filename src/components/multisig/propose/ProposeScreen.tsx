@@ -116,6 +116,9 @@ export function ProposeScreen({
 	const client = useQueryClient();
 	const wallet = useWalletSigner();
 	const [form, setForm] = useState<ActionForm>(() => {
+		// the Signers card's "Convert back" opens the same form on that choice
+		if (kind === "convertBack")
+			return { ...DEFAULT_FORM, kind: "changeSigners", signers: "null" };
 		const asked = ACTION_KINDS.find((k) => k.kind === kind)?.kind;
 		return asked ? { ...DEFAULT_FORM, kind: asked } : DEFAULT_FORM;
 	});
@@ -478,6 +481,7 @@ export function ProposeScreen({
 											known={known.proposals}
 											knownState={known.state}
 											relayInUse={relay.mode === "on"}
+											agents={state.agents}
 										/>
 									) : (
 										<ActionFields

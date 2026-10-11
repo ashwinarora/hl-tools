@@ -110,15 +110,26 @@ const PAYS = ["sendAsset", "usdSend", "spotSend", "withdraw3"];
 const SIGN_HINT_OTHER =
 	"Your wallet will show the treasury, the finaliser and every field of the action. Check them there.";
 
-export function signHint(actionType: unknown): string {
-	if (typeof actionType !== "string") return SIGN_HINT_OTHER;
-	if (PAYS.includes(actionType)) return RELAY_COPY.underSign;
-	return SIGN_HINTS[actionType] ?? SIGN_HINT_OTHER;
+/** The conversion back carries no list: the prompt shows the word the chain takes for it. */
+const SIGN_HINT_BACK =
+	"Your wallet will show the treasury, the finaliser and “signers” as “null”, which is the conversion back to a normal account. Check them there.";
+
+export function signHint(action: {
+	readonly type?: unknown;
+	readonly signers?: unknown;
+}): string {
+	const type = action.type;
+	if (typeof type !== "string") return SIGN_HINT_OTHER;
+	if (PAYS.includes(type)) return RELAY_COPY.underSign;
+	if (type === "convertToMultiSigUser" && action.signers === "null")
+		return SIGN_HINT_BACK;
+	return SIGN_HINTS[type] ?? SIGN_HINT_OTHER;
 }
 
 export const SIGN_HINT_TEXTS: readonly string[] = [
 	...Object.values(SIGN_HINTS),
 	SIGN_HINT_OTHER,
+	SIGN_HINT_BACK,
 ];
 
 /** Wording that must never appear in relay-era copy. */

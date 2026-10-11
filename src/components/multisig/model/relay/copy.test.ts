@@ -32,18 +32,30 @@ describe("relay copy", () => {
 
 	it("says what the wallet will show for the kind of action being signed", () => {
 		// a send: the destination and the amount
-		expect(signHint("sendAsset")).toBe(RELAY_COPY.underSign);
-		expect(signHint("withdraw3")).toContain("the destination and the amount");
+		expect(signHint({ type: "sendAsset" })).toBe(RELAY_COPY.underSign);
+		expect(signHint({ type: "withdraw3" })).toContain(
+			"the destination and the amount",
+		);
 		// a change of signers has neither
-		expect(signHint("convertToMultiSigUser")).toContain(
+		const change = signHint({
+			type: "convertToMultiSigUser",
+			signers: '{"authorizedUsers":[],"threshold":2}',
+		});
+		expect(change).toContain(
 			"the new list of signers with the number that must sign",
 		);
-		expect(signHint("convertToMultiSigUser")).not.toContain("amount");
-		expect(signHint("approveAgent")).toContain("the API wallet");
+		expect(change).not.toContain("amount");
+		// the conversion back shows no list at all
+		expect(
+			signHint({ type: "convertToMultiSigUser", signers: "null" }),
+		).toContain("“signers” as “null”");
+		expect(signHint({ type: "approveAgent" })).toContain("the API wallet");
 		// an action this page has no sentence for, or a document that names none:
 		// nothing is promised that the prompt may not show
-		expect(signHint("somethingNew")).toContain("every field of the action");
-		expect(signHint(undefined)).not.toContain("amount");
+		expect(signHint({ type: "somethingNew" })).toContain(
+			"every field of the action",
+		);
+		expect(signHint({})).not.toContain("amount");
 	});
 
 	it("still lets the checker see what it is meant to catch", () => {

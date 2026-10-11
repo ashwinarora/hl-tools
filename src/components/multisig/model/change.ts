@@ -5,6 +5,11 @@
  * three levels: blocked only where Hyperliquid would refuse, a warning as one
  * line with no click, and plain facts.
  */
+import { API_WALLET_CAN } from "./apiWallet";
+import type { Line } from "./signerSet";
+
+const plural = (n: number, one: string, many: string) =>
+	`${n} ${n === 1 ? one : many}`;
 
 export const CHANGE = {
 	/** On the treasury's Signers card. */
@@ -24,12 +29,25 @@ export const CHANGE = {
 				: k === n
 					? `all ${n} of them`
 					: `any ${k} of the ${n}`
-		}. Someone who is being removed can still sign it.`,
+		}.`,
+	/** With a change that takes someone out. */
+	removedCanSign: "Someone who is being removed can still sign it.",
 	takesEffect:
 		"It takes effect the moment Hyperliquid accepts the proposal. Until then nothing changes.",
 	/** On the proposal's page: what the comparison is made with. */
 	againstNow:
 		"Compared with the signers Hyperliquid reports for this treasury now.",
+	// The conversion back to a normal account: nothing to fill in, only to understand.
+	backLink: "Convert this treasury back to a normal account instead",
+	backTitle: "Convert back to a normal account",
+	backLead:
+		"After this the account is a normal account again. Whoever holds its own key controls everything it holds, alone. The signers decide nothing any more.",
+	backUndo: "Keep it a treasury and change its signers instead",
+	/** Under the list of waiting proposals, all of which end. */
+	backWaiting: (n: number) =>
+		n === 0
+			? ""
+			: `${plural(n, "waiting proposal", "waiting proposals")} can no longer be submitted afterwards.`,
 	// What the change does to the proposals still waiting.
 	affectedTitle: "Waiting proposals this changes",
 	affectedNone: "No waiting proposal is affected.",
@@ -41,3 +59,50 @@ export const CHANGE = {
 	affectedLocal:
 		"Checked against the proposals this browser has opened. One that was passed around as a link or a file and never opened here is not known.",
 } as const;
+
+/** What is known about the treasury when its conversion back is proposed. */
+export interface BackFacts {
+	/** Approved API wallets; null when they could not be read. */
+	readonly agents:
+		| readonly { readonly name: string; readonly validUntil: number }[]
+		| null;
+	readonly now: number;
+}
+
+/**
+ * What to know before converting back. Nothing here is blocked: Hyperliquid
+ * takes the conversion from the signers whatever the account holds, and the
+ * page cannot know who holds the account's own key.
+ */
+export function convertBackLines(f: BackFacts): Line[] {
+	const lines: Line[] = [
+		{
+			level: "warning",
+			code: "back.key",
+			text: "If nobody holds the account's own key, the account is locked for good. This page cannot tell who holds it.",
+		},
+	];
+	if (f.agents === null) {
+		lines.push({
+			level: "warning",
+			code: "back.agents_unread",
+			text: "Its API wallets could not be read. If it has one, that wallet keeps acting for the account afterwards.",
+		});
+	} else {
+		const live = f.agents.filter((a) => a.validUntil > f.now);
+		if (live.length > 0) {
+			const names = live.map((a) => `"${a.name || "unnamed"}"`).join(", ");
+			lines.push({
+				level: "warning",
+				code: "back.agents",
+				text: `${plural(live.length, "API wallet", "API wallets")} (${names}) ${live.length === 1 ? "keeps" : "keep"} acting for the account afterwards: ${live.length === 1 ? "it" : "they"} can ${API_WALLET_CAN}.`,
+			});
+		}
+	}
+	lines.push({
+		level: "shown",
+		code: "back.holds",
+		text: "It moves no funds: balances, positions and history stay as they are.",
+	});
+	return lines;
+}

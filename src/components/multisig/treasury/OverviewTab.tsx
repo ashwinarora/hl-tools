@@ -466,6 +466,18 @@ export function OverviewTab({
 							</PersonRow>
 						))
 					)}
+					{!frozen && me && signers.includes(me) && (
+						<p className="mt-3 border-t border-border pt-2.5 text-xs">
+							<Link
+								to="/multisig/propose"
+								search={{ treasury: address, kind: "convertBack" }}
+								className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+							>
+								{CHANGE.backTitle}
+							</Link>{" "}
+							<Help k="convertBack" />
+						</p>
+					)}
 				</Card>
 
 				<Card

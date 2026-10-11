@@ -153,7 +153,7 @@ export function YourPart({
 					})}
 				</ol>
 				<p className="mt-3 text-[13px] text-muted-foreground">
-					{signHint(proposal.payload.action.type)}
+					{signHint(proposal.payload.action)}
 				</p>
 			</Card>
 		);
@@ -176,7 +176,7 @@ export function YourPart({
 						? "Your signature completes the threshold. Two wallet prompts, then it is sent."
 						: "One wallet prompt, then it is sent."
 					: stage.canSign
-						? `${signHint(proposal.payload.action.type)}${chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
+						? `${signHint(proposal.payload.action)}${chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
 						: stage.hasSigned
 							? stage.phase === "ready"
 								? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to submit.`
