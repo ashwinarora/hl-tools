@@ -193,7 +193,8 @@ export function ProposeScreen({
 			perpWithdrawable: state.perp?.withdrawable,
 			spot: state.spot ?? undefined,
 		},
-		mode: state.mode,
+		// absent while it is on its way; null once the read has failed
+		mode: !hydrated || state.modePending ? undefined : state.mode,
 		receiver: lookup.receiver,
 		createdBy: wallet.address,
 		supersedes: superseded?.digest ?? null,

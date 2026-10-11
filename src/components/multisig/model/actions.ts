@@ -170,7 +170,7 @@ export interface BuildContext {
 			readonly hold?: string;
 		}[];
 	};
-	/** The treasury's account mode; null or absent while it is not known. */
+	/** The treasury's account mode: absent while it is being read, null when it could not be. */
 	readonly mode?: AccountMode | null;
 	/** What is known about the destination; null or absent while it is not. */
 	readonly receiver?: Receiver | null;
@@ -287,10 +287,14 @@ function warnOverBalance(
 	}
 }
 
-/** What the treasury can send of a spot token now: its total less what is held. */
+/**
+ * What the treasury can send of a spot token now: its total less what is
+ * held. Hyperliquid lists only the tokens an account holds, so a token
+ * missing from balances that were read is none of it.
+ */
 function spotFree(ctx: BuildContext, coin: string): string | undefined {
 	const b = ctx.balances?.spot?.find((x) => x.coin === coin);
-	if (!b) return undefined;
+	if (!b) return ctx.balances?.spot ? "0" : undefined;
 	const total = Decimal.tryParse(b.total);
 	const hold = Decimal.tryParse(b.hold ?? "0");
 	return total && hold ? total.sub(hold).toString() : b.total;
@@ -329,6 +333,19 @@ export function arrivalPocket(
 }
 
 const dexOf = (p: PocketChoice): string => (p === "perps" ? "" : "spot");
+
+/**
+ * The mode could not be read, so the form offers what a manual account can
+ * do. Said where that would be refused if the treasury turned out unified.
+ */
+const modeUnread = (consequence: string): Issue =>
+	issue(
+		"mode.unread",
+		"warning",
+		`This treasury's account mode could not be read from Hyperliquid. If it is a unified account, ${consequence}`,
+		// not a field of this form: shown with the general notes
+		{ path: "mode" },
+	);
 
 /**
  * Warnings about a finished action that moves money: what the treasury's mode
@@ -453,6 +470,12 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				);
 			}
 			const from = sourcePocket(form, ctx);
+			if (ctx.mode === null && from === "perps")
+				issues.push(
+					modeUnread(
+						"Hyperliquid refuses a payment taken from the perps balance: choose Spot.",
+					),
+				);
 			if (amount)
 				warnOverBalance(
 					amount,
@@ -569,6 +592,12 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 					),
 				);
 			}
+			if (ctx.mode === null)
+				issues.push(
+					modeUnread(
+						"it has one balance and Hyperliquid refuses a move between perps and spot.",
+					),
+				);
 			const toPerp = form.toPerp === "perp";
 			const amount = amountField(form.amount, USDC_DECIMALS, "USDC", issues);
 			if (amount)

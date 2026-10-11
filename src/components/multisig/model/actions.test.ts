@@ -384,7 +384,7 @@ describe("buildAction / buildProposalInput", () => {
 				ctx({ balances: { perpWithdrawable: "n/a" } }),
 			).issues,
 		).toEqual([]);
-		expect(
+		const purr = (balances: BuildContext["balances"]) =>
 			buildAction(
 				form({
 					kind: "sendToken",
@@ -392,9 +392,12 @@ describe("buildAction / buildProposalInput", () => {
 					token: `PURR:${PURR.tokenId}`,
 					amount: "99",
 				}),
-				ctx({ balances: { spot: [] } }),
-			).issues,
-		).toEqual([]);
+				ctx({ balances }),
+			).issues;
+		expect(purr({})).toEqual([]);
+		// Hyperliquid lists only what the account holds: not listed is none of it
+		expect(codes(purr({ spot: [] }))).toEqual(["amount.exceeds_balance"]);
+		expect(purr({ spot: [] })[0]?.message).toContain("(0)");
 	});
 
 	it("accepts only user-signed actions as raw JSON", () => {
@@ -606,6 +609,27 @@ describe("what the treasury's mode and a new receiver make of an action", () => 
 				ctx({ mode: MANUAL }),
 			).issues,
 		).toEqual([]);
+	});
+	it("says so when the mode could not be read and the action depends on it", () => {
+		// null: read and failed. Absent: still on its way, nothing to say yet.
+		const perps = send({ mode: null }, { fromPocket: "perps" });
+		expect(real(perps.issues)).toEqual(["mode.unread"]);
+		expect(perps.issues[0]?.message).toContain("choose Spot");
+		expect(perps.action).not.toBeNull();
+		expect(fieldOf(perps.issues[0] as Issue)).toBeNull();
+		expect(real(send({ mode: null }, { fromPocket: "spot" }).issues)).toEqual(
+			[],
+		);
+		expect(real(send({}, { fromPocket: "perps" }).issues)).toEqual([]);
+		expect(
+			real(send({ mode: MANUAL }, { fromPocket: "perps" }).issues),
+		).toEqual([]);
+		const move = buildAction(
+			form({ kind: "usdClassTransfer", amount: "5" }),
+			ctx({ mode: null }),
+		);
+		expect(codes(move.issues)).toEqual(["mode.unread"]);
+		expect(move.action).not.toBeNull();
 	});
 	it("warns when raw JSON names something a unified treasury is refused", () => {
 		const usdSend = { type: "usdSend", destination: RECIPIENT, amount: "5" };
