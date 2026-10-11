@@ -6,6 +6,8 @@ import {
 	usePrefsHydrated,
 } from "#/store/multisigPrefsStore";
 import { useNetwork } from "#/store/networkStore";
+import { CREATE } from "../model/create";
+import { RELAY_COPY } from "../model/relay/copy";
 import { groupInbox } from "../model/relay/inbox";
 import { type OpenProposal, useOpenProposals } from "../relay/openProposals";
 import { useTreasuries } from "../relay/queries";
@@ -148,10 +150,13 @@ export function InboxScreen() {
 									</b>
 									<br />
 									Add a multi-sig account you sign for; your co-signers will see
-									it too.
-									<span className="mt-3 block">
+									it too. Or turn this wallet's own account into one.
+									<span className="mt-3 flex flex-wrap justify-center gap-2">
 										<Link to="/multisig/add" className={linkButton}>
-											Add a treasury
+											{RELAY_COPY.addExisting}
+										</Link>
+										<Link to="/multisig/create" className={linkButton}>
+											{CREATE.title}
 										</Link>
 									</span>
 								</>

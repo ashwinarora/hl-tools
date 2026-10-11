@@ -270,7 +270,9 @@ function addedLines(
 			),
 		);
 	}
-	if (lines.length === 0)
+	// said also next to a warning (a checksum, a nested multi-sig): the reader
+	// should see that the address was looked up and what came back
+	if (check.role === "user")
 		lines.push(line("shown", "signer.ok", "In use on Hyperliquid."));
 	return { lines, pending: false, recheck };
 }

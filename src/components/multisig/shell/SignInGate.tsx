@@ -11,7 +11,14 @@ import { SmallPrint } from "./WalletBox";
  * form): while it is not, say why and offer the way in. Returns null when the
  * relay is in use and the screen should render.
  */
-export function SignInGate({ what }: { what: ReactNode }) {
+export function SignInGate({
+	what,
+	say,
+}: {
+	what: ReactNode;
+	/** In place of "Sign in with your wallet to see …", for a screen that does something. */
+	say?: string;
+}) {
 	const relay = useRelay();
 	const busy = useWalletBusy((b) => b.busy);
 	if (relay.mode === "on") return null;
@@ -44,8 +51,8 @@ export function SignInGate({ what }: { what: ReactNode }) {
 					{relay.mode === "unreachable"
 						? RELAY_COPY.unreachable
 						: relay.mode === "suspended"
-							? `${RELAY_COPY.suspended} Sign in with the connected wallet to see ${what}.`
-							: `Sign in with your wallet to see ${what}.`}
+							? `${RELAY_COPY.suspended} ${say ?? `Sign in with the connected wallet to see ${what}.`}`
+							: (say ?? `Sign in with your wallet to see ${what}.`)}
 				</p>
 				<div className="flex flex-wrap items-center gap-2">
 					{relay.mode === "unreachable" ? (

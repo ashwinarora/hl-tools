@@ -72,6 +72,7 @@ export const RELAY_COPY = {
 		"API wallets and transfers are checked when you open this treasury.",
 	awayOthers:
 		"API wallets and transfers were checked for your first ten treasuries. The others are checked when you open them.",
+	addExisting: "Add an existing one",
 	// Creating a treasury: the account that was converted registers itself.
 	createSignIn:
 		"Sign in with the wallet whose account you want to convert into a treasury.",

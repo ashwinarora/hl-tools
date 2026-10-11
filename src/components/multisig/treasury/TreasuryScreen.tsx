@@ -514,6 +514,8 @@ export function TreasuryScreen({
 						loading={open.loading}
 						me={me}
 						frozen={frozen}
+						first={known.state === "ready" && known.proposals.length === 0}
+						address={address}
 					/>
 				)}
 				{tab === "log" && <SigningLogTab treasury={treasury} me={me} />}

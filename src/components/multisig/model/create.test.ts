@@ -92,8 +92,12 @@ describe("the wizard's sentences", () => {
 		CREATE.headline(TREASURY),
 		CREATE.otherAccount,
 		CREATE.signersNote,
-		CREATE.later,
-		...CREATE.info,
+		// every fixed sentence, whatever is added later
+		...Object.values(CREATE).flatMap((v) =>
+			typeof v === "string" ? [v] : Array.isArray(v) ? [...v] : [],
+		),
+		CREATE.pasted(2, 1, ["foo", "bar"]),
+		CREATE.pasted(1, 0, []),
 		CREATE.before(TREASURY, 2, 3),
 		CREATE.before(TREASURY, 3, 3),
 		CREATE.before(TREASURY, 1, 1),
@@ -126,6 +130,15 @@ describe("the wizard's sentences", () => {
 			for (const word of jargon)
 				expect(t, `${word} in "${t}"`).not.toMatch(word);
 	});
+	it("say what a paste left out", () => {
+		expect(CREATE.pasted(0, 0, [])).toBe("");
+		expect(CREATE.pasted(1, 2, ["nope"])).toBe(
+			"1 address was already in the list. 2 addresses were left out: a treasury has at most 10 signers. Not an address: nope.",
+		);
+		expect(CREATE.pasted(0, 0, ["a", "b", "c", "d", "e"])).toBe(
+			"Not addresses: a, b, c and 2 more.",
+		);
+	});
 	it("say what changes, with the numbers in them", () => {
 		expect(CREATE.headline(TREASURY)).toContain("your own account, 0x");
 		expect(CREATE.before(TREASURY, 2, 3)).toContain(
@@ -141,7 +154,7 @@ describe("the wizard's sentences", () => {
 			/^Convert 0x.* into a 2-of-3 treasury$/,
 		);
 		expect(CREATE.inWallet(2, 3)).toContain(
-			'3 signer addresses and "threshold": 2',
+			"3 signer addresses and the threshold, 2",
 		);
 		expect(CREATE.inWallet(1, 1)).toContain("1 signer address and");
 		expect(CREATE.info).toHaveLength(4);

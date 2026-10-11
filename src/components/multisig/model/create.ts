@@ -24,14 +24,43 @@ export const CREATE = {
 		`You are converting your own account, ${shortAddress(account)}.`,
 	otherAccount:
 		"To convert a different account, sign out, choose that account in your wallet and sign in with it.",
+	otherAccountNoRelay:
+		"To convert a different account, choose it in your wallet.",
 	signOut: "Sign out",
+	/** A build without a relay: there is no sign-in, the connected wallet is the account. */
+	connect:
+		"Connect the wallet whose account you want to convert into a treasury.",
+	unread:
+		"This account could not be read on Hyperliquid just now, so nothing is known about what it holds or who can act for it.",
 	accountTitle: "The account you are converting",
 	signersTitle: "Who signs",
 	pasteHint: "Paste an address, or several at once.",
 	/** So "in use" is not read as "verified to be that person". */
+	noSigners: "No signers yet.",
+	/** Under the box after a paste: what was not added, and why. */
+	pasted: (duplicates: number, overMax: number, rejected: readonly string[]) =>
+		[
+			duplicates > 0
+				? `${plural(duplicates, "address was", "addresses were")} already in the list.`
+				: "",
+			overMax > 0
+				? `${plural(overMax, "address was", "addresses were")} left out: a treasury has at most 10 signers.`
+				: "",
+			rejected.length > 0
+				? `Not ${rejected.length === 1 ? "an address" : "addresses"}: ${rejected
+						.slice(0, 3)
+						.map((r) => (r.length > 20 ? `${r.slice(0, 20)}…` : r))
+						.join(
+							", ",
+						)}${rejected.length > 3 ? ` and ${rejected.length - 3} more` : ""}.`
+				: "",
+		]
+			.filter(Boolean)
+			.join(" "),
 	signersNote:
 		"The page can tell that an address is in use, not that anyone holds its key.",
 	howManyTitle: "How many must sign",
+	pickFirst: "Add the signers first. The number is chosen out of them.",
 	later:
 		"The signers can change this number, and who signs, later with a proposal.",
 	infoTitle: "What converting does and does not do",
@@ -55,15 +84,24 @@ export const CREATE = {
 	buttonIdle: "Convert this account",
 	/** While the wallet prompt is open. */
 	inWallet: (k: number, n: number) =>
-		`Your wallet shows the ${plural(n, "signer address", "signer addresses")} and "threshold": ${k}. Check them there before you sign.`,
+		`Your wallet shows the ${plural(n, "signer address", "signer addresses")} and the threshold, ${k}. Check them there before you sign.`,
 	checking: "Checking the signers on Hyperliquid…",
+	sending: "Sending the conversion to Hyperliquid…",
+	reading: "Reading the signer list back from Hyperliquid…",
 	doneTitle: "Your treasury is set up",
 	done: (account: string, k: number, n: number) =>
 		`${shortAddress(account)} is now a ${k}-of-${n} treasury.`,
 	readBack: "Read back from Hyperliquid.",
 	switchNow:
 		"You are signed in as the treasury itself, which can no longer act. Sign out and sign in as one of its signers to use it.",
+	/** Before the list of signers on the success screen. */
+	signInAs: "Its signers:",
+	signOutAndOpen: "Sign out and open the treasury",
+	/** A build without a relay: nothing to sign out of. */
+	switchNowNoRelay:
+		"Your wallet is on the treasury account itself, which can no longer act. Choose one of its signers in your wallet to use it.",
 	firstProposal: "Create your first proposal",
+	checkAgain: "Check again",
 } as const;
 
 /** What stands on the account being converted, as far as it was read. */

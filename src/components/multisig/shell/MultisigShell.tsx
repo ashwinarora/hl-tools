@@ -13,6 +13,7 @@ import { useNetworkHint } from "#/store/networkHintStore";
 import { useNetwork } from "#/store/networkStore";
 import { AwayKeeper } from "../away/AwayKeeper";
 import { useAway } from "../away/useAway";
+import { CREATE } from "../model/create";
 import { RELAY_COPY } from "../model/relay/copy";
 import {
 	countNeeds,
@@ -47,11 +48,17 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 				>
 					<Rail
 						foot={
-							<RailLink to="/multisig/open">
-								{relay.mode === "on"
-									? "Open a file or link"
-									: "Open or start a proposal"}
-							</RailLink>
+							<>
+								<RailLink to="/multisig/open">
+									{relay.mode === "on"
+										? "Open a file or link"
+										: "Open or start a proposal"}
+								</RailLink>
+								{/* with a relay the wizard is reached from the signed-in list */}
+								{relay.mode === "off" && (
+									<RailLink to="/multisig/create">{CREATE.title}</RailLink>
+								)}
+							</>
 						}
 					>
 						{relay.mode === "on" && <RailNav />}
@@ -185,7 +192,8 @@ function RailNav() {
 									: `None on ${nav.network} yet.`}
 						</span>
 					)}
-					<RailLink to="/multisig/add">+ Add a treasury</RailLink>
+					<RailLink to="/multisig/create">+ {CREATE.title}</RailLink>
+					<RailLink to="/multisig/add">+ {RELAY_COPY.addExisting}</RailLink>
 				</nav>
 			</div>
 		</>
@@ -202,9 +210,11 @@ function MobileSwitcher() {
 			?.address ??
 		(path === "/multisig/add"
 			? "__add"
-			: path === "/multisig"
-				? ""
-				: "__other");
+			: path === "/multisig/create"
+				? "__create"
+				: path === "/multisig"
+					? ""
+					: "__other");
 	return (
 		<select
 			name="multisig-go-to"
@@ -213,6 +223,7 @@ function MobileSwitcher() {
 			onChange={(e) => {
 				const v = e.target.value;
 				if (v === "__add") void navigate({ to: "/multisig/add" });
+				else if (v === "__create") void navigate({ to: "/multisig/create" });
 				else if (v === "") void navigate({ to: "/multisig" });
 				else if (v !== "__other")
 					void navigate({
@@ -236,7 +247,8 @@ function MobileSwitcher() {
 					{t.unread ? " · changed" : ""}
 				</option>
 			))}
-			<option value="__add">+ Add a treasury</option>
+			<option value="__create">+ {CREATE.title}</option>
+			<option value="__add">+ {RELAY_COPY.addExisting}</option>
 		</select>
 	);
 }
@@ -283,12 +295,22 @@ function MobileBar() {
 		<div className="mb-4 flex flex-col gap-2 min-[861px]:hidden">
 			<WalletBox />
 			{relay.mode === "on" && <MobileSwitcher />}
-			<Link
-				to="/multisig/open"
-				className="self-end text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
-			>
-				Open or start a proposal
-			</Link>
+			<span className="flex flex-wrap justify-end gap-x-4 gap-y-1 self-end">
+				{relay.mode === "off" && (
+					<Link
+						to="/multisig/create"
+						className="text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+					>
+						{CREATE.title}
+					</Link>
+				)}
+				<Link
+					to="/multisig/open"
+					className="text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+				>
+					Open or start a proposal
+				</Link>
+			</span>
 		</div>
 	);
 }

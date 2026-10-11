@@ -1,8 +1,10 @@
 import type { Address } from "@hl-tools/core";
+import { Link } from "@tanstack/react-router";
 import { ProposalRows } from "../inbox/ProposalRows";
+import { CREATE } from "../model/create";
 import type { OpenProposal } from "../relay/openProposals";
 import { Help } from "../shell/Help";
-import { Card, Empty } from "../shell/kit";
+import { Card, Empty, linkButton } from "../shell/kit";
 
 /** A treasury's open proposals, whoever they wait for. */
 export function PendingTab({
@@ -10,11 +12,16 @@ export function PendingTab({
 	loading,
 	me,
 	frozen,
+	first,
+	address,
 }: {
 	items: readonly OpenProposal[];
 	loading: boolean;
 	me: Address;
 	frozen: boolean;
+	/** Nothing was ever proposed for this treasury, as far as the page can read. */
+	first: boolean;
+	address: Address;
 }) {
 	return (
 		<Card
@@ -33,11 +40,26 @@ export function PendingTab({
 				<ProposalRows items={items} me={me} />
 			) : (
 				<Empty>
-					{loading
-						? "Reading the pending proposals…"
-						: frozen
-							? "Nothing pending."
-							: "Nothing pending. Propose an action and your co-signers will see it at once."}
+					{loading ? (
+						"Reading the pending proposals…"
+					) : frozen ? (
+						"Nothing pending."
+					) : first ? (
+						<>
+							Nothing has been proposed for this treasury yet.
+							<span className="mt-3 block">
+								<Link
+									to="/multisig/propose"
+									search={{ treasury: address }}
+									className={linkButton}
+								>
+									{CREATE.firstProposal}
+								</Link>
+							</span>
+						</>
+					) : (
+						"Nothing pending. Propose an action and your co-signers will see it at once."
+					)}
 				</Empty>
 			)}
 		</Card>

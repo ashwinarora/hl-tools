@@ -169,7 +169,9 @@ describe("signerRows: what stands on each row", () => {
 		const typo = CHECKSUMMED.replace("5aA", "5Aa");
 		const bad = rows([typo], { [typo]: ok })[0];
 		expect(bad?.level).toBe("warning");
-		expect(codes(bad?.lines ?? [])).toEqual(["signer.checksum"]);
+		// the look-up's answer is still said next to the warning
+		expect(codes(bad?.lines ?? [])).toEqual(["signer.checksum", "signer.ok"]);
+		expect(codes(nested?.lines ?? [])).toEqual(["signer.nested", "signer.ok"]);
 		// in good order: nothing to say about the capitals
 		expect(rows([CHECKSUMMED], { [CHECKSUMMED]: ok })[0]?.level).toBe("ok");
 	});
