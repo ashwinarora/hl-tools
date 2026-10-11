@@ -84,6 +84,9 @@ export function useTxLookups(
 				signal: AbortSignal;
 			}): Promise<ExplorerTx> => {
 				await pacer(network).turn();
+				// the screen that asked may be gone by the time its turn comes
+				// (another treasury was opened): then nothing is asked at all
+				signal.throwIfAborted();
 				const r = await explorerTxDetails(network, hash, { signal });
 				if (!r.data.found) throw new UnknownHash(r.data.reason);
 				return r.data.tx;

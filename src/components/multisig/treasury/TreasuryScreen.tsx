@@ -135,11 +135,12 @@ export function TreasuryScreen({
 			),
 		[open.items, network, address],
 	);
-	// The ledger, trades, orders and funding are followed while they are looked
-	// at, and while a proposal is pending: that is how this page notices one
-	// that was carried out without the tool.
+	// Trades, orders and funding are followed only while they are looked at.
+	// The ledger is followed then, and while a proposal is pending: that is how
+	// this page notices one that was carried out without the tool.
 	const live = useLiveTreasuryState(target, {
-		history: tab === "chain" || openHere.length > 0,
+		history: tab === "chain",
+		ledger: openHere.length > 0,
 	});
 	// With the relay's record unreadable nothing may be called "none on record":
 	// rows that could be a proposal's stay "checking…" until it is back.

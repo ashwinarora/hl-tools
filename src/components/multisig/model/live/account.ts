@@ -3,12 +3,18 @@
  * socket hub: the store behind the live tables. No React and no browser API
  * here; the hub is handed in, so the same code runs against a fake socket.
  *
- * Two groups of subscriptions, each held only while a screen wants it:
+ * Three groups of subscriptions, each held only while a screen wants it:
  *   holdings  perps (first dex), spot balances, open orders, and one look at
  *             every perp dex to learn whether another one holds anything
- *   history   ledger, fills, order history, funding
- * A group that nobody wants any more is kept for a short grace period, so
- * moving between two pages of the same treasury does not resubscribe.
+ *   ledger    deposits, withdrawals and transfers: what a pending proposal
+ *             is checked against
+ *   trades    fills, order history, funding: only where they are shown
+ * A screen that shows everything asks for "history", the ledger and the
+ * trades together. A group that nobody wants any more is kept for a short grace period, so
+ * moving between two pages of the same treasury does not resubscribe. That
+ * holds for the same account only: the moment a screen starts following
+ * another account, everything kept for the previous one is let go
+ * (`LiveAccounts`), so a page never follows two treasuries.
  */
 import {
 	FILL_MERGE,
@@ -45,7 +51,10 @@ import {
 	wsChannel,
 } from "@hl-tools/core";
 
-export type LiveGroup = "holdings" | "history";
+export type LiveGroup = "holdings" | "ledger" | "trades";
+
+/** What a screen asks for: one group, or "history" for the ledger and the trades together. */
+export type LiveWant = LiveGroup | "history";
 
 export type LivePart =
 	| "perp"
@@ -72,7 +81,8 @@ const CHANNEL: Record<LivePart, string> = {
 
 export const LIVE_GROUPS: Record<LiveGroup, readonly LivePart[]> = {
 	holdings: ["perp", "spot", "openOrders", "allDexs"],
-	history: ["ledger", "fills", "orderHistory", "fundings"],
+	ledger: ["ledger"],
+	trades: ["fills", "orderHistory", "fundings"],
 };
 
 /**
@@ -154,6 +164,8 @@ export interface LiveAccountStoreOptions {
 	readonly timers?: HubTimers;
 	/** How long a group nobody wants is kept. */
 	readonly graceMs?: number;
+	/** Called after a group was acquired and its subscriptions were asked for. */
+	readonly onAcquire?: () => void;
 }
 
 export const LIVE_GRACE_MS = 3_000;
@@ -169,6 +181,7 @@ export class LiveAccountStore {
 	private readonly account: string;
 	private readonly timers: HubTimers;
 	private readonly graceMs: number;
+	private readonly onAcquire: (() => void) | undefined;
 
 	private hub: WsHub | null = null;
 	private unwatch: (() => void) | null = null;
@@ -188,6 +201,7 @@ export class LiveAccountStore {
 			clear: (id) => clearTimeout(id as ReturnType<typeof setTimeout>),
 		};
 		this.graceMs = options.graceMs ?? LIVE_GRACE_MS;
+		this.onAcquire = options.onAcquire;
 	}
 
 	/** For useSyncExternalStore. */
@@ -202,7 +216,14 @@ export class LiveAccountStore {
 	readonly getSnapshot = (): LiveAccount => this.snapshot;
 
 	/** Want a group for as long as the returned function has not been called. */
-	acquire(group: LiveGroup): () => void {
+	acquire(want: LiveWant): () => void {
+		if (want === "history") {
+			const leave = [this.acquire("ledger"), this.acquire("trades")];
+			return () => {
+				for (const l of leave) l();
+			};
+		}
+		const group = want;
 		const pending = this.graceTimers.get(group);
 		if (pending !== undefined) {
 			this.timers.clear(pending);
@@ -210,6 +231,9 @@ export class LiveAccountStore {
 		}
 		this.wanted.set(group, (this.wanted.get(group) ?? 0) + 1);
 		this.start(group);
+		// after the subscriptions were asked for: whoever lets another account go
+		// now does it on a socket that is still in use, so it is not closed and reopened
+		this.onAcquire?.();
 		let released = false;
 		return () => {
 			if (released) return;
@@ -225,6 +249,23 @@ export class LiveAccountStore {
 				}, this.graceMs),
 			);
 		};
+	}
+
+	/**
+	 * Let go at once of every group nobody wants any more, without waiting out
+	 * the grace period. Groups a screen still holds are not touched.
+	 */
+	letGo(): void {
+		for (const [group, timer] of [...this.graceTimers]) {
+			this.timers.clear(timer);
+			this.graceTimers.delete(group);
+			this.stop(group);
+		}
+	}
+
+	/** Whether anything is still subscribed for this account (wanted, or kept for the grace period). */
+	get following(): boolean {
+		return this.leave.size > 0;
 	}
 
 	/** Ask again now: after "refused", or without waiting out a reconnect. */
@@ -404,5 +445,52 @@ export class LiveAccountStore {
 		if (next === this.snapshot) return;
 		this.snapshot = next;
 		for (const l of [...this.listeners]) l();
+	}
+}
+
+/**
+ * The stores of a page, one per account, with one rule on top: a page follows
+ * one account at a time. When a screen acquires anything for an account, what
+ * was only being kept for any other account (on any network) is let go in the
+ * same moment. Hyperliquid limits how many accounts a network address may
+ * follow and how many messages it may send; a treasury left behind must not
+ * count against either.
+ */
+export class LiveAccounts<N extends string = string> {
+	private readonly stores = new Map<string, LiveAccountStore>();
+
+	constructor(
+		private readonly hubFor: (network: N) => WsHub,
+		private readonly options: {
+			readonly timers?: HubTimers;
+			readonly graceMs?: number;
+		} = {},
+	) {}
+
+	/** The store of one account. Creating it connects nothing. */
+	store(network: N, address: string): LiveAccountStore {
+		const account = address.toLowerCase();
+		const key = `${network}:${account}`;
+		let store = this.stores.get(key);
+		if (!store) {
+			store = new LiveAccountStore({
+				hub: () => this.hubFor(network),
+				account,
+				timers: this.options.timers,
+				graceMs: this.options.graceMs,
+				onAcquire: () => this.only(key),
+			});
+			this.stores.set(key, store);
+		}
+		return store;
+	}
+
+	/** The accounts something is subscribed for right now, as `network:address`. */
+	following(): string[] {
+		return [...this.stores].filter(([, s]) => s.following).map(([k]) => k);
+	}
+
+	private only(key: string): void {
+		for (const [k, store] of this.stores) if (k !== key) store.letGo();
 	}
 }

@@ -14,13 +14,12 @@ import {
 	networkConfig,
 	WsHub,
 } from "@hl-tools/core";
-import { LiveAccountStore } from "../model/live/account";
+import { type LiveAccountStore, LiveAccounts } from "../model/live/account";
 
 /** How long a hidden tab keeps its connection. */
 export const HIDDEN_GRACE_MS = 60_000;
 
 const hubs = new Map<Network, WsHub>();
-const stores = new Map<string, LiveAccountStore>();
 let lifecycle = false;
 
 /** One listener set for every hub: created with the first hub, kept for the page's life. */
@@ -57,20 +56,22 @@ function hubFor(network: Network): WsHub {
 	return hub;
 }
 
+/** Every account store of the page; it sees to it that only one account is followed at a time. */
+const accounts = new LiveAccounts<Network>(hubFor);
+
 /**
  * The store of one account. Creating it connects nothing: the hub is made
- * when a screen first acquires a group of subscriptions.
+ * when a screen first acquires a group of subscriptions. Acquiring for one
+ * account lets go of what was kept for any other.
  */
 export function liveAccountStore(
 	network: Network,
 	address: Address | string,
 ): LiveAccountStore {
-	const account = address.toLowerCase();
-	const key = `${network}:${account}`;
-	let store = stores.get(key);
-	if (!store) {
-		store = new LiveAccountStore({ hub: () => hubFor(network), account });
-		stores.set(key, store);
-	}
-	return store;
+	return accounts.store(network, address);
+}
+
+/** The accounts this page is subscribed for right now (for tests and for checking by hand). */
+export function followedAccounts(): string[] {
+	return accounts.following();
 }

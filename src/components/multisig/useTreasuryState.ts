@@ -12,7 +12,7 @@ import type { AgentInfo, Policy } from "@hl-tools/core";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useAccount } from "#/components/tools/multisig/useAccount";
 import { CONTROL_REFRESH_MS, useControl } from "./live/useControl";
-import { useLiveAccount } from "./live/useLiveAccount";
+import { type LiveWants, useLiveAccount } from "./live/useLiveAccount";
 import type { LiveAccount, LiveStatus } from "./model/live/account";
 
 export interface TreasuryState {
@@ -104,7 +104,7 @@ export interface LiveTreasuryState extends TreasuryState {
 
 export function useLiveTreasuryState(
 	target: AccountTarget | null,
-	opts: { history?: boolean } = {},
+	opts: LiveWants = {},
 ): LiveTreasuryState {
 	const control = useControl(target);
 	const live = useLiveAccount(target, opts);

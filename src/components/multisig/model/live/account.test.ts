@@ -9,6 +9,7 @@ import {
 	LIVE_INITIAL,
 	type LiveAccount,
 	LiveAccountStore,
+	LiveAccounts,
 	liveStatus,
 } from "./account";
 
@@ -491,5 +492,227 @@ describe("LiveAccountStore: who wants what", () => {
 				resolve();
 			}, 5),
 		);
+	});
+});
+
+describe("LiveAccounts: one treasury at a time", () => {
+	const A = `0x${"a".repeat(40)}`;
+	const B = `0x${"b".repeat(40)}`;
+	const usersOf = (m: Record<string, unknown>[]) =>
+		m.map((x) => (x.subscription as { user: string }).user);
+	function page() {
+		const f = fakeHub();
+		const accounts = new LiveAccounts<"testnet" | "mainnet">(() => f.make(), {
+			timers: f.clock.timers,
+		});
+		return { ...f, accounts };
+	}
+	const HOLDINGS = [
+		"allDexsClearinghouseState",
+		"clearinghouseState",
+		"openOrders",
+		"spotState",
+	];
+	const HISTORY = [
+		"userFills",
+		"userFundings",
+		"userHistoricalOrders",
+		"userNonFundingLedgerUpdates",
+	];
+
+	it("hands out one store per account, whatever the letter case", () => {
+		const { accounts } = page();
+		expect(accounts.store("testnet", A)).toBe(
+			accounts.store("testnet", A.toUpperCase().replace("0X", "0x")),
+		);
+		expect(accounts.store("testnet", A)).not.toBe(accounts.store("mainnet", A));
+		expect(accounts.following()).toEqual([]);
+	});
+
+	it("switching treasuries unsubscribes everything of the one left behind, at once, on the same socket", () => {
+		const { accounts, last, sockets, clock } = page();
+		// treasury A's page: holdings and history
+		const a = accounts.store("testnet", A);
+		const leave = [a.acquire("holdings"), a.acquire("history")];
+		last().open();
+		last().ackAll();
+		expect(accounts.following()).toEqual([`testnet:${A}`]);
+
+		// the user clicks treasury B: A's page unmounts, B's mounts
+		for (const l of leave) l();
+		expect(last().types("unsubscribe")).toEqual([]);
+		accounts.store("testnet", B).acquire("holdings");
+
+		// no waiting: A is gone before the clock moves
+		const gone = [...last().log, ...last().sent].filter(
+			(m) => m.method === "unsubscribe",
+		);
+		expect(usersOf(gone).every((u) => u === A)).toBe(true);
+		expect(last().types("unsubscribe").sort()).toEqual(
+			[...HOLDINGS, ...HISTORY].sort(),
+		);
+		const asked = last().sent.filter((m) => m.method === "subscribe");
+		expect(usersOf(asked).every((u) => u === B)).toBe(true);
+		expect(
+			asked.map((m) => (m.subscription as { type: string }).type).sort(),
+		).toEqual(HOLDINGS);
+		expect(accounts.following()).toEqual([`testnet:${B}`]);
+		// one socket throughout: it was never closed and reopened
+		expect(sockets).toHaveLength(1);
+		expect(last().closed).toBe(false);
+		// and nothing of A comes back later
+		clock.advance(LIVE_GRACE_MS * 3);
+		expect(accounts.following()).toEqual([`testnet:${B}`]);
+		expect(a.getSnapshot()).toBe(LIVE_INITIAL);
+	});
+
+	it("clicking back and forth never leaves two treasuries subscribed", () => {
+		const { accounts, last, sockets } = page();
+		let leave = accounts.store("testnet", A).acquire("holdings");
+		last().open();
+		for (const next of [B, A, B, A, B]) {
+			leave();
+			leave = accounts.store("testnet", next).acquire("holdings");
+			last().ackAll();
+			expect(accounts.following()).toEqual([`testnet:${next}`]);
+		}
+		expect(sockets).toHaveLength(1);
+	});
+
+	it("keeps the grace period for the same treasury: its next page takes the subscriptions over", () => {
+		const { accounts, last, clock } = page();
+		const a = accounts.store("testnet", A);
+		const leave = a.acquire("holdings");
+		last().open();
+		last().ackAll();
+		leave();
+		clock.advance(LIVE_GRACE_MS - 1);
+		// treasury page to one of its proposals
+		a.acquire("holdings");
+		clock.advance(LIVE_GRACE_MS * 2);
+		expect(last().types("unsubscribe")).toEqual([]);
+		expect(last().types("subscribe")).toEqual([]);
+	});
+
+	it("does not touch an account a screen still holds", () => {
+		const { accounts, last } = page();
+		accounts.store("testnet", A).acquire("holdings");
+		last().open();
+		last().ackAll();
+		// something else on the page asks for B while A is still mounted
+		accounts.store("testnet", B).acquire("holdings");
+		expect(last().types("unsubscribe")).toEqual([]);
+		expect(accounts.following().sort()).toEqual(
+			[`testnet:${A}`, `testnet:${B}`].sort(),
+		);
+	});
+
+	it("leaving for a page with no treasury lets go after the grace period and closes the socket", () => {
+		const { accounts, last, clock, hub } = page();
+		const leave = accounts.store("testnet", A).acquire("holdings");
+		last().open();
+		last().ackAll();
+		leave();
+		expect(accounts.following()).toEqual([`testnet:${A}`]);
+		clock.advance(LIVE_GRACE_MS);
+		expect(accounts.following()).toEqual([]);
+		expect(last().closed).toBe(true);
+		expect(hub.state().status).toBe("idle");
+	});
+
+	it("switching network lets the other network's treasury go too", () => {
+		const test = fakeHub();
+		const main = fakeHub();
+		const accounts = new LiveAccounts<"testnet" | "mainnet">(
+			(n) => (n === "testnet" ? test.make() : main.make()),
+			{ timers: test.clock.timers },
+		);
+		const leave = accounts.store("testnet", A).acquire("holdings");
+		test.last().open();
+		test.last().ackAll();
+		leave();
+		accounts.store("mainnet", B).acquire("holdings");
+		expect(accounts.following()).toEqual([`mainnet:${B}`]);
+		// testnet has nothing left: its socket is closed
+		expect(test.last().closed).toBe(true);
+		expect(test.hub.state().status).toBe("idle");
+	});
+});
+
+describe("LiveAccountStore: the ledger alone", () => {
+	it("a page with a pending proposal follows the ledger and none of the trades", () => {
+		const { store, last, now } = setup();
+		store.acquire("holdings");
+		store.acquire("ledger");
+		last().open();
+		expect(last().types("subscribe")).toEqual([
+			"clearinghouseState",
+			"spotState",
+			"openOrders",
+			"allDexsClearinghouseState",
+			"userNonFundingLedgerUpdates",
+		]);
+		last().ackAll();
+		for (const d of recorded("ledger"))
+			last().say("userNonFundingLedgerUpdates", d);
+		expect(now().ledger).toHaveLength(25);
+		expect(now().fills).toBeNull();
+	});
+	it("leaving the trades keeps the ledger a pending proposal still needs", () => {
+		const { store, last, clock } = setup();
+		store.acquire("holdings");
+		// the treasury page with a proposal pending, then its "On Hyperliquid" tab
+		store.acquire("ledger");
+		const leaveTab = store.acquire("history");
+		last().open();
+		// asked for once, although two screens want it
+		expect(
+			last()
+				.types("subscribe")
+				.filter((t) => t === "userNonFundingLedgerUpdates"),
+		).toHaveLength(1);
+		last().ackAll();
+		leaveTab();
+		clock.advance(LIVE_GRACE_MS);
+		expect(last().types("unsubscribe").sort()).toEqual([
+			"userFills",
+			"userFundings",
+			"userHistoricalOrders",
+		]);
+	});
+	it("coming back to the trades within the grace period asks for nothing again", () => {
+		const { store, last, clock } = setup();
+		store.acquire("holdings");
+		const leave = store.acquire("history");
+		last().open();
+		last().ackAll();
+		leave();
+		clock.advance(LIVE_GRACE_MS - 1);
+		store.acquire("history");
+		clock.advance(LIVE_GRACE_MS);
+		expect(last().types("subscribe")).toEqual([]);
+		expect(last().types("unsubscribe")).toEqual([]);
+	});
+});
+
+describe("LiveAccountStore.letGo", () => {
+	it("drops what nobody wants and keeps what a screen holds", () => {
+		const { store, last } = setup();
+		store.acquire("holdings");
+		const leave = store.acquire("history");
+		last().open();
+		last().ackAll();
+		leave();
+		store.letGo();
+		expect(last().types("unsubscribe").sort()).toEqual([
+			"userFills",
+			"userFundings",
+			"userHistoricalOrders",
+			"userNonFundingLedgerUpdates",
+		]);
+		expect(store.following).toBe(true);
+		// a second call has nothing left to do
+		store.letGo();
+		expect(last().types("unsubscribe")).toHaveLength(4);
 	});
 });

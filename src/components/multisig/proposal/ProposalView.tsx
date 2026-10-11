@@ -155,7 +155,7 @@ export function ProposalView({
 		row?.status === "open" ||
 		row?.status === "withdrawn" ||
 		row?.status === "declined";
-	const treasury = useLiveTreasuryState(target, { history: unsettled });
+	const treasury = useLiveTreasuryState(target, { ledger: unsettled });
 	const candidates = useMemo(
 		() => [
 			{
