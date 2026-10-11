@@ -15,6 +15,7 @@ import {
 	signProposal,
 } from "@hl-tools/core";
 import { errorMessage } from "#/hooks/useHyperliquid";
+import { checkBeforeSubmit } from "../model/sendCheck";
 import { type Stage, shortAddress } from "../model/stage";
 import { submitEnvelope, withReceipt } from "../model/submit";
 import type { WalletSigner } from "../useWalletSigner";
@@ -105,6 +106,33 @@ export async function finalise(i: {
 				),
 			);
 		}
+	}
+
+	// Would Hyperliquid refuse it as things stand? A refusal uses up the
+	// proposal's number for good, so the treasury's mode and balances and the
+	// receiver are read again now, before any wallet prompt.
+	const client = infoClient(network);
+	const refusals = await checkBeforeSubmit(proposal.payload, {
+		mode: async (user) =>
+			(await client.userAbstraction(user, { fresh: true })).data,
+		withdrawable: async (user) =>
+			(await client.clearinghouseState(user, { fresh: true })).data
+				.withdrawable,
+		spot: async (user) =>
+			(await client.spotClearinghouseState(user, { fresh: true })).data
+				.balances,
+		role: async (address) =>
+			(await client.userRole(address, { fresh: true })).data,
+	});
+	if (refusals.length > 0) {
+		return stop(
+			stage.executeAddsSignature ? "inner" : "envelope",
+			refusals.map((r) => ({
+				code: `preflight.${r.code}`,
+				severity: "error" as const,
+				message: `Nothing was signed or sent: Hyperliquid would refuse this as things stand. ${r.message}`,
+			})),
+		);
 	}
 
 	let current = proposal;

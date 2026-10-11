@@ -97,6 +97,31 @@ const MODE_REFUSALS: Readonly<Record<string, string>> = {
 		"Only USDC moves into or out of a perps balance. Hyperliquid refuses any other token there.",
 };
 
+const MODE_TITLES: Readonly<Record<string, string>> = {
+	"unified-disabled": "Cannot be sent while the treasury is a unified account",
+	"unified-spot-only": "Cannot be sent while the treasury is a unified account",
+	"token-invalid": "Hyperliquid refuses this token in a perps balance",
+};
+
+/**
+ * What the treasury's mode alone says against an action. It is known as soon
+ * as the mode is read, so a proposal's page can say it before anyone signs.
+ * Null when the mode allows the action, or was not read.
+ */
+export function modeRefusal(
+	mode: AccountMode | null,
+	action: PlainObject,
+): (Refusal & { readonly title: string }) | null {
+	const refusal = mode ? sendRefusal(mode, action) : null;
+	return refusal
+		? {
+				code: refusal,
+				title: MODE_TITLES[refusal] as string,
+				message: MODE_REFUSALS[refusal] as string,
+			}
+		: null;
+}
+
 /**
  * Why Hyperliquid would refuse this action right now, as far as the facts
  * tell. Empty when nothing known stands in its way: a fact that was not read
@@ -104,9 +129,9 @@ const MODE_REFUSALS: Readonly<Record<string, string>> = {
  */
 export function preflight(action: PlainObject, facts: SendFacts): Refusal[] {
 	const out: Refusal[] = [];
-	const refusal = facts.mode ? sendRefusal(facts.mode, action) : null;
-	if (refusal)
-		out.push({ code: refusal, message: MODE_REFUSALS[refusal] as string });
+	const blocked = modeRefusal(facts.mode, action);
+	const refusal = blocked?.code ?? null;
+	if (blocked) out.push({ code: blocked.code, message: blocked.message });
 
 	if (overtakenBy(action, facts.done ?? []))
 		out.push({

@@ -339,18 +339,24 @@ export class InfoClient<N extends Network> {
 		);
 	}
 
-	clearinghouseState(user: string): Promise<Observed<PerpState, N>> {
-		return this.info<PerpState>({
-			type: "clearinghouseState",
-			user: user.toLowerCase(),
-		});
+	clearinghouseState(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<PerpState, N>> {
+		return this.info<PerpState>(
+			{ type: "clearinghouseState", user: user.toLowerCase() },
+			options,
+		);
 	}
 
-	spotClearinghouseState(user: string): Promise<Observed<SpotState, N>> {
-		return this.info<SpotState>({
-			type: "spotClearinghouseState",
-			user: user.toLowerCase(),
-		});
+	spotClearinghouseState(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<SpotState, N>> {
+		return this.info<SpotState>(
+			{ type: "spotClearinghouseState", user: user.toLowerCase() },
+			options,
+		);
 	}
 
 	openOrders(user: string): Promise<Observed<readonly OpenOrder[], N>> {

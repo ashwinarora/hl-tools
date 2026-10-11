@@ -102,10 +102,12 @@ describe("InfoClient account methods", () => {
 		// unless the caller wants what the chain says now
 		await client.userAbstraction(USER, { fresh: true });
 		await client.userRole(USER, { fresh: true });
-		expect(seen.length).toBe(9);
+		await client.clearinghouseState(USER, { fresh: true });
+		await client.spotClearinghouseState(USER, { fresh: true });
+		expect(seen.length).toBe(11);
 		now += 10_001;
 		await client.extraAgents(USER);
-		expect(seen.length).toBe(10);
+		expect(seen.length).toBe(12);
 	});
 	it("`fresh` asks the network whatever is cached, and later readers get the new answer", async () => {
 		const answers: Record<string, unknown> = {

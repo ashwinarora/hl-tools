@@ -6,6 +6,7 @@ import {
 	orderMark,
 	overtakenBy,
 	type Proposal,
+	sendShape,
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
@@ -23,9 +24,11 @@ import { useJudgement } from "#/components/tools/multisig/useJudgement";
 import { useNetwork } from "#/store/networkStore";
 import { useChainMatch, useTxLookups } from "../live/useChainMatch";
 import { CONTROL_REFRESH_MS } from "../live/useControl";
+import { useReceiver } from "../live/useReceiver";
 import { explorerTxUrl } from "../model/chain/columns";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
 import { RELAY_COPY } from "../model/relay/copy";
+import { costLine, modeRefusal } from "../model/send";
 import {
 	deriveStage,
 	type Phase,
@@ -33,6 +36,7 @@ import {
 	type WalletRole,
 } from "../model/stage";
 import { TreasuryNames, Who } from "../names/Names";
+import { CostNote } from "../propose/ActionFields";
 import { useTreasuries } from "../relay/queries";
 import { useExecutionReporter } from "../relay/useExecutionReporter";
 import { useRelay } from "../relay/useRelay";
@@ -71,6 +75,12 @@ const ACTIONABLE: ReadonlySet<Phase> = new Set([
 	"stuck",
 	"overtaken",
 	"refused",
+]);
+/** Phases in which what the send costs is still worth saying. */
+const COSTED: ReadonlySet<Phase> = new Set([
+	"collecting",
+	"ready",
+	"not-yet-valid",
 ]);
 /** Phases after which nobody signs any more. */
 const CLOSED: ReadonlySet<Phase> = new Set([
@@ -254,6 +264,33 @@ export function ProposalView({
 		() => describeAction(proposal.payload.action),
 		[proposal.payload.action],
 	);
+	// While it can still be signed or sent: who is being paid, and what that
+	// costs now (an address that was new when this was proposed may be in use
+	// by the time it is submitted).
+	const payee = useMemo(
+		() => sendShape(proposal.payload.action)?.destination || null,
+		[proposal.payload.action],
+	);
+	const lookup = useReceiver(
+		target.network,
+		COSTED.has(stage.phase) ? payee : null,
+		{ settleMs: 0 },
+	);
+	// The treasury's mode can rule the action out whatever else holds: said
+	// here, before anyone signs, with the way out.
+	const blocked = COSTED.has(stage.phase)
+		? modeRefusal(treasury.mode, proposal.payload.action)
+		: null;
+	const cost =
+		blocked || lookup.state === "idle"
+			? null
+			: costLine({
+					action: proposal.payload.action,
+					receiver: lookup.state === "loading" ? "loading" : lookup.receiver,
+					mode: treasury.mode,
+					perpsUsdc: treasury.perp?.withdrawable ?? null,
+					spot: treasury.spot,
+				});
 
 	// the treasury page, when the relay lists this treasury for the wallet
 	const { rows: mine } = useTreasuries();
@@ -446,6 +483,11 @@ export function ProposalView({
 							{stage.failedAttempt.cause} {stage.failedAttempt.fix}
 						</Callout>
 					)}
+					{blocked && (
+						<Callout tone="warning" title={blocked.title} action={repropose}>
+							{blocked.message}
+						</Callout>
+					)}
 					{stage.policyChanged && (
 						<Callout
 							tone="warning"
@@ -562,6 +604,7 @@ export function ProposalView({
 										</>
 									)}
 								</dl>
+								<CostNote line={cost} />
 								{(proposal.meta.title || proposal.meta.note) && (
 									<p className="mt-3 text-xs text-subtle-foreground">
 										The title and note are not signed: whoever shared the

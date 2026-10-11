@@ -11,6 +11,7 @@ import type { Receiver } from "./actions";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
 import {
 	costLine,
+	modeRefusal,
 	preflight,
 	receiverOf,
 	type SendFacts,
@@ -213,6 +214,25 @@ describe("preflight: what Hyperliquid would refuse as things stand", () => {
 		expect(
 			codes(usdSend("999"), facts({ mode: UNIFIED, perpsUsdc: "0" })),
 		).toEqual(["unified-disabled"]);
+	});
+});
+
+describe("modeRefusal: what the treasury's mode alone rules out", () => {
+	it("names what a unified treasury cannot send, with a title for the page", () => {
+		expect(modeRefusal(UNIFIED, usdSend())).toMatchObject({
+			code: "unified-disabled",
+			title: "Cannot be sent while the treasury is a unified account",
+		});
+		expect(modeRefusal(UNIFIED, asset("", ""))?.code).toBe("unified-spot-only");
+		expect(modeRefusal(MANUAL, asset("spot", "", "1", PURR))?.title).toContain(
+			"token",
+		);
+	});
+	it("says nothing when the mode allows it, or was not read", () => {
+		expect(modeRefusal(UNIFIED, asset("spot", "spot"))).toBeNull();
+		expect(modeRefusal(MANUAL, usdSend())).toBeNull();
+		expect(modeRefusal(null, usdSend())).toBeNull();
+		expect(modeRefusal(UNIFIED, { type: "approveAgent" })).toBeNull();
 	});
 });
 
