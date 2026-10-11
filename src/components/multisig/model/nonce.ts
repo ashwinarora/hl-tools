@@ -16,6 +16,37 @@ export function nonceFor(mode: NonceMode, now: number = Date.now()): number {
 	return mode === "extended" ? now + EXTENDED_OFFSET_MS : now;
 }
 
+/**
+ * The number a new proposal carries: the time it is made (or 23 hours later),
+ * and never below `floor`, the first number that comes after the treasury's
+ * earlier sends and withdrawals (the core's `orderFloor`). Hyperliquid takes
+ * those only in the order of their numbers, so a send made today must not be
+ * numbered below one that was dated ahead yesterday. `raised` says the floor
+ * decided.
+ */
+export function proposalNonce(
+	mode: NonceMode,
+	now: number,
+	floor: number | null,
+): { readonly nonce: number; readonly raised: boolean } {
+	const wanted = nonceFor(mode, now);
+	return floor !== null && floor > wanted
+		? { nonce: floor, raised: true }
+		: { nonce: wanted, raised: false };
+}
+
+/** Said under the signing window when the floor decided the number. */
+export const NUMBERED_AFTER =
+	"It is dated just after this treasury's latest send or withdrawal on record, because Hyperliquid carries those out only in the order of their dates.";
+
+/**
+ * Said under the longer signing window of a USDC send: what dating it ahead
+ * does to every other send of the account once it is carried out (measured on
+ * testnet, 2026-10-11).
+ */
+export const DATED_AHEAD =
+	"This send is dated 23 hours ahead. Once it is carried out, Hyperliquid refuses every USDC send and withdrawal of this treasury dated earlier, also ones made with another tool, until that time has passed.";
+
 export interface WindowInfo {
 	readonly validFrom: number;
 	readonly validUntil: number;

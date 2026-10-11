@@ -5,10 +5,13 @@ import {
 	fromPlain,
 	type Issue,
 	infoClient,
+	ORDERED_ACTION_TYPES,
+	orderFloor,
 	type Proposal,
 	prepareInnerAction,
 	signProposal,
 	stringifyJson,
+	ZERO_ADDRESS,
 } from "@hl-tools/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -52,7 +55,13 @@ import {
 } from "../model/actions";
 import { type InnerChain, innerChain } from "../model/chains";
 import { loadProposal, saveProposal } from "../model/history";
-import { describeWindow, type NonceMode, nonceFor } from "../model/nonce";
+import {
+	DATED_AHEAD,
+	describeWindow,
+	type NonceMode,
+	NUMBERED_AFTER,
+	proposalNonce,
+} from "../model/nonce";
 import { RELAY_COPY } from "../model/relay/copy";
 import { publishRow } from "../model/relay/push";
 import { linkTransport } from "../model/transport";
@@ -64,6 +73,7 @@ import { Help } from "../shell/Help";
 import { NetTag, SignsTag, backLink as shellBack } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { TreasuryStrip } from "../TreasuryStrip";
+import { useKnownProposals } from "../treasury/useKnownProposals";
 import { useTreasuryNames } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
@@ -146,6 +156,18 @@ export function ProposeScreen({
 		enabled: hydrated && form.kind === "spotSend",
 	});
 
+	// Hyperliquid carries out an account's sends and withdrawals only in the
+	// order of their numbers, so a new one is numbered after every one on record
+	// (one dated ahead yesterday is still ahead of the clock today).
+	const ordered = ORDERED_ACTION_TYPES.includes(form.kind);
+	const known = useKnownProposals(
+		network,
+		(address ?? ZERO_ADDRESS) as Address,
+		hydrated && !!address && ordered,
+	);
+	const floor = ordered ? orderFloor(form.kind, known.proposals) : null;
+	const orderUnknown = ordered && known.state === "loading";
+
 	const chain = innerChain(network, form.chain);
 	const context = (nonce: number) => ({
 		network,
@@ -161,7 +183,8 @@ export function ProposeScreen({
 		supersedes: superseded?.digest ?? null,
 		policyAtCreation: state.policy,
 	});
-	const previewNonce = nonceFor(form.nonceMode, previewNow);
+	const numbered = proposalNonce(form.nonceMode, previewNow, floor);
+	const previewNonce = numbered.nonce;
 	const draft = buildProposalInput(form, context(previewNonce));
 	const preview = draft.input
 		? createProposal(draft.input, { now: previewNow })
@@ -218,7 +241,7 @@ export function ProposeScreen({
 		const now = Date.now();
 		const fresh = buildProposalInput(
 			form,
-			context(nonceFor(form.nonceMode, now)),
+			context(proposalNonce(form.nonceMode, now, floor).nonce),
 		);
 		if (!fresh.input) return;
 		const created = createProposal(fresh.input, { now });
@@ -441,7 +464,7 @@ export function ProposeScreen({
 									<Field
 										label="Signing window"
 										trailing={<Help k="signingWindow" />}
-										hint={`If created now: ${window.text}. After that the chain rejects it and it must be re-proposed.`}
+										hint={`If created now: ${window.text}. After that the chain rejects it and it must be re-proposed.${numbered.raised ? ` ${NUMBERED_AFTER}` : ""}${form.kind === "usdSend" && form.nonceMode === "extended" ? ` ${DATED_AHEAD}` : ""}`}
 									>
 										<Segmented<NonceMode>
 											label="Signing window"
@@ -588,7 +611,9 @@ export function ProposeScreen({
 									<div className="flex flex-wrap items-center gap-2">
 										<Button
 											variant="brand"
-											disabled={!ready || !iAmSigner || wallet.busy}
+											disabled={
+												!ready || !iAmSigner || wallet.busy || orderUnknown
+											}
 											onClick={() =>
 												void wallet.run("Waiting for the wallet…", () =>
 													create(true),
@@ -601,7 +626,7 @@ export function ProposeScreen({
 										</Button>
 										<Button
 											variant="outline"
-											disabled={!ready || wallet.busy}
+											disabled={!ready || wallet.busy || orderUnknown}
 											onClick={() => void create(false)}
 										>
 											Create without signing
