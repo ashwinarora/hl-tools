@@ -131,6 +131,27 @@ export function candidatesFor(
 		: { kind: "candidates", digests: [...new Set(digests)] };
 }
 
+const ZERO_HASH = /^0x0+$/;
+
+/**
+ * The transactions worth looking up: those of rows that could be a known
+ * proposal's, once each, the newest first. Look-ups are paced, and the row
+ * somebody is waiting for is the one that has just landed.
+ */
+export function hashesToLookUp(
+	ledger: readonly LedgerRow[],
+	proposals: readonly MatchCandidate[],
+): string[] {
+	const out = new Set<string>();
+	for (const row of [...ledger].sort((a, b) => b.time - a.time))
+		if (
+			candidatesFor(row, proposals).kind === "candidates" &&
+			!ZERO_HASH.test(row.hash)
+		)
+			out.add(row.hash.toLowerCase());
+	return [...out];
+}
+
 /**
  * Exactly the same action: the same keys in the same order with the same
  * values. An integer may arrive as a number on one side and a bigint on the

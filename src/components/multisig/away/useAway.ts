@@ -32,8 +32,12 @@ import {
 	usePrefsHydrated,
 } from "#/store/multisigPrefsStore";
 import { useNetwork } from "#/store/networkStore";
-import { hashesToLookUp, lookupOf, useTxLookups } from "../live/useChainMatch";
-import { type MatchCandidate, rowProposal } from "../model/chain/match";
+import { lookupOf, useTxLookups } from "../live/useChainMatch";
+import {
+	hashesToLookUp,
+	type MatchCandidate,
+	rowProposal,
+} from "../model/chain/match";
 import { assembleProposal } from "../model/relay/assemble";
 import {
 	AWAY_CHECK_EVERY_MS,

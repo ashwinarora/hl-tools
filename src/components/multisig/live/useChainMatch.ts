@@ -13,7 +13,7 @@ import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import {
-	candidatesFor,
+	hashesToLookUp,
 	type Lookup,
 	type MatchCandidate,
 	type RowProposal,
@@ -42,21 +42,6 @@ class UnknownHash extends Error {}
 const ZERO_HASH = /^0x0+$/;
 const key = (network: Network, hash: string) =>
 	["explorer-tx", network, hash.toLowerCase()] as const;
-
-/** The hashes worth a look-up: rows that could be a known proposal's. */
-export function hashesToLookUp(
-	ledger: readonly LedgerRow[],
-	proposals: readonly MatchCandidate[],
-): string[] {
-	const out = new Set<string>();
-	for (const row of ledger)
-		if (
-			candidatesFor(row, proposals).kind === "candidates" &&
-			!ZERO_HASH.test(row.hash)
-		)
-			out.add(row.hash.toLowerCase());
-	return [...out];
-}
 
 /** A row's look-up, as `rowProposal` takes it. */
 export function lookupOf(

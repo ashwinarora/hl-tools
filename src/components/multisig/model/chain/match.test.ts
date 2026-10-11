@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	approvalOf,
 	candidatesFor,
+	hashesToLookUp,
 	judgeTx,
 	LANDS_AFTER_NONCE_MS,
 	LANDS_BEFORE_NONCE_MS,
@@ -249,6 +250,40 @@ describe("candidatesFor", () => {
 			kind: "candidates",
 			digests: [digest(1)],
 		});
+	});
+});
+
+describe("hashesToLookUp", () => {
+	const hash = (n: number) => `0x${n.toString(16).padStart(64, "0")}`;
+	it("asks for the newest row first, each transaction once", () => {
+		const ledger = [
+			row({ key: "a", time: NONCE + 100, hash: hash(1) }),
+			row({
+				key: "b",
+				time: NONCE + 900,
+				hash: hash(3).toUpperCase().replace("0X", "0x"),
+			}),
+			row({ key: "c", time: NONCE + 500, hash: hash(2) }),
+			// one transaction can leave two rows
+			row({ key: "d", time: NONCE + 900, hash: hash(3) }),
+		];
+		expect(hashesToLookUp(ledger, [proposal(1)])).toEqual([
+			hash(3),
+			hash(2),
+			hash(1),
+		]);
+		// the ledger itself is left as it was
+		expect(ledger.map((r) => r.key)).toEqual(["a", "b", "c", "d"]);
+	});
+	it("asks for nothing that cannot be a known proposal's", () => {
+		const ledger = [
+			row({ key: "in", direction: "in" }),
+			row({ key: "far", time: NONCE + LANDS_AFTER_NONCE_MS + 1 }),
+			// Hyperliquid gives some entries no transaction
+			row({ key: "zero", hash: `0x${"0".repeat(64)}` }),
+		];
+		expect(hashesToLookUp(ledger, [proposal(1)])).toEqual([]);
+		expect(hashesToLookUp([row()], [])).toEqual([]);
 	});
 });
 
