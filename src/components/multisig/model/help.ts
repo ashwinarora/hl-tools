@@ -45,7 +45,11 @@ export const HELP = {
 	},
 	movable: {
 		title: "Can be moved now",
-		body: "The part of the perps balance that is not tied up as margin for open positions. It is what a payment can use right now.",
+		body: "What a payment can use right now. In a manual account it is the part of the perps balance not tied up as margin for open positions. In a unified account it is the balance less what positions and waiting orders reserve.",
+	},
+	inUse: {
+		title: "In use",
+		body: "The part of the balance that open positions and waiting orders reserve. It is freed when a position is closed or an order is cancelled, and it cannot be paid out until then.",
 	},
 	accountMode: {
 		title: "Account mode",
@@ -65,7 +69,7 @@ export const HELP = {
 	},
 	onHold: {
 		title: "On hold",
-		body: "The part of a balance reserved by open orders. It comes back when the order is cancelled and is spent when the order fills.",
+		body: "The part of a balance reserved by open orders, and in a unified account by open positions too. It comes back when the order is cancelled and is spent when the order fills.",
 	},
 	unrealised: {
 		title: "Unrealised profit",

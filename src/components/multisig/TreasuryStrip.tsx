@@ -8,7 +8,7 @@ import {
 } from "#/components/hub/status";
 import { AddressLine, short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
-import { modeLabel } from "./model/mode";
+import { balanceView, modeLabel } from "./model/mode";
 import { When } from "./shell/live";
 import type { TreasuryState } from "./useTreasuryState";
 
@@ -28,12 +28,18 @@ export function TreasuryStrip({
 	const { target } = state;
 	if (!target) return null;
 	const me = wallet?.toLowerCase();
-	const usdc = state.spot?.find((b) => b.coin === "USDC");
 	const otherTokens =
 		state.spot?.filter((b) => b.coin !== "USDC" && Number(b.total) !== 0)
 			.length ?? 0;
 	const now = Date.now();
 	const mode = state.mode ? modeLabel(state.mode) : null;
+	// which balances there are depends on the mode: none are listed before it is known
+	const view = state.modePending
+		? null
+		: balanceView(state.mode, state.perp, state.spot);
+	const others = otherTokens
+		? ` + ${otherTokens} other token${otherTokens > 1 ? "s" : ""}`
+		: "";
 	return (
 		<Panel
 			title={
@@ -146,20 +152,43 @@ export function TreasuryStrip({
 										},
 									]
 								: []),
-							{
-								label: "Perps (account value · withdrawable)",
-								value: state.perp
-									? `${state.perp.accountValue} · ${state.perp.withdrawable} USDC`
-									: "—",
-								mono: true,
-							},
-							{
-								label: "Spot",
-								value: state.spot
-									? `${usdc?.total ?? "0"} USDC${otherTokens ? ` + ${otherTokens} other token${otherTokens > 1 ? "s" : ""}` : ""}`
-									: "—",
-								mono: true,
-							},
+							...(view?.kind === "one"
+								? [
+										{
+											label: "Balance",
+											value:
+												view.balance === null
+													? "—"
+													: `${view.balance} USDC${others}`,
+											mono: true,
+										},
+										{
+											label: "Can be moved now",
+											value:
+												view.movable === null ? "—" : `${view.movable} USDC`,
+											mono: true,
+										},
+									]
+								: view
+									? [
+											{
+												label: "Perps (account value · withdrawable)",
+												value:
+													view.perpsValue === null
+														? "—"
+														: `${view.perpsValue} · ${view.perpsMovable} USDC`,
+												mono: true,
+											},
+											{
+												label: "Spot",
+												value:
+													view.spotUsdc === null
+														? "—"
+														: `${view.spotUsdc} USDC${others}`,
+												mono: true,
+											},
+										]
+									: []),
 						]}
 					/>
 					{state.observedAt !== null && (

@@ -4,6 +4,7 @@
  * the other two are taken from Hyperliquid's documentation and said to be so.
  */
 import type { AccountMode } from "@hl-tools/core";
+import { spotAvailable } from "./send";
 
 export interface ModeLabel {
 	/** A few words for a tag. */
@@ -44,4 +45,59 @@ export function modeLabel(mode: AccountMode): ModeLabel {
 				text: "A discontinued mode, treated here like a manual account. It was not tested with this tool.",
 				caution: true,
 			};
+}
+
+/**
+ * Which balance figures a treasury's screens show. A manual account has two
+ * balances, and the perps one says how much of it is free. A unified account
+ * has one, reported with the spot balances: its USDC total, of which open
+ * positions and resting orders hold a part, and what can be sent is exactly
+ * the rest (measured: one cent more is refused). A figure is null while it
+ * has not been read.
+ */
+export type BalanceView =
+	| {
+			readonly kind: "one";
+			readonly balance: string | null;
+			readonly movable: string | null;
+			readonly inUse: string | null;
+	  }
+	| {
+			readonly kind: "two";
+			readonly perpsValue: string | null;
+			readonly perpsMovable: string | null;
+			readonly spotUsdc: string | null;
+	  };
+
+export function balanceView(
+	mode: AccountMode | null,
+	perp: {
+		readonly accountValue: string;
+		readonly withdrawable: string;
+	} | null,
+	spot:
+		| readonly {
+				readonly coin: string;
+				readonly total: string;
+				readonly hold?: string;
+		  }[]
+		| null,
+): BalanceView {
+	const usdc = spot ? (spot.find((b) => b.coin === "USDC") ?? null) : null;
+	const total = spot ? (usdc?.total ?? "0") : null;
+	// a mode that could not be read, or that this page has no rule for, is shown
+	// the way Hyperliquid reports any account: perps and spot apart
+	if (mode?.kind !== "unified")
+		return {
+			kind: "two",
+			perpsValue: perp?.accountValue ?? null,
+			perpsMovable: perp?.withdrawable ?? null,
+			spotUsdc: total,
+		};
+	return {
+		kind: "one",
+		balance: total,
+		movable: spotAvailable(spot, "USDC"),
+		inUse: spot ? (usdc?.hold ?? "0") : null,
+	};
 }

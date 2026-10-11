@@ -28,7 +28,7 @@ import {
 	sizeOf,
 } from "../model/chain/columns";
 import { approvalOf } from "../model/chain/match";
-import { modeLabel } from "../model/mode";
+import { balanceView, modeLabel } from "../model/mode";
 import { RELAY_COPY } from "../model/relay/copy";
 import type { TreasuryRow } from "../model/relay/rows";
 import { fromNow } from "../model/time";
@@ -250,7 +250,6 @@ export function OverviewTab({
 }) {
 	const now = useNow();
 	const live = state.live;
-	const usdc = live.spot?.find((b) => b.coin === "USDC");
 	const spot = useMemo(
 		() => live.spot?.filter((b) => isNonZero(b.total)) ?? [],
 		[live.spot],
@@ -259,6 +258,12 @@ export function OverviewTab({
 	const orders = live.openOrders ?? [];
 	const mode = state.mode ? modeLabel(state.mode) : null;
 	const reading = "Reading from Hyperliquid…";
+	// which figures there are depends on the mode: nothing is laid out before it is known
+	const view = state.modePending
+		? null
+		: balanceView(state.mode, live.perp, live.spot);
+	const usdc = (v: string | null) =>
+		v === null ? "…" : amountText(v, { maxDecimals: 2, minDecimals: 2 });
 
 	// who signs: the chain's list once it is read; the relay's copy until then,
 	// and for an account that is no longer a multi-sig
@@ -302,7 +307,7 @@ export function OverviewTab({
 			<Card
 				title={
 					<span className="inline-flex items-center gap-1.5">
-						Balances <Help k="perpsSpot" />
+						Balances {view?.kind === "two" && <Help k="perpsSpot" />}
 					</span>
 				}
 				actions={
@@ -317,45 +322,54 @@ export function OverviewTab({
 				}
 				flush
 			>
-				<dl className="grid grid-cols-1 divide-y divide-border border-b border-border min-[641px]:grid-cols-3 min-[641px]:divide-x min-[641px]:divide-y-0">
-					<Figure
-						label="Perps account value"
-						value={
-							live.perp
-								? amountText(live.perp.accountValue, {
-										maxDecimals: 2,
-										minDecimals: 2,
-									})
-								: "…"
-						}
-						unit="USDC"
-					/>
-					<Figure
-						label="Can be moved now"
-						extra={<Help k="movable" />}
-						value={
-							live.perp
-								? amountText(live.perp.withdrawable, {
-										maxDecimals: 2,
-										minDecimals: 2,
-									})
-								: "…"
-						}
-						unit="USDC"
-					/>
-					<Figure
-						label="Spot USDC"
-						value={
-							live.spot
-								? amountText(usdc?.total ?? "0", {
-										maxDecimals: 2,
-										minDecimals: 2,
-									})
-								: "…"
-						}
-						unit="USDC"
-					/>
-				</dl>
+				{view === null ? (
+					<p className="flex min-h-[70px] items-center border-b border-border px-4 text-sm text-muted-foreground">
+						{reading}
+					</p>
+				) : (
+					<dl className="grid grid-cols-1 divide-y divide-border border-b border-border min-[641px]:grid-cols-3 min-[641px]:divide-x min-[641px]:divide-y-0">
+						{view.kind === "one" ? (
+							<>
+								<Figure
+									label="Balance"
+									value={usdc(view.balance)}
+									unit="USDC"
+								/>
+								<Figure
+									label="Can be moved now"
+									extra={<Help k="movable" />}
+									value={usdc(view.movable)}
+									unit="USDC"
+								/>
+								<Figure
+									label="In use"
+									extra={<Help k="inUse" />}
+									value={usdc(view.inUse)}
+									unit="USDC"
+								/>
+							</>
+						) : (
+							<>
+								<Figure
+									label="Perps account value"
+									value={usdc(view.perpsValue)}
+									unit="USDC"
+								/>
+								<Figure
+									label="Can be moved now"
+									extra={<Help k="movable" />}
+									value={usdc(view.perpsMovable)}
+									unit="USDC"
+								/>
+								<Figure
+									label="Spot USDC"
+									value={usdc(view.spotUsdc)}
+									unit="USDC"
+								/>
+							</>
+						)}
+					</dl>
+				)}
 				<DataTable
 					label="Spot balances"
 					columns={SPOT}

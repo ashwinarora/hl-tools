@@ -43,6 +43,8 @@ export interface TreasuryState {
 	 * one balance). Null while not read: only a page that stays open reads it.
 	 */
 	readonly mode: AccountMode | null;
+	/** The mode is on its way: the balances are not laid out before it is known. */
+	readonly modePending: boolean;
 	/** When the signer set and API wallets were read. */
 	readonly observedAt: number | null;
 	/** How this was observed, for the line under the figures. */
@@ -80,6 +82,7 @@ export function useTreasuryState(target: AccountTarget | null): TreasuryState {
 			: null,
 		spot: d?.spot.ok ? d.spot.observed.data.balances : null,
 		mode: null,
+		modePending: false,
 		observedAt: d?.observedAt ?? null,
 		source: `${requests} info requests · weight ${weight}`,
 		money: "once",
@@ -125,6 +128,7 @@ export function useLiveTreasuryState(
 		perp: live.perp,
 		spot: live.spot,
 		mode: control.mode,
+		modePending: control.modePending,
 		observedAt: control.checkedAt,
 		source: liveSource(live.status),
 		money: live.status,

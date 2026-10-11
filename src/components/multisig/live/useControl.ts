@@ -35,6 +35,8 @@ export interface Control {
 	readonly agentsError: string | null;
 	/** How the account keeps its money; null while unknown or unreadable. */
 	readonly mode: AccountMode | null;
+	/** The mode is being read for the first time: nothing is known of it yet. */
+	readonly modePending: boolean;
 	/** When both lists were last read from Hyperliquid (the older of the two). */
 	readonly checkedAt: number | null;
 	/** A read is under way. */
@@ -98,6 +100,7 @@ export function useControl(target: AccountTarget | null): Control {
 				? errorMessage(agents.error)
 				: null,
 		mode: modeRead,
+		modePending: !!target && modeRaw === undefined && mode.isPending,
 		checkedAt: read.length === 2 ? Math.min(...read) : null,
 		checking: policy.isFetching || agents.isFetching || mode.isFetching,
 		failed: policy.isError || agents.isError,
