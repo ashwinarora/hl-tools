@@ -198,9 +198,9 @@ export const TOOLS: readonly ToolDef[] = [
 		short: "Multisig",
 		description:
 			"Propose, sign and submit native multi-sig actions — USDC and spot sends, perps ↔ spot transfers, withdrawals, API-wallet approvals — with your own wallet. Pass a proposal on as a link or a file, or sign in and every signer of a treasury sees it live. Signatures are verified in your browser before anything is sent.",
-		answers: "How do two of three signers get one usdSend onto the chain?",
+		answers: "How do two of three signers get one payment onto the chain?",
 		icon: FileSignature,
-		ruleSets: ["multisig", "signing", "errors"],
+		ruleSets: ["multisig", "signing", "transfers", "errors"],
 		primarySource: {
 			label: "Multi-sig",
 			url: `${DOCS}/hypercore/multi-sig`,
