@@ -431,16 +431,47 @@ describe("describeAction details", () => {
 			} as PlainObject).headline,
 		).toBe("Move 10 USDC spot → perps");
 		const sa = describeAction(SAMPLES.sendAsset as PlainObject);
+		expect(sa.headline).toBe(`Send 1 USDC to ${RECIPIENT}`);
 		expect(sa.lines).toEqual([
-			'from dex "" to dex "xyz"',
+			"taken from the perps balance",
+			'arrives in the receiver\'s balance on perp dex "xyz"',
+			"token USDC",
 			`from sub-account ${A}`,
+		]);
+		// the usual case: perps or spot on either side, no sub-account, a token with its id
+		const plain = describeAction({
+			...SAMPLES.sendAsset,
+			sourceDex: "spot",
+			destinationDex: "",
+			token: "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+			amount: "12.5",
+			fromSubAccount: "",
+		} as PlainObject);
+		expect(plain.headline).toBe(`Send 12.5 USDC to ${RECIPIENT}`);
+		expect(plain.lines).toEqual([
+			"taken from the spot balance",
+			"arrives in the receiver's perps balance",
+			"token USDC:0xeb62eee3685fc4c43992febcd9e75443",
 		]);
 		expect(
 			describeAction({
 				...SAMPLES.sendAsset,
+				sourceDex: "xyz",
+				destinationDex: "spot",
 				fromSubAccount: "",
-			} as PlainObject).lines.length,
-		).toBe(1);
+			} as PlainObject).lines.slice(0, 2),
+		).toEqual([
+			'taken from the balance on perp dex "xyz"',
+			"arrives in the receiver's spot balance",
+		]);
+		// fields left out are shown as unknown, never guessed
+		const bare = describeAction({ type: "sendAsset" } as PlainObject);
+		expect(bare.headline).toBe("Send ? ? to ?");
+		expect(bare.lines).toEqual([
+			'taken from the balance on perp dex "?"',
+			'arrives in the receiver\'s balance on perp dex "?"',
+			"token ?",
+		]);
 		expect(describeAction(SAMPLES.approveAgent as PlainObject).headline).toBe(
 			`Approve API wallet ${B} named "lab"`,
 		);

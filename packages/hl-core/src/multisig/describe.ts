@@ -112,6 +112,13 @@ const s = (v: unknown): string =>
 			: v === undefined
 				? "?"
 				: JSON.stringify(v);
+/** A `sendAsset` dex name in words: "" is the first perp dex, "spot" the spot balance. */
+const balanceName = (dex: unknown): string =>
+	dex === ""
+		? "the perps balance"
+		: dex === "spot"
+			? "the spot balance"
+			: `the balance on perp dex ${JSON.stringify(dex ?? "?")}`;
 const usd = (v: unknown): string => {
 	if (typeof v === "number" || typeof v === "bigint") {
 		const n = BigInt(v);
@@ -299,9 +306,11 @@ export function describeAction(
 			);
 		case "sendAsset":
 			return done(
-				`Send ${s(action.amount)} ${s(action.token)} to ${s(action.destination)}`,
+				`Send ${s(action.amount)} ${String(action.token ?? "?").split(":")[0]} to ${s(action.destination)}`,
 				[
-					`from dex "${s(action.sourceDex)}" to dex "${s(action.destinationDex)}"`,
+					`taken from ${balanceName(action.sourceDex)}`,
+					`arrives in the receiver's ${balanceName(action.destinationDex).replace(/^the /, "")}`,
+					`token ${s(action.token)}`,
 					action.fromSubAccount
 						? `from sub-account ${s(action.fromSubAccount)}`
 						: "",
