@@ -106,6 +106,25 @@ export interface Staking {
 }
 
 /**
+ * The validators of a network, for a list that names one: read once when the
+ * list shows a staking proposal, and not again while it is shown (a name
+ * rarely changes; the Staking tab and the form keep their own, fresher read).
+ * Nothing is asked while `enabled` is false. Null until read.
+ */
+export function useValidators(
+	network: Network,
+	enabled: boolean,
+): readonly Validator[] | null {
+	const q = useQuery({
+		...validatorsQueryOptions(network),
+		enabled,
+		staleTime: 10 * 60_000,
+		refetchOnWindowFocus: false,
+	});
+	return q.data?.data ?? null;
+}
+
+/**
  * An account's staking, as far as the screen shows it: read when the screen
  * opens, again every minute while the tab is in front, when the tab comes
  * back, on demand, and whenever `changed` changes (the account's spot HYPE,

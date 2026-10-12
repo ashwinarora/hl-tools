@@ -752,7 +752,9 @@ function MovePart({
 					{(stage.toSend[0] ?? 0) + 1} is sent
 					{toSend.length > 1
 						? ", and the next one once Hyperliquid has accepted it."
-						: "."}
+						: "."}{" "}
+					If no wallet window opens, open your wallet: it may be holding a
+					request.
 				</p>
 			</Card>
 		);

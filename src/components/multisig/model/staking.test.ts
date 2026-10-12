@@ -1,4 +1,5 @@
 import {
+	describeAction,
 	type Issue,
 	LOCKUP_MARGIN_MS,
 	type StakingAction,
@@ -10,6 +11,7 @@ import { NOW } from "#/test/keys";
 import { HELP_JARGON } from "./help";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
 import {
+	actionLine,
 	historyText,
 	isStakingKind,
 	lockupWords,
@@ -137,6 +139,30 @@ describe("the words of staking", () => {
 			"Unstake 40 HYPE from Hypurr (0x0000…00a1)",
 			"Return 100 HYPE from the staking balance to the spot balance",
 		]);
+	});
+	it("gives a list the same line as the step's own page, and anything else as the core says it", () => {
+		const stake = {
+			type: "tokenDelegate",
+			validator: X,
+			wei: 2_000_000,
+			isUndelegate: false,
+		};
+		// by its own name where the validators are at hand, by its address until then
+		expect(actionLine(stake, VALIDATORS)).toBe(
+			"Stake 0.02 HYPE with Hypurr (0x0000…00a1)",
+		);
+		expect(actionLine(stake)).toBe("Stake 0.02 HYPE with 0x0000…00a1");
+		expect(actionLine({ type: "cDeposit", wei: 2_000_000 })).toBe(
+			"Move 0.02 HYPE from the spot balance to the staking balance",
+		);
+		// not a staking step: the core's own headline, untouched
+		const send = {
+			type: "usdSend",
+			destination: STRANGER,
+			amount: "5",
+			time: 1,
+		};
+		expect(actionLine(send, VALIDATORS)).toBe(describeAction(send).headline);
 	});
 	it("knows its three kinds", () => {
 		expect(STAKING_KINDS).toEqual(["stake", "returnToSpot", "moveStake"]);

@@ -229,6 +229,25 @@ describe("what two steps mean together", () => {
 		expect(deriveMoveStage([done(), like(ready(), null)]).unsure).toBeNull();
 	});
 
+	it("while signatures are collected, the line is the step's the reader can still sign", () => {
+		// signed step 1, step 2 still to sign: the line that says "you" is step 2's
+		const m = deriveMoveStage([
+			collecting({
+				canSign: false,
+				hasSigned: true,
+				detail: "B can still sign",
+			}),
+			collecting({ detail: "you, B can still sign" }),
+		]);
+		expect(m.detail).toBe("you, B can still sign");
+		// nothing left for the reader: the first step that still lacks signatures
+		const waiting = deriveMoveStage([
+			ready(),
+			collecting({ canSign: false, detail: "C can still sign" }),
+		]);
+		expect(waiting.detail).toBe("C can still sign");
+	});
+
 	it("both steps over together are not told as one waiting for the other", () => {
 		const both = deriveMoveStage([step("withdrawn"), step("withdrawn")]);
 		expect(both.headline).toBe("[withdrawn] · neither step was carried out");
@@ -609,6 +628,17 @@ describe("saying once what holds for both steps of a move", () => {
 			line: "Stake 100 HYPE with 0x946b…5b21",
 		});
 		expect(refs.get(two.digest)).toMatchObject({ step: 2, other: one.digest });
+		// with the validators at hand the move is named as on its own page
+		const named = moveRefs(
+			[
+				{ proposal: one, proposedBy: A },
+				{ proposal: two, proposedBy: A },
+			],
+			[{ address: X, name: "Hypurr" }] as Validator[],
+		);
+		expect(named.get(two.digest)?.line).toBe(
+			"Stake 100 HYPE with Hypurr (0x946b…5b21)",
+		);
 	});
 
 	interface Line {

@@ -1,9 +1,4 @@
-import {
-	decodeProposal,
-	describeAction,
-	type Network,
-	type Proposal,
-} from "@hl-tools/core";
+import { decodeProposal, type Network, type Proposal } from "@hl-tools/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
@@ -19,6 +14,7 @@ import {
 } from "./model/history";
 import { moveSentence, pairMoves } from "./model/move";
 import { RELAY_COPY } from "./model/relay/copy";
+import { actionLine } from "./model/staking";
 import { useRelay } from "./relay/useRelay";
 import { When } from "./shell/live";
 
@@ -45,7 +41,7 @@ function entriesOf(rows: readonly StoredProposal[]): Entry[] {
 			read.push({
 				row,
 				second: null,
-				what: describeAction(proposal.payload.action).headline,
+				what: actionLine(proposal.payload.action),
 				proposal,
 				// no relay here: the documents' own word for who proposed them is compared
 				proposedBy: null,

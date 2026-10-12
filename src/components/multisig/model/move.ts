@@ -402,7 +402,13 @@ export function deriveMoveStage(
 			pending.length === 2
 				? `Collecting signatures · step 1: ${count(one)} · step 2: ${count(two)}`
 				: `Collecting signatures · ${count(pending[0] as StepView)}`,
-			(pending.find((s) => s.stage.phase !== "ready") ?? one).stage.detailParts,
+			// the step the reader can still sign says "you" among those who can;
+			// otherwise the first step that still lacks signatures
+			(
+				pending.find((s) => s.stage.canSign) ??
+				pending.find((s) => s.stage.phase !== "ready") ??
+				one
+			).stage.detailParts,
 		),
 	};
 }
@@ -498,10 +504,13 @@ export interface MoveRef {
 }
 
 /** For every proposal in the list that is a step of a move found there: its place in it. */
-export function moveRefs(items: readonly Listed[]): Map<Hex, MoveRef> {
+export function moveRefs(
+	items: readonly Listed[],
+	validators?: readonly Validator[] | null,
+): Map<Hex, MoveRef> {
 	const refs = new Map<Hex, MoveRef>();
 	pairMoves(items, (first, second, move) => {
-		const line = moveSentence(move);
+		const line = moveSentence(move, validators);
 		refs.set(first.proposal.digest, {
 			step: 1,
 			other: second.proposal.digest,

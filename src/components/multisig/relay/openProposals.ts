@@ -7,6 +7,7 @@
 import {
 	describeAction,
 	type Issue,
+	type Move,
 	orderMark,
 	overtakenBy,
 	type Proposal,
@@ -19,6 +20,7 @@ import { type InboxEntry, moveEntry } from "../model/relay/inbox";
 import { standing } from "../model/relay/positions";
 import type { ProposalRow } from "../model/relay/rows";
 import { finaliserLeft, refusedForGood } from "../model/stage";
+import { actionLine } from "../model/staking";
 import { listCarriedOutAfter, listOpenProposals } from "./api";
 import { treasuriesQuery, unwrap } from "./queries";
 import { queryIssue, useRelay } from "./useRelay";
@@ -36,6 +38,8 @@ export interface OpenProposal extends InboxEntry {
 	 * except what `moveEntry` says of the two together.
 	 */
 	readonly steps?: readonly [OpenProposal, OpenProposal];
+	/** With `steps`: what the move comes to, so a list can name its validators. */
+	readonly move?: Pick<Move, "kind" | "amount" | "validator" | "to">;
 	/**
 	 * Set on an item that stands alone and is one step of a move whose other
 	 * step is not in this list (`loneStep`): its number.
@@ -146,7 +150,8 @@ export function useOpenProposals() {
 									d.row.digest !== row.digest,
 							),
 						) !== null,
-					line: described.headline,
+					// a staking step in the words of its own page, anything else as the core says it
+					line: actionLine(p.payload.action),
 					title: p.meta.title,
 					flags: described.flags,
 				});
@@ -165,6 +170,12 @@ export function useOpenProposals() {
 						...moveEntry(first.item, second.item),
 						line: moveSentence(move),
 						steps: [first.item, second.item] as const,
+						move: {
+							kind: move.kind,
+							amount: move.amount,
+							validator: move.validator,
+							to: move.to,
+						},
 					},
 				}),
 			).map((x) => x.item);

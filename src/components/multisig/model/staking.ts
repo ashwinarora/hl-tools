@@ -17,6 +17,7 @@
 import {
 	Decimal,
 	type Delegation,
+	describeAction,
 	expectedRate,
 	HYPE_WEI_DECIMALS,
 	type Issue,
@@ -40,6 +41,7 @@ import {
 	type StakingFacts,
 	type StakingRefusal,
 	type StakingSummary,
+	stakingActionOf,
 	stakingFields,
 	type Validator,
 	validatorPays,
@@ -129,6 +131,22 @@ export function stepSentence(
 		default:
 			return `Return ${hype(step.amount)} from the staking balance to the spot balance`;
 	}
+}
+
+/**
+ * The line of an action wherever a proposal is listed. A staking step reads
+ * as on its own page: the validator by the name it gave itself where the
+ * list of validators is at hand, by its short address until then. Anything
+ * else reads as the core describes it.
+ */
+export function actionLine(
+	action: PlainObject,
+	validators?: readonly Validator[] | null,
+): string {
+	const step = stakingActionOf(action);
+	return step
+		? stepSentence(step, validators)
+		: describeAction(action).headline;
 }
 
 export const STAKING = {

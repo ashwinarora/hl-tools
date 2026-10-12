@@ -25,7 +25,6 @@ import {
 	type Address,
 	type AgentInfo,
 	Decimal,
-	describeAction,
 	type Hex,
 	type LedgerRow,
 	type Proposal,
@@ -34,6 +33,7 @@ import type { RowProposal } from "../chain/match";
 import { type MoveRef, sayOncePerMove, stepMark } from "../move";
 import { joinParts, type Part, part, say } from "../parts";
 import { shortAddress } from "../stage";
+import { actionLine } from "../staking";
 import type { TreasuryTab } from "../tabs";
 import { afterRejection } from "./copy";
 import type { EventRow, ProposalRow, ProposalStatus } from "./rows";
@@ -83,7 +83,8 @@ export function awayProposal(row: ProposalRow, p: Proposal): AwayProposal {
 	const agent = action.type === "approveAgent" ? action.agentAddress : null;
 	return {
 		digest: p.digest,
-		line: describeAction(action).headline,
+		// a staking step in the words of its own page, as every list has it
+		line: actionLine(action),
 		title: p.meta.title ?? null,
 		kind: String(action.type),
 		agent:

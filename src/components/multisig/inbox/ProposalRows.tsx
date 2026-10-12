@@ -1,10 +1,12 @@
-import type { Address } from "@hl-tools/core";
+import { type Address, type Network, stakingActionOf } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { FLAG_TEXT } from "#/components/tools/multisig/EnvelopeView";
-import { LONE_STEP_HINT } from "../model/move";
+import { useValidators } from "../live/useStaking";
+import { LONE_STEP_HINT, moveSentence } from "../model/move";
 import { closes } from "../model/nonce";
 import { finishLabel, inboxGroup } from "../model/relay/inbox";
 import { blockedTag, saidNoTag } from "../model/relay/positions";
+import { actionLine } from "../model/staking";
 import { localDateTime, utcDateTime } from "../model/time";
 import { NamesFor, Who } from "../names/Names";
 import type { OpenProposal } from "../relay/openProposals";
@@ -27,6 +29,24 @@ export function ProposalRows({
 	treasuryName?: (item: OpenProposal) => string;
 }) {
 	const now = useNow(60_000);
+	// A staking row names its validator as its own page does. The list of
+	// validators is asked for only on a network where such a row is shown.
+	const staking = (network: Network) =>
+		items.some(
+			(p) =>
+				p.network === network &&
+				(!!p.move || stakingActionOf(p.proposal.payload.action) !== null),
+		);
+	const names = {
+		mainnet: useValidators("mainnet", staking("mainnet")),
+		testnet: useValidators("testnet", staking("testnet")),
+	};
+	const lineOf = (p: OpenProposal): string =>
+		p.move
+			? moveSentence(p.move, names[p.network])
+			: stakingActionOf(p.proposal.payload.action)
+				? actionLine(p.proposal.payload.action, names[p.network])
+				: p.line;
 	return (
 		<div className="flex flex-col">
 			{items.map((p) => {
@@ -45,7 +65,7 @@ export function ProposalRows({
 					>
 						<span className="min-w-0">
 							<span className="block text-sm font-medium [overflow-wrap:anywhere]">
-								{p.line}
+								{lineOf(p)}
 							</span>
 							<span className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
 								{treasuryName && <span>{treasuryName(p)}</span>}

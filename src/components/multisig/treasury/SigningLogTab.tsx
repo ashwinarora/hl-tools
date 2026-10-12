@@ -1,13 +1,14 @@
 import {
 	type Address,
-	describeAction,
 	type Hex,
 	type Proposal,
+	stakingActionOf,
 } from "@hl-tools/core";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { download } from "#/lib/download";
+import { useValidators } from "../live/useStaking";
 import { type Listed, moveRefs } from "../model/move";
 import { assembleProposal } from "../model/relay/assemble";
 import type { EventRow, TreasuryRow } from "../model/relay/rows";
@@ -16,6 +17,7 @@ import {
 	historyExport,
 	historyFilename,
 } from "../model/relay/timeline";
+import { actionLine } from "../model/staking";
 import { Sentence } from "../names/Sentence";
 import { HISTORY_PAGE, listEvents, listProposalsByDigest } from "../relay/api";
 import { unwrap } from "../relay/queries";
@@ -101,26 +103,32 @@ export function SigningLogTab({
 					proposedBy: row.createdBy,
 				});
 			}
-			return { proposals: out, moves: moveRefs(listed) };
+			return { proposals: out, listed };
 		},
 		staleTime: 15_000,
 		retry: 1,
 	});
 
-	const entries = useMemo(
-		() =>
-			buildTimeline(events, {
-				me,
-				line: (digest) => {
-					const p = docs.data?.proposals.get(digest);
-					return p ? describeAction(p.payload.action).headline : null;
-				},
-				title: (digest) => docs.data?.proposals.get(digest)?.meta.title ?? null,
-				// the two steps of a move read as one entry where both say the same
-				move: (digest) => docs.data?.moves.get(digest) ?? null,
-			}),
-		[events, docs.data, me],
+	// a staking step names its validator as its own page does: the list of
+	// validators is asked for only when the log holds such a step
+	const listed = docs.data?.listed;
+	const validators = useValidators(
+		network,
+		!!listed?.some((x) => stakingActionOf(x.proposal.payload.action)),
 	);
+	const entries = useMemo(() => {
+		const moves = moveRefs(listed ?? [], validators);
+		return buildTimeline(events, {
+			me,
+			line: (digest) => {
+				const p = docs.data?.proposals.get(digest);
+				return p ? actionLine(p.payload.action, validators) : null;
+			},
+			title: (digest) => docs.data?.proposals.get(digest)?.meta.title ?? null,
+			// the two steps of a move read as one entry where both say the same
+			move: (digest) => moves.get(digest) ?? null,
+		});
+	}, [events, docs.data, listed, validators, me]);
 	const issue = queryIssue(pages.error);
 
 	const save = () =>
