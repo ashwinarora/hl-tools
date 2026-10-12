@@ -18,7 +18,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "test:relay": "vitest run --config vitest.relay.config.ts"
+    "test:relay": "vitest run --config vitest.relay.config.ts",
+    "rpc:1337": "bun scripts/signing-network-rpc.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
