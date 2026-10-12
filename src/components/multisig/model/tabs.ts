@@ -1,10 +1,11 @@
 /** The sections of a treasury page, and what older links to them mean now. */
 
-export type TreasuryTab = "overview" | "pending" | "log" | "chain";
+export type TreasuryTab = "overview" | "pending" | "staking" | "log" | "chain";
 
 export const TREASURY_TABS: readonly TreasuryTab[] = [
 	"overview",
 	"pending",
+	"staking",
 	"log",
 	"chain",
 ];

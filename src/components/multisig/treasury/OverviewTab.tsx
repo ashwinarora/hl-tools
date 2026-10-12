@@ -6,14 +6,14 @@ import type {
 	SpotBalanceRow,
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
-import { cn } from "#/lib/utils";
 import {
 	treasuryKey,
 	useMultisigPrefs,
 	usePrefsHydrated,
 } from "#/store/multisigPrefsStore";
+import { useStaking } from "../live/useStaking";
 import { API_WALLET_FORMER, API_WALLET_SENTENCE } from "../model/apiWallet";
 import {
 	amountText,
@@ -34,11 +34,13 @@ import { balanceView, modeLabel } from "../model/mode";
 import { RELAY_COPY } from "../model/relay/copy";
 import { type LastSigned, lastSignedText } from "../model/relay/lastSigned";
 import type { TreasuryRow } from "../model/relay/rows";
+import { stakingSummaryLine } from "../model/staking";
 import { fromNow, localDateTime } from "../model/time";
 import { Who } from "../names/Names";
+import { Checked } from "../shell/Checked";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
-import { ago, Btn, Card, linkButtonSm, PersonRow, Tag } from "../shell/kit";
+import { Btn, Card, linkButtonSm, PersonRow, Tag } from "../shell/kit";
 import { Figure, SourceLine, toneOf, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
 import type { KnownProposal } from "./useKnownProposals";
@@ -192,45 +194,6 @@ const ORDERS: readonly DataColumn<OrderRow>[] = [
 
 const key = (r: { readonly key: string }) => r.key;
 
-/** "Checked 2 minutes ago", with a way to check now. One per box that is asked for, not pushed. */
-function Checked({
-	state,
-	now,
-	what,
-}: {
-	state: LiveTreasuryState;
-	now: number;
-	what: string;
-}) {
-	return (
-		<>
-			<span className="inline-flex flex-wrap items-center gap-x-1">
-				{state.observedAt === null
-					? state.checking
-						? "Reading from Hyperliquid…"
-						: "Not read yet."
-					: state.failed
-						? `The last check failed. Shown as read ${ago(state.observedAt, now)}.`
-						: `Checked ${ago(state.observedAt, now)} · again every minute while this page is open`}
-				<Help k="checked" />
-			</span>
-			<button
-				type="button"
-				onClick={state.refetch}
-				disabled={state.checking}
-				aria-label={`Check ${what} again now`}
-				title="Check again now"
-				className="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-60"
-			>
-				<RefreshCw
-					className={cn("size-3.5", state.checking && "animate-spin")}
-					aria-hidden
-				/>
-			</button>
-		</>
-	);
-}
-
 function Quiet({ children }: { children: ReactNode }) {
 	return <span className="text-sm text-muted-foreground">{children}</span>;
 }
@@ -272,6 +235,8 @@ export function OverviewTab({
 		: balanceView(state.mode, live.perp, live.spot);
 	const usdc = (v: string | null) =>
 		v === null ? "…" : amountText(v, { maxDecimals: 2, minDecimals: 2 });
+	// one read a minute: what is staked does not show in the spot balances
+	const staked = stakingSummaryLine(useStaking(state.target).summary);
 
 	// who signs: the chain's list once it is read; the relay's copy until then,
 	// and for an account that is no longer a multi-sig
@@ -388,6 +353,23 @@ export function OverviewTab({
 					initialSort={{ id: "total", desc: true }}
 					empty={live.spot === null ? reading : "No spot balances."}
 				/>
+				{staked && (
+					// HYPE that left spot for staking is still the treasury's
+					<p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border px-4 py-2.5 text-[13px]">
+						<span className="text-muted-foreground">In staking:</span>
+						<span>{staked}</span>
+						{treasury && (
+							<Link
+								to="/multisig/t/$network/$address"
+								params={{ network, address }}
+								search={{ tab: "staking" }}
+								className="text-xs underline underline-offset-2"
+							>
+								Staking
+							</Link>
+						)}
+					</p>
+				)}
 			</Card>
 
 			{positions.length > 0 && (
@@ -463,7 +445,16 @@ export function OverviewTab({
 							</>
 						) : null
 					}
-					footer={<Checked state={state} now={now} what="the signers" />}
+					footer={
+						<Checked
+							observedAt={state.observedAt}
+							checking={state.checking}
+							failed={state.failed}
+							refetch={state.refetch}
+							now={now}
+							what="the signers"
+						/>
+					}
 				>
 					{signers.length === 0 ? (
 						<Quiet>
@@ -512,7 +503,16 @@ export function OverviewTab({
 						</span>
 					}
 					actions={active !== null ? <Tag>{active} active</Tag> : null}
-					footer={<Checked state={state} now={now} what="the API wallets" />}
+					footer={
+						<Checked
+							observedAt={state.observedAt}
+							checking={state.checking}
+							failed={state.failed}
+							refetch={state.refetch}
+							now={now}
+							what="the API wallets"
+						/>
+					}
 				>
 					{state.agents === null ? (
 						<Quiet>

@@ -15,6 +15,7 @@
  * recommendation: which validator to stake with is the signers' choice.
  */
 import {
+	Decimal,
 	type Delegation,
 	expectedRate,
 	HYPE_WEI_DECIMALS,
@@ -26,13 +27,16 @@ import {
 	MAX_PENDING_RETURNS,
 	type Network,
 	type NoPay,
+	type PendingReturn,
 	type PlainObject,
+	pendingReturns,
 	planMove,
 	planReturn,
 	planStake,
 	RETURN_QUEUE,
 	STAKE_LOCKUP,
 	type StakingAction,
+	type StakingEvent,
 	type StakingFacts,
 	type StakingRefusal,
 	type StakingSummary,
@@ -404,4 +408,155 @@ export function stakingActions(
 export function ratePercent(v: Validator): string | null {
 	const rate = expectedRate(v);
 	return rate === null ? null : `${(Number(rate) * 100).toFixed(2)}%`;
+}
+
+// ------------------------------------------------------------------- the page
+
+/** Why a stake earns nothing now, in a word or two for a tag. */
+const NO_PAY_TAG: Readonly<Record<NoPay, string>> = {
+	jailed: "jailed",
+	outside: "not active",
+	"keeps-all": "keeps all rewards",
+	"no-rate": "pays nothing",
+};
+
+/** A validator's state in a word, for a table: what Hyperliquid reports, nothing more. */
+export function validatorState(v: Validator): {
+	readonly text: string;
+	/** A stake with it earns nothing as things stand. */
+	readonly idle: boolean;
+} {
+	const pays = validatorPays(v);
+	return pays.pays
+		? { text: "active", idle: false }
+		: { text: NO_PAY_TAG[pays.why], idle: true };
+}
+
+/** One stake of the treasury, as its row reads. */
+export interface StakeRow {
+	readonly validator: string;
+	/** The validator's own name; "" when it gave none or the list was not read. */
+	readonly name: string;
+	readonly amount: string;
+	/** Hyperliquid's estimate, "2.17%"; null when not known. */
+	readonly rate: string | null;
+	/** Set when the stake earns nothing as things stand: the word for the tag. */
+	readonly idle: string | null;
+	/** Unix ms: from when it can be unstaked. */
+	readonly lockedUntil: number;
+	readonly locked: boolean;
+}
+
+/** One line of Hyperliquid's own list of an account's staking steps. */
+export interface StakingHistoryRow {
+	readonly key: string;
+	readonly time: number;
+	readonly text: string;
+	/** Null for Hyperliquid's own step (a return that landed): there is no transaction to open. */
+	readonly hash: string | null;
+}
+
+export interface StakingView {
+	/** Null while the staking balance is not read. */
+	readonly undelegated: string | null;
+	readonly delegated: string | null;
+	readonly pending: string | null;
+	/** How many returns are waiting, of the five Hyperliquid takes at once. */
+	readonly places: number | null;
+	readonly stakes: readonly StakeRow[] | null;
+	/** Null when not read, or when the history does not say when each lands. */
+	readonly returns: readonly PendingReturn[] | null;
+	readonly history: readonly StakingHistoryRow[] | null;
+	/** The account has something in staking, or on its way back. */
+	readonly any: boolean;
+}
+
+const nonZero = (v: string | null | undefined): boolean =>
+	!!v && !Decimal.parse(v).isZero();
+
+export function historyText(
+	e: StakingEvent,
+	validators: readonly Validator[] | null | undefined,
+): string {
+	switch (e.kind) {
+		case "moveIn":
+			return `Moved ${hype(e.amount)} from spot to the staking balance`;
+		case "stake":
+			return `Staked ${hype(e.amount)} with ${validatorLabel(e.validator ?? "", validators)}`;
+		case "unstake":
+			return `Unstaked ${hype(e.amount)} from ${validatorLabel(e.validator ?? "", validators)}`;
+		case "returnStarted":
+			return `Started the return of ${hype(e.amount)} to spot`;
+		default:
+			return `${hype(e.amount)} landed in spot`;
+	}
+}
+
+const ZERO_HASH = /^0x0+$/;
+
+/** What the Staking section shows, from what was read. */
+export function stakingView(
+	read: {
+		readonly summary: StakingSummary | null;
+		readonly delegations: readonly Delegation[] | null;
+		readonly history: readonly StakingEvent[] | null;
+		readonly validators: readonly Validator[] | null;
+	},
+	network: Network,
+	now: number,
+): StakingView {
+	const { summary, delegations, history, validators } = read;
+	return {
+		undelegated: summary?.undelegated ?? null,
+		delegated: summary?.delegated ?? null,
+		pending: summary?.pendingTotal ?? null,
+		places: summary?.pendingReturns ?? null,
+		stakes:
+			delegations?.map((d): StakeRow => {
+				const v = validators?.find((x) => x.address === d.validator) ?? null;
+				const pays = v ? validatorPays(v) : null;
+				return {
+					validator: d.validator,
+					name: v?.name.trim() ?? "",
+					amount: d.amount,
+					rate: v ? ratePercent(v) : null,
+					idle: pays && !pays.pays ? NO_PAY_TAG[pays.why] : null,
+					lockedUntil: d.lockedUntil,
+					locked: d.lockedUntil > now,
+				};
+			}) ?? null,
+		returns:
+			summary && history ? pendingReturns(summary, history, network) : null,
+		history:
+			history?.map((e, i) => ({
+				key: `${e.time}:${e.hash}:${i}`,
+				time: e.time,
+				text: historyText(e, validators),
+				hash: ZERO_HASH.test(e.hash) ? null : e.hash,
+			})) ?? null,
+		any:
+			nonZero(summary?.delegated) ||
+			nonZero(summary?.undelegated) ||
+			nonZero(summary?.pendingTotal),
+	};
+}
+
+/**
+ * The one line the Overview gives staking, so staked HYPE never looks as if
+ * it had left the treasury. Null when nothing is in staking.
+ */
+export function stakingSummaryLine(
+	summary: StakingSummary | null,
+): string | null {
+	if (!summary) return null;
+	const parts = [
+		nonZero(summary.delegated) ? `${hype(summary.delegated)} staked` : null,
+		nonZero(summary.undelegated)
+			? `${hype(summary.undelegated)} in the staking balance`
+			: null,
+		nonZero(summary.pendingTotal)
+			? `${hype(summary.pendingTotal)} on its way back to spot`
+			: null,
+	].filter((x): x is string => x !== null);
+	return parts.length > 0 ? parts.join(" · ") : null;
 }

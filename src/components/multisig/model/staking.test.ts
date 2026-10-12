@@ -2,6 +2,7 @@ import {
 	type Issue,
 	LOCKUP_MARGIN_MS,
 	type StakingAction,
+	type StakingEvent,
 	type Validator,
 } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
@@ -9,6 +10,7 @@ import { NOW } from "#/test/keys";
 import { HELP_JARGON } from "./help";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
 import {
+	historyText,
 	isStakingKind,
 	lockupWords,
 	noPayLine,
@@ -21,8 +23,11 @@ import {
 	type StakingInput,
 	type StakingRead,
 	stakingActions,
+	stakingSummaryLine,
+	stakingView,
 	stepSentence,
 	validatorLabel,
+	validatorState,
 	waitWords,
 } from "./staking";
 
@@ -496,5 +501,165 @@ describe("every sentence about staking", () => {
 			"unstake-lockup",
 			"validator-unknown",
 		]);
+	});
+});
+
+describe("what the Staking section shows", () => {
+	const ZERO = `0x${"0".repeat(64)}`;
+	const event = (
+		time: number,
+		kind: StakingEvent["kind"],
+		amount: string,
+		validator: string | null = null,
+		hash = `0x${"ab".repeat(32)}`,
+	): StakingEvent => ({ time, hash, kind, amount, validator });
+	const MINUTE = 60_000;
+	const history: StakingEvent[] = [
+		event(NOW - MINUTE, "returnStarted", "20"),
+		event(NOW - 2 * MINUTE, "returnStarted", "30"),
+		event(NOW - 3 * MINUTE, "unstake", "50", X),
+		event(NOW - 4 * MINUTE, "returnLanded", "5", null, ZERO),
+		event(NOW - 9 * MINUTE, "stake", "1050", X),
+		event(NOW - 10 * MINUTE, "moveIn", "1100"),
+	];
+	const waiting = {
+		delegated: "1000",
+		undelegated: "50",
+		pendingTotal: "50",
+		pendingReturns: 2,
+	};
+	const view = (over = {}, now = NOW) =>
+		stakingView(
+			{
+				summary: waiting,
+				delegations: [
+					{ validator: X, amount: "1000", lockedUntil: NOW + HOUR },
+					{ validator: JAILED, amount: "3", lockedUntil: NOW - HOUR },
+					{ validator: STRANGER, amount: "1", lockedUntil: 0 },
+				],
+				history,
+				validators: VALIDATORS,
+				...over,
+			},
+			"testnet",
+			now,
+		);
+
+	it("the figures, as Hyperliquid reports them", () => {
+		expect(view()).toMatchObject({
+			undelegated: "50",
+			delegated: "1000",
+			pending: "50",
+			places: 2,
+			any: true,
+		});
+	});
+	it("each stake with its validator's name, the estimate, and from when it can be unstaked", () => {
+		expect(view().stakes).toEqual([
+			{
+				validator: X,
+				name: "Hypurr",
+				amount: "1000",
+				rate: "2.17%",
+				idle: null,
+				lockedUntil: NOW + HOUR,
+				locked: true,
+			},
+			// the validator was jailed after the stake was made: said on the row
+			{
+				validator: JAILED,
+				name: "Kraken",
+				amount: "3",
+				rate: "0.00%",
+				idle: "jailed",
+				lockedUntil: NOW - HOUR,
+				locked: false,
+			},
+			// not on the list: nothing is made up about it
+			{
+				validator: STRANGER,
+				name: "",
+				amount: "1",
+				rate: null,
+				idle: null,
+				lockedUntil: 0,
+				locked: false,
+			},
+		]);
+		expect(view({}, NOW + HOUR).stakes?.[0]?.locked).toBe(false);
+	});
+	it("each return with the moment it lands, the next one first", () => {
+		expect(view().returns).toEqual([
+			{
+				amount: "30",
+				startedAt: NOW - 2 * MINUTE,
+				landsAt: NOW + 3 * MINUTE,
+			},
+			{ amount: "20", startedAt: NOW - MINUTE, landsAt: NOW + 4 * MINUTE },
+		]);
+	});
+	it("no landing time is made up when the history does not account for the returns", () => {
+		expect(view({ history: [] }).returns).toBeNull();
+		expect(view({ history: null }).returns).toBeNull();
+		expect(view({ history: null }).history).toBeNull();
+	});
+	it("Hyperliquid's own list of steps, in words, with a transaction to open where there is one", () => {
+		expect(view().history?.map((r) => [r.text, r.hash !== null])).toEqual([
+			["Started the return of 20 HYPE to spot", true],
+			["Started the return of 30 HYPE to spot", true],
+			["Unstaked 50 HYPE from Hypurr (0x0000…00a1)", true],
+			["5 HYPE landed in spot", false],
+			["Staked 1050 HYPE with Hypurr (0x0000…00a1)", true],
+			["Moved 1100 HYPE from spot to the staking balance", true],
+		]);
+		expect(new Set(view().history?.map((r) => r.key)).size).toBe(6);
+		expect(historyText(event(1, "stake", "1", STRANGER), null)).toBe(
+			"Staked 1 HYPE with 0x0000…0099",
+		);
+	});
+	it("nothing read, nothing claimed", () => {
+		expect(
+			stakingView(
+				{ summary: null, delegations: null, history: null, validators: null },
+				"mainnet",
+				NOW,
+			),
+		).toEqual({
+			undelegated: null,
+			delegated: null,
+			pending: null,
+			places: null,
+			stakes: null,
+			returns: null,
+			history: null,
+			any: false,
+		});
+	});
+	it("a validator's state in a word", () => {
+		expect(VALIDATORS.map((x) => validatorState(x))).toEqual([
+			{ text: "active", idle: false },
+			{ text: "active", idle: false },
+			{ text: "jailed", idle: true },
+			{ text: "not active", idle: true },
+			{ text: "keeps all rewards", idle: true },
+			{ text: "pays nothing", idle: true },
+		]);
+	});
+	it("the Overview's one line: only what is there", () => {
+		expect(stakingSummaryLine(waiting)).toBe(
+			"1000 HYPE staked · 50 HYPE in the staking balance · 50 HYPE on its way back to spot",
+		);
+		expect(
+			stakingSummaryLine({ ...waiting, undelegated: "0", pendingTotal: "0" }),
+		).toBe("1000 HYPE staked");
+		expect(
+			stakingSummaryLine({
+				delegated: "0",
+				undelegated: "0",
+				pendingTotal: "0",
+				pendingReturns: 0,
+			}),
+		).toBeNull();
+		expect(stakingSummaryLine(null)).toBeNull();
 	});
 });

@@ -43,6 +43,7 @@ import { ChainTab } from "./ChainTab";
 import { OverviewTab } from "./OverviewTab";
 import { PendingTab } from "./PendingTab";
 import { SigningLogTab } from "./SigningLogTab";
+import { StakingTab } from "./StakingTab";
 import { useKnownProposals } from "./useKnownProposals";
 
 /**
@@ -494,6 +495,7 @@ export function TreasuryScreen({
 							// what waits on a former multi-sig can go nowhere: listed, not counted
 							count: frozen ? 0 : pending.length,
 						},
+						{ value: "staking", label: "Staking" },
 						{ value: "log", label: "Signing log" },
 						{ value: "chain", label: "On Hyperliquid" },
 					]}
@@ -517,6 +519,14 @@ export function TreasuryScreen({
 						first={known.state === "ready" && known.proposals.length === 0}
 						network={network}
 						address={address}
+					/>
+				)}
+				{tab === "staking" && (
+					<StakingTab
+						network={network}
+						address={address}
+						state={live}
+						frozen={frozen}
 					/>
 				)}
 				{tab === "log" && <SigningLogTab treasury={treasury} me={me} />}
