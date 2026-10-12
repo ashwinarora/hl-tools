@@ -21,6 +21,8 @@
     "test:relay": "vitest run --config vitest.relay.config.ts"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
     "@hl-tools/core": "workspace:*",
     "@nktkas/hyperliquid": "^0.32.1",
     "@rainbow-me/rainbowkit": "^2.2.10",
