@@ -3,6 +3,7 @@ import {
 	type Issue,
 	type Proposal,
 	stakingActionOf,
+	vaultActionOf,
 	wouldShutOut,
 } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,12 +17,13 @@ import {
 } from "#/components/tools/multisig/policyQuery";
 import { useNetworkStore } from "#/store/networkStore";
 import { refreshStaking } from "../live/useStaking";
+import { refreshVaults } from "../live/useVaults";
 import { modeTargetOf } from "../model/modeSwitch";
 import { finishHint, RELAY_COPY, signHint } from "../model/relay/copy";
 import { objectionNote, ownPosition } from "../model/relay/positions";
 import { relayActions } from "../model/relay/status";
 import { CODE_COPY } from "../model/signingNetwork";
-import { type Stage, shortAddress } from "../model/stage";
+import { heldWhat, type Stage, shortAddress } from "../model/stage";
 import { untilWords } from "../model/time";
 import { Sentence } from "../names/Sentence";
 import { useOpenProposals } from "../relay/openProposals";
@@ -117,6 +119,8 @@ export function YourPart({
 			: null;
 	const adds = stage.executeAddsSignature;
 	const chain = stage.requiredChain;
+	// what a submission that waits for a lockup takes from: a stake, or a vault deposit
+	const held = heldWhat(proposal.payload.action);
 	// this click asks the wallet for a code: a finaliser who only submits signs none
 	const signsCodeNow =
 		stage.signsCode && (stage.canSign || (stage.canExecute && adds));
@@ -156,6 +160,13 @@ export function YourPart({
 		// a staking step that went through changed what the treasury has in staking
 		else if (result.accepted && stakingActionOf(proposal.payload.action))
 			void refreshStaking(
+				queries,
+				proposal.payload.network,
+				proposal.payload.multiSigUser,
+			);
+		// a vault step that went through changed what the treasury has in vaults
+		else if (result.accepted && vaultActionOf(proposal.payload.action))
+			void refreshVaults(
 				queries,
 				proposal.payload.network,
 				proposal.payload.multiSigUser,
@@ -396,7 +407,7 @@ export function YourPart({
 						<Btn
 							variant="brand"
 							disabled
-							title="Hyperliquid would refuse it before the stake's lockup has ended."
+							title={`Hyperliquid would refuse it before the ${held}'s lockup has ended.`}
 						>
 							Submit
 						</Btn>
@@ -457,11 +468,11 @@ export function YourPart({
 				<p className="mt-2.5 flex flex-wrap items-center gap-1 text-[13px] text-muted-foreground">
 					<span>
 						Submit opens on <When at={stage.opensAt} /> (
-						{untilWords(stage.opensAt, now)}): the stake this takes from is
+						{untilWords(stage.opensAt, now)}): the {held} this takes from is
 						locked until then.
 						{stage.canSign ? " You can sign now." : ""}
 					</span>
-					<Help k="stakeLockup" />
+					<Help k={held === "deposit" ? "vaultLockup" : "stakeLockup"} />
 				</p>
 			)}
 			{itself ? (

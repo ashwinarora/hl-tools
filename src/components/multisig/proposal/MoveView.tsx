@@ -1,10 +1,4 @@
-import {
-	type Address,
-	type Issue,
-	type Move,
-	type Proposal,
-	stakingActionOf,
-} from "@hl-tools/core";
+import type { Address, Issue, Move, Proposal } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, ExternalLink } from "lucide-react";
@@ -13,6 +7,7 @@ import { Callout, IssueList, type Tone } from "#/components/hub/status";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useNetwork } from "#/store/networkStore";
 import { refreshStaking } from "../live/useStaking";
+import { refreshVaults } from "../live/useVaults";
 import { explorerTxUrl } from "../model/chain/columns";
 import {
 	deriveMoveStage,
@@ -24,7 +19,7 @@ import { refusalNote } from "../model/refusal";
 import { RELAY_COPY, signHint } from "../model/relay/copy";
 import { relayActions } from "../model/relay/status";
 import { type Phase, shortAddress } from "../model/stage";
-import { stepSentence } from "../model/staking";
+import { actionLine } from "../model/staking";
 import { untilWords } from "../model/time";
 import { TreasuryNames, Who } from "../names/Names";
 import { Sentence } from "../names/Sentence";
@@ -62,6 +57,7 @@ import {
 	type StepState,
 	signMove,
 } from "./actions";
+import { CodePanel } from "./CodePanel";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
 import { TellCoSigners } from "./TellCoSigners";
@@ -141,7 +137,10 @@ export function MoveView({
 		}),
 		[first.payload.multiSigUser, first.payload.network],
 	);
-	const treasury = useLiveTreasuryState(target);
+	// a vault step leaves its only trace in the ledger: followed for a vault move
+	const treasury = useLiveTreasuryState(target, {
+		ledger: move.kind === "vault",
+	});
 	const { rows: mine } = useTreasuries();
 	const nameOf = useTreasuryNames();
 	const listed =
@@ -155,6 +154,7 @@ export function MoveView({
 		clock,
 		listed,
 		relayWallet: relay.wallet as Address | null,
+		ledger: move.kind === "vault" ? treasury.live.ledger : null,
 	};
 	const one = useMoveStep(first, issues[0], docs[0], shared);
 	const two = useMoveStep(second, issues[1], docs[1], shared);
@@ -442,7 +442,6 @@ function StepCard({
 }) {
 	const { proposal, stage, staking, description } = step;
 	const network = proposal.payload.network;
-	const action = stakingActionOf(proposal.payload.action);
 	const validators = staking.staking.validators;
 	const open = !CLOSED.has(stage.phase);
 	const onRecord = staking.record;
@@ -474,7 +473,7 @@ function StepCard({
 			}
 		>
 			<p className="text-[15px] font-medium [overflow-wrap:anywhere]">
-				{action ? stepSentence(action, validators) : description.headline}
+				{actionLine(proposal.payload.action, validators, network)}
 			</p>
 			<ul className="mt-1.5 space-y-0.5 text-[13px] text-muted-foreground">
 				{description.lines.map((line) => (
@@ -485,7 +484,9 @@ function StepCard({
 			</ul>
 			{description.parties.map((party) => (
 				<p key={`${party.role}:${party.address}`} className="mt-2 text-[13px]">
-					<span className="mr-2 text-xs text-muted-foreground">Validator</span>
+					<span className="mr-2 text-xs text-muted-foreground">
+						{party.role === "vault" ? "Vault" : "Validator"}
+					</span>
 					<Who address={party.address} full editable />
 					{party.address === me && " (you)"}
 					{staking.validator?.address === party.address &&
@@ -494,9 +495,35 @@ function StepCard({
 								listed as “{staking.validator.name.trim()}”
 							</span>
 						)}
+					{party.role === "vault" &&
+						step.vault.vault?.address === party.address &&
+						step.vault.vault.name.trim() && (
+							<span className="ml-1.5 text-muted-foreground">
+								named “{step.vault.vault.name.trim().slice(0, 40)}” on
+								Hyperliquid
+							</span>
+						)}
 				</p>
 			))}
 			{open && staking.noPay && <Amber>{staking.noPay}</Amber>}
+			{open && step.vault.relocks && <Amber>{step.vault.relocks}</Amber>}
+			{ask &&
+				(step.vault.record?.kind === "likely" ||
+					step.vault.record?.kind === "several") && (
+					<Amber>
+						{step.vault.record.kind === "likely" ? (
+							<>
+								Hyperliquid's record of this treasury shows a vault deposit like
+								this one on <When at={step.vault.record.time} />. It may be this
+								step, already carried out: a vault action carries no number that
+								would tell.
+							</>
+						) : (
+							"Hyperliquid's record of this treasury shows several vault deposits like this one since it was proposed. One of them may be this step, already carried out: a vault action carries no number that would tell."
+						)}{" "}
+						Look at the treasury's On Hyperliquid tab before {before}.
+					</Amber>
+				)}
 			{ask && onRecord?.kind === "likely" && (
 				<Amber>
 					Hyperliquid's staking history shows a step like this one on{" "}
@@ -586,6 +613,9 @@ function MovePart({
 	const [marks, setMarks] = useState<Marks | null>(null);
 	const [confirm, setConfirm] = useState(false);
 	const [busy, setBusy] = useState(false);
+	// the wallet answered that it lacks the signing network: the code panel offers to add it
+	const [needsNetwork, setNeedsNetwork] = useState(false);
+	const [addFailed, setAddFailed] = useState<string | null>(null);
 
 	const stage = deriveMoveStage(steps);
 	const me = wallet.address as Address | null;
@@ -652,51 +682,87 @@ function MovePart({
 		list.length === 2 ? "both steps" : `step ${(list[0] ?? 0) + 1}`;
 	const adds = toSend.some((s) => s.stage.executeAddsSignature);
 
-	const sign = () =>
-		void wallet.run("Waiting for the wallet…", async () => {
-			setOutcome(null);
-			setFailure(null);
-			const done = await signMove({
-				steps: toSign.map((s) => ({
-					proposal: s.proposal,
-					stage: s.stage,
-					store: s.doc.store,
-				})),
-				wallet,
-			});
+	// The steps this click asks the wallet for a code on (a vault deposit):
+	// the code has to be on the page to compare, and the wallet has to hold
+	// the signing network.
+	const coded = (
+		stage.canExecute
+			? toSend.filter((s) => s.stage.executeAddsSignature)
+			: toSign
+	).filter((s) => s.stage.signsCode);
+
+	const doSign = async () => {
+		setOutcome(null);
+		setFailure(null);
+		const done = await signMove({
+			steps: toSign.map((s) => ({
+				proposal: s.proposal,
+				stage: s.stage,
+				store: s.doc.store,
+			})),
+			wallet,
+		});
+		// not a failure: the wallet has to be given the network first
+		if (!done.outcome.ok && done.outcome.needsNetwork) setNeedsNetwork(true);
+		else {
+			setNeedsNetwork(false);
 			setOutcome(done.outcome);
+		}
+	};
+	const sign = () => void wallet.run("Waiting for the wallet…", doSign);
+
+	const doSubmit = async () => {
+		setOutcome(null);
+		setFailure(null);
+		setMarks({});
+		const result = await finaliseMove({
+			steps: toSend.map((s) => ({
+				proposal: s.proposal,
+				stage: s.stage,
+				doc: s.doc,
+			})),
+			wallet,
+			mark: (index, id, state) =>
+				setMarks((m) => ({
+					...(m ?? {}),
+					[index]: { ...(m?.[index] ?? {}), [id]: state },
+				})),
+		});
+		setMarks(null);
+		if (!result.ok && result.needsNetwork) {
+			setNeedsNetwork(true);
+			return;
+		}
+		setNeedsNetwork(false);
+		if (!result.ok)
+			setFailure({
+				title:
+					result.sent > 0
+						? `Step ${(stage.toSend[result.index] ?? 0) + 1} was not sent`
+						: "Nothing was sent",
+				issues: result.issues,
+			});
+		// what the treasury has in staking, or in vaults, changed with every step that went through
+		if (result.sent > 0) {
+			void refreshStaking(queries, network, multiSigUser);
+			void refreshVaults(queries, network, multiSigUser);
+		}
+	};
+
+	/** One approval in the wallet adds the network; then what was asked for goes on. */
+	const addNetwork = () =>
+		void wallet.run("Waiting for the wallet…", async () => {
+			setAddFailed(null);
+			const added = await wallet.addSigningNetwork();
+			if (!added.ok) {
+				setAddFailed(added.error);
+				return;
+			}
+			setNeedsNetwork(false);
+			await (stage.canExecute ? doSubmit() : doSign());
 		});
 
-	const submit = () =>
-		void wallet.run("Waiting for the wallet…", async () => {
-			setOutcome(null);
-			setFailure(null);
-			setMarks({});
-			const result = await finaliseMove({
-				steps: toSend.map((s) => ({
-					proposal: s.proposal,
-					stage: s.stage,
-					doc: s.doc,
-				})),
-				wallet,
-				mark: (index, id, state) =>
-					setMarks((m) => ({
-						...(m ?? {}),
-						[index]: { ...(m?.[index] ?? {}), [id]: state },
-					})),
-			});
-			setMarks(null);
-			if (!result.ok)
-				setFailure({
-					title:
-						result.sent > 0
-							? `Step ${(stage.toSend[result.index] ?? 0) + 1} was not sent`
-							: "Nothing was sent",
-					issues: result.issues,
-				});
-			// what the treasury has in staking changed with every step that went through
-			if (result.sent > 0) void refreshStaking(queries, network, multiSigUser);
-		});
+	const submit = () => void wallet.run("Waiting for the wallet…", doSubmit);
 
 	if (marks) {
 		return (
@@ -752,6 +818,12 @@ function MovePart({
 						);
 					})}
 				</div>
+				{coded.map((s) => (
+					// the wallet shows a code for this step: it has to be here to compare
+					<div key={s.proposal.digest} className="mt-3">
+						<CodePanel payload={s.proposal.payload} />
+					</div>
+				))}
 				<p className="mt-3 text-[13px] text-muted-foreground">
 					Every signature is asked for first. Then step{" "}
 					{(stage.toSend[0] ?? 0) + 1} is sent
@@ -780,7 +852,10 @@ function MovePart({
 		: stage.canExecute
 			? `Your wallet is asked ${times(stage.prompts)}. Then step ${(stage.toSend[0] ?? 0) + 1} is sent${toSend.length > 1 ? ", and step 2 once Hyperliquid has accepted it" : ""}.`
 			: stage.canSign
-				? `${toSign.length > 1 ? "One wallet prompt for each step. " : ""}${signHint(toSign[0]?.proposal.payload.action ?? {})}`
+				? `${toSign.length > 1 ? "One wallet prompt for each step. " : ""}${toSign
+						.map((s) => signHint(s.proposal.payload.action))
+						.filter((t, i, all) => all.indexOf(t) === i)
+						.join(" ")}`
 				: stage.signed > 0 && stage.toSign.length === 0
 					? `You signed ${stage.signed === 2 ? "both steps" : "what is left to sign"}. ${isFinaliser ? "" : `The finaliser ${shortAddress(finaliser)} submits.`}`
 					: (stage.executeReason ?? "");
@@ -794,14 +869,34 @@ function MovePart({
 			}
 			actions={isFinaliser ? <Tag tone="you">you are the finaliser</Tag> : null}
 		>
+			{(stage.canExecute || stage.canSign) &&
+				coded.map((s) => (
+					<div key={s.proposal.digest} className="mb-3">
+						<CodePanel
+							payload={s.proposal.payload}
+							needsNetwork={needsNetwork}
+							busy={wallet.busy}
+							onAdd={addNetwork}
+							failed={addFailed}
+						/>
+					</div>
+				))}
 			{any && (
 				<div className="flex flex-wrap items-center gap-2">
 					{stage.canExecute ? (
-						<Btn variant="brand" disabled={off} onClick={submit}>
+						<Btn
+							variant={needsNetwork ? "outline" : "brand"}
+							disabled={off}
+							onClick={submit}
+						>
 							{adds ? "Sign and submit" : "Submit"} {which(stage.toSend)}
 						</Btn>
 					) : stage.canSign ? (
-						<Btn variant="brand" disabled={off} onClick={sign}>
+						<Btn
+							variant={needsNetwork ? "outline" : "brand"}
+							disabled={off}
+							onClick={sign}
+						>
 							Sign {which(stage.toSign)}
 							{me ? ` as ${shortAddress(me)}` : ""}
 						</Btn>

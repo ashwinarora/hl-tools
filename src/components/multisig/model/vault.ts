@@ -406,3 +406,94 @@ export function vaultActionLine(
 	const step: VaultAction | null = vaultActionOf(action);
 	return step ? vaultStepSentence(step, network, name) : null;
 }
+
+// ------------------------------------------------------------------- the Vaults tab
+
+/** One vault the treasury has money in, as its row shows it. */
+export interface VaultRow {
+	readonly vault: string;
+	/** The vault's own name; empty while it is not read. */
+	readonly name: string;
+	readonly hlp: boolean;
+	/** What the deposit is worth now, in USDC. */
+	readonly equity: string;
+	/** Profit or loss so far, in USDC; null while the vault is not read. */
+	readonly pnl: string | null;
+	/** When the money first went in; null while not read. */
+	readonly since: number | null;
+	readonly lockedUntil: number;
+	/** Still inside the lockup at `now`. */
+	readonly locked: boolean;
+	/** The vault is closed, or its leader has switched deposits off: nothing more can go in. */
+	readonly shut: boolean;
+}
+
+export interface VaultsView {
+	/** Null while the deposits are not read. */
+	readonly rows: readonly VaultRow[] | null;
+	/** Everything in vaults, in USDC; null while not read. */
+	readonly total: string | null;
+}
+
+/** What the Vaults tab shows, from the deposits and what is read about each vault. */
+export function vaultsView(
+	deposits: readonly VaultDeposit[] | null,
+	details: ReadonlyMap<string, VaultLookup>,
+	network: Network,
+	now: number,
+): VaultsView {
+	if (!deposits) return { rows: null, total: null };
+	const rows = deposits
+		.map((d): VaultRow => {
+			const l = details.get(d.vault);
+			const info = l?.kind === "vault" ? l.vault : null;
+			return {
+				vault: d.vault,
+				name: info?.name.trim() ?? "",
+				hlp: isHlp(d.vault, network),
+				equity: d.equity,
+				pnl: info?.mine?.pnl ?? null,
+				since: info?.mine?.since ?? null,
+				lockedUntil: d.lockedUntil,
+				locked: d.lockedUntil > now,
+				shut: info ? info.closed || !info.takesDeposits : false,
+			};
+		})
+		.sort((a, b) =>
+			Decimal.parse(b.equity).gt(Decimal.parse(a.equity)) ? 1 : -1,
+		);
+	const total = deposits
+		.reduce((sum, d) => sum.add(Decimal.parse(d.equity)), Decimal.parse("0"))
+		.toString();
+	return { rows, total };
+}
+
+/**
+ * A USDC figure of a deposit as the screens show it: two decimals, cut and
+ * never rounded up (a deposit must not read as more than it is); below a cent
+ * (what "withdraw everything" leaves behind, a first hour's profit) up to six.
+ */
+export function usdcShown(v: string): string {
+	const d = Decimal.tryParse(v);
+	if (!d) return v;
+	const small = !d.isZero() && d.abs().lt(Decimal.parse("0.01"));
+	return small
+		? d.roundToDecimals(VAULT_USD_DECIMALS, "down").toDisplay()
+		: d.roundToDecimals(2, "down").toDisplay({ minDecimals: 2 });
+}
+
+/**
+ * The one line the Overview gives vaults, so money in a vault never looks as
+ * if it had left the treasury. Null when nothing is in a vault, or not read.
+ */
+export function vaultsSummaryLine(
+	deposits: readonly VaultDeposit[] | null,
+): string | null {
+	if (!deposits || deposits.length === 0) return null;
+	const total = deposits.reduce(
+		(sum, d) => sum.add(Decimal.parse(d.equity)),
+		Decimal.parse("0"),
+	);
+	if (!total.isPositive()) return null;
+	return `${usdcShown(total.toString())} USDC in ${deposits.length === 1 ? "1 vault" : `${deposits.length} vaults`}`;
+}

@@ -11,10 +11,12 @@ import {
 	type Hex,
 	type Network,
 	numberSpent,
+	type PlainObject,
 	type Policy,
 	type Proposal,
 	parseSignersString,
 	type Readiness,
+	vaultActionOf,
 } from "@hl-tools/core";
 import { describeWindow, type WindowInfo } from "./nonce";
 import {
@@ -133,6 +135,13 @@ export interface StageInput {
 	 */
 	readonly codeSigning?: boolean;
 }
+
+/**
+ * What a submission that has to wait for a lockup takes from: a stake (an
+ * unstake) or a vault deposit (a withdrawal from a vault).
+ */
+export const heldWhat = (action: PlainObject): "stake" | "deposit" =>
+	vaultActionOf(action) ? "deposit" : "stake";
 
 export interface Stage {
 	readonly phase: Phase;
@@ -496,7 +505,7 @@ export function deriveStage(input: StageInput): Stage {
 							: !isLeader
 								? `Only the finaliser ${shortAddress(leader)} can submit.`
 								: lockedUntil
-									? "The stake this takes from is still locked, and Hyperliquid would refuse it until the lockup has ended."
+									? `The ${heldWhat(p.payload.action)} this takes from is still locked, and Hyperliquid would refuse it until the lockup has ended.`
 									: null;
 	const canExecute = executeReason === null;
 	// time is all that is in the way: the page shows Submit, switched off, with the moment

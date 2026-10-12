@@ -75,7 +75,31 @@ beforeEach(() => {
 				});
 			case "spotClearinghouseState":
 				return json({
-					balances: [{ coin: "HYPE", token: 150, total: spotHype, hold: "0" }],
+					balances: [
+						{ coin: "HYPE", token: 150, total: spotHype, hold: "0" },
+						{ coin: "USDC", token: 0, total: "100", hold: "0" },
+					],
+				});
+			// a manual account with 30 USDC that perps can release, and nothing in a vault yet
+			case "userAbstraction":
+				return json("default");
+			case "clearinghouseState":
+				return json({
+					marginSummary: {
+						accountValue: "30",
+						totalNtlPos: "0",
+						totalMarginUsed: "0",
+					},
+					withdrawable: "30",
+					assetPositions: [],
+				});
+			case "userVaultEquities":
+				return json([]);
+			case "vaultDetails":
+				return json({
+					name: "A vault",
+					vaultAddress: body.vaultAddress,
+					leader: body.vaultAddress,
 				});
 			case "delegatorSummary":
 				return json({
@@ -500,6 +524,113 @@ describe("a vault action, which is signed as a code", () => {
 		const after = await stored(p);
 		expect(after.signatures.map((x) => x.signer).sort()).toEqual([A, B].sort());
 		expect(after.receipt?.response).toMatchObject({ status: "ok" });
+	});
+
+	/** "Deposit 50 USDC" with 20 to come from spot first: both steps signed by A, B finalises. */
+	async function vaultMove(): Promise<[Proposal, Proposal]> {
+		const step = (action: Record<string, unknown>, nonce: number) => {
+			const made = createProposal(
+				{
+					network: "testnet",
+					multiSigUser: TREASURY,
+					outerSigner: B,
+					action,
+					nonce,
+					createdBy: A,
+				},
+				{ now: NOW },
+			);
+			if (!made.proposal) throw new Error(JSON.stringify(made.issues));
+			return made.proposal;
+		};
+		const tied = tieSteps(
+			step(
+				{
+					type: "usdClassTransfer",
+					...HEAD,
+					amount: "20",
+					toPerp: true,
+					nonce: NOW,
+				},
+				NOW,
+			),
+			step(
+				{
+					type: "vaultTransfer",
+					vaultAddress: VAULT,
+					isDeposit: true,
+					usd: 50_000_000,
+				},
+				NOW + 1,
+			),
+		);
+		const out: Proposal[] = [];
+		for (const p of tied) {
+			const sig = await signProposal(p, viemSigner(ACCOUNTS[1] as never), {
+				expectedSigner: A,
+				at: NOW,
+			});
+			if (!sig.signature) throw new Error(JSON.stringify(sig.issues));
+			out.push(
+				(await saveProposal({ ...p, signatures: [sig.signature] })).proposal,
+			);
+		}
+		return out as [Proposal, Proposal];
+	}
+	const doing = () => log.filter((l) => !l.startsWith("read "));
+
+	it("a deposit in two steps: each signature under its own network, and the deposit sent only after the move to perps", async () => {
+		const [one, two] = await vaultMove();
+		expect([one.meta.kind, two.meta.kind]).toEqual(["user-signed", "l1"]);
+		const steps = [await stepOf(one), await stepOf(two)];
+		const { seen, mark } = marks();
+		const result = await finaliseMove({ steps, wallet: walletOfB(), mark });
+		expect(result).toEqual({ ok: true, accepted: true, sent: 2 });
+		// every signature first, then the posts in order
+		expect(doing()).toEqual([
+			// step 1: B's own signature on the readable step, then as finaliser
+			"chain 0x3e6",
+			"sign HyperliquidTransaction:UsdClassTransfer",
+			"chain 0x3e6",
+			"sign HyperliquidTransaction:SendMultiSig",
+			// step 2: the code under the signing network, the envelope back on the usual one
+			"chain 0x539",
+			"sign Agent",
+			"chain 0x3e6",
+			"sign HyperliquidTransaction:SendMultiSig",
+			"post usdClassTransfer",
+			"post vaultTransfer",
+		]);
+		// no envelope is ever signed under the signing network
+		expect(posted.map((b) => b.action.signatureChainId)).toEqual([
+			"0x3e6",
+			"0x3e6",
+		]);
+		expect(seen.at(-1)).toBe("2.submit:done");
+	});
+
+	it("a deposit in two steps is left whole when the wallet lacks the signing network: nothing is posted", async () => {
+		lacksNetwork = true;
+		const [one, two] = await vaultMove();
+		const steps = [await stepOf(one), await stepOf(two)];
+		const result = await finaliseMove({
+			steps,
+			wallet: walletOfB(),
+			mark: marks().mark,
+		});
+		expect(result).toMatchObject({ ok: false, needsNetwork: true, sent: 0 });
+		expect(doing().filter((l) => l.startsWith("post"))).toEqual([]);
+		// and a signer signing both steps hears the same, with step 1 signed
+		lacksNetwork = true;
+		const done = await signMove({
+			steps: steps.map((s) => ({
+				proposal: s.proposal,
+				stage: s.stage,
+				store: s.doc.store,
+			})),
+			wallet: walletOfB(),
+		});
+		expect(done.outcome).toMatchObject({ ok: false, needsNetwork: true });
 	});
 
 	it("a wallet without the signing network is not a failure: nothing is posted and the page is told to offer it", async () => {

@@ -19,17 +19,35 @@ import {
 	stepNumber,
 	type Validator,
 } from "@hl-tools/core";
-import { type Part, part, partsText, say } from "./parts";
+import { type Part, part, partsText, say, shortAddress } from "./parts";
 import type { Phase, Stage } from "./stage";
 import { hype, validatorLabel } from "./staking";
+import { vaultStepSentence } from "./vault";
 
-/** The move in one line, with the validators by the names they gave themselves. */
+/**
+ * The move in one line: a staking move with the validators by the names they
+ * gave themselves, a vault deposit by its vault (HLP by name on its own
+ * network, which the steps say).
+ */
 export function moveSentence(
-	move: Pick<Move, "kind" | "amount" | "validator" | "to">,
+	move: Pick<Move, "kind" | "amount" | "validator" | "to" | "vault"> & {
+		readonly steps?: Move["steps"];
+	},
 	validators?: readonly Validator[] | null,
 ): string {
 	const name = (address: string) => validatorLabel(address, validators);
 	switch (move.kind) {
+		case "vault": {
+			const network = move.steps?.[0].payload.network;
+			const step = {
+				kind: "deposit" as const,
+				vault: move.vault ?? "",
+				amount: move.amount,
+			};
+			return network
+				? vaultStepSentence(step, network)
+				: `Deposit ${move.amount} USDC into vault ${shortAddress(step.vault)}`;
+		}
 		case "stake":
 			return `Stake ${hype(move.amount)} with ${name(move.validator)}`;
 		case "return":

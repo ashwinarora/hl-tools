@@ -15,6 +15,7 @@ import {
 	usePrefsHydrated,
 } from "#/store/multisigPrefsStore";
 import { useStaking } from "../live/useStaking";
+import { useVaults } from "../live/useVaults";
 import { API_WALLET_FORMER, API_WALLET_SENTENCE } from "../model/apiWallet";
 import {
 	amountText,
@@ -37,6 +38,7 @@ import { type LastSigned, lastSignedText } from "../model/relay/lastSigned";
 import type { TreasuryRow } from "../model/relay/rows";
 import { stakingSummaryLine } from "../model/staking";
 import { fromNow, localDateTime } from "../model/time";
+import { vaultsSummaryLine } from "../model/vault";
 import { Who } from "../names/Names";
 import { Checked } from "../shell/Checked";
 import { type DataColumn, DataTable } from "../shell/DataTable";
@@ -238,6 +240,8 @@ export function OverviewTab({
 		v === null ? "…" : amountText(v, { maxDecimals: 2, minDecimals: 2 });
 	// one read a minute: what is staked does not show in the spot balances
 	const staked = stakingSummaryLine(useStaking(state.target).summary);
+	// and so is what sits in a vault
+	const inVaults = vaultsSummaryLine(useVaults(state.target).deposits);
 
 	// who signs: the chain's list once it is read; the relay's copy until then,
 	// and for an account that is no longer a multi-sig
@@ -379,6 +383,23 @@ export function OverviewTab({
 								className="text-xs underline underline-offset-2"
 							>
 								Staking
+							</Link>
+						)}
+					</p>
+				)}
+				{inVaults && (
+					// USDC that went into a vault is still the treasury's
+					<p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border px-4 py-2.5 text-[13px]">
+						<span className="text-muted-foreground">In vaults:</span>
+						<span>{inVaults}</span>
+						{treasury && (
+							<Link
+								to="/multisig/t/$network/$address"
+								params={{ network, address }}
+								search={{ tab: "vaults" }}
+								className="text-xs underline underline-offset-2"
+							>
+								Vaults
 							</Link>
 						)}
 					</p>

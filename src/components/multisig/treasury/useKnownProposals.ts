@@ -7,7 +7,6 @@
 import {
 	type Address,
 	decodeProposal,
-	describeAction,
 	type Network,
 	type Proposal,
 } from "@hl-tools/core";
@@ -17,6 +16,7 @@ import type { DoneProposal, MatchCandidate } from "../model/chain/match";
 import { listProposals as listLocal, receiptOk } from "../model/history";
 import { assembleProposal } from "../model/relay/assemble";
 import type { ProposalStatus } from "../model/relay/rows";
+import { actionLine } from "../model/staking";
 import { listProposals } from "../relay/api";
 import type { RelayClient } from "../relay/client";
 import { unwrap } from "../relay/queries";
@@ -42,7 +42,9 @@ function known(
 		nonce: p.payload.nonce,
 		finaliser: p.payload.outerSigner,
 		accepted,
-		title: p.meta.title ?? describeAction(p.payload.action).headline,
+		// the action in the words every list has it in (a vault by its short address)
+		title:
+			p.meta.title ?? actionLine(p.payload.action, null, p.payload.network),
 		proposal: p,
 	};
 }

@@ -45,6 +45,7 @@ import { PendingTab } from "./PendingTab";
 import { SigningLogTab } from "./SigningLogTab";
 import { StakingTab } from "./StakingTab";
 import { useKnownProposals } from "./useKnownProposals";
+import { VaultsTab } from "./VaultsTab";
 
 /**
  * The page title: the treasury's nickname, shared by its signers. The pencil
@@ -496,6 +497,7 @@ export function TreasuryScreen({
 							count: frozen ? 0 : pending.length,
 						},
 						{ value: "staking", label: "Staking" },
+						{ value: "vaults", label: "Vaults" },
 						{ value: "log", label: "Signing log" },
 						{ value: "chain", label: "On Hyperliquid" },
 					]}
@@ -527,6 +529,17 @@ export function TreasuryScreen({
 						address={address}
 						state={live}
 						frozen={frozen}
+					/>
+				)}
+				{tab === "vaults" && (
+					<VaultsTab
+						network={network}
+						address={address}
+						state={live}
+						frozen={frozen}
+						canPropose={
+							!!me && (live.policy?.authorizedUsers ?? []).includes(me)
+						}
 					/>
 				)}
 				{tab === "log" && <SigningLogTab treasury={treasury} me={me} />}

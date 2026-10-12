@@ -12,6 +12,7 @@ import {
 	isVaultKind,
 	lockupWords,
 	planVault,
+	usdcShown,
 	VAULT,
 	VAULT_REFUSALS,
 	type VaultInput,
@@ -22,6 +23,8 @@ import {
 	vaultFacts,
 	vaultLabel,
 	vaultStepSentence,
+	vaultsSummaryLine,
+	vaultsView,
 } from "./vault";
 
 const V = "0x49d05977597b22e3c73d654c351adde9d9920e18";
@@ -470,5 +473,95 @@ describe("words", () => {
 				expect(text, `${pattern}`).not.toMatch(pattern);
 		expect(isVaultKind("vaultDeposit")).toBe(true);
 		expect(isVaultKind("stake")).toBe(false);
+	});
+});
+
+describe("the Vaults tab", () => {
+	const deposits = [
+		{ vault: V, equity: "7.00119779", lockedUntil: NOW - DAY },
+		{ vault: HLP, equity: "10.00017", lockedUntil: NOW + 2 * DAY },
+	];
+	it("lists each deposit with what Hyperliquid reports about it, the largest first", () => {
+		const details = new Map<string, VaultLookup>([
+			[
+				V,
+				detail({
+					followerState: {
+						vaultEquity: "7.00119779",
+						allTimePnl: "0.0115",
+						vaultEntryTime: NOW - 9 * DAY,
+						lockupUntil: NOW - DAY,
+					},
+					allowDeposits: false,
+				}),
+			],
+		]);
+		const view = vaultsView(deposits, details, "testnet", NOW);
+		expect(view.total).toBe("17.00136779");
+		expect(view.rows).toEqual([
+			{
+				vault: HLP,
+				// not read yet: no name, no figures invented
+				name: "",
+				hlp: true,
+				equity: "10.00017",
+				pnl: null,
+				since: null,
+				lockedUntil: NOW + 2 * DAY,
+				locked: true,
+				shut: false,
+			},
+			{
+				vault: V,
+				name: "Crazy Franck",
+				hlp: false,
+				equity: "7.00119779",
+				pnl: "0.0115",
+				since: NOW - 9 * DAY,
+				lockedUntil: NOW - DAY,
+				locked: false,
+				shut: true,
+			},
+		]);
+	});
+
+	it("says nothing while the deposits are unread, and an empty list when there are none", () => {
+		expect(vaultsView(null, new Map(), "testnet", NOW)).toEqual({
+			rows: null,
+			total: null,
+		});
+		expect(vaultsView([], new Map(), "testnet", NOW)).toEqual({
+			rows: [],
+			total: "0",
+		});
+	});
+
+	it("shows a deposit's figures cut, never rounded up, and dust as it is", () => {
+		expect(usdcShown("24.999999")).toBe("24.99");
+		expect(usdcShown("25.000202")).toBe("25.00");
+		expect(usdcShown("1234.5")).toBe("1,234.50");
+		expect(usdcShown("0")).toBe("0.00");
+		// what "withdraw everything" leaves, a first hour's profit, a small loss
+		expect(usdcShown("0.000653")).toBe("0.000653");
+		expect(usdcShown("0.0001374779")).toBe("0.000137");
+		expect(usdcShown("-0.0000004733")).toBe("0");
+		expect(usdcShown("-12.349")).toBe("-12.34");
+		expect(usdcShown("much")).toBe("much");
+	});
+
+	it("gives the Overview one line, cut and not rounded up", () => {
+		expect(vaultsSummaryLine(deposits)).toBe("17.00 USDC in 2 vaults");
+		expect(vaultsSummaryLine(deposits.slice(0, 1))).toBe(
+			"7.00 USDC in 1 vault",
+		);
+		expect(
+			vaultsSummaryLine([{ vault: V, equity: "1234.999", lockedUntil: 0 }]),
+		).toBe("1,234.99 USDC in 1 vault");
+		// nothing in a vault, dust that is no money, or not read: no line
+		expect(vaultsSummaryLine([])).toBeNull();
+		expect(vaultsSummaryLine(null)).toBeNull();
+		expect(
+			vaultsSummaryLine([{ vault: V, equity: "0", lockedUntil: 0 }]),
+		).toBeNull();
 	});
 });

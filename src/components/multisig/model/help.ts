@@ -163,6 +163,10 @@ export const HELP = {
 		title: "Read once a minute",
 		body: "Hyperliquid does not send staking figures live, so this page asks for them once a minute while it is open, and again after a staking step. Balances, positions and orders arrive as they happen.",
 	},
+	vaultsChecked: {
+		title: "Vaults: read once a minute",
+		body: "Hyperliquid does not send vault figures live, so this page asks for them once a minute while it is open, and again after a vault step. A deposit's worth moves with the vault's trading in between.",
+	},
 	inboxFinish: {
 		title: "Ready for you to finish",
 		body: "Enough signers have approved, or your signature is the last one missing, and you are the finaliser. Open one, check it, and send it. Start with the oldest.",

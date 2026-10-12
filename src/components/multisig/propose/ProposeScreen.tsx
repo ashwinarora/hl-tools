@@ -10,6 +10,7 @@ import {
 	orderFloor,
 	otherStep,
 	type Proposal,
+	type ProposalPayload,
 	prepareInnerAction,
 	signProposal,
 	stringifyJson,
@@ -93,6 +94,7 @@ import { linkTransport } from "../model/transport";
 import { isVaultKind, planVault, VAULT, type VaultRead } from "../model/vault";
 import { TreasuryNames, useNames } from "../names/Names";
 import { Sentence } from "../names/Sentence";
+import { CodePanel } from "../proposal/CodePanel";
 import { shareMove } from "../relay/api";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -216,6 +218,10 @@ function ProposeForm({
 	// "Create and sign" found the wallet without the signing network a vault action needs
 	const [needsNetwork, setNeedsNetwork] = useState(false);
 	const [addFailed, setAddFailed] = useState<string | null>(null);
+	// the vault steps being signed right now, for the code each wallet prompt shows
+	const [signingCodes, setSigningCodes] = useState<readonly ProposalPayload[]>(
+		[],
+	);
 
 	const address =
 		treasury && ADDRESS_RE.test(treasury)
@@ -636,6 +642,7 @@ function ProposeForm({
 	const createOnce = async (sign: boolean) => {
 		setAttempted(true);
 		setFailure(null);
+		setSigningCodes([]);
 		const now = Date.now();
 		const fresh = buildProposalInputs(
 			form,
@@ -656,6 +663,11 @@ function ProposeForm({
 		let proposals: Proposal[] = one && two ? [...tieSteps(one, two)] : made;
 		if (sign) {
 			setNeedsNetwork(false);
+			// A vault step is signed as a code, and its number is fixed only now:
+			// the code goes on the page before the wallet is asked, to compare.
+			setSigningCodes(
+				proposals.filter((p) => p.meta.kind === "l1").map((p) => p.payload),
+			);
 			// one wallet prompt for each step; nothing is created unless all are signed
 			const signedAll: Proposal[] = [];
 			for (const proposal of proposals) {
@@ -1208,6 +1220,9 @@ function ProposeForm({
 											Signing asks your wallet twice, once for each step.
 										</p>
 									)}
+									{signingCodes.map((payload) => (
+										<CodePanel key={payload.nonce} payload={payload} />
+									))}
 									{needsNetwork && (
 										<div
 											data-needs-network

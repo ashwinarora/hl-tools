@@ -4,6 +4,7 @@ import {
 	describeAction,
 	type Hex,
 	type Issue,
+	type LedgerRow,
 	type Network,
 	type Proposal,
 	type Readiness,
@@ -21,6 +22,7 @@ import { deriveStage, type Stage } from "../model/stage";
 import { useExecutionReporter } from "../relay/useExecutionReporter";
 import type { ProposalDoc } from "./useProposalDoc";
 import { type StakingStep, useStakingStep } from "./useStakingStep";
+import { useVaultStep, type VaultStepState } from "./useVaultStep";
 import { useViewRecorder } from "./useViewRecorder";
 
 /** A step of a move leaves its trace in the staking history, not in the ledger: there is no ledger row to match. */
@@ -38,6 +40,7 @@ export interface MoveStepState extends StepView {
 	readonly parsed: ReturnType<typeof documentToParsed>;
 	readonly description: ActionDescription;
 	readonly staking: StakingStep;
+	readonly vault: VaultStepState;
 	/** The transaction that carried the step out, where one is known. */
 	readonly tx: string | null;
 }
@@ -61,6 +64,8 @@ export function useMoveStep(
 		/** The relay's entry for the treasury, when it lists it for the signed-in wallet. */
 		readonly listed: TreasuryRow | null;
 		readonly relayWallet: Address | null;
+		/** The treasury's ledger, where the page follows it (a vault move): null otherwise. */
+		readonly ledger?: readonly LedgerRow[] | null;
 	},
 ): MoveStepState {
 	const parsed = useMemo(
@@ -77,6 +82,12 @@ export function useMoveStep(
 		!settled && !(proposal.receipt && receiptOk(proposal.receipt)),
 	);
 	const onRecord = staking.record;
+	// a vault step leaves its trace in the ledger, and nowhere else
+	const vault = useVaultStep(
+		proposal,
+		!settled && !(proposal.receipt && receiptOk(proposal.receipt)),
+		shared.ledger ?? null,
+	);
 
 	// "checking", not "signer set not loaded", while the set is on its way and
 	// while signatures are re-counted against it (as on a proposal's own page)
@@ -149,8 +160,12 @@ export function useMoveStep(
 	});
 
 	const description = useMemo(
-		() => describeAction(proposal.payload.action),
-		[proposal.payload.action],
+		// with its network: a vault action names none, and its lockup is the network's
+		() =>
+			describeAction(proposal.payload.action, {
+				network: proposal.payload.network,
+			}),
+		[proposal.payload.action, proposal.payload.network],
 	);
 	return {
 		proposal,
@@ -162,11 +177,17 @@ export function useMoveStep(
 		onRecord:
 			onRecord?.kind === "likely" || onRecord?.kind === "unchecked"
 				? onRecord.kind
-				: null,
+				: // one row like it in the ledger, or several that cannot be told apart
+					vault.record?.kind === "likely"
+					? "likely"
+					: vault.record?.kind === "several"
+						? "unchecked"
+						: null,
 		state,
 		parsed,
 		description,
 		staking,
+		vault,
 		tx:
 			doc.relay.carriedOut?.txHash ??
 			(onRecord?.kind === "matched" ? onRecord.hash : null),

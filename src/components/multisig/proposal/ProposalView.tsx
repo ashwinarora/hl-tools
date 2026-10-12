@@ -10,6 +10,7 @@ import {
 	parseSignersString,
 	type SignerSet,
 	sendShape,
+	vaultActionOf,
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
@@ -73,6 +74,7 @@ import { StageCallout } from "./StageCallout";
 import { TellCoSigners } from "./TellCoSigners";
 import type { ProposalDoc } from "./useProposalDoc";
 import { useStakingStep } from "./useStakingStep";
+import { useVaultStep } from "./useVaultStep";
 import { useViewRecorder } from "./useViewRecorder";
 import { YourPart } from "./YourPart";
 
@@ -190,7 +192,15 @@ export function ProposalView({
 		row?.status === "open" ||
 		row?.status === "withdrawn" ||
 		row?.status === "declined";
-	const treasury = useLiveTreasuryState(target, { ledger: unsettled });
+	// A vault step is followed in the ledger also when it is not shared: the
+	// ledger is the only place that shows a submission whose answer was lost.
+	const vaultPending =
+		vaultActionOf(proposal.payload.action) !== null &&
+		row?.status !== "accepted" &&
+		!(proposal.receipt && receiptOk(proposal.receipt));
+	const treasury = useLiveTreasuryState(target, {
+		ledger: unsettled || vaultPending,
+	});
 	const candidates = useMemo(
 		() => [
 			{
@@ -226,6 +236,14 @@ export function ProposalView({
 		!settled && !(proposal.receipt && receiptOk(proposal.receipt)),
 	);
 	const onRecord = stakingStep.record;
+	// A vault step: the vault's name, the lockup a withdrawal waits for, that
+	// adding to a deposit locks all of it again, and a row like it in the ledger.
+	const vaultStep = useVaultStep(
+		proposal,
+		vaultPending,
+		vaultPending ? treasury.live.ledger : null,
+	);
+	const vaultSeen = vaultStep.record;
 	const stakingTx = useMemo(
 		() =>
 			onRecord?.kind === "matched"
@@ -308,7 +326,7 @@ export function ProposalView({
 				: onRecord?.kind === "matched"
 					? { txHash: onRecord.hash as Hex, seenBy: "page" }
 					: null,
-		heldUntil: stakingStep.heldUntil,
+		heldUntil: stakingStep.heldUntil ?? vaultStep.heldUntil,
 		codeSigning: signingNetwork() !== null,
 		closedUnknown: row?.status === "unknown",
 		overtaken,
@@ -320,8 +338,12 @@ export function ProposalView({
 	});
 	const role = ROLE[stage.role];
 	const description = useMemo(
-		() => describeAction(proposal.payload.action),
-		[proposal.payload.action],
+		// with its network: a vault action names none, and its lockup is the network's
+		() =>
+			describeAction(proposal.payload.action, {
+				network: proposal.payload.network,
+			}),
+		[proposal.payload.action, proposal.payload.network],
 	);
 	// While it can still be signed or sent: who is being paid, and what that
 	// costs now (an address that was new when this was proposed may be in use
@@ -680,6 +702,15 @@ export function ProposalView({
 															listed as “{stakingStep.validator.name.trim()}”
 														</span>
 													)}
+												{party.role === "vault" &&
+													vaultStep.vault?.address === party.address &&
+													vaultStep.vault.name.trim() && (
+														// the vault's own name, as Hyperliquid reports it
+														<span className="ml-1.5 text-muted-foreground">
+															named “{vaultStep.vault.name.trim().slice(0, 40)}”
+															on Hyperliquid
+														</span>
+													)}
 											</dd>
 										</div>
 									))}
@@ -718,6 +749,55 @@ export function ProposalView({
 										<span>{stakingStep.noPay}</span>
 									</p>
 								)}
+								{COSTED.has(stage.phase) && vaultStep.relocks && (
+									<p className="mt-3 flex items-start gap-1.5 text-[13px] text-warning">
+										<span
+											className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+											aria-hidden
+										/>
+										<span>{vaultStep.relocks}</span>
+									</p>
+								)}
+								{COSTED.has(stage.phase) &&
+									(vaultSeen?.kind === "likely" ||
+										vaultSeen?.kind === "several") && (
+										<p
+											data-may-be-done
+											className="mt-3 flex items-start gap-1.5 text-[13px] text-warning"
+										>
+											<span
+												className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+												aria-hidden
+											/>
+											<span>
+												{vaultSeen.kind === "likely" ? (
+													<>
+														Hyperliquid's record of this treasury shows a vault{" "}
+														{vaultStep.step?.kind === "withdraw"
+															? "withdrawal"
+															: "deposit"}{" "}
+														like this one on <When at={vaultSeen.time} />. It
+														may be this proposal, already carried out: a vault
+														action carries no number that would tell.{" "}
+													</>
+												) : (
+													"Hyperliquid's record of this treasury shows several vault steps like this one since it was proposed. One of them may be this proposal, already carried out: a vault action carries no number that would tell. "
+												)}
+												<Link
+													to="/multisig/t/$network/$address"
+													params={{
+														network: target.network,
+														address: target.address,
+													}}
+													search={{ tab: "chain" }}
+													className="underline underline-offset-2"
+												>
+													Look at On Hyperliquid
+												</Link>{" "}
+												before submitting.
+											</span>
+										</p>
+									)}
 								{COSTED.has(stage.phase) &&
 									(onRecord?.kind === "likely" ||
 										onRecord?.kind === "unchecked") && (
