@@ -46,6 +46,14 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 					aria-label="Multisig navigation"
 					className="sticky top-20 hidden flex-col gap-[18px] min-[861px]:flex"
 				>
+					{/* The site's "Skip to content" lands in front of this panel. A keyboard
+					    user then meets this first, and is past the panel in one more press. */}
+					<a
+						href="#multisig-main"
+						className="sr-only focus:not-sr-only focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-brand"
+					>
+						Skip the Multisig navigation
+					</a>
 					<Rail
 						foot={
 							<>
@@ -64,7 +72,7 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 						{relay.mode === "on" && <RailNav />}
 					</Rail>
 				</aside>
-				<main className="min-w-0">
+				<main id="multisig-main" tabIndex={-1} className="min-w-0 outline-none">
 					{relay.mode === "on" && <NetworkHint />}
 					{relay.mode === "on" && <AwayKeeper />}
 					{relay.mode === "on" && <TitleCount />}
