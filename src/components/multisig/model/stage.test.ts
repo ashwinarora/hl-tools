@@ -309,9 +309,22 @@ describe("deriveStage", () => {
 			);
 			expect([t.canSign, t.canExecute]).toEqual([false, false]);
 		}
-		const noChain = await stage({
+		// an action of the code family is signed under the signing network,
+		// whatever chain a wallet is on; a readable one that names no chain has none
+		const code = await stage({
 			...l1,
 			payload: { ...l1.payload, action: { type: "noop" } },
+		});
+		expect(code.requiredChain).toEqual({
+			hex: "0x539",
+			id: 1337,
+			label: "the signing network (1337)",
+		});
+		expect(code.onRequiredChain).toBe(false);
+		const { signatureChainId: _, ...unnamed } = base.payload.action;
+		const noChain = await stage({
+			...base,
+			payload: { ...base.payload, action: unnamed },
 		});
 		expect(noChain.requiredChain).toBeNull();
 		expect(noChain.onRequiredChain).toBe(false);

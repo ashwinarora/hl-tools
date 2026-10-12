@@ -9,8 +9,8 @@
 import { type Hex, type TypedDataSigner, viemSigner } from "@hl-tools/core";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { useAccount, useConfig, useSwitchChain } from "wagmi";
-import { getWalletClient } from "wagmi/actions";
+import { type Config, useAccount, useConfig, useSwitchChain } from "wagmi";
+import { getAccount, getWalletClient } from "wagmi/actions";
 import { useWalletBusy } from "#/store/walletBusyStore";
 import { chainIdToNumber, chainLabel } from "./model/chains";
 import { describeWalletError } from "./model/walletErrors";
@@ -31,6 +31,16 @@ export interface WalletSigner {
 	run<T>(label: string, fn: () => Promise<T>): Promise<T | undefined>;
 }
 
+/** The chain the wallet is on now, asked of the wallet itself; what wagmi last heard when it cannot say. */
+async function liveChain(config: Config): Promise<number | null> {
+	const { connector, chainId } = getAccount(config);
+	try {
+		return connector ? await connector.getChainId() : (chainId ?? null);
+	} catch {
+		return chainId ?? null;
+	}
+}
+
 export function useWalletSigner(): WalletSigner {
 	const config = useConfig();
 	const { address, chainId, isConnected } = useAccount();
@@ -45,9 +55,12 @@ export function useWalletSigner(): WalletSigner {
 				return { ok: false, error: `${hex} is not a chain id.` };
 			const label = chainLabel(want);
 			try {
-				if (chainId !== want)
+				// Asked of the wallet at this moment. The chain known when the page
+				// last rendered is stale inside one click that signs under two
+				// chains: the second switch would be skipped.
+				if ((await liveChain(config)) !== want)
 					await switchChainAsync({ chainId: want as never });
-				// a client for the chain the wallet is on now, not the one captured at render
+				// a client for the chain the wallet is on now
 				const client = await getWalletClient(config, {
 					chainId: want as never,
 				});
@@ -71,7 +84,7 @@ export function useWalletSigner(): WalletSigner {
 				return { ok: false, error: describeWalletError(e, label).message };
 			}
 		},
-		[chainId, config, switchChainAsync],
+		[config, switchChainAsync],
 	);
 
 	const run = useCallback(

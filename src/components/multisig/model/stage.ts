@@ -16,7 +16,6 @@ import {
 	parseSignersString,
 	type Readiness,
 } from "@hl-tools/core";
-import { chainIdToNumber, chainLabel } from "./chains";
 import { describeWindow, type WindowInfo } from "./nonce";
 import {
 	joinParts,
@@ -34,6 +33,7 @@ import {
 	standing,
 } from "./relay/positions";
 import { switchSentence } from "./selfTreasury";
+import { signingChainOf } from "./signingNetwork";
 
 export { shortAddress };
 
@@ -271,15 +271,7 @@ export function deriveStage(input: StageInput): Stage {
 	const hasSigned =
 		wallet !== null && !!r && r.counted.some((a) => a === wallet);
 
-	const chainId = chainIdToNumber(p.payload.action.signatureChainId);
-	const requiredChain =
-		chainId === null
-			? null
-			: {
-					hex: String(p.payload.action.signatureChainId).toLowerCase() as Hex,
-					id: chainId,
-					label: chainLabel(chainId),
-				};
+	const requiredChain = signingChainOf(p.payload.action);
 	const onRequiredChain =
 		requiredChain !== null && input.walletChainId === requiredChain.id;
 

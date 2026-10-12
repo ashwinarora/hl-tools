@@ -36,6 +36,9 @@ describe("chains", () => {
 		expect(chainLabel(42161)).toBe("Arbitrum One (42161)");
 		expect(chainLabel(1)).toBe("Ethereum (1)");
 		expect(chainLabel(5)).toBe("chain 5");
+		// the network a wallet holds for signing codes: named, never one a proposal asks for
+		expect(chainLabel(1337)).toBe("the signing network (1337)");
+		expect(knownChain(1337)).toBeNull();
 		expect(knownChain(999)?.label).toBe("HyperEVM");
 		expect(knownChain(1)).toBeNull();
 	});
