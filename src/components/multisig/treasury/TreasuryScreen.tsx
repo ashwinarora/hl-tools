@@ -488,7 +488,12 @@ export function TreasuryScreen({
 					onChange={setTab}
 					tabs={[
 						{ value: "overview", label: "Overview" },
-						{ value: "pending", label: "Pending", count: pending.length },
+						{
+							value: "pending",
+							label: "Pending",
+							// what waits on a former multi-sig can go nowhere: listed, not counted
+							count: frozen ? 0 : pending.length,
+						},
 						{ value: "log", label: "Signing log" },
 						{ value: "chain", label: "On Hyperliquid" },
 					]}

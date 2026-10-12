@@ -2,6 +2,7 @@ import type { Address, Network } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { ProposalRows } from "../inbox/ProposalRows";
 import { CREATE } from "../model/create";
+import { orderMatters } from "../model/relay/inbox";
 import type { OpenProposal } from "../relay/openProposals";
 import { Help } from "../shell/Help";
 import { Card, Empty, linkButton } from "../shell/kit";
@@ -29,10 +30,15 @@ export function PendingTab({
 		<Card
 			flush
 			footer={
-				items.length > 1 ? (
+				frozen && items.length > 0 ? (
+					<span>
+						This account is no longer a multi-sig, so these can no longer be
+						signed or submitted. They stay listed until their signing window
+						closes.
+					</span>
+				) : orderMatters(items.map((i) => i.proposal.payload.action)) ? (
 					<span className="inline-flex flex-wrap items-center gap-x-1">
-						Finish the oldest first: Hyperliquid takes a treasury's USDC
-						payments in the order they were proposed.
+						Some of these have to go in order: finish the older one first.
 						<Help k="sendOrder" />
 					</span>
 				) : undefined

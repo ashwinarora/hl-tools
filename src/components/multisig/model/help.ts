@@ -133,7 +133,7 @@ export const HELP = {
 	},
 	sendOrder: {
 		title: "Payments go in order",
-		body: "Hyperliquid accepts a treasury's USDC payments only in the order they were proposed. If a newer one is sent first, the older ones are refused and have to be proposed again.",
+		body: "Hyperliquid takes two kinds of payment only in the order they were proposed: a USDC send written as raw JSON, and a withdrawal to Arbitrum. If a newer one goes first, the older ones are refused and have to be proposed again. The Send forms here are not bound by this.",
 	},
 	waysOut: {
 		title: "Take back, withdraw, decline",

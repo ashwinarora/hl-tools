@@ -521,7 +521,11 @@ export function OverviewTab({
 								: reading}
 						</Quiet>
 					) : state.agents.length === 0 ? (
-						<Quiet>None approved. Every action needs the signers.</Quiet>
+						<Quiet>
+							{frozen
+								? "None approved."
+								: "None approved. Every action needs the signers."}
+						</Quiet>
 					) : (
 						<>
 							{state.agents.map((g) => {

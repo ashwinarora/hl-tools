@@ -4,7 +4,12 @@
  * recovered in the browser first); the proposal page itself judges against
  * the live chain.
  */
-import type { Address, Hex, Network } from "@hl-tools/core";
+import {
+	type Address,
+	type Hex,
+	type Network,
+	orderMark,
+} from "@hl-tools/core";
 
 export interface InboxEntry {
 	readonly network: Network;
@@ -46,6 +51,30 @@ export function inboxGroup(e: InboxEntry, me: Address): InboxGroup | null {
 	if (e.finaliser === me && (ready || completes)) return "finish";
 	if (!signed && !ready) return "sign";
 	return "waiting";
+}
+
+/**
+ * What the finaliser's row offers. Their own signature is asked for only
+ * when it is still needed: once the others have reached the number that must
+ * sign, submitting is one wallet prompt (audit F-018).
+ */
+export function finishLabel(
+	e: InboxEntry,
+	me: Address,
+): "Submit" | "Sign and submit" {
+	const signed = e.counted.includes(me);
+	const ready = e.counted.length >= e.threshold;
+	return signed || ready ? "Submit" : "Sign and submit";
+}
+
+/**
+ * Whether the order in which a list of waiting actions is carried out matters:
+ * at least two of them are of a kind Hyperliquid takes only in the order of
+ * their numbers (a `usdSend`, a bridge withdrawal). The guided sends are not
+ * (audit F-014).
+ */
+export function orderMatters(actions: readonly unknown[]): boolean {
+	return actions.filter((a) => orderMark(a) !== null).length > 1;
 }
 
 export function needsMe(e: InboxEntry, me: Address): boolean {
@@ -94,14 +123,19 @@ export function countNeeds(
 	).length;
 }
 
-/** Open proposals of a treasury, whoever they wait for. */
+/**
+ * A treasury's proposals that can still go somewhere, whoever they wait for.
+ * Those of an account that stopped being a multi-sig are not counted: nobody
+ * can sign or submit them (audit F-023).
+ */
 export function countOpen(
 	entries: readonly InboxEntry[],
 	network: Network,
 	treasury: Address,
 ): number {
 	return entries.filter(
-		(e) => e.network === network && e.treasury === treasury && e.open,
+		(e) =>
+			e.network === network && e.treasury === treasury && e.open && !e.frozen,
 	).length;
 }
 

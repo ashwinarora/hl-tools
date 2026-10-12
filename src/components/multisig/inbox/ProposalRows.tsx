@@ -2,7 +2,7 @@ import type { Address } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { FLAG_TEXT } from "#/components/tools/multisig/EnvelopeView";
 import { expiresSoon } from "../model/nonce";
-import { inboxGroup } from "../model/relay/inbox";
+import { finishLabel, inboxGroup } from "../model/relay/inbox";
 import { localDateTime } from "../model/time";
 import { NamesFor, Who } from "../names/Names";
 import type { OpenProposal } from "../relay/openProposals";
@@ -29,7 +29,6 @@ export function ProposalRows({
 		<div className="flex flex-col">
 			{items.map((p) => {
 				const group = inboxGroup(p, me);
-				const signed = p.counted.includes(me);
 				// only where time still matters: something can still be signed or submitted
 				const soon =
 					p.open && !p.stuck && !p.frozen
@@ -87,7 +86,7 @@ export function ProposalRows({
 						<span className="col-span-2 justify-self-start min-[861px]:col-span-1 min-[861px]:justify-self-end">
 							{group === "finish" ? (
 								<span className="inline-flex h-7 items-center rounded-md bg-brand px-2.5 text-xs font-medium text-brand-foreground">
-									{signed ? "Submit" : "Sign and submit"} ▸
+									{finishLabel(p, me)} ▸
 								</span>
 							) : group === "sign" ? (
 								<span className="inline-flex h-7 items-center rounded-md border border-border-strong bg-surface px-2.5 text-xs font-medium">

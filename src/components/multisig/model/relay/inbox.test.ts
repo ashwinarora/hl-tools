@@ -4,10 +4,12 @@ import { A, B, C, TREASURY } from "#/test/keys";
 import {
 	countNeeds,
 	countOpen,
+	finishLabel,
 	groupInbox,
 	type InboxEntry,
 	inboxGroup,
 	needsMe,
+	orderMatters,
 	SECTION_TITLE,
 	tabTitle,
 } from "./inbox";
@@ -50,8 +52,11 @@ describe("a treasury that is no longer a multi-sig", () => {
 		});
 	});
 
-	it("still counts them as that treasury's pending proposals", () => {
-		expect(countOpen(stuck, "testnet", TREASURY)).toBe(3);
+	it("does not count them as pending: nobody can sign or submit them (audit F-023)", () => {
+		expect(countOpen(stuck, "testnet", TREASURY)).toBe(0);
+		expect(
+			countOpen([...stuck, entry({ finaliser: A })], "testnet", TREASURY),
+		).toBe(1);
 	});
 });
 
@@ -172,5 +177,39 @@ describe("tabTitle", () => {
 		for (const n of [0, -1, Number.NaN, 0.4])
 			expect(tabTitle(n)).toBe(SECTION_TITLE);
 		expect(SECTION_TITLE).toBe("Multisig — hl-tools");
+	});
+});
+
+describe("what the finaliser's row offers (audit F-018)", () => {
+	it("asks for their signature only while it is still needed", () => {
+		// one short, and theirs would be the last: one press signs and submits
+		expect(finishLabel(entry({ finaliser: A, counted: [B] }), A)).toBe(
+			"Sign and submit",
+		);
+		// the others already reached the number: submitting is one wallet prompt
+		expect(finishLabel(entry({ finaliser: A, counted: [B, C] }), A)).toBe(
+			"Submit",
+		);
+		expect(finishLabel(entry({ finaliser: A, counted: [A, B] }), A)).toBe(
+			"Submit",
+		);
+	});
+});
+
+describe("whether the order of the waiting actions matters (audit F-014)", () => {
+	const usdSend = (time: number) => ({ type: "usdSend", time });
+	const guided = { type: "sendAsset", nonce: 1 };
+
+	it("does for two actions Hyperliquid takes only in order", () => {
+		expect(orderMatters([usdSend(1), usdSend(2)])).toBe(true);
+		expect(orderMatters([usdSend(1), { type: "withdraw3", time: 2 }])).toBe(
+			true,
+		);
+	});
+
+	it("does not for guided sends, or for a single ordered action among others", () => {
+		expect(orderMatters([guided, guided, guided])).toBe(false);
+		expect(orderMatters([usdSend(1), guided])).toBe(false);
+		expect(orderMatters([])).toBe(false);
 	});
 });
