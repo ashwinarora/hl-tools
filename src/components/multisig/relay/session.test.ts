@@ -1,6 +1,13 @@
+import type { Address } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
+import {
+	forgetWallet,
+	type Slots,
+	slotKey,
+	storedWallets,
+} from "../model/relay/wallets";
 import type { RelayClient } from "./client";
-import { type SignInWallet, signIn } from "./session";
+import { endSession, probeFor, type SignInWallet, signIn } from "./session";
 
 const ORIGIN = "http://localhost:3000";
 const NEW = "0x00000000000000000000000000000000000000b2" as const;
@@ -132,5 +139,160 @@ describe("signing in while another wallet is signed in (audit F-002)", () => {
 		});
 		expect(asked).toBe(false);
 		expect(r.held()).toBe(old);
+	});
+});
+
+/** The same two wallets, as the addresses the slots are named after. */
+const N = NEW as unknown as Address;
+const O = OLD as unknown as Address;
+
+/** A stand-in for `localStorage`. */
+function browser(init: Record<string, string> = {}): Slots & {
+	readonly map: Map<string, string>;
+} {
+	const map = new Map(Object.entries(init));
+	return {
+		map,
+		get length() {
+			return map.size;
+		},
+		key: (i) => [...map.keys()][i] ?? null,
+		getItem: (k) => map.get(k) ?? null,
+		setItem: (k, v) => void map.set(k, v),
+		removeItem: (k) => void map.delete(k),
+	};
+}
+
+/**
+ * A client whose stored session the relay answers for as told: `speaksFor`
+ * is the relay's own answer to "who am I", `down` a relay that does not answer.
+ */
+function probed(o: {
+	held?: boolean;
+	speaksFor?: string | null;
+	down?: boolean;
+}) {
+	let signedOut = 0;
+	const client = {
+		auth: {
+			getSession: async () =>
+				o.down
+					? {
+							data: { session: null },
+							error: Object.assign(new Error("Failed to fetch"), {
+								name: "AuthRetryableFetchError",
+							}),
+						}
+					: {
+							data: {
+								session:
+									o.held === false
+										? null
+										: { access_token: "t", user: { id: "u" } },
+							},
+							error: null,
+						},
+			signOut: async () => {
+				signedOut++;
+				return { error: null };
+			},
+		},
+		rpc: async () => ({ data: o.speaksFor ?? null, error: null }),
+	};
+	return {
+		client: client as unknown as RelayClient,
+		signedOut: () => signedOut,
+	};
+}
+
+describe("what a wallet's slot is worth", () => {
+	it("is used when the relay says the session speaks for that very wallet", async () => {
+		const slots = browser({ [slotKey(N)]: "session" });
+		const c = probed({ speaksFor: N });
+		expect(await probeFor(c.client, N, slots)).toBe("ready");
+		expect(storedWallets(slots)).toEqual([N]);
+		expect(c.signedOut()).toBe(0);
+	});
+
+	it("is never used for a session that speaks for another wallet: it is ended and the slot emptied", async () => {
+		// a slot that was tampered with, or filled from a wrong hint
+		const slots = browser({ [slotKey(N)]: "session of O" });
+		const c = probed({ speaksFor: O });
+		expect(await probeFor(c.client, N, slots)).toBe("none");
+		expect(storedWallets(slots)).toEqual([]);
+		expect(c.signedOut()).toBe(1);
+	});
+
+	it("leaves no slot behind for a session the relay no longer knows", async () => {
+		const slots = browser({ [slotKey(N)]: "stale", [slotKey(O)]: "x" });
+		expect(await probeFor(probed({ held: false }).client, N, slots)).toBe(
+			"none",
+		);
+		// the other wallet's slot is not touched
+		expect(storedWallets(slots)).toEqual([O]);
+		// a session that speaks for no wallet at all is of no use either
+		const mute = browser({ [slotKey(N)]: "x" });
+		expect(await probeFor(probed({ speaksFor: null }).client, N, mute)).toBe(
+			"none",
+		);
+		expect(storedWallets(mute)).toEqual([]);
+	});
+
+	it("discards nothing while the relay does not answer", async () => {
+		const slots = browser({ [slotKey(N)]: "session" });
+		const c = probed({ down: true });
+		expect(await probeFor(c.client, N, slots)).toBe("unreachable");
+		expect(storedWallets(slots)).toEqual([N]);
+		expect(c.signedOut()).toBe(0);
+	});
+});
+
+describe("signing a wallet out of this browser", () => {
+	it("empties its slot before the relay is even asked, and hands the session on to be ended there", async () => {
+		const slots = browser({
+			[slotKey(N)]: "raw-new",
+			[slotKey(O)]: "raw-old",
+		});
+		let seenAtEnd: string[] | null = null;
+		let handed: string | null = null;
+		const done = endSession(N, slots, async (raw) => {
+			handed = raw;
+			// by the time the relay is asked, the browser already holds nothing for it
+			seenAtEnd = storedWallets(slots);
+			return "ended";
+		});
+		// synchronously: gone, whatever happens next
+		expect(storedWallets(slots)).toEqual([O]);
+		expect(await done).toBe("ended");
+		expect(handed).toBe("raw-new");
+		expect(seenAtEnd).toEqual([O]);
+	});
+
+	it("is just as gone when the relay cannot be reached or the attempt throws", async () => {
+		for (const end of [
+			async () => "unreachable" as const,
+			async () => {
+				throw new Error("Failed to fetch");
+			},
+		]) {
+			const slots = browser({ [slotKey(N)]: "raw" });
+			expect(await endSession(N, slots, end)).toBe("unreachable");
+			expect(storedWallets(slots)).toEqual([]);
+		}
+	});
+
+	it("asks the relay nothing for a wallet that has no slot", async () => {
+		const slots = browser({ [slotKey(O)]: "raw-old" });
+		let asked = false;
+		expect(
+			await endSession(N, slots, async () => {
+				asked = true;
+				return "ended";
+			}),
+		).toBe("nothing");
+		expect(asked).toBe(false);
+		expect(storedWallets(slots)).toEqual([O]);
+		forgetWallet(slots, O);
+		expect(storedWallets(slots)).toEqual([]);
 	});
 });

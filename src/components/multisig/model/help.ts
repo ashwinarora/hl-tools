@@ -165,7 +165,7 @@ export const HELP = {
 	},
 	signIn: {
 		title: "Signing in",
-		body: "One wallet prompt proves which wallet you are. It approves nothing and cannot move funds. It lets this site show your treasuries and what your co-signers have proposed.",
+		body: "One wallet prompt proves which wallet you are. It approves nothing and cannot move funds. It lets this site show your treasuries and what your co-signers have proposed. Each wallet signs in once: after that you can switch between them in your wallet.",
 	},
 	signsAndSends: {
 		title: "Signs & sends",

@@ -288,7 +288,7 @@ export function TreasuryScreen({
 					network={network}
 					address={address}
 					state={live}
-					me={relay.sessionWallet}
+					me={null}
 					treasury={null}
 					proposals={known.proposals}
 				/>

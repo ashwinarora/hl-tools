@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useWalletBusy } from "#/store/walletBusyStore";
-import { RELAY_COPY } from "../model/relay/copy";
+import { gateOthers, RELAY_COPY } from "../model/relay/copy";
 import { useRelay } from "../relay/useRelay";
 import { Btn, Card, linkButton } from "./kit";
 import { SmallPrint } from "./WalletBox";
@@ -50,10 +50,14 @@ export function SignInGate({
 				<p className="text-sm text-muted-foreground">
 					{relay.mode === "unreachable"
 						? RELAY_COPY.unreachable
-						: relay.mode === "suspended"
-							? `${RELAY_COPY.suspended} ${say ?? `Sign in with the connected wallet to see ${what}.`}`
-							: (say ?? `Sign in with your wallet to see ${what}.`)}
+						: (say ?? `Sign in with your wallet to see ${what}.`)}
 				</p>
+				{/* the wallet was switched to one that is not signed in: say where the other went */}
+				{relay.mode === "signed-out" && relay.others.length > 0 && (
+					<p className="text-xs text-muted-foreground">
+						{gateOthers(relay.others.length)}
+					</p>
+				)}
 				<div className="flex flex-wrap items-center gap-2">
 					{relay.mode === "unreachable" ? (
 						<Btn variant="outline" onClick={relay.retry}>

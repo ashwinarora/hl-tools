@@ -6,6 +6,7 @@ import {
 	useCallback,
 	useEffect,
 	useMemo,
+	useReducer,
 	useRef,
 	useState,
 } from "react";
@@ -14,11 +15,33 @@ import { generateSiweNonce } from "viem/siwe";
 import { useAccount, useSignMessage } from "wagmi";
 import { NO_WALLET, walletInBrowser } from "#/lib/signerWallets";
 import { useWalletBusy } from "#/store/walletBusyStore";
+import { relayIssue } from "../model/relay/errors";
+import {
+	identityStep,
+	identityView,
+	NO_IDENTITY,
+	otherWallets,
+	stillAsked,
+} from "../model/relay/identity";
 import { reconnectDelay } from "../model/relay/reconnect";
-import { getRelayClient, hasStoredSession, type RelayClient } from "./client";
+import {
+	adoptLegacy,
+	hasSlot,
+	overLimit,
+	RELAY_USED_KEY,
+	storedWallets,
+	touchWallet,
+	walletOfSlot,
+} from "../model/relay/wallets";
+import {
+	browserSlots,
+	endStoredSession,
+	getRelayClient,
+	type RelayClient,
+} from "./client";
 import { relayConfig } from "./config";
 import { type ChannelState, subscribeWallet } from "./realtime";
-import { probeSession, signIn, signOut } from "./session";
+import { endSession, probeFor, signIn } from "./session";
 import {
 	RELAY_OFF,
 	RelayContext,
@@ -26,25 +49,18 @@ import {
 	type RelayValue,
 } from "./useRelay";
 
-type Session =
-	| { readonly status: "none" }
-	| { readonly status: "restoring" }
-	| { readonly status: "unreachable" }
-	| {
-			readonly status: "ready";
-			readonly client: RelayClient;
-			readonly wallet: Address;
-	  };
-
 /**
- * The relay session for the Multisig section: restore it when the section
- * opens, tie it to the connected wallet, and keep everything else away from
- * the relay unless the two agree.
+ * The relay sessions for the Multisig section.
  *
- * Sign-in is one message signed by the wallet. The session then belongs to
- * that wallet; connecting another one does not sign anybody out, it suspends
- * the relay (no reads, no writes, no token renewal, no channel) until the
- * wallets agree again or the other wallet signs in.
+ * Sign-in is one message signed by the wallet, and the session it opens
+ * belongs to that wallet. Several wallets can stay signed in in one browser,
+ * each in its own slot with its own client; the one in use is always the
+ * wallet that is connected right now, and only after the relay has said that
+ * its stored session speaks for it. Connecting another wallet signs nobody
+ * out: the one that was in use is parked (no reads, no writes, no token
+ * renewal, no channel) and the newly connected one is used if it is signed
+ * in, or offered a sign-in if it is not. The rule itself is
+ * `model/relay/identity.ts`; this component is its hands.
  */
 export function RelayProvider({ children }: { children: ReactNode }) {
 	const config = useMemo(() => relayConfig(), []);
@@ -70,61 +86,96 @@ function RelaySession({
 	const { signMessageAsync } = useSignMessage();
 	const { openConnectModal } = useConnectModal();
 	const connected = address ? (address.toLowerCase() as Address) : null;
+	const slots = useMemo(() => browserSlots(), []);
 
-	// Whether a session is stored is only known after mount. Until then the page
+	// Whether anything is stored is only known after mount. Until then the page
 	// says it is checking, never "sign in": the server's HTML can stay on screen
 	// for a while on a slow connection, in front of someone who is signed in.
-	const [session, setSession] = useState<Session>({ status: "restoring" });
+	const [mounted, setMounted] = useState(false);
+	const [identity, dispatch] = useReducer(identityStep, NO_IDENTITY);
+	// what an answer that arrives later is checked against
+	const latest = useRef(identity);
+	latest.current = identity;
+	/** Every wallet with a slot in this browser, most recently used first. */
+	const [stored, setStored] = useState<readonly Address[]>([]);
+	/** The clients whose stored session the relay has confirmed, by wallet. */
+	const confirmed = useRef(new Map<Address, RelayClient>());
 	const [signingIn, setSigningIn] = useState(false);
 	const [issue, setIssue] = useState<Issue | null>(null);
 	const [channel, setChannel] = useState<ChannelState | null>(null);
+	const [unanswered, setUnanswered] = useState(0);
 	const wantsSignIn = useRef(false);
 
-	const forget = useCallback(() => {
-		setSession({ status: "none" });
-		queries.removeQueries({ queryKey: ["relay"] });
-	}, [queries]);
-
-	// `quiet` asks again without flashing the "restoring" skeleton: the rail
-	// keeps saying "unreachable" until the relay really answers.
-	const probing = useRef(false);
-	const [unanswered, setUnanswered] = useState(0);
-	const restore = useCallback(
-		async (quiet = false) => {
-			if (probing.current) return;
-			if (!hasStoredSession()) {
-				setSession({ status: "none" });
-				setUnanswered(0);
-				return;
-			}
-			probing.current = true;
-			try {
-				if (!quiet) setSession({ status: "restoring" });
-				const client = await getRelayClient(config);
-				const probe = await probeSession(client);
-				setSession(
-					probe.status === "ready"
-						? { status: "ready", client, wallet: probe.wallet }
-						: { status: probe.status },
-				);
-				setUnanswered((n) => (probe.status === "unreachable" ? n + 1 : 0));
-			} finally {
-				probing.current = false;
-			}
-		},
-		[config],
+	const readStored = useCallback(
+		() => setStored(slots ? storedWallets(slots) : []),
+		[slots],
 	);
 
 	useEffect(() => {
-		void restore();
-	}, [restore]);
+		// the one session of the time before there was a slot per wallet
+		if (slots) adoptLegacy(slots, Date.now());
+		readStored();
+		setMounted(true);
+	}, [slots, readStored]);
+
+	// The state follows the wallet extension, one step behind it; until it has
+	// caught up nothing is in use (`identityView`).
+	useEffect(() => {
+		if (!mounted) return;
+		dispatch({
+			type: "wallet",
+			wallet: connected,
+			stored: !!connected && !!slots && hasSlot(slots, connected),
+		});
+		// what was said about the wallet before does not concern this one
+		setIssue(null);
+		setUnanswered(0);
+	}, [mounted, connected, slots]);
+
+	const asking = useRef(new Set<string>());
+	const probe = useCallback(
+		async (wallet: Address, turn: number) => {
+			if (!slots) return;
+			const key = `${wallet}:${turn}`;
+			if (asking.current.has(key)) return;
+			asking.current.add(key);
+			let result: "ready" | "none" | "unreachable";
+			try {
+				const client = await getRelayClient(config, wallet);
+				result = await probeFor(client, wallet, slots);
+				if (result === "ready") confirmed.current.set(wallet, client);
+				else if (result === "none") confirmed.current.delete(wallet);
+			} catch {
+				// the client could not even be loaded
+				result = "unreachable";
+			} finally {
+				asking.current.delete(key);
+			}
+			if (stillAsked(latest.current, wallet, turn)) {
+				if (result === "ready") touchWallet(slots, wallet, Date.now());
+				setUnanswered((n) => (result === "unreachable" ? n + 1 : 0));
+			}
+			readStored();
+			// an answer nobody waits for any more is dropped by the rule itself
+			dispatch({ type: "probed", turn, result });
+		},
+		[config, slots, readStored],
+	);
+
+	useEffect(() => {
+		if (identity.slot === "restoring" && identity.wallet)
+			void probe(identity.wallet, identity.turn);
+	}, [identity.slot, identity.wallet, identity.turn, probe]);
 
 	// The relay not answering is usually brief. Ask again on a slowing schedule,
 	// and at once when the browser is back online or the tab is looked at again.
-	const down = session.status === "unreachable";
+	// Asked under the same question, so the rail keeps saying "unreachable"
+	// until the relay really answers.
+	const down = identity.slot === "unreachable" ? identity.wallet : null;
+	const downTurn = identity.turn;
 	useEffect(() => {
 		if (!down) return;
-		const again = () => void restore(true);
+		const again = () => void probe(down, downTurn);
 		const timer = setTimeout(again, reconnectDelay(unanswered - 1));
 		const seen = () => {
 			if (document.visibilityState === "visible") again();
@@ -136,43 +187,97 @@ function RelaySession({
 			window.removeEventListener("online", again);
 			document.removeEventListener("visibilitychange", seen);
 		};
-	}, [down, unanswered, restore]);
+	}, [down, downTurn, unanswered, probe]);
 
+	const view = identityView({
+		mounted,
+		walletStatus,
+		connected,
+		identity,
+		anyStored: stored.length > 0,
+	});
+	// "on" always comes with the client of that very wallet, or it is not "on"
+	const active = view.wallet
+		? (confirmed.current.get(view.wallet) ?? null)
+		: null;
 	const mode: RelayMode =
-		session.status === "none"
-			? "signed-out"
-			: session.status === "restoring"
-				? "restoring"
-				: session.status === "unreachable"
-					? "unreachable"
-					: connected === session.wallet
-						? "on"
-						: // the wallet stack reconnects a moment after load: not a mismatch yet
-							walletStatus === "reconnecting" || walletStatus === "connecting"
-							? "restoring"
-							: "suspended";
+		view.mode === "on" && !active ? "restoring" : view.mode;
+	const wallet = mode === "on" ? view.wallet : null;
 
-	const client = session.status === "ready" ? session.client : null;
-	const sessionWallet = session.status === "ready" ? session.wallet : null;
-	const active = mode === "on" ? client : null;
-
-	// The session ending on its own (renewal refused, signed out elsewhere).
+	// What was read as one wallet is not kept once another is in use, or none.
 	useEffect(() => {
-		if (!client) return;
-		const { data } = client.auth.onAuthStateChange((event) => {
-			if (event === "SIGNED_OUT") forget();
+		queries.removeQueries({
+			predicate: (q) => q.queryKey[0] === "relay" && q.queryKey[1] !== wallet,
+		});
+	}, [wallet, queries]);
+
+	/** A wallet's session is over, however that came about: the page lets go of it. */
+	const letGo = useCallback(
+		(gone: Address) => {
+			confirmed.current.delete(gone);
+			dispatch({ type: "ended", wallet: gone });
+			queries.removeQueries({
+				predicate: (q) => q.queryKey[0] === "relay" && q.queryKey[1] === gone,
+			});
+			readStored();
+		},
+		[queries, readStored],
+	);
+
+	/** Sign a wallet out of this browser: its slot first, then the relay's side. */
+	const end = useCallback(
+		(gone: Address) => {
+			if (slots)
+				void endSession(gone, slots, (raw) => endStoredSession(config, raw));
+			letGo(gone);
+		},
+		[config, slots, letGo],
+	);
+
+	// The session ending on its own (renewal refused, signed out in another tab).
+	useEffect(() => {
+		if (!active || !wallet) return;
+		const { data } = active.auth.onAuthStateChange((event) => {
+			if (event === "SIGNED_OUT") end(wallet);
 		});
 		return () => data.subscription.unsubscribe();
-	}, [client, forget]);
+	}, [active, wallet, end]);
 
-	// Token renewal and the wallet's channel run only while the relay is in use,
-	// and stop when the section is left.
+	// Another tab signed a wallet in or out: this one follows.
 	useEffect(() => {
-		if (!active || !sessionWallet) return;
+		if (!slots) return;
+		const on = (ev: StorageEvent) => {
+			if (ev.storageArea !== slots) return;
+			if (ev.key === null) {
+				// everything was cleared
+				const now = latest.current.wallet;
+				if (now && !hasSlot(slots, now)) letGo(now);
+				else readStored();
+				return;
+			}
+			const changed = walletOfSlot(ev.key);
+			if (!changed) {
+				if (ev.key === RELAY_USED_KEY) readStored();
+				return;
+			}
+			if (ev.newValue === null) letGo(changed);
+			else {
+				readStored();
+				dispatch({ type: "appeared", wallet: changed });
+			}
+		};
+		window.addEventListener("storage", on);
+		return () => window.removeEventListener("storage", on);
+	}, [slots, letGo, readStored]);
+
+	// Token renewal and the wallet's channel run only for the wallet in use,
+	// and stop when it is parked or the section is left.
+	useEffect(() => {
+		if (!active || !wallet) return;
 		void active.auth.startAutoRefresh();
 		const leave = subscribeWallet(
 			active,
-			sessionWallet,
+			wallet,
 			() => void queries.invalidateQueries({ queryKey: ["relay"] }),
 			setChannel,
 		);
@@ -181,10 +286,14 @@ function RelaySession({
 			setChannel(null);
 			void active.auth.stopAutoRefresh();
 		};
-	}, [active, sessionWallet, queries]);
+	}, [active, wallet, queries]);
 
 	const doSignIn = useCallback(async () => {
-		if (!address) return;
+		if (!address || !slots) return;
+		const me = address.toLowerCase() as Address;
+		const { turn } = latest.current;
+		// the button was for the wallet the state is about, and only while it is signed out
+		if (latest.current.wallet !== me || latest.current.slot !== "none") return;
 		if (!useWalletBusy.getState().begin()) return;
 		setSigningIn(true);
 		setIssue(null);
@@ -192,48 +301,64 @@ function RelaySession({
 			"Waiting for your wallet: sign in to hl-tools",
 		);
 		try {
-			const c = await getRelayClient(config);
-			// Another wallet's session in this browser stays until this one has
-			// signed in (`signIn` replaces it then), so a declined prompt changes nothing.
+			// this wallet's own client: no other wallet's session is touched
+			const c = await getRelayClient(config, me);
 			const r = await signIn(
 				c,
 				{
 					address,
 					chainId: chainId ?? 1,
-					signMessage: (message) => signMessageAsync({ message }),
+					// asked of this very account: a wallet that was switched while the
+					// prompt was open signs as the one that was asked, or not at all
+					signMessage: (message) =>
+						signMessageAsync({ account: address, message }),
 				},
 				{ origin: window.location.origin, nonce: generateSiweNonce() },
 			);
 			if (r.ok) {
-				queries.removeQueries({ queryKey: ["relay"] });
-				setSession({ status: "ready", client: c, wallet: r.wallet });
+				confirmed.current.set(me, c);
+				touchWallet(slots, me, Date.now());
+				// the number kept at rest is bounded: the least recently used go
+				for (const gone of overLimit(storedWallets(slots), me)) end(gone);
+				readStored();
+				// dropped by the rule if the wallet was switched while its prompt was open
+				dispatch({ type: "signed-in", turn });
 			} else {
-				// the session there was, if any, is still the one in this browser,
-				// unless the relay opened one it then had to end
-				if (!hasStoredSession()) forget();
-				setIssue(r.issue);
+				// a session left behind by a sign-in the relay could not finish is asked about
+				if (hasSlot(slots, me)) dispatch({ type: "appeared", wallet: me });
+				if (stillAsked(latest.current, me, turn)) setIssue(r.issue);
 			}
+		} catch (e) {
+			if (stillAsked(latest.current, me, turn)) setIssue(relayIssue(e));
 		} finally {
 			toast.dismiss(waiting);
 			useWalletBusy.getState().end();
 			setSigningIn(false);
 		}
-	}, [address, chainId, config, forget, queries, signMessageAsync]);
+	}, [address, chainId, config, slots, end, readStored, signMessageAsync]);
 
-	// "Sign in" with no wallet connected opens the picker; the sign-in follows the connection.
+	// "Sign in" with no wallet connected opens the picker; the sign-in follows
+	// the connection, unless the wallet that was picked is signed in already.
+	const settled =
+		identity.wallet === connected && identity.slot !== "restoring";
+	const slot = identity.slot;
 	useEffect(() => {
-		if (wantsSignIn.current && address) {
-			wantsSignIn.current = false;
-			void doSignIn();
-		}
-	}, [address, doSignIn]);
+		if (!wantsSignIn.current || !connected || !settled) return;
+		wantsSignIn.current = false;
+		if (slot === "none") void doSignIn();
+	}, [connected, settled, slot, doSignIn]);
+
+	const others = useMemo(
+		() => otherWallets(stored, connected),
+		[stored, connected],
+	);
 
 	const value = useMemo<RelayValue>(
 		() => ({
 			mode,
-			sessionWallet,
-			wallet: mode === "on" ? sessionWallet : null,
-			client: active,
+			wallet,
+			client: mode === "on" ? active : null,
+			others,
 			signingIn,
 			issue,
 			channel,
@@ -249,24 +374,31 @@ function RelaySession({
 			},
 			signOut: () => {
 				setIssue(null);
-				if (client) void signOut(client);
-				forget();
+				wantsSignIn.current = false;
+				if (connected) end(connected);
 			},
-			retry: () => void restore(),
+			signOutWallet: (gone) => end(gone),
+			signOutAll: () => {
+				setIssue(null);
+				wantsSignIn.current = false;
+				for (const gone of slots ? storedWallets(slots) : []) end(gone);
+			},
+			retry: () => dispatch({ type: "retry" }),
 		}),
 		[
 			mode,
-			sessionWallet,
+			wallet,
 			active,
+			others,
 			signingIn,
 			issue,
 			channel,
 			address,
+			connected,
+			slots,
 			doSignIn,
 			openConnectModal,
-			client,
-			forget,
-			restore,
+			end,
 		],
 	);
 

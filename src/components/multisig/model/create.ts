@@ -24,10 +24,9 @@ export const CREATE = {
 	headline: (account: string) =>
 		`You are converting your own account, ${shortAddress(account)}.`,
 	otherAccount:
-		"To convert a different account, sign out, choose that account in your wallet and sign in with it.",
+		"To convert a different account, choose it in your wallet. It signs in here once, if it has not before.",
 	otherAccountNoRelay:
 		"To convert a different account, choose it in your wallet.",
-	signOut: "Sign out",
 	/** A build without a relay: there is no sign-in, the connected wallet is the account. */
 	connect:
 		"Connect the wallet whose account you want to convert into a treasury.",
@@ -102,10 +101,10 @@ export const CREATE = {
 		`${shortAddress(account)} is now a ${k}-of-${n} treasury.`,
 	readBack: "Read back from Hyperliquid.",
 	switchNow:
-		"You are signed in as the treasury itself, which can no longer act. Sign out and sign in as one of its signers to use it.",
+		"You are signed in as the treasury itself, which can no longer act. Choose one of its signers in your wallet to use it.",
 	/** Before the list of signers on the success screen. */
 	signInAs: "Its signers:",
-	signOutAndOpen: "Sign out and open the treasury",
+	openTreasury: "Open the treasury",
 	/** A build without a relay: nothing to sign out of. */
 	switchNowNoRelay:
 		"Your wallet is on the treasury account itself, which can no longer act. Choose one of its signers in your wallet to use it.",

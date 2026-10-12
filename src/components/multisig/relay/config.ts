@@ -1,3 +1,6 @@
+import type { Address } from "@hl-tools/core";
+import { slotKey } from "../model/relay/wallets";
+
 /**
  * Whether this build has a relay at all. Both values come from the build's
  * environment, so the answer is the same on the server and in the browser;
@@ -10,8 +13,31 @@ export interface RelayConfig {
 	readonly key: string;
 }
 
-/** Where the browser keeps the relay session (one key, this origin only). */
-export const RELAY_STORAGE_KEY = "hl-tools.relay";
+/**
+ * How every relay client is set up for sign-in. A client is made for one
+ * wallet and keeps its session in that wallet's own slot (`slotKey`), so the
+ * session a client holds can only ever be that wallet's. `storage` is given
+ * by tests; the browser's `localStorage` is the default.
+ */
+export function relayAuthOptions(
+	wallet: Address,
+	storage?: {
+		getItem(key: string): string | null;
+		setItem(key: string, value: string): void;
+		removeItem(key: string): void;
+	},
+) {
+	return {
+		persistSession: true,
+		// The provider starts and stops token renewal itself: only the wallet
+		// that is connected is ever renewed, and nothing after the section is left.
+		autoRefreshToken: false,
+		// sign-in is a wallet signature; nothing ever arrives in the URL
+		detectSessionInUrl: false,
+		storageKey: slotKey(wallet),
+		...(storage ? { storage } : {}),
+	};
+}
 
 export function relayConfig(
 	env: {

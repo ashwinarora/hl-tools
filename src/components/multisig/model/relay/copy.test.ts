@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	afterRejection,
 	FORBIDDEN_CLAIMS,
+	gateOthers,
+	othersSummary,
 	RELAY_COPY,
 	SIGN_HINT_TEXTS,
 	signHint,
@@ -17,6 +19,12 @@ describe("relay copy", () => {
 		["after a rejection (200)", afterRejection(200)],
 		["after a rejection (502)", afterRejection(502)],
 		["after a rejection (unknown)", afterRejection(undefined)],
+		["others (1, connected)", othersSummary(1, true)],
+		["others (3, connected)", othersSummary(3, true)],
+		["others (1, none connected)", othersSummary(1, false)],
+		["others (2, none connected)", othersSummary(2, false)],
+		["gate (1 other)", gateOthers(1)],
+		["gate (4 others)", gateOthers(4)],
 		...SIGN_HINT_TEXTS.map((t, i): [string, string] => [`sign hint ${i}`, t]),
 		...REFUSAL_TEXTS.map((t, i): [string, string] => [`refusal ${i}`, t]),
 		// what the page says when it refuses a nickname before asking the relay
@@ -97,5 +105,16 @@ describe("relay copy", () => {
 		expect(`${RELAY_COPY.smallPrintBefore}${RELAY_COPY.smallPrintLink}.`).toBe(
 			"By signing in you agree to the Privacy Policy.",
 		);
+	});
+
+	it("counts the wallets signed in here in plain words", () => {
+		expect(othersSummary(1, true)).toBe("1 more wallet is signed in here");
+		expect(othersSummary(2, true)).toBe("2 more wallets are signed in here");
+		expect(othersSummary(1, false)).toBe("1 wallet is signed in here");
+		expect(othersSummary(3, false)).toBe("3 wallets are signed in here");
+		expect(gateOthers(1)).toMatch(/^Another wallet is signed in here\./);
+		expect(gateOthers(2)).toMatch(/^2 other wallets are signed in here\./);
+		// a parked wallet is never said to be doing anything
+		expect(RELAY_COPY.othersHow).toMatch(/nothing is read or sent for these/);
 	});
 });

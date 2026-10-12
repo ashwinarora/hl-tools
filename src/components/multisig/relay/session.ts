@@ -6,6 +6,7 @@
 import { type Address, type Issue, issue } from "@hl-tools/core";
 import { isUnreachable, relayIssue } from "../model/relay/errors";
 import { buildSignInMessage, signInOriginProblem } from "../model/relay/siwe";
+import { forgetWallet, type Slots, slotKey } from "../model/relay/wallets";
 import { describeWalletError } from "../model/walletErrors";
 import type { RelayClient } from "./client";
 
@@ -193,11 +194,54 @@ async function endReplaced(client: RelayClient, token: string): Promise<void> {
 	}
 }
 
-/** Ends the session in this browser only; other devices stay signed in. */
+/**
+ * Ends the session a client holds, on the relay and in the client's storage;
+ * other devices stay signed in. When the relay cannot be reached the stored
+ * session may be left behind: a caller that must be sure the browser holds
+ * nothing any more uses `endSession`.
+ */
 export async function signOut(client: RelayClient): Promise<void> {
 	try {
 		await client.auth.signOut({ scope: "local" });
 	} catch {
-		// the stored session is cleared even when the relay cannot be reached
+		// nothing more can be done from here
 	}
+}
+
+/**
+ * What a wallet's slot is worth right now. On top of `probeSession`: the
+ * session in a slot must speak for the wallet the slot is named after. One
+ * that speaks for another wallet (a slot that was tampered with, or filled
+ * from a wrong hint) is ended and never used; a session the relay no longer
+ * recognises leaves no slot behind.
+ */
+export async function probeFor(
+	client: RelayClient,
+	wallet: Address,
+	slots: Slots,
+): Promise<"ready" | "none" | "unreachable"> {
+	const probe = await probeSession(client);
+	if (probe.status === "unreachable") return "unreachable";
+	if (probe.status === "ready" && probe.wallet === wallet) return "ready";
+	if (probe.status === "ready") await signOut(client);
+	forgetWallet(slots, wallet);
+	return "none";
+}
+
+/**
+ * Sign a wallet out of this browser. Its slot is emptied first, at once and
+ * whatever the relay says, so that from this line on the browser holds
+ * nothing that speaks for the wallet; the session is then ended on the relay
+ * in the background (`end`), so its renewal token stops working there too.
+ * Returns what became of the relay's side, for tests and logs.
+ */
+export function endSession(
+	wallet: Address,
+	slots: Slots,
+	end: (raw: string) => Promise<"ended" | "gone" | "unreachable">,
+): Promise<"ended" | "gone" | "unreachable" | "nothing"> {
+	const raw = slots.getItem(slotKey(wallet));
+	forgetWallet(slots, wallet);
+	if (raw === null) return Promise.resolve("nothing");
+	return end(raw).catch(() => "unreachable" as const);
 }

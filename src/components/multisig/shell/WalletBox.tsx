@@ -12,7 +12,7 @@ import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 import { useWalletBusy } from "#/store/walletBusyStore";
 import { useSelfTreasury } from "../live/useSelfTreasury";
 import { chainLabel } from "../model/chains";
-import { RELAY_COPY } from "../model/relay/copy";
+import { othersSummary, RELAY_COPY } from "../model/relay/copy";
 import { selfTag } from "../model/selfTreasury";
 import { useRelay } from "../relay/useRelay";
 import { Help } from "./Help";
@@ -263,50 +263,7 @@ export function WalletBox() {
 						</Btn>
 					}
 				/>
-			</div>
-		);
-	}
-
-	if (relay.mode === "suspended" && relay.sessionWallet) {
-		return (
-			<div className={box}>
-				{w.connected && w.address ? (
-					<WalletRow
-						address={w.address}
-						sub={chain}
-						title={title}
-						action={disconnect}
-					/>
-				) : null}
-				<p className="text-[13px] text-muted-foreground">
-					Signed in as{" "}
-					<span
-						className="font-mono text-foreground"
-						title={relay.sessionWallet}
-					>
-						{short(relay.sessionWallet)}
-					</span>
-					{w.connected && w.address
-						? ", but that is not the connected wallet. Nothing is read from or sent to the relay."
-						: ". Connect that wallet to continue."}
-				</p>
-				{w.connected && w.address ? (
-					<Btn variant="brand" disabled={busy} onClick={relay.signIn}>
-						{relay.signingIn
-							? "Waiting for your wallet…"
-							: `Sign in as ${short(w.address)}`}
-					</Btn>
-				) : (
-					<>
-						{connect("Connect wallet")}
-						<NoWalletNote />
-					</>
-				)}
-				<Btn size="sm" variant="ghost" onClick={relay.signOut}>
-					Sign out {short(relay.sessionWallet)}
-				</Btn>
-				{problem}
-				{w.connected && <SmallPrint />}
+				<OtherWallets />
 			</div>
 		);
 	}
@@ -348,7 +305,9 @@ export function WalletBox() {
 		);
 	}
 
-	// signed out
+	// Signed out: the connected wallet is not signed in here, or no wallet is
+	// connected. Other wallets may be; they are listed, and never used meanwhile.
+	const parked = relay.others.length > 0;
 	return (
 		<div className={box}>
 			{w.connected && w.address ? (
@@ -359,10 +318,14 @@ export function WalletBox() {
 					action={disconnect}
 				/>
 			) : (
-				<b className="text-sm font-semibold">Not signed in</b>
+				<b className="text-sm font-semibold">
+					{parked ? "No wallet connected" : "Not signed in"}
+				</b>
 			)}
 			<span className="text-[13px] text-muted-foreground">
-				{RELAY_COPY.signedOutRail}
+				{parked && !w.connected
+					? RELAY_COPY.connectOneOf
+					: RELAY_COPY.signedOutRail}
 			</span>
 			<Btn variant="brand" disabled={busy} onClick={relay.signIn}>
 				{relay.signingIn ? "Waiting for your wallet…" : RELAY_COPY.signInButton}
@@ -380,6 +343,54 @@ export function WalletBox() {
 					Connect a wallet without signing in
 				</Btn>
 			)}
+			<OtherWallets />
 		</div>
+	);
+}
+
+/**
+ * The other wallets signed in in this browser, each with its own way out.
+ * They are only listed: while another wallet is connected (or none), nothing
+ * is read, sent or renewed for them.
+ */
+function OtherWallets() {
+	const relay = useRelay();
+	const w = useShellWallet();
+	const n = relay.others.length;
+	if (n === 0) return null;
+	return (
+		<details className="border-t border-border pt-2 text-xs">
+			<summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
+				{othersSummary(n, w.connected)}
+			</summary>
+			<ul className="mt-1.5 flex flex-col gap-0.5">
+				{relay.others.map((a) => (
+					<li key={a} className="flex items-center justify-between gap-2">
+						<span className="font-mono text-[12px]" title={a}>
+							{short(a)}
+						</span>
+						<Btn
+							size="sm"
+							variant="ghost"
+							onClick={() => relay.signOutWallet(a)}
+							aria-label={`Sign out ${a}`}
+						>
+							Sign out
+						</Btn>
+					</li>
+				))}
+			</ul>
+			<p className="mt-1.5 text-subtle-foreground">{RELAY_COPY.othersHow}</p>
+			{(n > 1 || relay.mode === "on") && (
+				<Btn
+					size="sm"
+					variant="ghost"
+					className="mt-1"
+					onClick={relay.signOutAll}
+				>
+					{RELAY_COPY.signOutAll}
+				</Btn>
+			)}
+		</details>
 	);
 }

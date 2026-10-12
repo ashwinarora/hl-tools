@@ -145,9 +145,12 @@ function PrivacyPage() {
 						you.
 					</p>
 					<p>
-						Your browser also keeps a session token so you stay signed in. The
-						relay never receives a private key or a seed phrase, and nothing on
-						this site asks for one.
+						Your browser also keeps a session for each wallet you sign in with,
+						so you stay signed in when you switch between them (at most eight
+						wallets; the one unused longest is dropped). Only the wallet that is
+						connected is ever used, and "Sign out" removes that wallet's session
+						from the browser at once. The relay never receives a private key or
+						a seed phrase, and nothing on this site asks for one.
 					</p>
 				</Section>
 

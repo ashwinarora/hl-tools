@@ -4,7 +4,7 @@ import { FileQuestion, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { EmptyState } from "#/components/hub/layout";
 import { Callout, IssueList } from "#/components/hub/status";
-import { RELAY_COPY } from "#/components/multisig/model/relay/copy";
+import { gateOthers, RELAY_COPY } from "#/components/multisig/model/relay/copy";
 import {
 	documentFromFragment,
 	openText,
@@ -196,8 +196,8 @@ function Missing({
 					? "Checking your session…"
 					: relay.mode === "unreachable"
 						? RELAY_COPY.unreachable
-						: relay.mode === "suspended"
-							? `${RELAY_COPY.suspended} Sign in with the connected wallet to open it, or paste the document.`
+						: relay.others.length > 0
+							? `${gateOthers(relay.others.length)} Or paste the document you were sent.`
 							: "Sign in to open it, or paste the document you were sent."
 			}
 			sample={digest}

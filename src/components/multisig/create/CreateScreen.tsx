@@ -441,16 +441,18 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 								<Btn
 									variant="brand"
 									onClick={() => {
-										// the treasury's page is where its signers land after signing in
+										// The treasury's page is where its signers land. This account
+										// stays signed in: switching to a signer in the wallet is all
+										// that is needed, and a signer that signed in here before is
+										// not asked again.
 										void navigate({
 											to: "/multisig/t/$network/$address",
 											params: { network, address: account },
 											search: { tab: "pending" },
 										});
-										relay.signOut();
 									}}
 								>
-									{CREATE.signOutAndOpen}
+									{CREATE.openTreasury}
 								</Btn>
 							) : (
 								<Link
@@ -585,11 +587,6 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 					)}
 					<p className="flex flex-wrap items-center gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
 						{withRelay ? CREATE.otherAccount : CREATE.otherAccountNoRelay}
-						{withRelay && (
-							<Btn size="sm" variant="outline" onClick={relay.signOut}>
-								{CREATE.signOut}
-							</Btn>
-						)}
 					</p>
 				</div>
 			</Card>

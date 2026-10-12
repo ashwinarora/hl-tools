@@ -24,8 +24,12 @@ export const RELAY_COPY = {
 	recentHere:
 		"Proposals you made or opened here, as this browser keeps them (IndexedDB). The chain knows nothing of a proposal until it is submitted.",
 	unreachable: "Relay unreachable. Links and files still work.",
-	suspended:
-		"The connected wallet is not the one signed in, so nothing is read from or sent to the relay.",
+	// Several wallets can stay signed in in one browser; only the connected one is in use.
+	othersHow:
+		"Choose one of them in your wallet to use it, with no new signature. While another wallet is connected, nothing is read or sent for these.",
+	connectOneOf:
+		"Connect a wallet that is signed in here to continue, or sign in with another one.",
+	signOutAll: "Sign out all wallets",
 	firstUseTitle: "This section signs and sends real transactions",
 	firstUseBody:
 		"You approve every signature in your own wallet, and a submitted action cannot be undone. Read the destination and amount in the wallet prompt each time, and rehearse on testnet first.",
@@ -146,6 +150,27 @@ export const SIGN_HINT_TEXTS: readonly string[] = [
 	SIGN_HINT_OTHER,
 	SIGN_HINT_BACK,
 ];
+
+/**
+ * The line that opens the list of wallets signed in in this browser besides
+ * the connected one (all of them when no wallet is connected).
+ */
+export function othersSummary(count: number, connected: boolean): string {
+	const more = connected ? "more " : "";
+	return count === 1
+		? `1 ${more}wallet is signed in here`
+		: `${count} ${more}wallets are signed in here`;
+}
+
+/**
+ * Under a sign-in gate, when the connected wallet is not signed in but
+ * others are: why what was on screen a moment ago is gone.
+ */
+export function gateOthers(count: number): string {
+	return count === 1
+		? "Another wallet is signed in here. Choose it in your wallet to go on as that one, or sign in with this one."
+		: `${count} other wallets are signed in here. Choose one of them in your wallet to go on as that one, or sign in with this one.`;
+}
 
 /** Wording that must never appear in relay-era copy. */
 export const FORBIDDEN_CLAIMS: readonly RegExp[] = [
