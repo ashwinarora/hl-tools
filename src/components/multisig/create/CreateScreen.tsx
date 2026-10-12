@@ -39,6 +39,7 @@ import {
 	CREATE,
 	outcomeText,
 } from "../model/create";
+import { createDraftFor, DRAFT_COPY, draftKey } from "../model/drafts";
 import { modeLabel } from "../model/mode";
 import { RELAY_COPY } from "../model/relay/copy";
 import { registerStep } from "../model/relay/register";
@@ -59,8 +60,10 @@ import { useRequest } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
 import { Help } from "../shell/Help";
 import { Btn, Card, linkButton, NetTag, SignsTag } from "../shell/kit";
+import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
+import { useDraft } from "../shell/useDraft";
 import { usePageNetwork } from "../shell/usePageNetwork";
 import { useMounted, useShellWallet } from "../shell/WalletBox";
 import {
@@ -232,6 +235,37 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 	const n = entries.length;
 	const k = threshold;
 
+	// ---- what was entered here before, kept in this browser (model/drafts.ts)
+	const kept = useDraft(draftKey("create", network, account));
+	const clearKept = kept.clear;
+	const now = useNow();
+	const [restoredAt, setRestoredAt] = useState<number | null>(null);
+	const touched = useRef(false);
+	const restoreTried = useRef(false);
+	useEffect(() => {
+		if (!kept.hydrated || restoreTried.current) return;
+		restoreTried.current = true;
+		if (touched.current) return;
+		const stored = createDraftFor(kept.stored);
+		if (!stored) return;
+		setEntries(stored.entries);
+		setThreshold(stored.threshold);
+		setRestoredAt(stored.at);
+	}, [kept.hydrated, kept.stored]);
+	// written from the handlers, a moment after the last change: never from an effect
+	const keep = (list: readonly string[], number: number | null) => {
+		touched.current = true;
+		kept.save(list.length > 0 ? { entries: list, threshold: number } : null);
+	};
+	const clearDraft = () => {
+		kept.clear();
+		touched.current = false;
+		setRestoredAt(null);
+		setEntries([]);
+		setThreshold(null);
+		setPasteNote("");
+	};
+
 	const add = (text: string) => {
 		const pasted = parsePasted(text);
 		const added = addEntries(entries, pasted.addresses);
@@ -239,13 +273,21 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 		setPasteNote(
 			CREATE.pasted(added.duplicates, added.overMax, pasted.rejected),
 		);
+		keep(added.entries, threshold);
 	};
 	const remove = (address: string) => {
 		const next = entries.filter((e) => e.toLowerCase() !== address);
 		setEntries(next);
 		setPasteNote("");
 		// a number that no longer fits is cleared, never adjusted
-		if (threshold !== null && threshold > next.length) setThreshold(null);
+		const fits =
+			threshold !== null && threshold > next.length ? null : threshold;
+		if (fits !== threshold) setThreshold(null);
+		keep(next, fits);
+	};
+	const choose = (number: number | null) => {
+		setThreshold(number);
+		keep(entries, number);
 	};
 
 	// ---- the conversion
@@ -287,8 +329,10 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 				queryKey: ["multisig-account", network, account],
 			});
 			setDone(policy);
+			// it is a treasury now: nothing half-entered is left to keep
+			clearKept();
 		},
-		[queries, network, account],
+		[queries, network, account, clearKept],
 	);
 
 	const convert = () => {
@@ -600,6 +644,22 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 				}
 			>
 				<div className="flex flex-col gap-3">
+					{restoredAt !== null && !done && (
+						<p
+							data-draft
+							className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-surface-2 px-2.5 py-2 text-xs text-muted-foreground"
+						>
+							<span>{DRAFT_COPY.restored(restoredAt, now)}</span>
+							<button
+								type="button"
+								disabled={busy}
+								onClick={clearDraft}
+								className="font-medium text-foreground underline underline-offset-2 disabled:opacity-60"
+							>
+								{DRAFT_COPY.clear}
+							</button>
+						</p>
+					)}
 					<PasteBox disabled={busy} note={pasteNote} onAdd={add} />
 					{rows.length === 0 ? (
 						<p className="text-[13px] text-muted-foreground">
@@ -636,7 +696,7 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 							{CREATE.pickFirst}
 						</p>
 					) : (
-						<HowMany n={n} value={k} disabled={busy} onChange={setThreshold} />
+						<HowMany n={n} value={k} disabled={busy} onChange={choose} />
 					)}
 					{lines && <ThresholdMeaning lines={lines} />}
 					<p className="text-xs text-subtle-foreground">{CREATE.later}</p>

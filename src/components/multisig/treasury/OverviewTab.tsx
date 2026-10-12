@@ -8,6 +8,7 @@ import type {
 import { Link } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
+import { useMultisigDrafts } from "#/store/multisigDraftsStore";
 import {
 	treasuryKey,
 	useMultisigPrefs,
@@ -636,7 +637,12 @@ export function OverviewTab({
 							<Btn
 								size="sm"
 								variant="outline"
-								onClick={() => setHidden(network, address, !hidden)}
+								onClick={() => {
+									// taken out of this browser's list: what was half-filled for it goes too
+									if (!hidden)
+										useMultisigDrafts.getState().dropFor(network, address);
+									setHidden(network, address, !hidden);
+								}}
 							>
 								{hidden ? "Show in my list again" : "Hide from my list"}
 							</Btn>

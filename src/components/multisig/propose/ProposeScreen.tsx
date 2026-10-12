@@ -63,6 +63,12 @@ import {
 	sourcePocket,
 } from "../model/actions";
 import { type InnerChain, innerChain } from "../model/chains";
+import {
+	DRAFT_COPY,
+	draftKey,
+	formWorthKeeping,
+	proposeDraftFor,
+} from "../model/drafts";
 import { loadProposal, saveProposal } from "../model/history";
 import {
 	DATED_AHEAD,
@@ -88,6 +94,7 @@ import { NetTag, SignsTag, backLink as shellBack } from "../shell/kit";
 import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
+import { useDraft } from "../shell/useDraft";
 import { usePageNetwork } from "../shell/usePageNetwork";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useKnownProposals } from "../treasury/useKnownProposals";
@@ -153,6 +160,18 @@ export function ProposeScreen(props: {
 	);
 }
 
+/** The form a link opens: empty, or on the kind (and the API wallet) it asks for. */
+function formForLink(kind?: string, agent?: string): ActionForm {
+	// the Signers card's "Convert back" opens the same form on that choice
+	if (kind === "convertBack")
+		return { ...DEFAULT_FORM, kind: "changeSigners", signers: "null" };
+	const asked = ACTION_KINDS.find((k) => k.kind === kind)?.kind;
+	// the Overview's "Remove" names the wallet; without a name there is one to choose
+	if (asked === "removeAgent")
+		return { ...DEFAULT_FORM, kind: asked, removeAgent: agent ?? null };
+	return asked ? { ...DEFAULT_FORM, kind: asked } : DEFAULT_FORM;
+}
+
 /**
  * Build a proposal for one treasury on one network: the action, who
  * finalises it, the chain signers sign under and how long they have. The
@@ -175,16 +194,7 @@ function ProposeForm({
 	const navigate = useNavigate();
 	const client = useQueryClient();
 	const wallet = useWalletSigner();
-	const [form, setForm] = useState<ActionForm>(() => {
-		// the Signers card's "Convert back" opens the same form on that choice
-		if (kind === "convertBack")
-			return { ...DEFAULT_FORM, kind: "changeSigners", signers: "null" };
-		const asked = ACTION_KINDS.find((k) => k.kind === kind)?.kind;
-		// the Overview's "Remove" names the wallet; without a name there is one to choose
-		if (asked === "removeAgent")
-			return { ...DEFAULT_FORM, kind: asked, removeAgent: agent ?? null };
-		return asked ? { ...DEFAULT_FORM, kind: asked } : DEFAULT_FORM;
-	});
+	const [form, setForm] = useState<ActionForm>(() => formForLink(kind, agent));
 	const [attempted, setAttempted] = useState(false);
 	const [failure, setFailure] = useState<{
 		title: string;
@@ -196,13 +206,49 @@ function ProposeForm({
 	// why a proposal named in the link was not used as the starting point
 	const [notCopied, setNotCopied] = useState<string | null>(null);
 
-	const set = <K extends keyof ActionForm>(key: K, value: ActionForm[K]) =>
-		setForm((f) => ({ ...f, [key]: value }));
-
 	const address =
 		treasury && ADDRESS_RE.test(treasury)
 			? (treasury.toLowerCase() as `0x${string}`)
 			: null;
+
+	// ---- what was filled in here before, kept in this browser (model/drafts.ts)
+	const kept = useDraft(address ? draftKey("propose", network, address) : null);
+	const [restoredAt, setRestoredAt] = useState<number | null>(null);
+	// the form as of the last change, for a setter called twice in one tick
+	const latest = useRef(form);
+	useEffect(() => {
+		latest.current = form;
+	}, [form]);
+	const touched = useRef(false);
+	const restoreTried = useRef(false);
+	// Once the stored drafts are read: put this treasury's back, unless the
+	// link asks for something else or something was typed in the meantime.
+	useEffect(() => {
+		if (!kept.hydrated || restoreTried.current) return;
+		restoreTried.current = true;
+		if (touched.current) return;
+		const stored = proposeDraftFor(kept.stored, { kind, supersedes, agent });
+		if (!stored) return;
+		setForm(stored.form);
+		setRestoredAt(stored.at);
+	}, [kept.hydrated, kept.stored, kind, supersedes, agent]);
+
+	const set = <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => {
+		touched.current = true;
+		const next = { ...latest.current, [key]: value };
+		latest.current = next;
+		setForm((f) => ({ ...f, [key]: value }));
+		// Written from the setter, a moment after typing stops, never from an
+		// effect on the form: the wallet and the stored values arrive late, and
+		// an effect would write the empty form over the draft.
+		kept.save(formWorthKeeping(next) ? { form: next } : null);
+	};
+	const clearDraft = () => {
+		kept.clear();
+		touched.current = false;
+		setRestoredAt(null);
+		setForm(formForLink(kind, agent));
+	};
 	const target = useMemo<AccountTarget | null>(
 		() => (hydrated && address ? { address, network } : null),
 		[hydrated, address, network],
@@ -575,6 +621,8 @@ function ProposeForm({
 			const saved: Proposal[] = [];
 			for (const proposal of proposals)
 				saved.push((await saveProposal(proposal)).proposal);
+			// it is a proposal now: nothing half-filled is left to keep
+			kept.clear();
 			await client.invalidateQueries({ queryKey: ["multisig-proposals"] });
 			// Signed in and listed as a signer on the relay: co-signers see it at once.
 			// A relay failure does not undo the proposal; its page says "only in this
@@ -686,6 +734,21 @@ function ProposeForm({
 								}
 							>
 								<div className="space-y-4">
+									{restoredAt !== null && (
+										<p
+											data-draft
+											className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-surface-2 px-2.5 py-2 text-xs text-muted-foreground"
+										>
+											<span>{DRAFT_COPY.restored(restoredAt, now)}</span>
+											<button
+												type="button"
+												onClick={clearDraft}
+												className="font-medium text-foreground underline underline-offset-2"
+											>
+												{DRAFT_COPY.clear}
+											</button>
+										</p>
+									)}
 									<Segmented<string>
 										label="Action"
 										value={stakingOn ? "staking" : form.kind}
