@@ -936,6 +936,98 @@ New test files: `src/lib/thirdParty.test.ts` (no other host in the document head
 - Two signers online at the same moment were not tried in this pass (the auditing session has one wallet).
 - Mainnet was touched only by the auditing session, on its own accounts. No hosted Supabase project.
 
+## 15. Multisig — several wallets stay signed in (2026-10-12)
+
+Until now the browser kept one relay session, so a signer who holds two of a treasury's keys signed in again on every switch of account. Each wallet now keeps its own session, and the one in use is always the connected wallet (DECISIONS.md, "Several wallets stay signed in"). This is the sign-in path, so it was tested at three levels: the rule by itself, the sessions against the local relay, and the page in a browser with real account switches.
+
+The browser rows were run by the auditing session of §14, not by the one that wrote the code: Brave with Rabby on `http://localhost:3000` against the local relay, testnet, with three of the wallet's accounts (**A** and **B**, signers of one test treasury, and **C**, which had never signed in). No slot's value was printed at any point; storage was checked by key name.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 93 files, 2,281 tests, all passing |
+| Relay integration | `bun run test:relay` | 62 tests, all passing (9 of them new) |
+| Relay database | `bun run db:test` | unchanged: 807 pgTAP tests; no migration was touched |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
+
+New test files: `multisig/model/relay/wallets.test.ts` (the slot per wallet), `multisig/model/relay/identity.test.ts` (which wallet is in use). Extended: `multisig/relay/session.test.ts`, `model/relay/copy.test.ts`, `relay.itest.ts`.
+
+### The rule by itself (`identity.test.ts`, `wallets.test.ts`, `session.test.ts`)
+
+| Case | Result |
+|---|---|
+| A stored session is checked with the relay before it is used; a wallet with no slot is signed out whoever else is signed in | ✅ |
+| A, B, A in quick succession: only the answer to the last question counts, in whatever order the earlier ones arrive | ✅ |
+| An answer about the wallet that was left is never applied to the one that is connected | ✅ |
+| A sign-in that finishes after the wallet moved on is not applied to the new wallet | ✅ |
+| Signed out while a check was still running: the late "ready" cannot bring the session back | ✅ |
+| In the one render where the wallet extension already says B and the state still says A, nothing is in use | ✅ |
+| 4,000 generated histories of 14 events each (connect, switch, disconnect, answers under any count, sign-in, sign-out, another tab): the wallet in use is always the connected one, and "in use" is only ever reached by an answer or a sign-in under the question that stood | ✅ 56,000 states checked |
+| Slots: named after the wallet in lowercase; nothing else under the prefix is read as one; order is most recently used first and survives a damaged note; at most eight, the least recently used dropped, never the one that just signed in | ✅ |
+| The single session of before: moved into its wallet's slot once; dropped when its wallet cannot be told or already has a slot | ✅ |
+| A slot whose session speaks for another wallet: ended, emptied, never used. The relay not answering: nothing discarded | ✅ |
+| Signing out: the slot is empty before the relay is asked anything, and stays empty when the relay cannot be reached or the attempt throws | ✅ |
+
+### Against the local relay (`relay.itest.ts`, "several wallets signed in in one browser")
+
+One storage, a client per wallet, set up exactly as the page sets them up.
+
+| Case | Result |
+|---|---|
+| Two wallets sign in side by side: two slots, and each client answers `whoami()` as its own wallet | ✅ |
+| A write through the second wallet's client in the first wallet's name is stopped by the page (`relay.wrong_wallet`); with that check skipped, the relay does not take the name from the row | ✅ |
+| Each wallet's private channel is joined only through that wallet's own client; the other wallet's client is refused there | ✅ |
+| Signing one out: its slot is gone before the relay has answered, its renewal token is refused afterwards, and the other wallet reads, writes and renews as before | ✅ |
+| A session whose access token has run out is ended on the relay without being written back into its slot | ✅ |
+| The relay unreachable: "unreachable" is reported and the browser still holds nothing | ✅ |
+| A session copied into another wallet's slot is never used, and is ended | ✅ |
+| The single session of before is carried over and works with no new signature | ✅ |
+| Stated limit: an ended session's access token is not looked up again and works until it runs out (at most an hour) | ✅ as written; see the limits below |
+
+### In the browser (testnet, real account switches in Rabby)
+
+| # | Step | Seen |
+|---|---|---|
+| S1 | reload while signed in from before the change | still "signed in · live", no prompt; the old key gone, the wallet's own slot there |
+| S2 | switch to B, never signed in | "B · not signed in", "1 more wallet is signed in here" listing A; nothing of A's on screen; the gate says another wallet is signed in here; one prompt to sign B in |
+| S3 | A and B in turn, then A, B, A, B about 0.8 s apart, the page sampled every 60 ms | no prompt; always ended on the connected wallet; never one wallet's address over the other's treasuries; "Checking your session…" for 40 to 50 ms on a switch |
+| S4 | B proposes, A signs, back to B | the log says proposed by B, signed by A |
+| S5 | a form filled as A, wallet switched to B before Create | the button reads "Create and sign as B"; what is created is B's. With C (a signer, not signed in): the proposal is made locally and is not uploaded under anybody's session |
+| S6 | every relay request recorded by the address in its token (the token itself never) | 136 s as A with B signed in: 42 requests, all A's. From the switch on: 21 requests, all B's; the first is `whoami` as B, and a new socket is opened |
+| S7 | "Sign out" as B | B's slot gone in the same tick; A still listed; switch to A: signed in, no prompt |
+| S8 | B's "Sign out" in the list while A is connected | the list goes, A stays "signed in · live"; switch to B: not signed in |
+| S9 | "Sign out all wallets" | nobody signed in, no key of the relay left in storage |
+| S10 | site disconnected in the wallet with A and B signed in | "No wallet connected", "2 wallets are signed in here"; connecting A again signs in with no signature prompt |
+| S11 | reload in each state (B in use with A parked; C not signed in with two parked; nobody connected) | first paint "Checking your session…", then the same state; never the other wallet |
+| S12 | two tabs as A; sign out in the first, sign in again | the second follows within about 50 ms and 200 ms, with no reload |
+| S13 | sign-in rejected in the wallet as C | "You declined in the wallet."; A and B untouched; the line is gone after switching to A |
+| S14 | B's slot given a dead renewal token while A is connected | A unaffected; on switching to B: "not signed in", the slot removed; back to A with no prompt |
+| S15 | A's slot copied into a slot named after C, wallet switched to C, sampled every 30 ms | "Checking…" for 59 ms, then "C · not signed in"; nothing of A's on screen at any sample; the forged slot removed |
+| S16 | the wizard open as A with a signer added, wallet switched to B, then to C | B: the headline names B and the list is empty again. C: the sign-in gate. Read only, nothing converted |
+| S17 | console and hosts across all of it | no error from the app, no "Multiple GoTrueClient instances"; the relay and Hyperliquid only |
+| S18 | 375 px | the list opens and closes in the top bar; no sideways scroll |
+| S19 | regression from scratch: sign in, propose, sign, withdraw, the away notice, a nickname | as before |
+| — | account switched while the sign-in prompt is open | Rabby closes the prompt; the page shows the new wallet "not signed in"; no slot written |
+
+Four points from that run were changed and looked at again in the browser:
+
+| Seen | Now | Re-check |
+|---|---|---|
+| For about 34 ms after a reload the rail said "No wallet connected" above the list of wallets signed in, before the wallet came back (measured with a MutationObserver and a 16 ms timer). The wallet stack names an address as soon as its first connector has answered and calls it connected only after asking the others; the relay code went by the address, the rail by "connected" | one function says which wallet is connected, for both; until the stack says so the page is checking | ✅ two reloads: "Checking your session…" → the wallet → "signed in" → live, no other frame. With the site really disconnected it still settles on "No wallet connected · 2 wallets are signed in here" |
+| With no wallet connected the gate spoke of "other" wallets and of "this one" | "2 wallets are signed in here. Connect one of them to go on as that one, or sign in with another." | ✅ |
+| A signer who is not signed in can create a proposal, which then stays in the browser, with no word about it near the buttons | "You are not signed in, so it stays in this browser until you pass it on: your co-signers do not see it in their lists." | ✅ |
+| After the change to what counts as connected: A → B → A, sign out as one, sign in again, reconnect after a disconnect | as before | ✅ |
+
+### Limits
+
+- **An ended session's access token works until it runs out.** Measured (the last integration case): after "Sign out" the relay refuses to renew the session, but an access token issued earlier is accepted for the rest of its hour, because the relay reads the wallet from the token and does not ask whether the session behind it still exists. The browser holds nothing after "Sign out", so this concerns only a copy taken before. Not changed here; it is a change to the relay's identity function and was left as its own decision.
+- The cap of eight wallets is unit-tested only (the test wallet has six accounts).
+- A browser that refuses `localStorage` falls back to the page's memory (signed in until the page is closed); not tried in a browser.
+- Whose session a channel joins with was shown against the relay, not read from the socket in the browser.
+- One wallet extension (Rabby), one profile. No hardware wallet, no phone.
+- §10 and §13 describe the single session of their day ("Signed in as S1, but that is not the connected wallet"): that state no longer exists.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
