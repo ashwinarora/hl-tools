@@ -11,14 +11,13 @@ import {
 	type AccountMode,
 	type Address,
 	activationCharge,
-	checksumMismatch,
 	Decimal,
 	fromPlain,
 	type Hex,
 	hasErrors,
 	type Issue,
 	issue,
-	isZeroAddress,
+	type Move,
 	type Network,
 	networkConfig,
 	type PlainObject,
@@ -27,6 +26,7 @@ import {
 	sendRefusal,
 	sendShape,
 	signingFamilyFor,
+	stakingActionOf,
 	stringifyJson,
 	toPlain,
 	tryParseJson,
@@ -36,6 +36,7 @@ import {
 } from "@hl-tools/core";
 import { ADDRESS_RE } from "#/components/tools/multisig/model";
 import { chainChoiceFor, type InnerChain } from "./chains";
+import { addressField, amountField } from "./fields";
 import type { NonceMode } from "./nonce";
 import { selfRefusal } from "./selfSend";
 import {
@@ -44,6 +45,13 @@ import {
 	signersField,
 	wantedSet,
 } from "./signerSet";
+import {
+	planStaking,
+	STAKING,
+	type StakingKind,
+	type StakingRead,
+	stakingActions,
+} from "./staking";
 
 /**
  * `sendUsdc` and `sendToken` both build a `sendAsset`: the one way of sending
@@ -58,12 +66,15 @@ export type ActionKind =
 	| "withdraw3"
 	| "approveAgent"
 	| "changeSigners"
+	| StakingKind
 	| "raw";
 
 export const ACTION_KINDS: readonly {
 	readonly kind: ActionKind;
 	readonly label: string;
 	readonly description: string;
+	/** Kinds a chooser shows as one entry, with the choice between them inside. */
+	readonly group?: "staking";
 }[] = [
 	{
 		kind: "sendUsdc",
@@ -97,6 +108,9 @@ export const ACTION_KINDS: readonly {
 		description:
 			"Replace the list of signers and how many of them must sign, in one step.",
 	},
+	{ kind: "stake", ...STAKING.kinds.stake, group: "staking" },
+	{ kind: "returnToSpot", ...STAKING.kinds.returnToSpot, group: "staking" },
+	{ kind: "moveStake", ...STAKING.kinds.moveStake, group: "staking" },
 	{
 		kind: "raw",
 		label: "Raw JSON",
@@ -146,6 +160,12 @@ export interface ActionForm {
 	 * conversion back to a normal account.
 	 */
 	readonly signers: string;
+	/**
+	 * Staking: the validator staked with (Stake) or unstaked from (Return to
+	 * spot, Move to another validator), and for a move the one it goes to.
+	 */
+	readonly validator: string;
+	readonly toValidator: string;
 	readonly raw: string;
 	/** The leader: the signer expected to complete and submit. */
 	readonly finaliser: string;
@@ -166,6 +186,8 @@ export const DEFAULT_FORM: ActionForm = {
 	agentAddress: "",
 	agentName: "",
 	signers: "",
+	validator: "",
+	toValidator: "",
 	raw: "",
 	finaliser: "",
 	chain: "hyperevm",
@@ -204,6 +226,10 @@ export interface BuildContext {
 	readonly agent?: Receiver | null;
 	/** What Hyperliquid said about the addresses that would be new signers. */
 	readonly signerChecks?: ReadonlyMap<string, SignerCheck>;
+	/** What Hyperliquid said about the treasury's staking and the validators; null or absent while unread. */
+	readonly staking?: StakingRead | null;
+	/** The page's clock, for what is still locked; the proposal's number when absent. */
+	readonly now?: number;
 	readonly createdBy?: string | null;
 	readonly supersedes?: Hex | null;
 	readonly policyAtCreation?: Policy | null;
@@ -215,115 +241,6 @@ const NO_CHECKS: ReadonlyMap<string, SignerCheck> = new Map();
 const USDC_DECIMALS = 6;
 const USDC = "USDC";
 const TOKEN_RE = /^[^:\s]+:0x[0-9a-f]{32}$/;
-
-function addressField(
-	value: string,
-	path: string,
-	what: string,
-	issues: Issue[],
-	/** Money is sent to this address (false: it is given a role). */
-	receives = true,
-): string | null {
-	const v = value.trim();
-	if (!v) {
-		issues.push(
-			issue("field.required", "error", `${what} is required.`, { path }),
-		);
-		return null;
-	}
-	if (!ADDRESS_RE.test(v)) {
-		issues.push(
-			issue(
-				"address.invalid",
-				"error",
-				`${what} must be a 20-byte hex address: 0x followed by 40 hex digits.`,
-				{ path },
-			),
-		);
-		return null;
-	}
-	// two things worth a line where a typo costs money; neither is refused by Hyperliquid
-	if (checksumMismatch(v)) {
-		issues.push(
-			issue(
-				"address.checksum",
-				"warning",
-				"The capital letters do not match this address's checksum. Check it for a typo.",
-				{ path },
-			),
-		);
-	}
-	if (isZeroAddress(v)) {
-		issues.push(
-			issue(
-				"address.zero",
-				"warning",
-				receives
-					? "This is the zero address. Nobody holds its key: whatever is sent to it is lost."
-					: "This is the zero address. Nobody holds its key.",
-				{ path },
-			),
-		);
-	}
-	return v.toLowerCase();
-}
-
-function amountField(
-	value: string,
-	maxDecimals: number,
-	unit: string,
-	issues: Issue[],
-): Decimal | null {
-	const path = "action.amount";
-	const v = value.trim();
-	if (!v) {
-		issues.push(
-			issue("field.required", "error", "Amount is required.", { path }),
-		);
-		return null;
-	}
-	// a person types 12.5, not 1.25e1; refuse the exponent form the parser would accept
-	const d = /[eE]/.test(v) ? null : Decimal.tryParse(v);
-	if (!d) {
-		issues.push(
-			issue(
-				"amount.invalid",
-				"error",
-				"Amount must be a plain decimal number such as 12.5.",
-				{ path },
-			),
-		);
-		return null;
-	}
-	if (!d.isPositive()) {
-		issues.push(
-			issue(
-				"amount.not_positive",
-				"error",
-				"Amount must be greater than zero.",
-				{
-					path,
-				},
-			),
-		);
-		return null;
-	}
-	if (d.decimalPlaces() > maxDecimals) {
-		issues.push(
-			issue(
-				"amount.precision",
-				"error",
-				`${unit} has ${maxDecimals} decimal places; ${v} has ${d.decimalPlaces()}.`,
-				{
-					path,
-					fix: "Shorten the amount yourself; it is never rounded for you.",
-				},
-			),
-		);
-		return null;
-	}
-	return d;
-}
 
 function warnOverBalance(
 	amount: Decimal,
@@ -498,6 +415,11 @@ export interface BuiltAction {
 	 */
 	readonly sketch: PlainObject | null;
 	readonly issues: readonly Issue[];
+	/**
+	 * The further actions of the same move, in order: a staking form may ask
+	 * for two (model/staking.ts). Empty for everything else.
+	 */
+	readonly also: readonly PlainObject[];
 }
 
 /** The inner action for the chosen kind, or the reasons it cannot be built. */
@@ -508,10 +430,14 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 		hyperliquidChain: networkConfig(ctx.network).hyperliquidChain,
 	};
 	const treasury = ctx.multiSigUser.toLowerCase();
-	const done = (action: PlainObject | null): BuiltAction => ({
+	const done = (
+		action: PlainObject | null,
+		also: readonly PlainObject[] = [],
+	): BuiltAction => ({
 		action: hasErrors(issues) ? null : action,
 		sketch: action,
 		issues,
+		also: hasErrors(issues) ? [] : also,
 	});
 	// what a destination that is the treasury itself means is said where the
 	// action is known: a send (`warnAboutSend`), a withdrawal (below)
@@ -786,6 +712,27 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				stop("signers.checking", "Checking the new signers on Hyperliquid…");
 			return done(convert(signersField(wanted.entries, wanted.threshold)));
 		}
+		case "stake":
+		case "returnToSpot":
+		case "moveStake": {
+			const plan = planStaking(
+				{
+					kind: form.kind,
+					amount: form.amount,
+					validator: form.validator,
+					toValidator: form.toValidator,
+				},
+				ctx.staking,
+				ctx.network,
+				ctx.now ?? ctx.nonce,
+			);
+			issues.push(...plan.issues);
+			// each step is its own proposal, numbered one after the other
+			const [first, ...rest] = plan.steps
+				? stakingActions(plan.steps, head, ctx.nonce)
+				: [];
+			return done(first ?? null, rest);
+		}
 		case "raw": {
 			const action = rawAction(form.raw, head, ctx.nonce, issues);
 			if (action) warnAboutSend(action, ctx, issues);
@@ -926,6 +873,12 @@ export function actionTypeOf(
 			return "sendAsset";
 		case "changeSigners":
 			return "convertToMultiSigUser";
+		// one or two actions, known only once the staking balance is read; none
+		// of them is numbered after the ones on record
+		case "stake":
+		case "returnToSpot":
+		case "moveStake":
+			return null;
 		case "raw": {
 			const parsed = tryParseJson(form.raw.trim());
 			const plain = parsed.ok ? toPlain(parsed.node) : null;
@@ -975,8 +928,24 @@ export interface Draft {
 	readonly issues: readonly Issue[];
 }
 
-/** Everything `createProposal` needs. Vault address and expiry are always null (see DECISIONS). */
-export function buildProposalInput(form: ActionForm, ctx: BuildContext): Draft {
+export interface Drafts {
+	/**
+	 * One input for each proposal the form asks for, in order: one, or the
+	 * two steps of a staking move, numbered one after the other. Null while
+	 * the form has errors.
+	 */
+	readonly inputs: readonly ProposalInput[] | null;
+	readonly actions: readonly PlainObject[];
+	/** See `BuiltAction.sketch`. */
+	readonly sketch: PlainObject | null;
+	readonly issues: readonly Issue[];
+}
+
+/** Everything `createProposal` needs, for each proposal the form asks for. Vault address and expiry are always null (see DECISIONS). */
+export function buildProposalInputs(
+	form: ActionForm,
+	ctx: BuildContext,
+): Drafts {
 	const built = buildAction(form, ctx);
 	const issues: Issue[] = [...built.issues];
 	const path = "payload.outerSigner";
@@ -1006,18 +975,19 @@ export function buildProposalInput(form: ActionForm, ctx: BuildContext): Draft {
 			),
 		);
 	}
+	const actions = built.action ? [built.action, ...built.also] : [];
 	if (!built.action || hasErrors(issues))
-		return { input: null, action: built.action, sketch: built.sketch, issues };
+		return { inputs: null, actions, sketch: built.sketch, issues };
 	return {
-		action: built.action,
+		actions,
 		sketch: built.sketch,
 		issues,
-		input: {
+		inputs: actions.map((action, i) => ({
 			network: ctx.network,
 			multiSigUser: ctx.multiSigUser,
 			outerSigner: finaliser,
-			action: built.action,
-			nonce: ctx.nonce,
+			action,
+			nonce: ctx.nonce + i,
 			vaultAddress: null,
 			expiresAfter: null,
 			title: form.title.trim() || null,
@@ -1026,7 +996,18 @@ export function buildProposalInput(form: ActionForm, ctx: BuildContext): Draft {
 			createdBy: ctx.createdBy ? ctx.createdBy.toLowerCase() : null,
 			supersedes: ctx.supersedes ?? null,
 			policyAtCreation: ctx.policyAtCreation ?? null,
-		},
+		})),
+	};
+}
+
+/** The first (for most forms, the only) proposal a form asks for. */
+export function buildProposalInput(form: ActionForm, ctx: BuildContext): Draft {
+	const drafts = buildProposalInputs(form, ctx);
+	return {
+		input: drafts.inputs?.[0] ?? null,
+		action: drafts.actions[0] ?? null,
+		sketch: drafts.sketch,
+		issues: drafts.issues,
 	};
 }
 
@@ -1120,9 +1101,48 @@ export function formFromAction(
 		// the form's field is the action's own value: nothing to translate
 		case "convertToMultiSigUser":
 			return { ...base, kind: "changeSigners", signers: str(action.signers) };
-		default:
+		default: {
+			// A stake or a return comes back as the form that names its end; the
+			// form then works the steps out again from what the treasury holds
+			// now. The other two staking steps mean nothing by themselves there
+			// and stay as they are.
+			const staking = stakingActionOf(action);
+			if (staking?.kind === "stake")
+				return {
+					...base,
+					kind: "stake",
+					amount: staking.amount,
+					validator: staking.validator,
+				};
+			if (staking?.kind === "return")
+				return { ...base, kind: "returnToSpot", amount: staking.amount };
 			return rawForm(action, base);
+		}
 	}
+}
+
+/** Pre-fill the form from a move of two steps (re-proposing it): the form that names its end. */
+export function formFromMove(
+	move: Pick<Move, "kind" | "amount" | "validator" | "to" | "steps">,
+	network: Network,
+): Partial<ActionForm> {
+	const chain =
+		chainChoiceFor(
+			str(move.steps[0].payload.action.signatureChainId),
+			network,
+		) ?? undefined;
+	return {
+		...(chain ? { chain } : {}),
+		kind:
+			move.kind === "stake"
+				? "stake"
+				: move.kind === "return"
+					? "returnToSpot"
+					: "moveStake",
+		amount: move.amount,
+		validator: move.validator,
+		toValidator: move.to ?? "",
+	};
 }
 
 /** The action as raw JSON, without the three fields this page sets, so the paste is not "overridden" at once. */
@@ -1157,6 +1177,10 @@ export function fieldOf(i: Issue): keyof ActionForm | null {
 			return "agentName";
 		case "action.signers":
 			return "signers";
+		case "action.validator":
+			return "validator";
+		case "action.toValidator":
+			return "toValidator";
 		case "action":
 		case "action.type":
 			return "raw";

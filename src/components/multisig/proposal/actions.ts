@@ -126,6 +126,15 @@ export async function finalise(i: {
 		signers: async (user) =>
 			(await client.multiSigSigners(user, { fresh: true })).data
 				?.authorizedUsers ?? null,
+		staking: async (user) => {
+			const [summary, delegations] = await Promise.all([
+				client.delegatorSummary(user, { fresh: true }),
+				client.delegations(user, { fresh: true }),
+			]);
+			return { summary: summary.data, delegations: delegations.data };
+		},
+		validators: async () =>
+			(await client.validatorSummaries({ fresh: true })).data,
 	});
 	if (refusals.length > 0) {
 		return stop(

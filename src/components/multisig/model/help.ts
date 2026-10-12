@@ -115,6 +115,38 @@ export const HELP = {
 		title: "Checked a moment ago",
 		body: "Signers and API wallets are read from Hyperliquid once a minute while this page is open. The round arrow reads them again at once.",
 	},
+	staking: {
+		title: "Staking",
+		body: "HYPE staked with a validator helps secure Hyperliquid and earns rewards, which are added to the stake. It stays the treasury's: it sits in the staking balance or with a validator, and only the signers can bring it back to spot.",
+	},
+	stakingBalance: {
+		title: "Staking balance",
+		body: "HYPE that was moved out of spot for staking and is not staked with a validator. It earns nothing there. It can be staked at once, or returned to spot, which takes 7 days (5 minutes on testnet).",
+	},
+	stakeLockup: {
+		title: "Lockup",
+		body: "After HYPE is staked with a validator it cannot be unstaked for 1 day (2 minutes on testnet). Adding to a stake starts that wait again for everything staked with that validator.",
+	},
+	returnQueue: {
+		title: "Return to spot",
+		body: "HYPE going from the staking balance back to spot waits 7 days (5 minutes on testnet) and then lands by itself, with no further signature. Hyperliquid lets five returns wait at once.",
+	},
+	validatorState: {
+		title: "Validator state",
+		body: "Active validators produce blocks and are paid. A jailed one was voted out by the others for not responding, and an inactive one has too little stake to be among them. A stake with either earns nothing until that changes.",
+	},
+	expectedRate: {
+		title: "Expected rate",
+		body: "Hyperliquid's own estimate of what a stake with this validator earns in a year, after the validator's commission. It is an estimate and it changes. It is shown as Hyperliquid reports it, and nobody is recommended here.",
+	},
+	moveSteps: {
+		title: "Two steps, one move",
+		body: "Hyperliquid takes one action at a time, and this takes two. They are two proposals, shown as one. Each signer signs both, and the finaliser sends the second only once Hyperliquid has accepted the first.",
+	},
+	stakingChecked: {
+		title: "Read once a minute",
+		body: "Hyperliquid does not send staking figures live, so this page asks for them once a minute while it is open, and again after a staking step. Balances, positions and orders arrive as they happen.",
+	},
 	inboxFinish: {
 		title: "Ready for you to finish",
 		body: "Enough signers have approved, or your signature is the last one missing, and you are the finaliser. Open one, check it, and send it. Start with the oldest.",

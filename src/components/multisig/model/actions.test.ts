@@ -3,6 +3,11 @@ import {
 	createProposal,
 	hasErrors,
 	type Issue,
+	judgeMove,
+	type PlainObject,
+	type Proposal,
+	tieSteps,
+	type Validator,
 } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import {
@@ -24,13 +29,16 @@ import {
 	type BuildContext,
 	buildAction,
 	buildProposalInput,
+	buildProposalInputs,
 	DEFAULT_FORM,
 	destinationOf,
 	fieldOf,
 	formFromAction,
+	formFromMove,
 	sourcePocket,
 } from "./actions";
 import { type SignerCheck, signersField } from "./signerSet";
+import type { StakingRead } from "./staking";
 
 const PURR = {
 	name: "PURR",
@@ -235,7 +243,7 @@ const VALID: Record<string, { form: ActionForm; action: object }> = {
 };
 
 describe("buildAction / buildProposalInput", () => {
-	it("lists the seven kinds once each", () => {
+	it("lists the ten kinds once each, the three staking forms as one group", () => {
 		expect(ACTION_KINDS.map((k) => k.kind)).toEqual([
 			"sendUsdc",
 			"sendToken",
@@ -243,8 +251,14 @@ describe("buildAction / buildProposalInput", () => {
 			"withdraw3",
 			"approveAgent",
 			"changeSigners",
+			"stake",
+			"returnToSpot",
+			"moveStake",
 			"raw",
 		]);
+		expect(
+			ACTION_KINDS.filter((k) => k.group === "staking").map((k) => k.label),
+		).toEqual(["Stake", "Return to spot", "Move to another validator"]);
 	});
 
 	for (const [name, v] of Object.entries(VALID)) {
@@ -1171,5 +1185,234 @@ describe("fieldOf", () => {
 		expect(at("payload.outerSigner")).toBe("finaliser");
 		expect(at("payload.nonce")).toBeNull();
 		expect(at(undefined)).toBeNull();
+	});
+});
+
+describe("the staking forms", () => {
+	const X = "0x946bf3135c7d15e4462b510f74b6e304aabb5b21";
+	const Y = "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6";
+	const validator = (address: string, name: string): Validator => ({
+		address,
+		name,
+		description: "",
+		stake: "1000",
+		isActive: true,
+		isJailed: false,
+		commission: "0.03",
+		day: null,
+		week: null,
+		month: { uptime: "1", expectedRate: "0.02" },
+	});
+	/** 400 HYPE in spot, 50 unstaked in the staking balance, 1,000 staked with X. */
+	const STAKING: StakingRead = {
+		summary: {
+			delegated: "1000",
+			undelegated: "50",
+			pendingTotal: "0",
+			pendingReturns: 0,
+		},
+		delegations: [{ validator: X, amount: "1000", lockedUntil: 0 }],
+		validators: [validator(X, "Hypurr"), validator(Y, "Nansen")],
+		spotAvailable: "400",
+	};
+	const staking = (over: Partial<BuildContext> = {}) =>
+		ctx({ staking: STAKING, now: NOW, createdBy: A, ...over });
+	/** The proposals a form makes, tied when there are two. */
+	const proposals = (f: ActionForm): Proposal[] => {
+		const drafts = buildProposalInputs(f, staking());
+		expect(drafts.issues.filter((i) => i.severity === "error")).toEqual([]);
+		const made = (drafts.inputs ?? []).map((input) => {
+			const created = createProposal(input, { now: NOW });
+			if (!created.proposal) throw new Error(JSON.stringify(created.issues));
+			return created.proposal;
+		});
+		const [first, second] = made;
+		return first && second ? [...tieSteps(first, second)] : made;
+	};
+
+	it("stake: two proposals when part has to come from spot, numbered one after the other", () => {
+		const f = form({ kind: "stake", amount: "100", validator: Y });
+		const drafts = buildProposalInputs(f, staking());
+		expect(drafts.issues).toEqual([]);
+		expect(drafts.actions).toEqual([
+			{ type: "cDeposit", ...HEAD, wei: 5000000000, nonce: NONCE },
+			{
+				type: "tokenDelegate",
+				...HEAD,
+				validator: Y,
+				wei: 10000000000,
+				isUndelegate: false,
+				nonce: NONCE + 1,
+			},
+		]);
+		expect(drafts.inputs?.map((i) => i.nonce)).toEqual([NONCE, NONCE + 1]);
+		expect(drafts.inputs?.every((i) => i.outerSigner === B)).toBe(true);
+		// the single-proposal reading gives the first step
+		expect(buildProposalInput(f, staking()).action).toEqual(drafts.actions[0]);
+		expect(buildAction(f, staking()).also).toEqual([drafts.actions[1]]);
+	});
+
+	it("the core takes both, and the two are one move", () => {
+		const [first, second] = proposals(
+			form({ kind: "stake", amount: "100", validator: Y }),
+		) as [Proposal, Proposal];
+		expect(first.meta.kind).toBe("user-signed");
+		const judged = judgeMove(first, second);
+		expect(judged.flaw).toBeNull();
+		expect(judged.move).toMatchObject({
+			kind: "stake",
+			amount: "100",
+			validator: Y,
+		});
+	});
+
+	it("stake: one proposal when the staking balance covers it", () => {
+		const drafts = buildProposalInputs(
+			form({ kind: "stake", amount: "50", validator: Y }),
+			staking(),
+		);
+		expect(drafts.inputs).toHaveLength(1);
+		expect(drafts.actions[0]).toMatchObject({
+			type: "tokenDelegate",
+			wei: 5000000000,
+			nonce: NONCE,
+		});
+		expect(
+			buildAction(
+				form({ kind: "stake", amount: "50", validator: Y }),
+				staking(),
+			).also,
+		).toEqual([]);
+	});
+
+	it("return to spot and move to another validator make their two steps", () => {
+		const back = proposals(
+			form({ kind: "returnToSpot", amount: "100", validator: X }),
+		) as [Proposal, Proposal];
+		expect(back.map((p) => p.payload.action.type)).toEqual([
+			"tokenDelegate",
+			"cWithdraw",
+		]);
+		expect(judgeMove(...back).move).toMatchObject({
+			kind: "return",
+			amount: "100",
+			validator: X,
+		});
+		const across = proposals(
+			form({ kind: "moveStake", amount: "100", validator: X, toValidator: Y }),
+		) as [Proposal, Proposal];
+		expect(judgeMove(...across).move).toMatchObject({
+			kind: "switch",
+			amount: "100",
+			validator: X,
+			to: Y,
+		});
+	});
+
+	it("nothing is built before the staking balance is read, or with errors in the form", () => {
+		const unread = buildProposalInputs(
+			form({ kind: "stake", amount: "100", validator: Y }),
+			ctx(),
+		);
+		expect(unread.inputs).toBeNull();
+		expect(unread.actions).toEqual([]);
+		expect(codes(unread.issues)).toEqual(["staking.unread"]);
+		const noAmount = buildProposalInputs(
+			form({ kind: "stake", amount: "", validator: Y }),
+			staking(),
+		);
+		expect(noAmount.inputs).toBeNull();
+		expect(codes(noAmount.issues)).toEqual(["field.required"]);
+		// the finaliser is asked for like everywhere
+		const noFinaliser = buildProposalInputs(
+			form({ kind: "stake", amount: "100", validator: Y, finaliser: "" }),
+			staking(),
+		);
+		expect(noFinaliser.inputs).toBeNull();
+		expect(noFinaliser.actions).toHaveLength(2);
+		expect(codes(noFinaliser.issues)).toEqual(["finaliser.required"]);
+	});
+
+	it("a warning does not stop the proposals", () => {
+		// adding to the stake with X locks all of it again: said, not refused
+		const drafts = buildProposalInputs(
+			form({ kind: "stake", amount: "100", validator: X }),
+			staking(),
+		);
+		expect(codes(drafts.issues)).toEqual(["stake.relocks"]);
+		expect(drafts.inputs).toHaveLength(2);
+	});
+
+	it("uses the proposal's number as the clock when the page gives none", () => {
+		const locked: StakingRead = {
+			...STAKING,
+			delegations: [{ validator: X, amount: "1000", lockedUntil: NONCE + 1 }],
+		};
+		const f = form({ kind: "returnToSpot", amount: "100", validator: X });
+		// a locked stake is no reason against proposing, whichever clock is used
+		expect(
+			buildProposalInputs(f, ctx({ staking: locked })).inputs,
+		).toHaveLength(2);
+	});
+
+	it("their type is not known before the plan, and none is numbered after the sends on record", () => {
+		for (const kind of ["stake", "returnToSpot", "moveStake"] as const)
+			expect(actionTypeOf({ kind, raw: "" })).toBeNull();
+	});
+
+	it("puts an issue under the field it is about", () => {
+		const at = (path: string) =>
+			fieldOf({ code: "x", severity: "error", message: "", path });
+		expect(at("action.validator")).toBe("validator");
+		expect(at("action.toValidator")).toBe("toValidator");
+		expect(at("action.amount")).toBe("amount");
+	});
+
+	it("a move comes back as the form that names its end", () => {
+		const cases: ActionForm[] = [
+			form({ kind: "stake", amount: "100", validator: Y }),
+			form({ kind: "returnToSpot", amount: "100", validator: X }),
+			form({ kind: "moveStake", amount: "100", validator: X, toValidator: Y }),
+		];
+		for (const f of cases) {
+			const [first, second] = proposals(f) as [Proposal, Proposal];
+			const move = judgeMove(first, second).move;
+			if (!move) throw new Error("no move");
+			expect(formFromMove(move, "testnet")).toEqual({
+				chain: "hyperevm",
+				kind: f.kind,
+				amount: f.amount,
+				validator: f.validator,
+				toValidator: f.toValidator,
+			});
+		}
+	});
+
+	it("a single stake or return comes back as its form; the other two steps stay as they are", () => {
+		const stake: PlainObject = {
+			type: "tokenDelegate",
+			...HEAD,
+			validator: Y,
+			wei: 10000000000,
+			isUndelegate: false,
+			nonce: NONCE,
+		};
+		expect(formFromAction(stake, "testnet")).toEqual({
+			chain: "hyperevm",
+			kind: "stake",
+			amount: "100",
+			validator: Y,
+		});
+		expect(
+			formFromAction(
+				{ type: "cWithdraw", ...HEAD, wei: 2000000, nonce: NONCE },
+				"testnet",
+			),
+		).toEqual({ chain: "hyperevm", kind: "returnToSpot", amount: "0.02" });
+		for (const alone of [
+			{ ...stake, isUndelegate: true },
+			{ type: "cDeposit", ...HEAD, wei: 2000000, nonce: NONCE },
+		] as PlainObject[])
+			expect(formFromAction(alone, "testnet").kind).toBe("raw");
 	});
 });

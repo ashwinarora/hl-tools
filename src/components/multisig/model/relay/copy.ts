@@ -125,6 +125,8 @@ export function afterRejection(httpStatus: unknown): string {
  * is: the prompt shows the treasury and the finaliser every time, and then
  * the fields of the action itself.
  */
+const STAKING_WEI_HINT =
+	"Your wallet will show the treasury, the finaliser and the amount as a whole number: 100000000 is 1 HYPE. Check them there.";
 const SIGN_HINTS: Readonly<Record<string, string>> = {
 	convertToMultiSigUser:
 		"Your wallet will show the treasury, the finaliser and the new list of signers with the number that must sign. Check them there.",
@@ -132,6 +134,11 @@ const SIGN_HINTS: Readonly<Record<string, string>> = {
 		"Your wallet will show the treasury, the finaliser and the address of the API wallet. Check them there.",
 	usdClassTransfer:
 		"Your wallet will show the treasury, the finaliser, the amount and the direction. Check them there.",
+	// the staking actions carry HYPE as a whole number with 8 decimals
+	cDeposit: STAKING_WEI_HINT,
+	cWithdraw: STAKING_WEI_HINT,
+	tokenDelegate:
+		"Your wallet will show the treasury, the finaliser, the validator's address and the amount as a whole number: 100000000 is 1 HYPE. “isUndelegate” reads false for a stake and true for an unstake. Check them there.",
 };
 
 /** The actions that pay someone: the prompt names a destination and an amount. */
