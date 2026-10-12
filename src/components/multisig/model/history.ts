@@ -134,7 +134,8 @@ export interface SaveResult {
  * Merge `incoming` with the stored copy of the same digest and write the
  * result. A copy whose payload differs from the stored one is refused: for
  * user-signed actions `vaultAddress` and `expiresAfter` are outside the digest,
- * so an equal digest does not prove an equal payload.
+ * so an equal digest does not prove an equal payload. The stored copy's
+ * unsigned fields (title, note) stay as they are.
  */
 export function saveProposal(
 	incoming: Proposal,
@@ -156,6 +157,10 @@ export function saveProposal(
 		}
 		const next: Proposal = {
 			...m.merged,
+			// The title, the note and the rest of `meta` are signed by nobody. A
+			// copy that comes back brings signatures; it never rewrites or adds to
+			// what this browser already holds about the proposal (audit F-026).
+			meta: existing ? existing.meta : m.merged.meta,
 			receipt: betterReceipt(existing?.receipt ?? null, incoming.receipt),
 		};
 		await put(next, deps.now);

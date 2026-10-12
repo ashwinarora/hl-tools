@@ -61,6 +61,35 @@ describe("history", () => {
 		expect(toStored({ ...p, receipt: failed() }).submitted).toBe("error");
 	});
 
+	it("takes signatures from a returned copy, never its title or note (audit F-026)", async () => {
+		const base = makeProposal({ title: "pay Bob" });
+		const mine = await signAs(base, 1);
+		await saveProposal(mine);
+		expect(mine.meta.note).toBeNull();
+		// the copy that comes back was edited on the way: nobody signs these fields
+		const returned = await signAs(
+			{
+				...base,
+				meta: {
+					...base.meta,
+					title: "pay Mallory",
+					note: "changed in transit",
+				},
+			},
+			2,
+		);
+		const merged = await saveProposal(returned);
+		expect(merged.saved).toBe(true);
+		expect(merged.proposal.signatures).toHaveLength(2);
+		expect(merged.proposal.meta).toEqual(mine.meta);
+		expect((await loadProposal(base.digest)).proposal?.meta).toEqual(mine.meta);
+		// a first copy is stored as it came: there is nothing else to go by
+		const first = makeProposal({ title: "first seen here", leader: A });
+		expect((await saveProposal(first)).proposal.meta.title).toBe(
+			"first seen here",
+		);
+	});
+
 	it("merges a returned copy by signer instead of appending", async () => {
 		const base = makeProposal();
 		const withA = await signAs(base, 1);
