@@ -37,6 +37,14 @@ const KIND: Readonly<Record<StakingAction["kind"], StakingEvent["kind"]>> = {
 };
 const ZERO_HASH = /^0x0+$/;
 
+/**
+ * How far before the moment a proposal says it was made a step may lie and
+ * still be its own: the proposer's clock and Hyperliquid's are not the same
+ * clock. Two minutes; a step made earlier than that was made before the
+ * proposal existed and is somebody else's.
+ */
+export const MADE_BEFORE_SLACK_MS = 2 * 60_000;
+
 const sameStep = (a: StakingAction, b: StakingAction): boolean =>
 	a.kind === b.kind &&
 	Decimal.parse(a.amount).eq(Decimal.parse(b.amount)) &&
@@ -47,22 +55,34 @@ const sameStep = (a: StakingAction, b: StakingAction): boolean =>
  * The steps in the history that agree with the action in everything the
  * history shows, and lie where an action with this number can have landed.
  * Newest first. Empty for an action that is no staking step.
+ *
+ * `madeAt` is when the proposal says it was made. A step from before that
+ * cannot be the proposal's, however alike: an earlier stake of the same
+ * amount with the same validator is the common case, and without this bound
+ * a brand-new proposal would be told it "may be carried out already" whenever
+ * the explorer cannot say whose that earlier step was. Null when the document
+ * does not say: then only the number bounds it.
  */
 export function stakingCandidates(
 	action: PlainObject,
 	nonce: number,
 	events: readonly StakingEvent[],
+	madeAt: number | null = null,
 ): StakingEvent[] {
 	const step = stakingActionOf(action);
 	if (!step) return [];
 	const validator = "validator" in step ? step.validator : null;
+	const earliest = Math.max(
+		nonce - LANDS_BEFORE_NONCE_MS,
+		madeAt === null ? Number.NEGATIVE_INFINITY : madeAt - MADE_BEFORE_SLACK_MS,
+	);
 	return events
 		.filter(
 			(e) =>
 				e.kind === KIND[step.kind] &&
 				e.validator === validator &&
 				Decimal.parse(e.amount).eq(Decimal.parse(step.amount)) &&
-				e.time >= nonce - LANDS_BEFORE_NONCE_MS &&
+				e.time >= earliest &&
 				e.time <= nonce + LANDS_AFTER_NONCE_MS &&
 				!ZERO_HASH.test(e.hash),
 		)
@@ -92,12 +112,19 @@ export function stepRecord(i: {
 	readonly account: string;
 	readonly events: readonly StakingEvent[] | null;
 	readonly lookups: ReadonlyMap<string, Lookup>;
+	/** When the proposal says it was made (`stakingCandidates`); null when it does not. */
+	readonly madeAt?: number | null;
 }): StepRecord {
 	if (!i.events) return { kind: "unread" };
 	const step = stakingActionOf(i.action);
 	const open: StakingEvent[] = [];
 	let pending = false;
-	for (const e of stakingCandidates(i.action, i.nonce, i.events)) {
+	for (const e of stakingCandidates(
+		i.action,
+		i.nonce,
+		i.events,
+		i.madeAt ?? null,
+	)) {
 		const lookup = i.lookups.get(e.hash);
 		if (!lookup || lookup.state === "pending") {
 			pending = true;

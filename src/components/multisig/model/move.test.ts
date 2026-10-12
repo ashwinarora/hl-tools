@@ -153,7 +153,7 @@ describe("what two steps mean together", () => {
 			"Step 1 may be carried out already · look before proposing again",
 		);
 		expect(one.detail).toBe(
-			`Step 1: Hyperliquid answered "duplicate nonce" to it, so its number had been used by an earlier submission. If that one went through, the step is carried out already. Look at the treasury's staking history before proposing it again. Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.`,
+			`Step 1: Hyperliquid answered "duplicate nonce" to it, so its number had been used by an earlier submission. If that one went through, the step is carried out already. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was. Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.`,
 		);
 		const two = deriveMoveStage([done(), refusedWith("nonce-duplicate")]);
 		expect([two.phase, two.unsure]).toEqual(["broken", 1]);
@@ -206,7 +206,7 @@ describe("what two steps mean together", () => {
 			"Step 1 was carried out · step 2 may be too",
 		]);
 		expect(gone.detail).toBe(
-			"Step 2: [withdrawn]. Hyperliquid's staking history shows a step like it, so it may have been carried out all the same: the explorer did not say. Look at the treasury's staking history before proposing it again.",
+			"Step 2: [withdrawn]. Hyperliquid's staking history shows a step like it, so it may have been carried out all the same: the explorer did not say. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was.",
 		);
 		const first = deriveMoveStage([like(step("expired")), step("expired")]);
 		expect([first.phase, first.unsure]).toEqual(["halted", 0]);

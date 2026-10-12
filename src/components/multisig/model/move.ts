@@ -150,8 +150,8 @@ const mayBeDone = (s: StepView): boolean =>
 /** Why a step that is over may have been carried out all the same. */
 const maybe = (s: StepView, n: 1 | 2): Part[] =>
 	duplicate(s)
-		? say`Step ${String(n)}: Hyperliquid answered "duplicate nonce" to it, so its number had been used by an earlier submission. If that one went through, the step is carried out already. Look at the treasury's staking history before proposing it again.`
-		: say`Step ${String(n)}: ${s.stage.headlineParts}. Hyperliquid's staking history shows a step like it, so it may have been carried out all the same: the explorer did not say. Look at the treasury's staking history before proposing it again.`;
+		? say`Step ${String(n)}: Hyperliquid answered "duplicate nonce" to it, so its number had been used by an earlier submission. If that one went through, the step is carried out already. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was.`
+		: say`Step ${String(n)}: ${s.stage.headlineParts}. Hyperliquid's staking history shows a step like it, so it may have been carried out all the same: the explorer did not say. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was.`;
 
 /**
  * Under "Your part" of a move that is over while the relay still holds a step

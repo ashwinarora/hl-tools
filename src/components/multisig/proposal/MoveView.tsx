@@ -190,7 +190,12 @@ export function MoveView({
 	);
 	const repropose =
 		stage.phase === "broken" ? (
-			again(second, "Propose it again")
+			// said by its number where it may be done already: the reader should
+			// know it is a new step 2 that is being made
+			again(
+				second,
+				stage.unsure === 1 ? "Propose step 2 again" : "Propose it again",
+			)
 		) : stage.unsure === 0 ? (
 			// whether step 1 was carried out is not known from the answer: the
 			// reader looks, then proposes what is really left

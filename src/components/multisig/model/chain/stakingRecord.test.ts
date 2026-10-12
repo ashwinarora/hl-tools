@@ -2,7 +2,11 @@ import type { ExplorerTx, PlainObject, StakingEvent } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import { NONCE, TREASURY } from "#/test/keys";
 import type { Lookup } from "./match";
-import { stakingCandidates, stepRecord } from "./stakingRecord";
+import {
+	MADE_BEFORE_SLACK_MS,
+	stakingCandidates,
+	stepRecord,
+} from "./stakingRecord";
 
 const X = "0x946bf3135c7d15e4462b510f74b6e304aabb5b21";
 const Y = "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6";
@@ -70,6 +74,57 @@ describe("the steps in the staking history that could be a proposal's", () => {
 		expect(
 			stakingCandidates(stake(), NONCE, events).map((e) => e.hash),
 		).toEqual([h(8), h(1), h(2)]);
+	});
+	it("a step made before the proposal existed is never its own, however alike", () => {
+		// the same stake carried out 36 minutes before this proposal was made,
+		// as two proposals of one amount with one validator leave it
+		const earlier = event(h(1), { time: NONCE - 36 * 60_000 });
+		const later = event(h(2), { time: NONCE + 5_000 });
+		const made = NONCE;
+		expect(
+			stakingCandidates(stake(), NONCE, [earlier, later], made).map(
+				(e) => e.hash,
+			),
+		).toEqual([h(2)]);
+		// the two clocks are not one clock: a little before still counts
+		const justBefore = event(h(3), { time: made - MADE_BEFORE_SLACK_MS });
+		const tooEarly = event(h(4), { time: made - MADE_BEFORE_SLACK_MS - 1 });
+		expect(
+			stakingCandidates(stake(), NONCE, [justBefore, tooEarly], made).map(
+				(e) => e.hash,
+			),
+		).toEqual([h(3)]);
+		// a document that does not say when it was made: the number alone bounds it
+		expect(
+			stakingCandidates(stake(), NONCE, [earlier, later], null).map(
+				(e) => e.hash,
+			),
+		).toEqual([h(2), h(1)]);
+		// a proposal numbered ahead of its making is still bound by its making
+		expect(stakingCandidates(stake(), NONCE + HOUR, [earlier], made)).toEqual(
+			[],
+		);
+		// and so a new proposal is not told it may be done when the explorer is silent
+		const failed: Lookup = { state: "failed" };
+		expect(
+			stepRecord({
+				action: stake(),
+				nonce: NONCE,
+				account: TREASURY,
+				events: [earlier],
+				lookups: new Map([[h(1), failed]]),
+				madeAt: made,
+			}),
+		).toEqual({ kind: "none" });
+		expect(
+			stepRecord({
+				action: stake(),
+				nonce: NONCE,
+				account: TREASURY,
+				events: [earlier],
+				lookups: new Map([[h(1), failed]]),
+			}).kind,
+		).toBe("likely");
 	});
 	it("each kind of step has its own row in the history", () => {
 		const moveIn: PlainObject = {

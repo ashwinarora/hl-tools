@@ -53,6 +53,8 @@ export function useStakingStep(
 	active: boolean,
 ): StakingStep {
 	const { action, nonce, network, multiSigUser } = proposal.payload;
+	// a step made before the proposal existed is never taken for its own
+	const madeAt = proposal.meta.createdAt;
 	const step = useMemo(() => stakingActionOf(action), [action]);
 	const target = useMemo<AccountTarget | null>(
 		() => (step && active ? { address: multiSigUser, network } : null),
@@ -68,9 +70,9 @@ export function useStakingStep(
 	const candidates = useMemo(
 		() =>
 			target && staking.history
-				? stakingCandidates(action, nonce, staking.history)
+				? stakingCandidates(action, nonce, staking.history, madeAt)
 				: [],
-		[target, staking.history, action, nonce],
+		[target, staking.history, action, nonce, madeAt],
 	);
 	const hashes = useMemo(() => candidates.map((e) => e.hash), [candidates]);
 	const lookups = useTxLookups(network, hashes);
@@ -83,9 +85,10 @@ export function useStakingStep(
 						account: multiSigUser,
 						events: staking.history,
 						lookups,
+						madeAt,
 					})
 				: null,
-		[target, action, nonce, multiSigUser, staking.history, lookups],
+		[target, action, nonce, multiSigUser, staking.history, lookups, madeAt],
 	);
 
 	const lockedUntil =
