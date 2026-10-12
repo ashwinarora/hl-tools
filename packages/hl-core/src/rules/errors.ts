@@ -3,7 +3,7 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.7.0",
+	version: "1.8.0",
 	verifiedAt: "2026-10-12",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
@@ -60,6 +60,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.7.0",
 			date: "2026-10-12",
 			note: 'Recorded on testnet through a multi-sig: "Withdrawal is smaller than fee." (a withdraw3 of exactly the bridge\'s 1 USDC fee).',
+		},
+		{
+			version: "1.8.0",
+			date: "2026-10-12",
+			note: 'Staking, recorded on testnet through a multi-sig (fixtures/multisig/staking.json): "Insufficient funds available to deposit." (moving more HYPE into staking than spot can release), "Insufficient balance to delegate" (staking more than the staking balance holds unstaked), "Unknown validator", "Cannot undelegate during lockup period after delegating or voting." (an unstake before the stake\'s lockup has ended, which a top-up restarts), "Insufficient balance to undelegate", "Insufficient balance to withdraw from CStaking" (returning more than is unstaked) and "Too many concurrent CStaking withdrawals" (a sixth return while five wait).',
 		},
 	],
 });
@@ -572,6 +577,75 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		cause:
 			"A sendAsset names a token the balance it is taken from or sent to cannot hold: only the collateral token (USDC on the first perp dex) moves into or out of a perps balance.",
 		fix: "Send a spot token from spot to spot. To move its value into perps, sell it for USDC first.",
+		documented: false,
+	},
+	{
+		id: "staking-deposit-funds",
+		pattern: /insufficient funds available to deposit/i,
+		example: "Insufficient funds available to deposit.",
+		category: "margin",
+		cause:
+			"The action moves more HYPE from the spot balance into staking than the spot balance can release (its total minus what is on hold).",
+		fix: "Lower the amount to the HYPE that is available in spot, or bring more HYPE into the account first.",
+		documented: false,
+	},
+	{
+		id: "stake-balance",
+		pattern: /insufficient balance to delegate/i,
+		example: "Insufficient balance to delegate",
+		category: "margin",
+		cause:
+			"The action stakes more HYPE than the staking balance holds unstaked. HYPE has to be moved from spot into the staking balance before it can be staked.",
+		fix: "Move the missing HYPE from spot into the staking balance first, or stake less.",
+		documented: false,
+	},
+	{
+		id: "validator-unknown",
+		pattern: /^unknown validator/i,
+		example: "Unknown validator",
+		category: "account",
+		cause: "The address the action stakes with is not a validator.",
+		fix: "Use a validator's own address, as Hyperliquid's validator list gives it.",
+		documented: false,
+	},
+	{
+		id: "unstake-lockup",
+		pattern: /cannot undelegate during lockup period/i,
+		example:
+			"Cannot undelegate during lockup period after delegating or voting.",
+		category: "limits",
+		cause:
+			"The stake with this validator is still locked: a stake cannot be removed for a day after it was made or added to (2 minutes on testnet), and adding to it starts the wait again for all of it.",
+		fix: "Wait until the lockup of this stake has ended (the account's list of stakes gives the moment), then propose the unstake again.",
+		documented: false,
+	},
+	{
+		id: "unstake-balance",
+		pattern: /insufficient balance to undelegate/i,
+		example: "Insufficient balance to undelegate",
+		category: "margin",
+		cause: "The action unstakes more HYPE than is staked with that validator.",
+		fix: "Lower the amount to what is staked with this validator.",
+		documented: false,
+	},
+	{
+		id: "return-balance",
+		pattern: /insufficient balance to withdraw from cstaking/i,
+		example: "Insufficient balance to withdraw from CStaking",
+		category: "margin",
+		cause:
+			"The action returns more HYPE to spot than the staking balance holds unstaked. Staked HYPE has to be unstaked before it can be returned.",
+		fix: "Unstake the missing HYPE first, or return less.",
+		documented: false,
+	},
+	{
+		id: "return-queue-full",
+		pattern: /too many concurrent cstaking withdrawals/i,
+		example: "Too many concurrent CStaking withdrawals",
+		category: "limits",
+		cause:
+			"Five returns from staking to spot are already waiting for this account, and Hyperliquid takes no more than five at once.",
+		fix: "Wait until one of the waiting returns has landed in spot, then propose this one again.",
 		documented: false,
 	},
 	{

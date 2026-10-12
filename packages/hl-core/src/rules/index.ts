@@ -10,6 +10,7 @@ import { PRECISION_RULES } from "./precision.ts";
 import { PRECOMPILE_RULES } from "./precompiles.ts";
 import { RATE_LIMIT_RULES } from "./rateLimits.ts";
 import { SIGNING_RULES } from "./signing.ts";
+import { STAKING_RULES } from "./staking.ts";
 import { TRANSFER_RULES } from "./transfers.ts";
 import { WEBSOCKET_RULES } from "./websocket.ts";
 
@@ -25,6 +26,7 @@ export * from "./precision.ts";
 export * from "./precompiles.ts";
 export * from "./rateLimits.ts";
 export * from "./signing.ts";
+export * from "./staking.ts";
 export * from "./transfers.ts";
 export * from "./websocket.ts";
 
@@ -36,6 +38,7 @@ export const RULE_REGISTRY: readonly RuleSetMeta[] = [
 	SIGNING_RULES,
 	MULTISIG_RULES,
 	TRANSFER_RULES,
+	STAKING_RULES,
 	RATE_LIMIT_RULES,
 	ERROR_RULES,
 	COREWRITER_RULES,

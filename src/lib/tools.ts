@@ -200,7 +200,7 @@ export const TOOLS: readonly ToolDef[] = [
 			"Create a treasury from your own account, then propose, sign and submit native multi-sig actions — USDC and spot sends, perps ↔ spot transfers, withdrawals, API-wallet approvals, a change of signers — with your own wallet. Pass a proposal on as a link or a file, or sign in and every signer of a treasury sees it live. Signatures are verified in your browser before anything is sent.",
 		answers: "How do two of three signers get one payment onto the chain?",
 		icon: FileSignature,
-		ruleSets: ["multisig", "signing", "transfers", "errors"],
+		ruleSets: ["multisig", "signing", "transfers", "staking", "errors"],
 		primarySource: {
 			label: "Multi-sig",
 			url: `${DOCS}/hypercore/multi-sig`,

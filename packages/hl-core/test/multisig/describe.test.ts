@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { L1_ACTION_SHAPES } from "../../src/canonical.ts";
-import { describeAction, type PlainObject } from "../../src/multisig/index.ts";
+import {
+	describeAction,
+	type PlainObject,
+	RETURN_QUEUE_LINE,
+	STAKE_LOCKUP_LINE,
+} from "../../src/multisig/index.ts";
 import { USER_SIGNED_SPECS } from "../../src/rules/signing.ts";
 import { A, B, ORDER, RECIPIENT, usdSend } from "./_helpers.ts";
 
@@ -508,21 +513,28 @@ describe("describeAction details", () => {
 		expect(
 			describeAction(SAMPLES.approveBuilderFee as PlainObject).headline,
 		).toBe(`Approve builder ${B} up to 0.01%`);
-		expect(describeAction(SAMPLES.tokenDelegate as PlainObject).headline).toBe(
-			`Delegate 100000000 wei of HYPE to validator ${B}`,
+		const stake = describeAction(SAMPLES.tokenDelegate as PlainObject);
+		expect(stake.headline).toBe(`Stake 1 HYPE with validator ${B}`);
+		expect(stake.lines).toEqual([STAKE_LOCKUP_LINE]);
+		const unstake = describeAction({
+			...SAMPLES.tokenDelegate,
+			isUndelegate: true,
+		} as PlainObject);
+		expect(unstake.headline).toBe(`Unstake 1 HYPE from validator ${B}`);
+		expect(unstake.lines[0]).toContain("separate step");
+		expect(describeAction(SAMPLES.cDeposit as PlainObject).headline).toBe(
+			"Move 0.00000005 HYPE from the spot balance to the staking balance",
 		);
+		const back = describeAction(SAMPLES.cWithdraw as PlainObject);
+		expect(back.headline).toBe(
+			"Return 0.00000005 HYPE from the staking balance to the spot balance",
+		);
+		expect(back.lines).toEqual([RETURN_QUEUE_LINE]);
+		// an amount that is no whole number is shown as it stands, never guessed
 		expect(
-			describeAction({
-				...SAMPLES.tokenDelegate,
-				isUndelegate: true,
-			} as PlainObject).headline,
-		).toContain("Undelegate");
-		expect(describeAction(SAMPLES.cDeposit as PlainObject).headline).toContain(
-			"into staking",
-		);
-		expect(describeAction(SAMPLES.cWithdraw as PlainObject).lines[0]).toContain(
-			"7 days",
-		);
+			describeAction({ ...SAMPLES.cDeposit, wei: "1.5" } as PlainObject)
+				.headline,
+		).toBe("Move 1.5 wei of HYPE from the spot balance to the staking balance");
 		expect(
 			describeAction(SAMPLES.linkStakingUser as PlainObject).headline,
 		).toContain("Finalise");

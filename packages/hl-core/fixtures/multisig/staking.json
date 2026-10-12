@@ -1,0 +1,1178 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-12. The three staking actions through a 2-of-3 multi-sig (lab keys; every action went through the multi-sig envelope). `before` and `after` are what Hyperliquid reported about the account around the action (`delegatorSummary`, `delegations`, spot HYPE that is not on hold); `sentAt` is this machine's clock when it was signed; `answer` is Hyperliquid's. Testnet's lockup after staking is 2 minutes and its return queue 5 minutes. Each action is reduced to the fields that decide the outcome.",
+	"network": "testnet",
+	"validators": {
+		"HYPURR": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+		"JAILED": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+		"INACTIVE": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+		"NOBODY": "0x00000000000000000000000000000000000000aa"
+	},
+	"notes": {
+		"topUp": {
+			"lockedBefore": 1791816445746,
+			"lockedAfter": 1791820832327,
+			"unstakeAtOnce": "Cannot undelegate during lockup period after delegating or voting."
+		},
+		"moveBackToBack": {
+			"unstake": "accepted",
+			"stake": "accepted"
+		},
+		"lockupEnd": {
+			"lockedUntil": 1791820832327,
+			"tries": [
+				{
+					"offsetMs": -2500,
+					"sentAt": 1791820830471,
+					"result": "Cannot undelegate during lockup period after delegating or voting."
+				},
+				{
+					"offsetMs": 300,
+					"sentAt": 1791820833876,
+					"result": "accepted"
+				}
+			]
+		}
+	},
+	"steps": [
+		{
+			"about": "stake with nothing like that in the staking balance",
+			"action": {
+				"type": "tokenDelegate",
+				"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+				"wei": 900000000,
+				"isUndelegate": false
+			},
+			"sentAt": 1791820700459,
+			"before": {
+				"at": 1791820700012,
+				"spotAvailable": "0.089",
+				"undelegated": "0.0004",
+				"delegated": "0.0106",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.01",
+						"lockedUntilTimestamp": 1791816445746
+					}
+				]
+			},
+			"answer": {
+				"status": "err",
+				"response": "Insufficient balance to delegate"
+			},
+			"after": {
+				"at": 1791820702770,
+				"spotAvailable": "0.089",
+				"undelegated": "0.0004",
+				"delegated": "0.0106",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.01",
+						"lockedUntilTimestamp": 1791816445746
+					}
+				]
+			},
+			"history": null
+		},
+		{
+			"about": "move in more than spot holds",
+			"action": {
+				"type": "cDeposit",
+				"wei": 900000000
+			},
+			"sentAt": 1791820704095,
+			"before": {
+				"at": 1791820703741,
+				"spotAvailable": "0.089",
+				"undelegated": "0.0004",
+				"delegated": "0.0106",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.01",
+						"lockedUntilTimestamp": 1791816445746
+					}
+				]
+			},
+			"answer": {
+				"status": "err",
+				"response": "Insufficient funds available to deposit."
+			},
+			"after": {
+				"at": 1791820706317,
+				"spotAvailable": "0.089",
+				"undelegated": "0.0004",
+				"delegated": "0.0106",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.01",
+						"lockedUntilTimestamp": 1791816445746
+					}
+				]
+			},
+			"history": null
+		},
+		{
+			"about": "move in",
+			"action": {
+				"type": "cDeposit",
+				"wei": 2000000
+			},
+			"sentAt": 1791820707202,
+			"before": {
+				"at": 1791820706847,
+				"spotAvailable": "0.089",
+				"undelegated": "0.0004",
+				"delegated": "0.0106",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.01",
+						"lockedUntilTimestamp": 1791816445746
+					}
+				]
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791820709648,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0204",
+				"delegated": "0.0106",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.01",
+						"lockedUntilTimestamp": 1791816445746
+					}
+				]
+			},
+			"history": {
+				"time": 1791820707922,
+				"hash": "0x7b66ac4dd6eb43d97ce0042b8694b0010600c43371ee62ab1f2f57a095ef1dc4",
+				"delta": {
+					"cDeposit": {
+						"amount": "0.02"
+					}
+				}
+			}
+		},
+		{
+			"about": "stake more with a validator whose lockup had passed",
+			"action": {
+				"type": "tokenDelegate",
+				"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+				"wei": 1000000,
+				"isUndelegate": false
+			},
+			"sentAt": 1791820711800,
+			"before": {
+				"at": 1791820711449,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0204",
+				"delegated": "0.0106",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.01",
+						"lockedUntilTimestamp": 1791816445746
+					}
+				]
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791820713995,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": {
+				"time": 1791820712327,
+				"hash": "0x6572579aff42859366ec042b8694fc0000ad6f809a45a465093b02edbe465f7e",
+				"delta": {
+					"delegate": {
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.01",
+						"isUndelegate": false
+					}
+				}
+			}
+		},
+		{
+			"about": "unstake part of it at once, after the top-up",
+			"action": {
+				"type": "tokenDelegate",
+				"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+				"wei": 200000,
+				"isUndelegate": true
+			},
+			"sentAt": 1791820715955,
+			"before": {
+				"at": 1791820715562,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "err",
+				"response": "Cannot undelegate during lockup period after delegating or voting."
+			},
+			"after": {
+				"at": 1791820718493,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": null
+		},
+		{
+			"about": "unstake from one validator (its lockup had passed)",
+			"action": {
+				"type": "tokenDelegate",
+				"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+				"wei": 30000,
+				"isUndelegate": true
+			},
+			"sentAt": 1791820719519,
+			"before": {
+				"at": 1791820719169,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816549620
+					},
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791820721799,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0107",
+				"delegated": "0.0203",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": {
+				"time": 1791820720119,
+				"hash": "0x1a7c68be2252c0a01bf6042b86957401010080a3bd55df72be451410e1569a8a",
+				"delta": {
+					"delegate": {
+						"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+						"amount": "0.0003",
+						"isUndelegate": true
+					}
+				}
+			}
+		},
+		{
+			"about": "and at once stake that with another",
+			"action": {
+				"type": "tokenDelegate",
+				"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+				"wei": 30000,
+				"isUndelegate": false
+			},
+			"sentAt": 1791820723322,
+			"before": {
+				"at": 1791820722822,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0107",
+				"delegated": "0.0203",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"lockedUntilTimestamp": 1791816554852
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791820725788,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": {
+				"time": 1791820724012,
+				"hash": "0xae82c862ebb6c9bfaffc042b8695b5010200e04886b9e891524b73b5aabaa3aa",
+				"delta": {
+					"delegate": {
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0003",
+						"isUndelegate": false
+					}
+				}
+			}
+		},
+		{
+			"about": "stake with an address that is no validator",
+			"action": {
+				"type": "tokenDelegate",
+				"validator": "0x00000000000000000000000000000000000000aa",
+				"wei": 10000,
+				"isUndelegate": false
+			},
+			"sentAt": 1791820726839,
+			"before": {
+				"at": 1791820726488,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "err",
+				"response": "Unknown validator"
+			},
+			"after": {
+				"at": 1791820729273,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": null
+		},
+		{
+			"about": "unstake more than is staked there",
+			"action": {
+				"type": "tokenDelegate",
+				"validator": "0x0000472d488d33b7329ca53bfcc3918961d55f8e",
+				"wei": 500000000,
+				"isUndelegate": true
+			},
+			"sentAt": 1791820730141,
+			"before": {
+				"at": 1791820729794,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "err",
+				"response": "Insufficient balance to undelegate"
+			},
+			"after": {
+				"at": 1791820732344,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": null
+		},
+		{
+			"about": "return more than is unstaked",
+			"action": {
+				"type": "cWithdraw",
+				"wei": 500000000
+			},
+			"sentAt": 1791820733214,
+			"before": {
+				"at": 1791820732865,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "err",
+				"response": "Insufficient balance to withdraw from CStaking"
+			},
+			"after": {
+				"at": 1791820735426,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": null
+		},
+		{
+			"about": "return 1 of 5",
+			"action": {
+				"type": "cWithdraw",
+				"wei": 10000
+			},
+			"sentAt": 1791820736466,
+			"before": {
+				"at": 1791820735954,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0104",
+				"delegated": "0.0206",
+				"pendingReturns": 0,
+				"pendingTotal": "0.0",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791820738853,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0103",
+				"delegated": "0.0206",
+				"pendingReturns": 1,
+				"pendingTotal": "0.0001",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": {
+				"time": 1791820737080,
+				"hash": "0xdd24a859a7a4959fde9e042b869692010800c03f42a7b47180ed53ac66a86f8a",
+				"delta": {
+					"withdrawal": {
+						"amount": "0.0001",
+						"phase": "initiated"
+					}
+				}
+			}
+		},
+		{
+			"about": "return 2 of 5",
+			"action": {
+				"type": "cWithdraw",
+				"wei": 10000
+			},
+			"sentAt": 1791820740546,
+			"before": {
+				"at": 1791820740029,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0103",
+				"delegated": "0.0206",
+				"pendingReturns": 1,
+				"pendingTotal": "0.0001",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791820742803,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0102",
+				"delegated": "0.0206",
+				"pendingReturns": 2,
+				"pendingTotal": "0.0002",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": {
+				"time": 1791820741122,
+				"hash": "0xf899086779498cf0fa12042b8696ce010600204d144cabc39c61b3ba384d66db",
+				"delta": {
+					"withdrawal": {
+						"amount": "0.0001",
+						"phase": "initiated"
+					}
+				}
+			}
+		},
+		{
+			"about": "return 3 of 5",
+			"action": {
+				"type": "cWithdraw",
+				"wei": 10000
+			},
+			"sentAt": 1791820744159,
+			"before": {
+				"at": 1791820743652,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0102",
+				"delegated": "0.0206",
+				"pendingReturns": 2,
+				"pendingTotal": "0.0002",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791820746382,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0101",
+				"delegated": "0.0206",
+				"pendingReturns": 3,
+				"pendingTotal": "0.0003",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": {
+				"time": 1791820744711,
+				"hash": "0xdad84434ed22b70bdc52042b86970b0103005c1a8825d5dd7ea0ef87ac2690f6",
+				"delta": {
+					"withdrawal": {
+						"amount": "0.0001",
+						"phase": "initiated"
+					}
+				}
+			}
+		},
+		{
+			"about": "return 4 of 5",
+			"action": {
+				"type": "cWithdraw",
+				"wei": 10000
+			},
+			"sentAt": 1791820747575,
+			"before": {
+				"at": 1791820747224,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0101",
+				"delegated": "0.0206",
+				"pendingReturns": 3,
+				"pendingTotal": "0.0003",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791820750064,
+				"spotAvailable": "0.069",
+				"undelegated": "0.01",
+				"delegated": "0.0206",
+				"pendingReturns": 4,
+				"pendingTotal": "0.0004",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": {
+				"time": 1791820748244,
+				"hash": "0x284dbea91c35a0ba29c7042b869743010400d68eb738bf8ccc1669fbdb397aa4",
+				"delta": {
+					"withdrawal": {
+						"amount": "0.0001",
+						"phase": "initiated"
+					}
+				}
+			}
+		},
+		{
+			"about": "return 5 of 5",
+			"action": {
+				"type": "cWithdraw",
+				"wei": 10000
+			},
+			"sentAt": 1791820751573,
+			"before": {
+				"at": 1791820751223,
+				"spotAvailable": "0.069",
+				"undelegated": "0.01",
+				"delegated": "0.0206",
+				"pendingReturns": 4,
+				"pendingTotal": "0.0004",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791820753776,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0099",
+				"delegated": "0.0206",
+				"pendingReturns": 5,
+				"pendingTotal": "0.0005",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": {
+				"time": 1791820752097,
+				"hash": "0x73aa9395c32bc37a7524042b869783010b00ab7b5e2ee24c17733ee8822f9d65",
+				"delta": {
+					"withdrawal": {
+						"amount": "0.0001",
+						"phase": "initiated"
+					}
+				}
+			}
+		},
+		{
+			"about": "a sixth return while five wait",
+			"action": {
+				"type": "cWithdraw",
+				"wei": 10000
+			},
+			"sentAt": 1791820754976,
+			"before": {
+				"at": 1791820754618,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0099",
+				"delegated": "0.0206",
+				"pendingReturns": 5,
+				"pendingTotal": "0.0005",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "err",
+				"response": "Too many concurrent CStaking withdrawals"
+			},
+			"after": {
+				"at": 1791820757201,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0099",
+				"delegated": "0.0206",
+				"pendingReturns": 5,
+				"pendingTotal": "0.0005",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": null
+		},
+		{
+			"about": "unstake -2500 ms from the end of the lockup",
+			"action": {
+				"type": "tokenDelegate",
+				"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+				"wei": 10000,
+				"isUndelegate": true
+			},
+			"sentAt": 1791820830471,
+			"before": {
+				"at": 1791820830108,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0099",
+				"delegated": "0.0206",
+				"pendingReturns": 5,
+				"pendingTotal": "0.0005",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "err",
+				"response": "Cannot undelegate during lockup period after delegating or voting."
+			},
+			"after": {
+				"at": 1791820832685,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0099",
+				"delegated": "0.0206",
+				"pendingReturns": 5,
+				"pendingTotal": "0.0005",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": null
+		},
+		{
+			"about": "unstake 300 ms from the end of the lockup",
+			"action": {
+				"type": "tokenDelegate",
+				"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+				"wei": 10000,
+				"isUndelegate": true
+			},
+			"sentAt": 1791820833876,
+			"before": {
+				"at": 1791820833373,
+				"spotAvailable": "0.069",
+				"undelegated": "0.0099",
+				"delegated": "0.0206",
+				"pendingReturns": 5,
+				"pendingTotal": "0.0005",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.02",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791820836100,
+				"spotAvailable": "0.069",
+				"undelegated": "0.01",
+				"delegated": "0.0205",
+				"pendingReturns": 5,
+				"pendingTotal": "0.0005",
+				"delegations": [
+					{
+						"validator": "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6",
+						"amount": "0.0006",
+						"lockedUntilTimestamp": 1791820844012
+					},
+					{
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.0199",
+						"lockedUntilTimestamp": 1791820832327
+					}
+				]
+			},
+			"history": {
+				"time": 1791820834432,
+				"hash": "0x8c03376e2ba071b58d7c042b869cab010b004f53c6a390872fcbe2c0eaa44ba0",
+				"delta": {
+					"delegate": {
+						"validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+						"amount": "0.0001",
+						"isUndelegate": true
+					}
+				}
+			}
+		}
+	]
+}

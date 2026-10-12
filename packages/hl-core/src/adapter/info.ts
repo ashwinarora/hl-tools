@@ -9,6 +9,16 @@
 
 import { HttpTransport } from "@nktkas/hyperliquid";
 import { type Observed, observed, toAddress } from "../identity.ts";
+import {
+	type Delegation,
+	parseDelegations,
+	parseDelegatorHistory,
+	parseDelegatorSummary,
+	parseValidators,
+	type StakingEvent,
+	type StakingSummary,
+	type Validator,
+} from "../multisig/staking.ts";
 import type { Policy } from "../multisig/types.ts";
 import { type Network, networkConfig } from "../network.ts";
 import {
@@ -364,6 +374,56 @@ export class InfoClient<N extends Network> {
 			type: "openOrders",
 			user: user.toLowerCase(),
 		});
+	}
+
+	/**
+	 * An account's staking balance. Staking is on no WebSocket channel, so it
+	 * is asked for. Null when the answer has a shape this version cannot read.
+	 */
+	async delegatorSummary(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<StakingSummary | null, N>> {
+		const r = await this.info<unknown>(
+			{ type: "delegatorSummary", user: user.toLowerCase() },
+			options,
+		);
+		return { ...r, data: parseDelegatorSummary(r.data) };
+	}
+
+	/** An account's stakes, one per validator, each with the end of its lockup. */
+	async delegations(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<Delegation[] | null, N>> {
+		const r = await this.info<unknown>(
+			{ type: "delegations", user: user.toLowerCase() },
+			options,
+		);
+		return { ...r, data: parseDelegations(r.data) };
+	}
+
+	/** Every staking step of an account, newest first. */
+	async delegatorHistory(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<StakingEvent[] | null, N>> {
+		const r = await this.info<unknown>(
+			{ type: "delegatorHistory", user: user.toLowerCase() },
+			options,
+		);
+		return { ...r, data: parseDelegatorHistory(r.data) };
+	}
+
+	/**
+	 * Every validator with its state. The request is not in Hyperliquid's API
+	 * documentation (rules/staking.ts), so a caller has to cope with null.
+	 */
+	async validatorSummaries(
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<Validator[] | null, N>> {
+		const r = await this.info<unknown>({ type: "validatorSummaries" }, options);
+		return { ...r, data: parseValidators(r.data) };
 	}
 
 	allMids(dex?: string): Promise<Observed<Record<string, string>, N>> {

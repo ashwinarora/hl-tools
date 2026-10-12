@@ -145,3 +145,85 @@ describe("InfoClient account methods", () => {
 		expect((await client.multiSigSigners(USER)).data).toBeNull();
 	});
 });
+
+describe("InfoClient staking methods", () => {
+	const USER = "0xF8365A35694F401a554E4Ffa51b5AfE3B203d148";
+	const VALIDATOR = "0x946bf3135c7d15e4462b510f74b6e304aabb5b21";
+	it("ask for the account in lowercase and read the answers", async () => {
+		const { seen, transport } = fakeTransport({
+			delegatorSummary: {
+				delegated: "0.0205",
+				undelegated: "0.01",
+				totalPendingWithdrawal: "0.0005",
+				nPendingWithdrawals: 5,
+			},
+			delegations: [
+				{
+					validator: VALIDATOR,
+					amount: "0.0199",
+					lockedUntilTimestamp: 1791820832327,
+				},
+			],
+			delegatorHistory: [
+				{
+					time: 1791820707922,
+					hash: "0x7b66ac4dd6eb43d97ce0042b8694b0010600c43371ee62ab1f2f57a095ef1dc4",
+					delta: { cDeposit: { amount: "0.02" } },
+				},
+			],
+			validatorSummaries: [
+				{
+					validator: VALIDATOR,
+					name: "Hypurr",
+					description: "",
+					stake: 701023300824871,
+					isJailed: false,
+					isActive: true,
+					commission: "1.0",
+					stats: [],
+				},
+			],
+		});
+		const client = new InfoClient("testnet", { transport, now: () => 5 });
+
+		const summary = await client.delegatorSummary(USER);
+		expect(summary.data).toEqual({
+			delegated: "0.0205",
+			undelegated: "0.01",
+			pendingTotal: "0.0005",
+			pendingReturns: 5,
+		});
+		expect(summary.network).toBe("testnet");
+		expect(summary.observedAt).toBe(5);
+		expect((await client.delegations(USER)).data).toEqual([
+			{ validator: VALIDATOR, amount: "0.0199", lockedUntil: 1791820832327 },
+		]);
+		expect((await client.delegatorHistory(USER)).data?.[0]?.kind).toBe(
+			"moveIn",
+		);
+		expect((await client.validatorSummaries()).data?.[0]).toMatchObject({
+			address: VALIDATOR,
+			name: "Hypurr",
+			stake: "7010233.00824871",
+			commission: "1",
+		});
+		expect(seen).toEqual([
+			{ type: "delegatorSummary", user: USER.toLowerCase() },
+			{ type: "delegations", user: USER.toLowerCase() },
+			{ type: "delegatorHistory", user: USER.toLowerCase() },
+			{ type: "validatorSummaries" },
+		]);
+	});
+
+	it("answer null for a shape they cannot read, and are never served from a cache", async () => {
+		const { seen, transport } = fakeTransport({
+			delegatorSummary: "down for maintenance",
+			validatorSummaries: { error: "unknown type" },
+		});
+		const client = new InfoClient("testnet", { transport, now: () => 5 });
+		expect((await client.delegatorSummary(USER)).data).toBeNull();
+		expect((await client.delegatorSummary(USER)).data).toBeNull();
+		expect((await client.validatorSummaries()).data).toBeNull();
+		expect(seen).toHaveLength(3);
+	});
+});

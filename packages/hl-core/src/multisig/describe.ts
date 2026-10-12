@@ -8,6 +8,7 @@
 import { WITHDRAWAL_FEE_USDC } from "../rules/transfers.ts";
 import { riskFlags } from "./action.ts";
 import { parseSignersString } from "./signerSet.ts";
+import { weiToHype } from "./staking.ts";
 import { withdrawalOutcome } from "./transfer.ts";
 import type { PlainObject, RiskFlag } from "./types.ts";
 
@@ -50,6 +51,18 @@ export interface ActionDescription {
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
+
+/** The two waits of staking, as rules/staking.ts has them (a test holds the two together). */
+export const STAKE_LOCKUP_LINE =
+	"A stake cannot be removed for 1 day after it is made or added to (2 minutes on testnet).";
+export const RETURN_QUEUE_LINE =
+	"Hyperliquid releases a return to spot 7 days after it is carried out (5 minutes on testnet), with no further signature.";
+
+/** A staking action's integer as HYPE; as it stands when it is not a whole number. */
+const hype = (wei: unknown): string => {
+	const amount = weiToHype(wei);
+	return amount === null ? `${s(wei)} wei of HYPE` : `${amount} HYPE`;
+};
 
 function partiesOf(type: string, action: PlainObject): readonly ActionParty[] {
 	const out: ActionParty[] = [];
@@ -346,15 +359,28 @@ export function describeAction(
 				`Approve builder ${s(action.builder)} up to ${s(action.maxFeeRate)}`,
 			);
 		case "tokenDelegate":
-			return done(
-				`${action.isUndelegate ? "Undelegate" : "Delegate"} ${s(action.wei)} wei of HYPE ${action.isUndelegate ? "from" : "to"} validator ${s(action.validator)}`,
-			);
+			return action.isUndelegate
+				? done(
+						`Unstake ${hype(action.wei)} from validator ${s(action.validator)}`,
+						[
+							"It goes to the staking balance. Returning it to spot is a separate step.",
+						],
+					)
+				: done(
+						`Stake ${hype(action.wei)} with validator ${s(action.validator)}`,
+						[STAKE_LOCKUP_LINE],
+					);
 		case "cDeposit":
-			return done(`Move ${s(action.wei)} wei of HYPE from spot into staking`);
+			return done(
+				`Move ${hype(action.wei)} from the spot balance to the staking balance`,
+				[
+					"It is not staked yet. Staking it with a validator is a separate step.",
+				],
+			);
 		case "cWithdraw":
 			return done(
-				`Move ${s(action.wei)} wei of HYPE from staking back to spot`,
-				["Staking withdrawals take about 7 days to unlock."],
+				`Return ${hype(action.wei)} from the staking balance to the spot balance`,
+				[RETURN_QUEUE_LINE],
 			);
 		case "linkStakingUser":
 			return done(
