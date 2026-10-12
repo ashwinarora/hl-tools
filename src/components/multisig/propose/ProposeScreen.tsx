@@ -5,13 +5,16 @@ import {
 	fromPlain,
 	type Issue,
 	infoClient,
+	moveOf,
 	type Network,
 	ORDERED_ACTION_TYPES,
 	orderFloor,
+	otherStep,
 	type Proposal,
 	prepareInnerAction,
 	signProposal,
 	stringifyJson,
+	tieSteps,
 	ZERO_ADDRESS,
 } from "@hl-tools/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -47,16 +50,18 @@ import { errorMessage } from "#/hooks/useHyperliquid";
 import { useNetworkHydrated } from "#/store/networkStore";
 import { useReceiver } from "../live/useReceiver";
 import { useSignerChecks } from "../live/useSignerChecks";
+import { useStaking } from "../live/useStaking";
 import {
 	ACTION_KINDS,
 	type ActionForm,
 	type ActionKind,
 	actionTypeOf,
-	buildProposalInput,
+	buildProposalInputs,
 	DEFAULT_FORM,
 	destinationOf,
 	fieldOf,
 	formFromAction,
+	formFromMove,
 	sourcePocket,
 } from "../model/actions";
 import { type InnerChain, innerChain } from "../model/chains";
@@ -74,13 +79,15 @@ import { reproposeSource } from "../model/repropose";
 import { isItself } from "../model/selfTreasury";
 import { costLine, spotAvailable } from "../model/send";
 import { toLookUp, wantedSet } from "../model/signerSet";
+import { isStakingKind, planStaking, STAKING } from "../model/staking";
 import { linkTransport } from "../model/transport";
 import { TreasuryNames, useNames } from "../names/Names";
-import { addSignature, publishProposal } from "../relay/api";
+import { addSignature, publishMove } from "../relay/api";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
 import { Help } from "../shell/Help";
 import { NetTag, SignsTag, backLink as shellBack } from "../shell/kit";
+import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
 import { usePageNetwork } from "../shell/usePageNetwork";
@@ -91,6 +98,7 @@ import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
 import { ActionFields } from "./ActionFields";
 import { ChangeSignersFields } from "./ChangeSignersFields";
+import { StakingFields } from "./StakingFields";
 
 /** Warnings said under the field they are about, not with the general notes. */
 const FIELD_NOTES: ReadonlySet<string> = new Set([
@@ -211,13 +219,30 @@ function ProposeForm({
 					return;
 				}
 				setSuperseded(old);
-				setForm((f) => ({
-					...f,
-					...formFromAction(old.payload.action, old.payload.network),
-					finaliser: old.payload.outerSigner,
-					title: old.meta.title ?? "",
-					note: old.meta.note ?? "",
-				}));
+				const fill = (fields: Partial<ActionForm>) =>
+					setForm((f) => ({
+						...f,
+						...fields,
+						finaliser: old.payload.outerSigner,
+						title: old.meta.title ?? "",
+						note: old.meta.note ?? "",
+					}));
+				// one step of a move: the form that names the whole move, where
+				// the other step is in this browser too
+				const other = otherStep(old);
+				if (!other) {
+					fill(formFromAction(old.payload.action, old.payload.network));
+					return;
+				}
+				return loadProposal(other).then((o) => {
+					if (cancelled) return;
+					const move = o.proposal ? moveOf(old, o.proposal) : null;
+					fill(
+						move
+							? formFromMove(move, old.payload.network)
+							: formFromAction(old.payload.action, old.payload.network),
+					);
+				});
 			})
 			.catch(() => undefined);
 		return () => {
@@ -279,6 +304,38 @@ function ProposeForm({
 	);
 	const signerLookups = useSignerChecks(network, wantedSigners);
 
+	// Staking: what the treasury has in staking and the validators, read only
+	// while one of the staking forms is open.
+	const stakingOn = isStakingKind(form.kind);
+	const now = useNow();
+	const spotHype = spotAvailable(state.spot, "HYPE");
+	const staking = useStaking(
+		stakingOn ? target : null,
+		{ stakes: true, validators: true },
+		spotHype,
+	);
+	const stakingRead = stakingOn
+		? {
+				summary: staking.summary,
+				delegations: staking.delegations,
+				validators: staking.validators,
+				spotAvailable: spotHype,
+			}
+		: undefined;
+	const stakingPlan = isStakingKind(form.kind)
+		? planStaking(
+				{
+					kind: form.kind,
+					amount: form.amount,
+					validator: form.validator,
+					toValidator: form.toValidator,
+				},
+				stakingRead,
+				network,
+				now,
+			)
+		: null;
+
 	const chain = innerChain(network, form.chain);
 	const context = (nonce: number) => ({
 		network,
@@ -298,22 +355,40 @@ function ProposeForm({
 		createdBy: wallet.address,
 		supersedes: superseded?.digest ?? null,
 		policyAtCreation: state.policy,
+		staking: stakingRead,
+		now,
 	});
 	const numbered = proposalNonce(form.nonceMode, previewNow, floor);
 	const previewNonce = numbered.nonce;
-	const draft = buildProposalInput(form, context(previewNonce));
-	const preview = draft.input
-		? createProposal(draft.input, { now: previewNow })
-		: null;
+	// one proposal, or the two steps of a staking move
+	const drafts = buildProposalInputs(form, context(previewNonce));
+	const draft = {
+		input: drafts.inputs?.[0] ?? null,
+		action: drafts.actions[0] ?? null,
+		sketch: drafts.sketch,
+		issues: drafts.issues,
+	};
+	const previews = drafts.inputs?.map((input) =>
+		createProposal(input, { now: previewNow }),
+	);
 	// The canonical action and its risk flags do not depend on the finaliser, so show them
 	// as soon as the action itself builds.
 	const prepared = draft.action
 		? prepareInnerAction(draft.action, network, previewNonce)
 		: null;
+	const second = drafts.actions[1]
+		? prepareInnerAction(drafts.actions[1], network, previewNonce + 1)
+		: null;
 	const issues = [
 		...draft.issues,
-		...(preview ? preview.issues : (prepared?.issues ?? [])),
-	];
+		...(previews
+			? previews.flatMap((p) => p.issues)
+			: [...(prepared?.issues ?? []), ...(second?.issues ?? [])]),
+	].filter(
+		// the same note about both steps is said once
+		(i, n, all) =>
+			all.findIndex((x) => x.code === i.code && x.message === i.message) === n,
+	);
 	const error = (field: keyof ActionForm) =>
 		issues.find(
 			(i) =>
@@ -337,13 +412,23 @@ function ProposeForm({
 			issues.filter((i) => i.severity === "error").map((i) => i.message),
 		),
 	];
+	// a staking form says its own amber lines, next to the steps they are about
+	const saidByForm = new Set(
+		stakingPlan?.issues
+			.filter((i) => i.severity === "warning")
+			.map((i) => i.code),
+	);
 	const otherIssues = issues.filter(
 		(i) =>
 			(i.severity !== "error" || fieldOf(i) === null) &&
-			!FIELD_NOTES.has(i.code),
+			!FIELD_NOTES.has(i.code) &&
+			!saidByForm.has(i.code),
 	);
 	const action = prepared?.action ?? null;
 	const described = action ? describeAction(action) : null;
+	const secondAction = second?.action ?? null;
+	const twoSteps = drafts.actions.length === 2;
+	const secondDescribed = secondAction ? describeAction(secondAction) : null;
 	const flags = prepared?.flags ?? [];
 	const unified = state.mode?.kind === "unified";
 	const movable = {
@@ -367,6 +452,14 @@ function ProposeForm({
 	// a unified treasury has one balance: nothing to move between perps and spot
 	const kinds = ACTION_KINDS.filter(
 		(k) => !(unified && k.kind === "usdClassTransfer"),
+	);
+	// the three staking forms are one entry here; the choice between them is inside
+	const choices = kinds.flatMap((k) =>
+		k.group === "staking"
+			? k.kind === "stake"
+				? [{ value: "staking", label: STAKING.label }]
+				: []
+			: [{ value: k.kind as string, label: k.label }],
 	);
 	const window = describeWindow(previewNonce, previewNow);
 
@@ -414,20 +507,23 @@ function ProposeForm({
 		setAttempted(true);
 		setFailure(null);
 		const now = Date.now();
-		const fresh = buildProposalInput(
+		const fresh = buildProposalInputs(
 			form,
 			context(proposalNonce(form.nonceMode, now, floor).nonce),
 		);
-		if (!fresh.input) return;
-		const created = createProposal(fresh.input, { now });
-		if (!created.proposal) {
+		if (!fresh.inputs) return;
+		const created = fresh.inputs.map((input) => createProposal(input, { now }));
+		const made = created.flatMap((c) => (c.proposal ? [c.proposal] : []));
+		if (made.length !== created.length) {
 			setFailure({
 				title: "The proposal could not be created",
-				issues: created.issues,
+				issues: created.flatMap((c) => c.issues),
 			});
 			return;
 		}
-		let proposal = created.proposal;
+		// the two steps of a move name each other, so every page shows them as one
+		const [one, two] = made;
+		let proposals: Proposal[] = one && two ? [...tieSteps(one, two)] : made;
 		if (sign) {
 			const got = await wallet.signerFor(chain.hex);
 			if (!got.ok) {
@@ -437,48 +533,65 @@ function ProposeForm({
 				});
 				return;
 			}
-			const signed = await signProposal(proposal, got.signer, {
-				expectedSigner: wallet.address ?? undefined,
-			});
-			if (!signed.signature) {
-				setFailure({ title: "The wallet did not sign", issues: signed.issues });
-				return;
+			// one wallet prompt for each step; nothing is created unless all are signed
+			const signedAll: Proposal[] = [];
+			for (const proposal of proposals) {
+				const signed = await signProposal(proposal, got.signer, {
+					expectedSigner: wallet.address ?? undefined,
+				});
+				if (!signed.signature) {
+					setFailure({
+						title: "The wallet did not sign",
+						issues: signed.issues,
+					});
+					return;
+				}
+				signedAll.push({ ...proposal, signatures: [signed.signature] });
 			}
-			proposal = { ...proposal, signatures: [signed.signature] };
+			proposals = signedAll;
 		}
+		const first = proposals[0];
+		if (!first) return;
 		try {
-			const saved = await saveProposal(proposal);
+			const saved: Proposal[] = [];
+			for (const proposal of proposals)
+				saved.push((await saveProposal(proposal)).proposal);
 			await client.invalidateQueries({ queryKey: ["multisig-proposals"] });
 			// Signed in and listed as a signer on the relay: co-signers see it at once.
 			// A relay failure does not undo the proposal; its page says "only in this
 			// browser" and offers to share it again.
 			if (sharing && relay.client && relay.wallet) {
-				const key = {
-					network: saved.proposal.payload.network,
-					treasury: saved.proposal.payload.multiSigUser,
-					digest: saved.proposal.digest,
-				};
-				const shared = await publishProposal(
+				// both steps of a move in one write: the relay takes both or neither
+				const shared = await publishMove(
 					relay.client,
 					relay.wallet,
-					publishRow(saved.proposal),
+					saved.map(publishRow),
 				);
-				const mine = saved.proposal.signatures.find(
-					(x) => x.signer === relay.wallet,
-				);
-				if (!shared.issue && mine) {
-					await addSignature(relay.client, relay.wallet, key, mine);
-				}
+				if (!shared.issue)
+					for (const p of saved) {
+						const mine = p.signatures.find((x) => x.signer === relay.wallet);
+						if (mine)
+							await addSignature(
+								relay.client,
+								relay.wallet,
+								{
+									network: p.payload.network,
+									treasury: p.payload.multiSigUser,
+									digest: p.digest,
+								},
+								mine,
+							);
+					}
 				void client.invalidateQueries({ queryKey: ["relay", relay.wallet] });
 			}
 			void navigate({
 				to: "/multisig/proposal",
-				search: { digest: saved.proposal.digest },
+				search: { digest: (saved[0] ?? first).digest },
 			});
 		} catch (e) {
 			// No history in this browser: carry the document to the proposal page in the link itself.
 			const url = linkTransport(() => globalThis.location.origin).publish(
-				proposal,
+				first,
 			).url;
 			if (url) globalThis.location.assign(url);
 			else
@@ -565,20 +678,33 @@ function ProposeForm({
 							<Panel
 								title="Action"
 								description={
-									ACTION_KINDS.find((k) => k.kind === form.kind)?.description
+									stakingOn
+										? "HYPE between spot, the staking balance and a validator."
+										: ACTION_KINDS.find((k) => k.kind === form.kind)
+												?.description
 								}
 							>
 								<div className="space-y-4">
-									<Segmented<ActionKind>
+									<Segmented<string>
 										label="Action"
-										value={form.kind}
-										onChange={(v) => set("kind", v)}
-										options={kinds.map((k) => ({
-											value: k.kind,
-											label: k.label,
-										}))}
+										value={stakingOn ? "staking" : form.kind}
+										onChange={(v) =>
+											set("kind", v === "staking" ? "stake" : (v as ActionKind))
+										}
+										options={choices}
 									/>
-									{form.kind === "changeSigners" ? (
+									{stakingPlan ? (
+										<StakingFields
+											form={form}
+											set={set}
+											error={error}
+											network={network}
+											staking={staking}
+											spotAvailable={spotHype}
+											plan={stakingPlan}
+											now={now}
+										/>
+									) : form.kind === "changeSigners" ? (
 										<ChangeSignersFields
 											signers={form.signers}
 											onChange={(v) => set("signers", v)}
@@ -721,6 +847,12 @@ function ProposeForm({
 								{action && described ? (
 									<div className="space-y-4">
 										<div>
+											{secondDescribed && (
+												<p className="mb-1 text-xs text-muted-foreground">
+													Two proposals, signed together and sent one after the
+													other. Step 1:
+												</p>
+											)}
 											<p className="text-base font-medium [overflow-wrap:anywhere]">
 												{described.headline}
 											</p>
@@ -734,6 +866,26 @@ function ProposeForm({
 														</li>
 													))}
 												</ul>
+											)}
+											{secondDescribed && (
+												<>
+													<p className="mt-3 mb-1 text-xs text-muted-foreground">
+														Step 2:
+													</p>
+													<p className="text-base font-medium [overflow-wrap:anywhere]">
+														{secondDescribed.headline}
+													</p>
+													<ul className="mt-1.5 space-y-0.5 text-sm text-muted-foreground">
+														{secondDescribed.lines.map((line) => (
+															<li
+																key={line}
+																className="[overflow-wrap:anywhere]"
+															>
+																{line}
+															</li>
+														))}
+													</ul>
+												</>
 											)}
 											<div className="mt-2 flex flex-wrap gap-2">
 												{flags.map((f) => (
@@ -793,6 +945,18 @@ function ProposeForm({
 										lang="json"
 										maxHeight="18rem"
 									/>
+									{secondAction && (
+										<div className="mt-3">
+											<p className="mb-1.5 text-xs text-muted-foreground">
+												Step 2, a proposal of its own:
+											</p>
+											<CodeBlock
+												content={stringifyJson(fromPlain(secondAction), 2)}
+												lang="json"
+												maxHeight="18rem"
+											/>
+										</div>
+									)}
 								</Panel>
 							)}
 							<Panel title="Create">
@@ -843,8 +1007,8 @@ function ProposeForm({
 											}
 										>
 											{wallet.address
-												? `Create and sign as ${short(wallet.address)}`
-												: "Create and sign"}
+												? `Create ${twoSteps ? "both " : ""}and sign as ${short(wallet.address)}`
+												: `Create ${twoSteps ? "both " : ""}and sign`}
 										</Button>
 										<Button
 											variant="outline"
@@ -853,9 +1017,16 @@ function ProposeForm({
 											}
 											onClick={() => void create(false)}
 										>
-											Create without signing
+											{twoSteps
+												? "Create both without signing"
+												: "Create without signing"}
 										</Button>
 									</div>
+									{twoSteps && (
+										<p className="text-xs text-muted-foreground">
+											Signing asks your wallet twice, once for each step.
+										</p>
+									)}
 									{itself ? (
 										<SwitchToSigner
 											signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
