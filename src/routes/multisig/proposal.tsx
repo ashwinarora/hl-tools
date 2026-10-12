@@ -4,9 +4,10 @@ import { FileQuestion, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { EmptyState } from "#/components/hub/layout";
 import { Callout, IssueList } from "#/components/hub/status";
+import { saveProposal } from "#/components/multisig/model/history";
 import { gateOthers, RELAY_COPY } from "#/components/multisig/model/relay/copy";
 import {
-	documentFromFragment,
+	documentsFromFragment,
 	openText,
 } from "#/components/multisig/model/transport";
 import { MoveView } from "#/components/multisig/proposal/MoveView";
@@ -46,19 +47,29 @@ function ProposalScreen() {
 	// strip it from the address bar and continue under the digest.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: the fragment is read once, on arrival
 	useEffect(() => {
-		const text = documentFromFragment(window.location.hash);
-		if (text === null) {
+		const texts = documentsFromFragment(window.location.hash);
+		if (texts === null) {
 			setLink({ state: "none" });
 			return;
 		}
 		clearShared();
-		const decoded = openText(text);
-		if (!decoded.proposal) {
-			setLink({ state: "failed", issues: decoded.issues });
+		// one proposal, or the two steps of a move: every one has to open
+		const decoded = texts.map((text) => openText(text));
+		const [first, ...rest] = decoded.flatMap((d) =>
+			d.proposal ? [d.proposal] : [],
+		);
+		if (!first || rest.length + 1 !== decoded.length) {
+			setLink({
+				state: "failed",
+				issues: decoded.flatMap((d) => (d.proposal ? [] : d.issues)),
+			});
 			return;
 		}
 		let cancelled = false;
-		void store(decoded.proposal).then((saved) => {
+		void (async () => {
+			// the other step first, so the page finds the move whole when it opens
+			for (const other of rest) await saveProposal(other).catch(() => null);
+			const saved = await store(first);
 			if (cancelled) return;
 			setLink({ state: "none" });
 			void navigate({
@@ -66,7 +77,7 @@ function ProposalScreen() {
 				search: { digest: saved.proposal.digest },
 				replace: true,
 			});
-		});
+		})();
 		return () => {
 			cancelled = true;
 		};

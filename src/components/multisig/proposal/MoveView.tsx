@@ -56,6 +56,7 @@ import {
 	type StepState,
 	signMove,
 } from "./actions";
+import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
 import { TellCoSigners } from "./TellCoSigners";
 import { type MoveStepState, useMoveStep } from "./useMoveStep";
@@ -347,6 +348,12 @@ export function MoveView({
 								</div>
 							))}
 							<TellCoSigners proposal={first} doc={docs[0]} />
+							<SharePanel
+								proposal={first}
+								store={docs[0].store}
+								also={[{ proposal: second, store: docs[1].store }]}
+								secondary={docs[0].relay.known}
+							/>
 						</div>
 					</div>
 

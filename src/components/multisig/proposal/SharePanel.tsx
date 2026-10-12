@@ -26,13 +26,26 @@ import { RELAY_COPY } from "../model/relay/copy";
 import {
 	fileTransport,
 	linkTransport,
+	openAll,
 	openText,
 	type Published,
 } from "../model/transport";
 import type { StoreResult } from "./useProposalDoc";
 
-/** The link, behind an acknowledgement: it carries the whole proposal. */
-function LinkDialog({ proposal }: { proposal: Proposal }) {
+const NO_MORE: readonly {
+	readonly proposal: Proposal;
+	readonly store: (p: Proposal) => Promise<StoreResult>;
+}[] = [];
+
+/** The link, behind an acknowledgement: it carries the whole proposal (for a move: both steps). */
+function LinkDialog({
+	proposal,
+	also,
+}: {
+	proposal: Proposal;
+	also: readonly Proposal[];
+}) {
+	const move = also.length > 0;
 	const id = useId();
 	const [open, setOpen] = useState(false);
 	const [confirmed, setConfirmed] = useState(false);
@@ -55,12 +68,14 @@ function LinkDialog({ proposal }: { proposal: Proposal }) {
 			</DialogTrigger>
 			<DialogContent className="max-w-lg">
 				<DialogHeader>
-					<DialogTitle>A link to this proposal</DialogTitle>
+					<DialogTitle>
+						{move ? "A link to this move" : "A link to this proposal"}
+					</DialogTitle>
 					<DialogDescription>
-						The link carries the whole document, signatures included, in its
-						fragment. Fragments are not sent to servers and signatures are not
-						secrets, but anyone holding the link can read what this treasury
-						intends to do.
+						The link carries {move ? "both documents" : "the whole document"},
+						signatures included, in its fragment. Fragments are not sent to
+						servers and signatures are not secrets, but anyone holding the link
+						can read what this treasury intends to do.
 					</DialogDescription>
 				</DialogHeader>
 				<label
@@ -77,6 +92,7 @@ function LinkDialog({ proposal }: { proposal: Proposal }) {
 								e.target.checked
 									? linkTransport(() => window.location.origin).publish(
 											proposal,
+											also,
 										)
 									: null,
 							);
@@ -120,9 +136,19 @@ export function SharePanel({
 	proposal,
 	store,
 	secondary = false,
+	also = NO_MORE,
 }: {
 	proposal: Proposal;
 	store: (p: Proposal) => Promise<StoreResult>;
+	/**
+	 * The further steps of the same move, each with its own way into this
+	 * browser's copy. The link and the file then carry all of them, and what
+	 * comes back is merged step by step.
+	 */
+	also?: readonly {
+		readonly proposal: Proposal;
+		readonly store: (p: Proposal) => Promise<StoreResult>;
+	}[];
 	/**
 	 * The proposal is shared through the relay, so this is the way around it
 	 * rather than the way: folded away under "Export / Import".
@@ -144,7 +170,45 @@ export function SharePanel({
 		[proposal],
 	);
 
+	const steps = [{ proposal, store }, ...also];
+	// a move's signatures are counted over its steps, and the line says so
+	const across = also.length > 0 ? " across the steps" : "";
+	const others = also.map((x) => x.proposal);
+	/** A returned copy of a move: every step goes into its own document. */
+	const mergeMove = async (returned: readonly Proposal[]) => {
+		let added = 0;
+		let total = 0;
+		const issues: Issue[] = [];
+		for (const incoming of returned) {
+			const step = steps.find((x) => x.proposal.digest === incoming.digest);
+			if (!step) {
+				// not a step of this move: kept, and said
+				await store(incoming);
+				setResult({ kind: "other", digest: incoming.digest });
+				return;
+			}
+			const stored = await step.store(incoming);
+			if (hasErrors(stored.issues)) {
+				setResult({ kind: "failed", issues: stored.issues });
+				return;
+			}
+			added +=
+				stored.proposal.signatures.length - step.proposal.signatures.length;
+			total += stored.proposal.signatures.length;
+			issues.push(...stored.issues);
+		}
+		setText("");
+		setResult({ kind: "merged", added, total, issues });
+	};
+
 	const merge = async (source: string) => {
+		if (also.length > 0) {
+			const all = openAll(source);
+			if (all.proposals.length === 0)
+				setResult({ kind: "failed", issues: all.issues });
+			else await mergeMove(all.proposals);
+			return;
+		}
 		const decoded = openText(source);
 		if (!decoded.proposal) {
 			setResult({ kind: "failed", issues: decoded.issues });
@@ -175,26 +239,31 @@ export function SharePanel({
 	const body = (
 		<div className="space-y-4">
 			<div className="flex flex-wrap items-center gap-2">
-				<LinkDialog proposal={proposal} />
+				<LinkDialog proposal={proposal} also={others} />
 				<Button
 					variant="outline"
 					size="sm"
-					onClick={() => fileTransport(download).publish(proposal)}
+					onClick={() => fileTransport(download).publish(proposal, others)}
 				>
 					<Download className="size-3.5" aria-hidden /> Download file
 				</Button>
-				<CopyButton value={pretty} label="Copy JSON" />
-				<Button
-					variant="ghost"
-					size="sm"
-					onClick={() => {
-						// handed over in memory, like every pasted payload in the hub
-						send("multisig", pretty);
-						void navigate({ to: "/tools/multisig" });
-					}}
-				>
-					<Search className="size-3.5" aria-hidden /> Inspect
-				</Button>
+				{also.length === 0 && (
+					// one document at a time: a move is two
+					<>
+						<CopyButton value={pretty} label="Copy JSON" />
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => {
+								// handed over in memory, like every pasted payload in the hub
+								send("multisig", pretty);
+								void navigate({ to: "/tools/multisig" });
+							}}
+						>
+							<Search className="size-3.5" aria-hidden /> Inspect
+						</Button>
+					</>
+				)}
 			</div>
 			<Field
 				label="Merge a returned copy"
@@ -244,8 +313,8 @@ export function SharePanel({
 					tone={result.added > 0 ? "success" : "info"}
 					title={
 						result.added > 0
-							? `Added ${result.added} signature${result.added === 1 ? "" : "s"}; ${result.total} in total`
-							: `Nothing new: still ${result.total} signature${result.total === 1 ? "" : "s"}`
+							? `Added ${result.added} signature${result.added === 1 ? "" : "s"}; ${result.total} in total${across}`
+							: `Nothing new: still ${result.total} signature${result.total === 1 ? "" : "s"}${across}`
 					}
 				>
 					<IssueList plain issues={result.issues} />

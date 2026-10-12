@@ -592,6 +592,7 @@ function ProposeForm({
 			// No history in this browser: carry the document to the proposal page in the link itself.
 			const url = linkTransport(() => globalThis.location.origin).publish(
 				first,
+				proposals.slice(1),
 			).url;
 			if (url) globalThis.location.assign(url);
 			else

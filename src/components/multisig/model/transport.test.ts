@@ -1,15 +1,22 @@
 import {
 	decodeProposal,
 	encodeProposal,
+	judgeMove,
 	PROPOSAL_SIZE_WARN_BYTES,
+	type Proposal,
+	tieSteps,
 } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import { parseShareFragment, shareFragment } from "#/lib/share";
-import { makeProposal, signAs } from "#/test/keys";
+import { makeProposal, NONCE, NOW, signAs } from "#/test/keys";
 import {
 	documentFromFragment,
+	documentsFromFragment,
 	fileTransport,
 	linkTransport,
+	moveFilename,
+	moveText,
+	openAll,
 	openText,
 	PROPOSAL_PATH,
 	proposalFilename,
@@ -123,5 +130,120 @@ describe("openText", () => {
 			openText('{"note":"see https://x/#share=abc"}').issues.map((i) => i.code),
 		).not.toContain("transport.link");
 		expect(openText('{"v":2}').proposal).toBeNull();
+	});
+});
+
+describe("a move travels as one link or one file", () => {
+	const HEAD = { signatureChainId: "0x3e6", hyperliquidChain: "Testnet" };
+	const X = "0x946bf3135c7d15e4462b510f74b6e304aabb5b21";
+	/** "Stake 100 HYPE with X", both steps signed by A. A whole number above 2^53 rides along. */
+	const move = async (): Promise<[Proposal, Proposal]> => {
+		const [one, two] = tieSteps(
+			makeProposal({
+				action: {
+					type: "cDeposit",
+					...HEAD,
+					wei: 9_007_199_300_000_000n,
+					nonce: NONCE,
+				},
+			}),
+			makeProposal({
+				action: {
+					type: "tokenDelegate",
+					...HEAD,
+					validator: X,
+					wei: 9_007_199_300_000_000n,
+					isUndelegate: false,
+					nonce: NONCE + 1,
+				},
+				nonce: NONCE + 1,
+			}),
+		);
+		return [await signAs(one, 1), await signAs(two, 1)];
+	};
+
+	it("the link carries both, and a build from before moves still finds step 1 where it looks", async () => {
+		const [one, two] = await move();
+		const out = link.publish(one, [two]);
+		const hash = new URL(out.url as string).hash;
+		expect(documentsFromFragment(hash)).toEqual([
+			encodeProposal(one),
+			encodeProposal(two),
+		]);
+		expect(documentFromFragment(hash)).toBe(encodeProposal(one));
+		expect(new URL(out.url as string).search).toBe("");
+		// the size that matters is that of both
+		expect(link.publish(one).bytes).toBeLessThan(out.bytes);
+	});
+
+	it("opens whole from the link: both steps, exact, and still one move", async () => {
+		const [one, two] = await move();
+		const opened = openAll(link.publish(one, [two]).url as string, NOW);
+		expect(opened.issues).toEqual([]);
+		expect(opened.proposals).toEqual([one, two]);
+		const [a, b] = opened.proposals as [Proposal, Proposal];
+		expect(a.payload.action.wei).toBe(9_007_199_300_000_000n);
+		// the documents name no proposer here, so the page is told who it was
+		expect(judgeMove(a, b, { a: "0xaa", b: "0xaa" }).move?.kind).toBe("stake");
+	});
+
+	it("the file holds both steps as they are written by themselves", async () => {
+		const [one, two] = await move();
+		const saved: [string, string][] = [];
+		const out = fileTransport((name, text) => saved.push([name, text])).publish(
+			one,
+			[two],
+		);
+		expect(out.filename).toBe(moveFilename(one));
+		expect(out.filename).toMatch(/^multisig-testnet-[0-9a-f]{8}-move\.json$/);
+		const text = saved[0]?.[1] as string;
+		expect(text).toBe(moveText([one, two]));
+		expect(text).toContain(encodeProposal(one, { pretty: true }));
+		expect(openAll(text, NOW).proposals).toEqual([one, two]);
+		// a single proposal's file is what it always was
+		const single = fileTransport(() => undefined).publish(one);
+		expect(single.filename).toBe(proposalFilename(one));
+	});
+
+	it("opens one proposal as before, from its link, its file or its text", async () => {
+		const p = await signAs(makeProposal(), 1);
+		for (const source of [
+			link.publish(p).url as string,
+			encodeProposal(p, { pretty: true }),
+			encodeProposal(p),
+		])
+			expect(openAll(source, NOW)).toEqual({ proposals: [p], issues: [] });
+	});
+
+	it("opens a move whole or not at all", async () => {
+		const [one, two] = await move();
+		// the second step's own digest no longer fits its payload
+		const broken = moveText([one, two]).replace(
+			`"digest": "${two.digest}"`,
+			`"digest": "0x${"00".repeat(32)}"`,
+		);
+		expect(broken).not.toBe(moveText([one, two]));
+		const opened = openAll(broken, NOW);
+		expect(opened.proposals).toEqual([]);
+		expect(opened.issues.map((i) => i.code)).toContain(
+			"proposal.digest_mismatch",
+		);
+		expect(opened.issues[0]?.message).toMatch(/^Step 2: /);
+	});
+
+	it("says what does not open", () => {
+		expect(openAll("not a proposal").proposals).toEqual([]);
+		expect(openAll("not a proposal").issues.length).toBeGreaterThan(0);
+		expect(
+			openAll(
+				`${ORIGIN}/x#${shareFragment("signing", { doc: "{}" })}`,
+			).issues.map((i) => i.code),
+		).toEqual(["transport.link"]);
+		// a fragment whose extra documents are not text carries only the first
+		const odd = `${ORIGIN}${PROPOSAL_PATH}#${shareFragment(SHARE_TOOL, {
+			doc: encodeProposal(makeProposal()),
+			also: [1, null],
+		})}`;
+		expect(openAll(odd).proposals).toHaveLength(1);
 	});
 });
