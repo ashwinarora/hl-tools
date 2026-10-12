@@ -19,6 +19,8 @@ import {
 	privateKeyToAccount,
 } from "viem/accounts";
 import { generateSiweNonce } from "viem/siwe";
+import type { Slots } from "#/components/multisig/model/relay/wallets";
+import { relayAuthOptions } from "#/components/multisig/relay/config";
 import { signIn } from "#/components/multisig/relay/session";
 
 /** The site the local stack is configured for (supabase/config.toml). */
@@ -73,6 +75,60 @@ export function newClient(): SupabaseClient {
 			},
 		},
 	});
+}
+
+/**
+ * One browser: its storage, and the client the app makes for each wallet
+ * (`relayAuthOptions`, a slot per wallet). Several wallets can sign in in it
+ * side by side, as they do behind one wallet extension.
+ */
+export function newBrowser(): {
+	readonly slots: Slots;
+	readonly map: Map<string, string>;
+	clientFor(wallet: Address): SupabaseClient;
+} {
+	const s = stack();
+	const map = new Map<string, string>();
+	const slots: Slots = {
+		get length() {
+			return map.size;
+		},
+		key: (i) => [...map.keys()][i] ?? null,
+		getItem: (k) => map.get(k) ?? null,
+		setItem: (k, v) => void map.set(k, v),
+		removeItem: (k) => void map.delete(k),
+	};
+	const made = new Map<Address, SupabaseClient>();
+	return {
+		slots,
+		map,
+		clientFor(wallet) {
+			let c = made.get(wallet);
+			if (!c) {
+				c = createClient(s.url, s.key, {
+					auth: relayAuthOptions(wallet, slots),
+				});
+				made.set(wallet, c);
+			}
+			return c;
+		},
+	};
+}
+
+/** Sign an account in through `client`, exactly as the page does. */
+export async function signInWith(
+	client: SupabaseClient,
+	account: PrivateKeyAccount,
+) {
+	return signIn(
+		client,
+		{
+			address: account.address,
+			chainId: 999,
+			signMessage: (message) => account.signMessage({ message }),
+		},
+		{ origin: ORIGIN, nonce: generateSiweNonce() },
+	);
 }
 
 export interface TestWallet {

@@ -17,6 +17,7 @@ import {
 	signProposal,
 	viemSigner,
 } from "@hl-tools/core";
+import { createClient } from "@supabase/supabase-js";
 import { generateSiweNonce } from "viem/siwe";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -24,10 +25,13 @@ import {
 	type InfoStub,
 	infoStub,
 	newAccount,
+	newBrowser,
 	newClient,
 	newWallet,
 	ORIGIN,
 	type Sql,
+	signInWith,
+	stack,
 	type TestWallet,
 	until,
 	untilWorker,
@@ -46,6 +50,12 @@ import { acceptNicknames } from "../model/relay/nicknames";
 import { planPush, publishRow } from "../model/relay/push";
 import { latestMarks } from "../model/relay/rows";
 import { buildSignInMessage } from "../model/relay/siwe";
+import {
+	adoptLegacy,
+	RELAY_LEGACY_KEY,
+	slotKey,
+	storedWallets,
+} from "../model/relay/wallets";
 import {
 	addSignature,
 	endProposal,
@@ -75,8 +85,16 @@ import {
 	requestTreasury,
 	setNickname,
 } from "./api";
+import { endStoredSession } from "./client";
 import { type ChannelState, subscribeWallet } from "./realtime";
-import { probeSession, sessionWallet, signIn, signOut } from "./session";
+import {
+	endSession,
+	probeFor,
+	probeSession,
+	sessionWallet,
+	signIn,
+	signOut,
+} from "./session";
 
 const NET = "mainnet" as const;
 const REAL_INFO = "https://api.hyperliquid.xyz/info";
@@ -393,6 +411,238 @@ describe("signing in", () => {
 		await signOut(w.client);
 		expect(await sessionWallet(w.client)).toBeNull();
 		expect((await listTreasuries(w.client)).issue).not.toBeNull();
+	});
+});
+
+describe("several wallets signed in in one browser", () => {
+	// One browser, one storage, a slot and a client per wallet: what the page
+	// has when the wallet extension is switched between accounts.
+	const config = () => ({ url: stack().url, key: stack().key });
+	const end = (raw: string) => endStoredSession(config(), raw);
+
+	it("keeps each wallet's session in its own slot, and each client speaks only for its wallet", async () => {
+		const here = newBrowser();
+		const one = newAccount();
+		const two = newAccount();
+		expect(
+			(await signInWith(here.clientFor(one.address), one.account)).ok,
+		).toBe(true);
+		expect(
+			(await signInWith(here.clientFor(two.address), two.account)).ok,
+		).toBe(true);
+		expect(storedWallets(here.slots).sort()).toEqual(
+			[one.address, two.address].sort(),
+		);
+		// signing in as the second did not touch the first: both answer, each as itself
+		expect(
+			await probeFor(here.clientFor(one.address), one.address, here.slots),
+		).toBe("ready");
+		expect(
+			await probeFor(here.clientFor(two.address), two.address, here.slots),
+		).toBe("ready");
+		expect(await sessionWallet(here.clientFor(one.address))).toBe(one.address);
+		expect(await sessionWallet(here.clientFor(two.address))).toBe(two.address);
+	});
+
+	it("never files a write under the other wallet, whichever signed in last", async () => {
+		const here = newBrowser();
+		const one = newAccount();
+		const two = newAccount();
+		await signInWith(here.clientFor(one.address), one.account);
+		await signInWith(here.clientFor(two.address), two.account);
+		const account = newAccount().address;
+		stub.answer(account, { signers: [one.address, two.address], threshold: 2 });
+		// through the second wallet's client, in the first wallet's name: stopped in the page
+		const crossed = await requestTreasury(
+			here.clientFor(two.address),
+			one.address,
+			NET,
+			account,
+			"add",
+		);
+		expect(codes(crossed.issue)).toBe("relay.wrong_wallet");
+		// and with the page's check skipped, the relay does not take the name from the row:
+		// the attempt is refused, or filed under the wallet whose session sent it
+		await here.clientFor(two.address).from("treasury_requests").insert({
+			network: NET,
+			address: account,
+			kind: "add",
+			requested_by: one.address,
+		});
+		const forged = await sql`
+			select requested_by from public.treasury_requests where address = ${account}`;
+		expect(forged.map((r) => r.requested_by)).not.toContain(one.address);
+		// each through its own client: taken, and filed under its own name
+		const mine = await requestTreasury(
+			here.clientFor(one.address),
+			one.address,
+			NET,
+			account,
+			"add",
+		);
+		expect(mine.issue).toBeNull();
+		const filed = await sql`
+			select requested_by from public.treasury_requests where address = ${account}`;
+		expect(filed.filter((r) => r.requested_by === one.address)).toHaveLength(1);
+	});
+
+	it("signs one wallet out and leaves the other signed in", async () => {
+		const here = newBrowser();
+		const one = newAccount();
+		const two = newAccount();
+		await signInWith(here.clientFor(one.address), one.account);
+		await signInWith(here.clientFor(two.address), two.account);
+		const held = JSON.parse(here.map.get(slotKey(one.address)) ?? "{}") as {
+			refresh_token: string;
+		};
+
+		const ended = endSession(one.address, here.slots, end);
+		// gone from the browser before the relay has answered
+		expect(storedWallets(here.slots)).toEqual([two.address]);
+		expect(await ended).toBe("ended");
+		// its renewal token no longer works anywhere
+		const renewed = await newClient().auth.refreshSession({
+			refresh_token: held.refresh_token,
+		});
+		expect(renewed.error).not.toBeNull();
+		// the wallet's own client now has nothing to speak with
+		expect(
+			await probeFor(here.clientFor(one.address), one.address, here.slots),
+		).toBe("none");
+		expect(
+			(await listTreasuries(here.clientFor(one.address))).issue,
+		).not.toBeNull();
+		// the other wallet never noticed
+		expect(
+			await probeFor(here.clientFor(two.address), two.address, here.slots),
+		).toBe("ready");
+		expect(
+			(await listTreasuries(here.clientFor(two.address))).issue,
+		).toBeNull();
+		const still = await here.clientFor(two.address).auth.refreshSession();
+		expect(still.error).toBeNull();
+		expect(await sessionWallet(here.clientFor(two.address))).toBe(two.address);
+	});
+
+	it("ends a session whose access token has run out, without putting it back into its slot", async () => {
+		const here = newBrowser();
+		const one = newAccount();
+		await signInWith(here.clientFor(one.address), one.account);
+		const raw = here.map.get(slotKey(one.address)) as string;
+		const session = JSON.parse(raw) as {
+			access_token: string;
+			refresh_token: string;
+			expires_at: number;
+		};
+		// The same session as the browser would hold it an hour later: an access
+		// token past its time (only its expiry is read here), the renewal token intact.
+		const [h, body, sig] = session.access_token.split(".") as [
+			string,
+			string,
+			string,
+		];
+		const claims = JSON.parse(Buffer.from(body, "base64url").toString()) as {
+			exp: number;
+		};
+		claims.exp = Math.floor(Date.now() / 1000) - 60;
+		const lapsed = JSON.stringify({
+			...session,
+			access_token: `${h}.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.${sig}`,
+			expires_at: claims.exp,
+		});
+		here.map.set(slotKey(one.address), lapsed);
+
+		expect(await endSession(one.address, here.slots, end)).toBe("ended");
+		// renewing on the way to ending it wrote nothing back
+		expect([...here.map.keys()]).toEqual([]);
+		const renewed = await newClient().auth.refreshSession({
+			refresh_token: session.refresh_token,
+		});
+		expect(renewed.error).not.toBeNull();
+	});
+
+	it("says so when the relay cannot be reached, and the browser still holds nothing", async () => {
+		const here = newBrowser();
+		const one = newAccount();
+		await signInWith(here.clientFor(one.address), one.account);
+		const nowhere = (raw: string) =>
+			endStoredSession({ url: "http://127.0.0.1:9", key: stack().key }, raw);
+		expect(await endSession(one.address, here.slots, nowhere)).toBe(
+			"unreachable",
+		);
+		expect(storedWallets(here.slots)).toEqual([]);
+		expect(await endStoredSession(config(), "not json")).toBe("gone");
+		expect(await endStoredSession(config(), "{}")).toBe("gone");
+	});
+
+	it("never uses a session that sits in another wallet's slot", async () => {
+		const here = newBrowser();
+		const one = newAccount();
+		const other = newAccount();
+		await signInWith(here.clientFor(one.address), one.account);
+		const copied = here.map.get(slotKey(one.address)) as string;
+		// the first wallet's session, copied into a slot named after another wallet
+		here.map.set(slotKey(other.address), copied);
+		expect(
+			await probeFor(here.clientFor(other.address), other.address, here.slots),
+		).toBe("none");
+		expect(here.map.has(slotKey(other.address))).toBe(false);
+		// nothing was read as the other wallet
+		expect(await sessionWallet(here.clientFor(other.address))).toBeNull();
+		// and the copied session was ended on the relay: it cannot be renewed
+		const renewed = await newClient().auth.refreshSession({
+			refresh_token: (JSON.parse(copied) as { refresh_token: string })
+				.refresh_token,
+		});
+		expect(renewed.error).not.toBeNull();
+	});
+
+	it("an ended session's access token is not looked up again: it works until it runs out", async () => {
+		// Known and stated (DECISIONS.md): the relay reads the wallet from the
+		// token and never asks whether the session behind it still exists. What
+		// "Sign out" guarantees is that this browser holds nothing any more and
+		// that the session cannot be renewed; a copy of the access token taken
+		// earlier is good for at most its remaining hour.
+		const here = newBrowser();
+		const one = newAccount();
+		await signInWith(here.clientFor(one.address), one.account);
+		const { access_token } = JSON.parse(
+			here.map.get(slotKey(one.address)) as string,
+		) as { access_token: string };
+		expect(await endSession(one.address, here.slots, end)).toBe("ended");
+		const copy = createClient(stack().url, stack().key, {
+			auth: { persistSession: false, autoRefreshToken: false },
+			global: { headers: { Authorization: `Bearer ${access_token}` } },
+		});
+		const who = await copy.rpc("whoami");
+		expect(who.data).toBe(one.address);
+	});
+
+	it("carries the session of the single-slot time over, with no new signature", async () => {
+		const here = newBrowser();
+		const one = newAccount();
+		// as the page stored it before there was a slot per wallet
+		const old = createClient(stack().url, stack().key, {
+			auth: {
+				persistSession: true,
+				autoRefreshToken: false,
+				detectSessionInUrl: false,
+				storageKey: RELAY_LEGACY_KEY,
+				storage: here.slots,
+			},
+		});
+		expect((await signInWith(old, one.account)).ok).toBe(true);
+		expect([...here.map.keys()]).toEqual([RELAY_LEGACY_KEY]);
+
+		expect(adoptLegacy(here.slots, Date.now())).toBe(one.address);
+		expect(here.map.has(RELAY_LEGACY_KEY)).toBe(false);
+		expect(storedWallets(here.slots)).toEqual([one.address]);
+		expect(
+			await probeFor(here.clientFor(one.address), one.address, here.slots),
+		).toBe("ready");
+		expect(
+			(await listTreasuries(here.clientFor(one.address))).issue,
+		).toBeNull();
 	});
 });
 
