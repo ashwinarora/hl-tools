@@ -41,10 +41,13 @@ export function Avatar({ className = "size-7" }: { className?: string }) {
  * relay, see `signerWallets.ts`), so such a visitor is told what to do.
  */
 export function useWalletFound(): boolean {
-	// a wallet that announces itself late adds a connector, which renders this again
-	useConnectors();
+	// wagmi lists each wallet that announced itself as a connector of its own,
+	// and renders this again when one announces itself late
+	const announced = useConnectors().filter(
+		(c) => c.type === "injected" && c.id !== "injected",
+	).length;
 	const mounted = useMounted();
-	return mounted ? walletInBrowser() : true;
+	return mounted ? walletInBrowser(announced) : true;
 }
 
 /** Under a "Connect" button, when there is nothing to connect to. */

@@ -24,10 +24,16 @@ const injected = (): boolean =>
 /**
  * True when there is something to connect to here: a wallet that announces
  * itself, one that only injects, or a Safe app's frame around the page.
+ * A caller that already knows how many wallets announced themselves (wagmi
+ * keeps count) passes it, so that nothing is asked again on every render.
  */
-export function walletInBrowser(): boolean {
+export function walletInBrowser(announced?: number): boolean {
 	if (typeof window === "undefined") return false;
-	return injected() || announcedWallets() > 0 || window.parent !== window;
+	return (
+		injected() ||
+		window.parent !== window ||
+		(announced ?? announcedWallets()) > 0
+	);
 }
 
 /** Said in place of an empty picker: it offers no QR code to a phone wallet. */

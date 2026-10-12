@@ -115,6 +115,10 @@ describe("what there is to connect to in this browser", () => {
 		expect(walletInBrowser()).toBe(true);
 		browser({ framed: true });
 		expect(walletInBrowser()).toBe(true);
+		// a caller that already has the count is believed, and nothing is asked
+		browser({});
+		expect(walletInBrowser(1)).toBe(true);
+		expect(walletInBrowser(0)).toBe(false);
 	});
 
 	it('offers "Browser Wallet" only for a wallet that injects without announcing itself', () => {
