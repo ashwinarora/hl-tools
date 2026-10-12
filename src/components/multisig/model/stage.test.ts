@@ -740,6 +740,100 @@ describe("deriveStage", () => {
 	});
 });
 
+describe("an action Hyperliquid would refuse before a certain moment", () => {
+	const HOUR = 3_600_000;
+	const until = NOW + 5 * HOUR;
+
+	it("signing is open; Submit waits, and the page says from when", async () => {
+		const ready = await signAs(await signAs(makeProposal(), 1), 3); // A and C signed, B leads
+		const asB = await stage(ready, { wallet: B, heldUntil: until });
+		expect(asB.phase).toBe("ready");
+		expect(asB.canExecute).toBe(false);
+		expect(asB.executeReason).toBe(
+			"The stake this takes from is still locked, and Hyperliquid would refuse it until the lockup has ended.",
+		);
+		expect(asB.opensAt).toBe(until);
+		expect(asB.detail).toMatch(
+			/^You are the finaliser\. It can be submitted from \d{4}-\d\d-\d\d \d\d:\d\d: the stake it takes from is locked until then · submittable until/,
+		);
+		expect(asB.detailParts.some((part) => part.when === until)).toBe(true);
+		// a co-signer reads who will submit, and from when
+		const asA = await stage(ready, { wallet: A, heldUntil: until });
+		expect(asA.opensAt).toBeNull();
+		expect(asA.detail).toContain(
+			`The finaliser ${shortAddress(B)} submits it. It can be submitted from`,
+		);
+	});
+
+	it("the finaliser whose signature completes it can sign now and submit later", async () => {
+		const p = await signAs(makeProposal(), 1); // A signed, B leads and has not
+		const asB = await stage(p, { wallet: B, heldUntil: until });
+		expect(asB.canSign).toBe(true);
+		expect(asB.canExecute).toBe(false);
+		expect(asB.executeAddsSignature).toBe(false);
+		expect(asB.opensAt).toBe(until);
+	});
+
+	it("once the moment has passed nothing is held", async () => {
+		const ready = await signAs(await signAs(makeProposal(), 1), 3);
+		for (const heldUntil of [NOW, NOW - HOUR, null]) {
+			const asB = await stage(ready, { wallet: B, heldUntil });
+			expect(asB.canExecute).toBe(true);
+			expect(asB.opensAt).toBeNull();
+			expect(asB.detail).toMatch(/^You are the finaliser: submit it when/);
+		}
+	});
+
+	it("is not what a page says while something else stops the proposal", async () => {
+		// on the other network the reader is told to switch first
+		const ready = await signAs(await signAs(makeProposal(), 1), 3);
+		const wrong = await stage(ready, {
+			wallet: B,
+			heldUntil: until,
+			headerNetwork: "mainnet",
+		});
+		expect(wrong.opensAt).toBeNull();
+		expect(wrong.executeReason).toContain("Switch the header");
+	});
+});
+
+describe("a staking step found in Hyperliquid's staking history", () => {
+	it("is carried out, and the page says where it saw that", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 3);
+		const s = await stage(p, {
+			wallet: B,
+			carriedOut: { txHash: `0x${"ab".repeat(32)}`, seenBy: "page" },
+		});
+		expect(s.phase).toBe("carried-out");
+		expect([s.canSign, s.canExecute]).toEqual([false, false]);
+		expect(s.detail).toBe(
+			"Hyperliquid's own list of this account's staking steps holds this action, under this proposal's number: it was carried out, but its result was never reported here. Nothing more to sign.",
+		);
+		// the relay's own check reads as before
+		expect((await stage(p, { carriedOut: { txHash: null } })).detail).toContain(
+			"The relay checked the transaction itself.",
+		);
+	});
+});
+
+describe("a submission answered “duplicate nonce”", () => {
+	it("says the number was used before, and to look before proposing again", async () => {
+		const p = {
+			...(await signAs(await signAs(makeProposal(), 1), 3)),
+			receipt: receipt({
+				status: "err",
+				response: `Invalid nonce: duplicate nonce ${NONCE}`,
+			}),
+		};
+		const s = await stage(p, { wallet: B });
+		expect(s.phase).toBe("refused");
+		expect(s.canExecute).toBe(false);
+		expect(s.detail).toBe(
+			"Hyperliquid answered \"duplicate nonce\": this proposal's number had already been used by an earlier submission. If that one went through, the action is carried out already. Look at the treasury's record on Hyperliquid before proposing it again.",
+		);
+	});
+});
+
 describe("a proposal somebody said no to", () => {
 	const HOUR = 3_600_000;
 	const no = (signer: string, hoursAgo = 2) => ({

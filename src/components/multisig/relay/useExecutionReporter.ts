@@ -28,19 +28,35 @@ export function useExecutionReporter(i: {
 	readonly signer: boolean;
 	/** Re-read on a clock, so a row is reported once it is old enough. */
 	readonly now: number;
+	/**
+	 * Transactions tied to a proposal some other way than through the ledger:
+	 * a staking step found in Hyperliquid's staking history.
+	 */
+	readonly also?: readonly {
+		readonly time: number;
+		readonly hash: string;
+		readonly digest: Hex;
+	}[];
 }): void {
 	const relay = useRelay();
 	const client = relay.client;
 	const me = relay.wallet;
-	const { network, treasury, ledger, match, statusOf, signer, now } = i;
+	const { network, treasury, ledger, match, statusOf, signer, now, also } = i;
 	useEffect(() => {
-		if (!client || !me || !signer || !ledger) return;
+		if (!client || !me || !signer || (!ledger && !also?.length)) return;
 		const due = reportsDue({
-			rows: ledger.map((row) => ({
-				time: row.time,
-				hash: row.hash,
-				match: match.of(row),
-			})),
+			rows: [
+				...(ledger ?? []).map((row) => ({
+					time: row.time,
+					hash: row.hash,
+					match: match.of(row),
+				})),
+				...(also ?? []).map((row) => ({
+					time: row.time,
+					hash: row.hash,
+					match: { kind: "matched" as const, digest: row.digest },
+				})),
+			],
 			statusOf,
 			now,
 			told,
@@ -55,5 +71,16 @@ export function useExecutionReporter(i: {
 				d.txHash,
 			);
 		}
-	}, [client, me, signer, ledger, match, statusOf, now, network, treasury]);
+	}, [
+		client,
+		me,
+		signer,
+		ledger,
+		match,
+		statusOf,
+		now,
+		network,
+		treasury,
+		also,
+	]);
 }

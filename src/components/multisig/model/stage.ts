@@ -90,10 +90,16 @@ export interface StageInput {
 		readonly by: Address;
 	} | null;
 	/**
-	 * Set when the relay closed the proposal as carried out outside the tool:
-	 * it checked the transaction on Hyperliquid itself.
+	 * Set when the proposal was carried out and its result was never reported
+	 * here. By the relay: it closed the proposal after checking the
+	 * transaction on Hyperliquid itself. By this page (`seenBy: "page"`): a
+	 * staking step leaves no row in the ledger, so the page looked the
+	 * transaction up in Hyperliquid's own list of the account's staking steps.
 	 */
-	readonly carriedOut?: { readonly txHash: Hex | null } | null;
+	readonly carriedOut?: {
+		readonly txHash: Hex | null;
+		readonly seenBy?: "relay" | "page";
+	} | null;
 	/** The relay closed the proposal in a way this version of the page does not know. */
 	readonly closedUnknown?: boolean;
 	/**
@@ -115,6 +121,12 @@ export interface StageInput {
 	 * signature.
 	 */
 	readonly objections?: readonly Objection[];
+	/**
+	 * Hyperliquid would refuse the action before this moment (unix ms): an
+	 * unstake while the stake it takes from is still locked. Signing is open
+	 * all the same; only submitting waits.
+	 */
+	readonly heldUntil?: number | null;
 }
 
 export interface Stage {
@@ -135,6 +147,11 @@ export interface Stage {
 	/** True when the finaliser's own signature would complete the threshold. */
 	readonly executeAddsSignature: boolean;
 	readonly executeReason: string | null;
+	/**
+	 * Set while time is the only thing between the finaliser and Submit (see
+	 * `StageInput.heldUntil`): the moment it opens.
+	 */
+	readonly opensAt: number | null;
 	/** The live signer set differs from the one recorded when the proposal was made. */
 	readonly policyChanged: boolean;
 	/** The header is on the other network than the proposal: signing is refused until it is switched. */
@@ -215,12 +232,20 @@ export function changeInEffect(p: Proposal, live: Policy | null): boolean {
 	);
 }
 
+/** A moment as a part: shown in the reader's own zone. */
+const heldWhen = (at: number): Part => ({
+	text: new Date(at).toISOString().slice(0, 16).replace("T", " "),
+	when: at,
+});
+
 export function deriveStage(input: StageInput): Stage {
 	const { proposal: p, readiness: r, policy } = input;
 	const now = input.now ?? Date.now();
 	const wallet = input.wallet ? input.wallet.toLowerCase() : null;
 	const leader = p.payload.outerSigner;
 	const window = describeWindow(p.payload.nonce, now);
+	const lockedUntil =
+		input.heldUntil != null && input.heldUntil > now ? input.heldUntil : null;
 
 	const isLeader = wallet !== null && wallet === leader;
 	const isSigner =
@@ -300,7 +325,10 @@ export function deriveStage(input: StageInput): Stage {
 		phase = "carried-out";
 		// said this way because the submitter may well have used this page, signed out
 		head = say`Carried out, not reported here`;
-		body = say`Hyperliquid carried this action out, but its result was never reported here: it was submitted while signed out, or some other way. The relay checked the transaction itself. Nothing more to sign.`;
+		body =
+			input.carriedOut.seenBy === "page"
+				? say`Hyperliquid's own list of this account's staking steps holds this action, under this proposal's number: it was carried out, but its result was never reported here. Nothing more to sign.`
+				: say`Hyperliquid carried this action out, but its result was never reported here: it was submitted while signed out, or some other way. The relay checked the transaction itself. Nothing more to sign.`;
 	} else if (input.closedUnknown) {
 		phase = "closed";
 		head = say`Closed`;
@@ -338,7 +366,12 @@ export function deriveStage(input: StageInput): Stage {
 		// before anything about signatures: no signature changes it any more
 		phase = "refused";
 		head = say`Refused by Hyperliquid · cannot be sent again`;
-		body = say`Hyperliquid refused this proposal when it was submitted, and a refused submission still uses up the proposal's number. Sending it again would only be answered "duplicate nonce". Propose it again: it gets a new number, and the signers sign once more.`;
+		body =
+			failedAttempt.id === "nonce-duplicate"
+				? // the number was used before this attempt: by a submission that was
+					// refused, or by one that went through and whose answer never got here
+					say`Hyperliquid answered "duplicate nonce": this proposal's number had already been used by an earlier submission. If that one went through, the action is carried out already. Look at the treasury's record on Hyperliquid before proposing it again.`
+				: say`Hyperliquid refused this proposal when it was submitted, and a refused submission still uses up the proposal's number. Sending it again would only be answered "duplicate nonce". Propose it again: it gets a new number, and the signers sign once more.`;
 	} else if (!r) {
 		phase = "judging";
 		head = say`Checking signatures…`;
@@ -378,9 +411,11 @@ export function deriveStage(input: StageInput): Stage {
 	} else if (r.status === "ready") {
 		phase = "ready";
 		head = say`Ready · ${String(r.have)} of ${String(r.need)} signatures`;
-		body = isLeader
-			? say`You are the finaliser: submit it when you are ready · ${window.parts}.`
-			: say`The finaliser ${who(leader)} signs the envelope and submits · ${window.parts}.`;
+		body = lockedUntil
+			? say`${isLeader ? "You are the finaliser. It" : say`The finaliser ${who(leader)} submits it. It`} can be submitted from ${heldWhen(lockedUntil)}: the stake it takes from is locked until then · ${window.parts}.`
+			: isLeader
+				? say`You are the finaliser: submit it when you are ready · ${window.parts}.`
+				: say`The finaliser ${who(leader)} signs the envelope and submits · ${window.parts}.`;
 	} else {
 		phase = "collecting";
 		head = say`Collecting signatures · ${String(r.have)} of ${String(r.need)}`;
@@ -454,8 +489,15 @@ export function deriveStage(input: StageInput): Stage {
 							? "Connect the finaliser's wallet to submit."
 							: !isLeader
 								? `Only the finaliser ${shortAddress(leader)} can submit.`
-								: null;
+								: lockedUntil
+									? "The stake this takes from is still locked, and Hyperliquid would refuse it until the lockup has ended."
+									: null;
 	const canExecute = executeReason === null;
+	// time is all that is in the way: the page shows Submit, switched off, with the moment
+	const opensAt =
+		lockedUntil && executable && !networkMismatch && isLeader
+			? lockedUntil
+			: null;
 
 	return {
 		phase,
@@ -468,6 +510,7 @@ export function deriveStage(input: StageInput): Stage {
 		canExecute,
 		executeAddsSignature: canExecute && executeAddsSignature,
 		executeReason,
+		opensAt,
 		policyChanged: policyChanged(p, policy),
 		networkMismatch,
 		failedAttempt,

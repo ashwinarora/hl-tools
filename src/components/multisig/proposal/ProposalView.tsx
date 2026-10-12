@@ -2,6 +2,7 @@ import {
 	type ActionPartyRole,
 	type Address,
 	describeAction,
+	type Hex,
 	type Issue,
 	orderMark,
 	overtakenBy,
@@ -30,6 +31,7 @@ import { useReceiver } from "../live/useReceiver";
 import { explorerTxUrl } from "../model/chain/columns";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
 import { CHANGE } from "../model/change";
+import { receiptOk } from "../model/history";
 import { refusalNote } from "../model/refusal";
 import { RELAY_COPY } from "../model/relay/copy";
 import { costLine, modeRefusal } from "../model/send";
@@ -55,7 +57,7 @@ import {
 	SignsTag,
 	Tag,
 } from "../shell/kit";
-import { useNow } from "../shell/live";
+import { useNow, When } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { AffectedList } from "../signers/AffectedList";
 import { useAffected } from "../signers/useAffected";
@@ -69,6 +71,7 @@ import { SignaturesPanel } from "./SignaturesPanel";
 import { StageCallout } from "./StageCallout";
 import { TellCoSigners } from "./TellCoSigners";
 import type { ProposalDoc } from "./useProposalDoc";
+import { useStakingStep } from "./useStakingStep";
 import { useViewRecorder } from "./useViewRecorder";
 import { YourPart } from "./YourPart";
 
@@ -211,6 +214,27 @@ export function ProposalView({
 	);
 	const settled =
 		status === "accepted" || status === "carried_out" || status === "unknown";
+	// A staking step: the lockup an unstake waits for, the state of the
+	// validator a stake goes to, and whether Hyperliquid already has the step
+	// (stake, unstake and the start of a return leave nothing in the ledger).
+	const stakingStep = useStakingStep(
+		proposal,
+		!settled && !(proposal.receipt && receiptOk(proposal.receipt)),
+	);
+	const onRecord = stakingStep.record;
+	const stakingTx = useMemo(
+		() =>
+			onRecord?.kind === "matched"
+				? [
+						{
+							time: onRecord.time,
+							hash: onRecord.hash,
+							digest: proposal.digest,
+						},
+					]
+				: undefined,
+		[onRecord, proposal.digest],
+	);
 	// A change of signers touches the other proposals still waiting: the same
 	// record says which.
 	const changeTo = useMemo<SignerSet | "revert" | null>(() => {
@@ -277,7 +301,10 @@ export function ProposalView({
 		carriedOut:
 			row?.status === "carried_out"
 				? { txHash: doc.relay.carriedOut?.txHash ?? null }
-				: null,
+				: onRecord?.kind === "matched"
+					? { txHash: onRecord.hash as Hex, seenBy: "page" }
+					: null,
+		heldUntil: stakingStep.heldUntil,
 		closedUnknown: row?.status === "unknown",
 		overtaken,
 		headerNetwork: header,
@@ -348,6 +375,7 @@ export function ProposalView({
 		statusOf,
 		signer: !!listed && !!relay.wallet && listed.signers.includes(relay.wallet),
 		now: clock,
+		also: stakingTx,
 	});
 	const mySignerHere =
 		!!listed && !!relay.wallet && listed.signers.includes(relay.wallet);
@@ -372,7 +400,9 @@ export function ProposalView({
 				: null,
 		[row, doc.relay.views],
 	);
-	const carriedTx = doc.relay.carriedOut?.txHash ?? null;
+	const carriedTx =
+		doc.relay.carriedOut?.txHash ??
+		(onRecord?.kind === "matched" ? onRecord.hash : null);
 	const treasuryName = listed
 		? nameOf(target.network, target.address as Address)
 		: shortAddress(target.address);
@@ -632,6 +662,14 @@ export function ProposalView({
 											<dd className="text-[13px]">
 												<Who address={party.address} full editable />
 												{party.address === me && " (you)"}
+												{party.role === "validator" &&
+													stakingStep.validator?.address === party.address &&
+													stakingStep.validator.name.trim() && (
+														// the validator's own word for itself, as Hyperliquid lists it
+														<span className="ml-1.5 text-muted-foreground">
+															listed as “{stakingStep.validator.name.trim()}”
+														</span>
+													)}
 											</dd>
 										</div>
 									))}
@@ -660,6 +698,50 @@ export function ProposalView({
 									)}
 								</dl>
 								<CostNote line={cost} />
+								{COSTED.has(stage.phase) && stakingStep.noPay && (
+									// read from Hyperliquid for every signer who opens this
+									<p className="mt-3 flex items-start gap-1.5 text-[13px] text-warning">
+										<span
+											className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+											aria-hidden
+										/>
+										<span>{stakingStep.noPay}</span>
+									</p>
+								)}
+								{COSTED.has(stage.phase) &&
+									(onRecord?.kind === "likely" ||
+										onRecord?.kind === "unchecked") && (
+										<p className="mt-3 flex items-start gap-1.5 text-[13px] text-warning">
+											<span
+												className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+												aria-hidden
+											/>
+											<span>
+												{onRecord.kind === "likely" ? (
+													<>
+														Hyperliquid's staking history shows a step like this
+														one on <When at={onRecord.time} />. It may be this
+														proposal, already carried out: the explorer did not
+														say.{" "}
+														<a
+															href={explorerTxUrl(
+																target.network,
+																onRecord.hash,
+															)}
+															target="_blank"
+															rel="noreferrer"
+															className="underline underline-offset-2"
+														>
+															Look at that transaction
+														</a>{" "}
+														before submitting.
+													</>
+												) : (
+													"Hyperliquid's staking history shows several steps like this one, and the explorer did not say whether one of them is this proposal. Look at the treasury's Staking history before submitting."
+												)}
+											</span>
+										</p>
+									)}
 								{changeTo && liveSet && (
 									<div className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3">
 										<h3 className="text-xs font-medium">

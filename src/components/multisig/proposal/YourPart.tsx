@@ -2,21 +2,26 @@ import {
 	type Address,
 	type Issue,
 	type Proposal,
+	stakingActionOf,
 	wouldShutOut,
 } from "@hl-tools/core";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { Callout, IssueList } from "#/components/hub/status";
 import { useNetworkStore } from "#/store/networkStore";
+import { refreshStaking } from "../live/useStaking";
 import { RELAY_COPY, signHint } from "../model/relay/copy";
 import { objectionNote, ownPosition } from "../model/relay/positions";
 import { relayActions } from "../model/relay/status";
 import { type Stage, shortAddress } from "../model/stage";
+import { untilWords } from "../model/time";
 import { Sentence } from "../names/Sentence";
 import { useOpenProposals } from "../relay/openProposals";
 import { Help } from "../shell/Help";
 import { Btn, Card, Tag } from "../shell/kit";
+import { When } from "../shell/live";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
 import type { WalletSigner } from "../useWalletSigner";
 import {
@@ -69,6 +74,7 @@ export function YourPart({
 	const [confirm, setConfirm] = useState(false);
 	const [finishing, setFinishing] = useState(false);
 	const open = useOpenProposals();
+	const queries = useQueryClient();
 
 	const { network, outerSigner } = proposal.payload;
 	const me = wallet.address as Address | null;
@@ -125,6 +131,13 @@ export function YourPart({
 			});
 			setFinishing(false);
 			if (!result.ok) setFailure(result.issues);
+			// a staking step that went through changed what the treasury has in staking
+			else if (result.accepted && stakingActionOf(proposal.payload.action))
+				void refreshStaking(
+					queries,
+					proposal.payload.network,
+					proposal.payload.multiSigUser,
+				);
 		});
 
 	const rows: { id: StepId; label: string }[] = [
@@ -226,9 +239,12 @@ export function YourPart({
 			).map((x) => x.item)
 		: [];
 
+	// Submit is shown switched off while only time stands in its way
+	const waits = stage.opensAt !== null && !stage.canExecute;
 	const any =
 		stage.canExecute ||
 		stage.canSign ||
+		waits ||
 		actions.takeBack ||
 		actions.withdraw ||
 		actions.sayNo ||
@@ -308,6 +324,15 @@ export function YourPart({
 								: `Sign as ${me ? shortAddress(me) : "…"}`}
 						</Btn>
 					) : null}
+					{waits && (
+						<Btn
+							variant="brand"
+							disabled
+							title="Hyperliquid would refuse it before the stake's lockup has ended."
+						>
+							Submit
+						</Btn>
+					)}
 					{actions.takeBack && (
 						<Btn
 							variant="outline"
@@ -360,6 +385,17 @@ export function YourPart({
 					)}
 				</div>
 			)}
+			{waits && stage.opensAt !== null && (
+				<p className="mt-2.5 flex flex-wrap items-center gap-1 text-[13px] text-muted-foreground">
+					<span>
+						Submit opens on <When at={stage.opensAt} /> (
+						{untilWords(stage.opensAt, now)}): the stake this takes from is
+						locked until then.
+						{stage.canSign ? " You can sign now." : ""}
+					</span>
+					<Help k="stakeLockup" />
+				</p>
+			)}
 			{itself ? (
 				<SwitchToSigner signers={signers} className={any ? "mt-2.5" : ""} />
 			) : mine ? (
@@ -373,7 +409,7 @@ export function YourPart({
 				>
 					<Sentence parts={mine} /> <Help k="sayNo" />
 				</p>
-			) : note ? (
+			) : note && !(waits && !stage.canSign) ? (
 				<p
 					className={
 						any
