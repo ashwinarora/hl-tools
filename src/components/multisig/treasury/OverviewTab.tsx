@@ -14,7 +14,7 @@ import {
 	useMultisigPrefs,
 	usePrefsHydrated,
 } from "#/store/multisigPrefsStore";
-import { API_WALLET_SENTENCE } from "../model/apiWallet";
+import { API_WALLET_FORMER, API_WALLET_SENTENCE } from "../model/apiWallet";
 import {
 	amountText,
 	compareAmount,
@@ -577,7 +577,7 @@ export function OverviewTab({
 								);
 							})}
 							<p className="mt-2.5 text-xs text-subtle-foreground">
-								{API_WALLET_SENTENCE}
+								{frozen ? API_WALLET_FORMER : API_WALLET_SENTENCE}
 							</p>
 						</>
 					)}

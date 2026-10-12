@@ -14,6 +14,10 @@ export const API_WALLET_CANNOT =
 /** Under a treasury's list of API wallets. */
 export const API_WALLET_SENTENCE = `An API wallet acts for this treasury without the signers: it can ${API_WALLET_CAN}. ${API_WALLET_CANNOT}`;
 
+/** The same, once the account is no longer a multi-sig: there are no signers to act without. */
+export const API_WALLET_FORMER =
+	"An API wallet still acts for this account: it can trade with everything the account holds and move it into vaults. It cannot send funds to another account or withdraw them.";
+
 /** In the form that proposes one, after the protocol's own sentence. */
 export const API_WALLET_PROPOSE =
 	"Whoever holds this key can do all of that on their own, with the perps and the spot balance alike.";
