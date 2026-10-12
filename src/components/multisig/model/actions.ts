@@ -19,6 +19,7 @@ import {
 	issue,
 	type Move,
 	moveOf,
+	multiSigEvmRefusal,
 	type Network,
 	networkConfig,
 	type PlainObject,
@@ -42,6 +43,7 @@ import { chainChoiceFor, type InnerChain } from "./chains";
 import { addressField, amountField } from "./fields";
 import type { NonceMode } from "./nonce";
 import { selfRefusal } from "./selfSend";
+import { TO_HYPEREVM } from "./send";
 import {
 	judgeSet,
 	type SignerCheck,
@@ -335,6 +337,15 @@ function warnAboutSend(
 	issues: Issue[],
 ): void {
 	const treasury = ctx.multiSigUser.toLowerCase();
+	// not an account: nothing else about a receiver applies
+	if (multiSigEvmRefusal(action)) {
+		issues.push(
+			issue("action.to_hyperevm", "error", TO_HYPEREVM, {
+				path: "action.destination",
+			}),
+		);
+		return;
+	}
 	const toItself = selfRefusal(treasury, action);
 	if (toItself) {
 		issues.push(

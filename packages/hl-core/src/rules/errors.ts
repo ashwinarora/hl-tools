@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.8.0",
-	verifiedAt: "2026-10-12",
+	version: "1.9.0",
+	verifiedAt: "2026-10-13",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
 	sources: [
@@ -65,6 +65,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.8.0",
 			date: "2026-10-12",
 			note: 'Staking, recorded on testnet through a multi-sig (fixtures/multisig/staking.json): "Insufficient funds available to deposit." (moving more HYPE into staking than spot can release), "Insufficient balance to delegate" (staking more than the staking balance holds unstaked), "Unknown validator", "Cannot undelegate during lockup period after delegating or voting." (an unstake before the stake\'s lockup has ended, which a top-up restarts), "Insufficient balance to undelegate", "Insufficient balance to withdraw from CStaking" (returning more than is unstaked) and "Too many concurrent CStaking withdrawals" (a sixth return while five wait).',
+		},
+		{
+			version: "1.9.0",
+			date: "2026-10-13",
+			note: 'Recorded on testnet through a multi-sig (fixtures/multisig/evm-transfer.json): "Multi-sig user cannot transfer token to EVM" (a send to the token\'s own HyperEVM system address) and "EVM transfer not configured" (a send to another token\'s system address).',
 		},
 	],
 });
@@ -557,6 +562,26 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		cause:
 			"A sendAsset names the sending account itself and the same balance as source and destination, so nothing would move (recorded on testnet, plain and through a multi-sig).",
 		fix: "Send to another account, or to the account's other balance.",
+		documented: false,
+	},
+	{
+		id: "evm-multisig",
+		pattern: /multi-?sig user cannot transfer token to evm/i,
+		example: "Multi-sig user cannot transfer token to EVM",
+		category: "account",
+		cause:
+			"A multi-sig account sent a token to that token's system address on HyperEVM (0x2222…2222 for HYPE, 0x20 followed by the token index for the others), which asks Hyperliquid to move the token to HyperEVM. Hyperliquid does not do that for a multi-sig account (recorded on testnet, spotSend and sendAsset).",
+		fix: "Send to an account on Hyperliquid instead. A multi-sig's tokens cannot be moved to HyperEVM.",
+		documented: false,
+	},
+	{
+		id: "evm-unconfigured",
+		pattern: /evm transfer not configured/i,
+		example: "EVM transfer not configured",
+		category: "account",
+		cause:
+			"The destination is a HyperEVM system address, and not the one of the token being sent: each token moves to HyperEVM only through its own system address (recorded on testnet through a multi-sig).",
+		fix: "Send to an account on Hyperliquid, or to the system address of the token being sent (0x20 followed by its index; 0x2222…2222 for HYPE). A multi-sig account is refused there too.",
 		documented: false,
 	},
 	{

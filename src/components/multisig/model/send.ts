@@ -13,6 +13,7 @@ import {
 	activationCharge,
 	Decimal,
 	landsIn,
+	multiSigEvmRefusal,
 	overtakenBy,
 	type PlainObject,
 	sendRefusal,
@@ -107,6 +108,14 @@ export interface Refusal {
 	readonly message: string;
 }
 
+/**
+ * A destination that is one of HyperEVM's own addresses: a send to it asks
+ * Hyperliquid to move the token to HyperEVM, which it does not do for a
+ * multi-sig account (core: `multiSigEvmRefusal`).
+ */
+export const TO_HYPEREVM =
+	"The destination is one of HyperEVM's own addresses: a send to it would move the token to HyperEVM, and Hyperliquid refuses that from a multi-sig account. A treasury's tokens can only be sent to accounts on Hyperliquid.";
+
 const MODE_REFUSALS: Readonly<Record<string, string>> = {
 	"unified-disabled":
 		"This treasury is a unified account, and Hyperliquid switches this kind of action off there. Propose it again as Send USDC or Send spot token.",
@@ -118,6 +127,7 @@ const MODE_REFUSALS: Readonly<Record<string, string>> = {
 		"This sends from the treasury to itself, and Hyperliquid refuses that kind of send to oneself. Propose it again with another destination.",
 	"send-invalid":
 		"This sends from one of the treasury's balances into the same balance of itself, and Hyperliquid refuses that. To move USDC between its perps and spot balances, propose Perps ↔ spot.",
+	"evm-multisig": TO_HYPEREVM,
 };
 
 const MODE_TITLES: Readonly<Record<string, string>> = {
@@ -126,6 +136,7 @@ const MODE_TITLES: Readonly<Record<string, string>> = {
 	"token-invalid": "Hyperliquid refuses this token in a perps balance",
 	"self-transfer": "Hyperliquid refuses a send from an account to itself",
 	"send-invalid": "Hyperliquid refuses a send into the balance it comes from",
+	"evm-multisig": "Hyperliquid refuses a send to HyperEVM from a multi-sig",
 };
 
 /**
@@ -139,7 +150,9 @@ export function modeRefusal(
 	/** The sending account: a send to itself is refused whatever the mode. */
 	self?: string,
 ): (Refusal & { readonly title: string }) | null {
+	// first what no mode changes: the destination is not an account at all
 	const refusal =
+		multiSigEvmRefusal(action) ??
 		(mode ? sendRefusal(mode, action) : null) ??
 		(self ? selfRefusal(self, action) : null);
 	return refusal
@@ -264,6 +277,8 @@ export function costLine(input: {
 	const { action, receiver } = input;
 	const shape = action ? sendShape(action) : null;
 	if (!action || !shape || shape.destination === null) return null;
+	// not an account: the form says so under the destination, and nothing is paid
+	if (multiSigEvmRefusal(action)) return null;
 	if (receiver === "loading")
 		return {
 			tone: "muted",

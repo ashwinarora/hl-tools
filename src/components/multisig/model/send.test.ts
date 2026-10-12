@@ -17,6 +17,7 @@ import {
 	receiverRecheckMs,
 	type SendFacts,
 	spotAvailable,
+	TO_HYPEREVM,
 } from "./send";
 
 const USDC = "USDC:0xeb62eee3685fc4c43992febcd9e75443";
@@ -243,6 +244,30 @@ describe("modeRefusal: what the treasury's mode alone rules out", () => {
 			"token",
 		);
 	});
+	it("refuses a destination that moves the token to HyperEVM, whatever the mode and also when it was not read", () => {
+		const hype = "0x2222222222222222222222222222222222222222";
+		const toEvm = { ...asset("spot", "spot"), destination: hype };
+		for (const mode of [MANUAL, UNIFIED, null])
+			expect(modeRefusal(mode, toEvm)).toEqual({
+				code: "evm-multisig",
+				title: "Hyperliquid refuses a send to HyperEVM from a multi-sig",
+				message: TO_HYPEREVM,
+			});
+		// said before what the mode has against it: no other way of sending would do
+		expect(
+			modeRefusal(UNIFIED, { ...usdSend(), destination: hype })?.code,
+		).toBe("evm-multisig");
+		// a token's system address by its index
+		expect(
+			modeRefusal(MANUAL, {
+				...asset("spot", "spot", "1", PURR),
+				destination: "0x2000000000000000000000000000000000000001",
+			})?.code,
+		).toBe("evm-multisig");
+		expect(TO_HYPEREVM).toContain("refuses that from a multi-sig account");
+		for (const pattern of FORBIDDEN_CLAIMS)
+			expect(TO_HYPEREVM).not.toMatch(pattern);
+	});
 	it("says nothing when the mode allows it, or was not read", () => {
 		expect(modeRefusal(UNIFIED, asset("spot", "spot"))).toBeNull();
 		expect(modeRefusal(MANUAL, usdSend())).toBeNull();
@@ -265,6 +290,17 @@ describe("costLine: what sending to this address costs", () => {
 			spot: [{ coin: "USDC", total: "100", hold: "0" }],
 			...over,
 		});
+	it("is silent for a destination that is no account: the form refuses it under the field", () => {
+		expect(
+			line(
+				{
+					...asset("spot", "spot"),
+					destination: "0x2222222222222222222222222222222222222222",
+				},
+				FRESH,
+			),
+		).toBeNull();
+	});
 	it("is silent for what pays nobody", () => {
 		expect(line(null, FRESH)).toBeNull();
 		expect(

@@ -5,10 +5,16 @@ import {
 	activationCharge,
 	explainExchangeError,
 	landsIn,
+	multiSigEvmRefusal,
 	sendRefusal,
 	sendShape,
 	withdrawalOutcome,
 } from "../../src/multisig/index.ts";
+import {
+	isSystemAddress,
+	SYSTEM_ADDRESSES,
+	tokenSystemAddress,
+} from "../../src/rules/hyperevm.ts";
 import {
 	ACCOUNT_MODES,
 	MODE_KINDS,
@@ -658,5 +664,94 @@ describe("withdrawalOutcome", () => {
 		).toBeNull();
 		expect(withdrawalOutcome(null)).toBeNull();
 		expect(withdrawalOutcome("withdraw3")).toBeNull();
+	});
+});
+
+describe("a send to HyperEVM from a multi-sig (fixtures/multisig/evm-transfer.json)", () => {
+	interface EvmSend {
+		about: string;
+		action: Record<string, unknown>;
+		answer: string;
+	}
+	const evm = fixture<{
+		tokens: Record<string, { index: number; system: string }>;
+		sends: EvmSend[];
+	}>("evm-transfer");
+	const own = (action: Record<string, unknown>): string =>
+		evm.tokens[String(action.token).replace(/:.*$/, "")]?.system ?? "";
+
+	it("covers both ways of sending, the token's own system address and another token's", () => {
+		expect(evm.sends).toHaveLength(7);
+		expect(new Set(evm.sends.map((s) => s.action.type))).toEqual(
+			new Set(["spotSend", "sendAsset"]),
+		);
+		expect(evm.tokens.HYPE?.system).toBe(SYSTEM_ADDRESSES.hype);
+		expect(evm.tokens.USDC?.system).toBe(tokenSystemAddress(0));
+	});
+
+	it.each(
+		evm.sends.map((s) => [s.about, s] as const),
+	)("%s: refused, and known to be before it is sent", (_name, s) => {
+		expect(multiSigEvmRefusal(s.action)).toBe("evm-multisig");
+		// the answer is in the catalogue: the multi-sig one at the token's own address, the other elsewhere
+		expect(
+			explainExchangeError({ status: "err", response: s.answer }, 200).id,
+		).toBe(
+			s.action.destination === own(s.action)
+				? "evm-multisig"
+				: "evm-unconfigured",
+		);
+	});
+
+	it("says nothing about a send to an account, or about what sends nothing", () => {
+		expect(multiSigEvmRefusal(asset("spot", "spot"))).toBeNull();
+		expect(multiSigEvmRefusal(usdSend())).toBeNull();
+		// perps USDC to USDC's system address: not measured for usdSend, taken to be refused the same way
+		expect(
+			multiSigEvmRefusal({
+				...usdSend(),
+				destination: SYSTEM_ADDRESSES.tokenBase,
+			}),
+		).toBe("evm-multisig");
+		expect(
+			multiSigEvmRefusal({
+				type: "usdClassTransfer",
+				amount: "5",
+				toPerp: true,
+			}),
+		).toBeNull();
+		expect(
+			multiSigEvmRefusal({
+				type: "withdraw3",
+				destination: SYSTEM_ADDRESSES.hype,
+				amount: "5",
+			}),
+		).toBeNull();
+		expect(multiSigEvmRefusal(null)).toBeNull();
+	});
+
+	it("knows a system address from an address that only begins like one", () => {
+		expect(isSystemAddress(SYSTEM_ADDRESSES.hype)).toBe(true);
+		expect(
+			isSystemAddress(SYSTEM_ADDRESSES.hype.toUpperCase().replace("0X", "0x")),
+		).toBe(true);
+		expect(isSystemAddress(tokenSystemAddress(0))).toBe(true);
+		// a token index above 255: HYPE on testnet is 1105
+		expect(isSystemAddress(tokenSystemAddress(1105))).toBe(true);
+		expect(isSystemAddress("0x2000000000000000000000000000000000000451")).toBe(
+			true,
+		);
+		expect(isSystemAddress(tokenSystemAddress(0xffffffff))).toBe(true);
+		// an account whose address begins with 0x20
+		expect(isSystemAddress("0x20a5b6f2154b4836de8c8b80fb90feacc236bd07")).toBe(
+			false,
+		);
+		expect(isSystemAddress("0x2000000000000000000000000000000100000000")).toBe(
+			false,
+		);
+		// CoreWriter's address is not a token's
+		expect(isSystemAddress(SYSTEM_ADDRESSES.coreWriter)).toBe(false);
+		expect(isSystemAddress("0x2222")).toBe(false);
+		expect(isSystemAddress("")).toBe(false);
 	});
 });

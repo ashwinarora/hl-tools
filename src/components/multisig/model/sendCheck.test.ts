@@ -192,6 +192,22 @@ describe("checkBeforeSubmit", () => {
 		expect(await codes(asset("", "5"), { mode: 7 })).toEqual([]);
 	});
 
+	it("stops a send to one of HyperEVM's own addresses, whatever the mode and the balances", async () => {
+		const toEvm = {
+			...asset("spot"),
+			destination: "0x2222222222222222222222222222222222222222",
+		};
+		expect(await codes(toEvm)).toEqual(["evm-multisig"]);
+		// nothing read at all: the destination alone says it
+		expect(
+			await codes(toEvm, {
+				mode: new Error("timeout"),
+				role: new Error("timeout"),
+				spot: new Error("timeout"),
+			}),
+		).toEqual(["evm-multisig"]);
+	});
+
 	it("stops a send from the treasury into the same balance of itself, whatever its mode", async () => {
 		const toItself = { ...asset(""), destination: TREASURY };
 		expect(await codes(toItself)).toEqual(["send-invalid"]);

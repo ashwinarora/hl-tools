@@ -339,6 +339,57 @@ describe("buildAction / buildProposalInput", () => {
 		}
 	});
 
+	it("stops a send to one of HyperEVM's own addresses, in both send forms and in Raw JSON", () => {
+		const HYPE_SYSTEM = "0x2222222222222222222222222222222222222222";
+		const usdc = buildAction(
+			form({ kind: "sendUsdc", destination: HYPE_SYSTEM, amount: "1" }),
+			// also for a receiver the look-up called new: no fee line beside it
+			ctx({ receiver: { status: "new", mode: null } }),
+		);
+		expect(codes(usdc.issues)).toEqual(["action.to_hyperevm"]);
+		expect(usdc.action).toBeNull();
+		expect(usdc.issues[0]?.severity).toBe("error");
+		expect(usdc.issues[0]?.message).toContain("HyperEVM");
+		expect(fieldOf(usdc.issues[0] as Issue)).toBe("destination");
+		// a token's own system address: 0x20 and the token's index
+		const token = buildAction(
+			form({
+				kind: "sendToken",
+				destination: "0x2000000000000000000000000000000000000001",
+				token: `PURR:${PURR.tokenId}`,
+				amount: "1",
+			}),
+			ctx(),
+		);
+		expect(codes(token.issues)).toEqual(["action.to_hyperevm"]);
+		expect(token.action).toBeNull();
+		const raw = buildAction(
+			form({
+				kind: "raw",
+				raw: JSON.stringify({
+					type: "spotSend",
+					destination: HYPE_SYSTEM,
+					token: "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+					amount: "0.1",
+				}),
+			}),
+			ctx(),
+		);
+		expect(codes(raw.issues)).toContain("action.to_hyperevm");
+		expect(raw.action).toBeNull();
+		// an account whose address merely begins like one is an account
+		const account = buildAction(
+			form({
+				kind: "sendUsdc",
+				destination: "0x20a5b6f2154b4836de8c8b80fb90feacc236bd07",
+				amount: "1",
+			}),
+			ctx(),
+		);
+		expect(codes(account.issues)).toEqual([]);
+		expect(account.action).not.toBeNull();
+	});
+
 	it("checks addresses and flags a send to the account itself", () => {
 		const send = (destination: string) =>
 			buildAction(form({ kind: "sendUsdc", destination, amount: "1" }), ctx());

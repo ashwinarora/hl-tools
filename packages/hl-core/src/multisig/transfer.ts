@@ -6,6 +6,7 @@
  * never used costs and whom.
  */
 import { Decimal } from "../decimal.ts";
+import { isSystemAddress } from "../rules/hyperevm.ts";
 import {
 	ACCOUNT_MODES,
 	ACTIVATION_FEE_USDC,
@@ -153,6 +154,21 @@ export function sendRefusal(
 		if (samePocket(shape.from, shape.to)) return "send-invalid";
 	}
 	return null;
+}
+
+/**
+ * A send to one of HyperEVM's system addresses asks Hyperliquid to move the
+ * token to HyperEVM. From a multi-sig account every such send is refused,
+ * whatever its mode and whichever way it is sent: to the token's own system
+ * address with "Multi-sig user cannot transfer token to EVM", to another
+ * token's with "EVM transfer not configured" (measured:
+ * fixtures/multisig/evm-transfer.json). The id is the catalogue's for the
+ * first: which of the two Hyperliquid answers takes the token's index, and
+ * either way nothing moves.
+ */
+export function multiSigEvmRefusal(action: unknown): "evm-multisig" | null {
+	const to = sendShape(action)?.destination;
+	return to && isSystemAddress(to) ? "evm-multisig" : null;
 }
 
 /**
