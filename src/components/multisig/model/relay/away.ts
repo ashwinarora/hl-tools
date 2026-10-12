@@ -26,6 +26,7 @@ import {
 	type AgentInfo,
 	Decimal,
 	type Hex,
+	isAgentRemoval,
 	type LedgerRow,
 	type Proposal,
 } from "@hl-tools/core";
@@ -60,6 +61,8 @@ export interface AwayProposal {
 	readonly kind: string;
 	/** The API wallet an `approveAgent` names. */
 	readonly agent: Address | null;
+	/** It removes an API wallet (an approval of the zero address). */
+	readonly removes?: boolean;
 	readonly createdBy: Address | null;
 	/** The one signer who can submit it. */
 	readonly finaliser: Address | null;
@@ -80,7 +83,10 @@ const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
  */
 export function awayProposal(row: ProposalRow, p: Proposal): AwayProposal {
 	const action = p.payload.action;
-	const agent = action.type === "approveAgent" ? action.agentAddress : null;
+	const removes = isAgentRemoval(action);
+	// a removal names the zero address, which is nobody's wallet
+	const agent =
+		action.type === "approveAgent" && !removes ? action.agentAddress : null;
 	return {
 		digest: p.digest,
 		// a staking step in the words of its own page, as every list has it
@@ -91,6 +97,7 @@ export function awayProposal(row: ProposalRow, p: Proposal): AwayProposal {
 			typeof agent === "string" && ADDRESS.test(agent)
 				? (agent.toLowerCase() as Address)
 				: null,
+		removes,
 		createdBy: row.createdBy,
 		finaliser: row.finaliser,
 		signers: p.signatures.map((s) => s.signer),
@@ -402,12 +409,23 @@ export function awayItems(i: {
 				go: { kind: "tab", tab: "overview" },
 			});
 		}
-		for (const address of mark.agents) {
-			if (now.has(address)) continue;
+		// A removal names its wallet by name and the reader's list holds
+		// addresses, so which wallet a removal took cannot be told for certain.
+		// When as many removals were carried out as wallets are gone, the two
+		// facts are said side by side; a guess at the cause is left out.
+		const gone = mark.agents.filter((address) => !now.has(address));
+		const removals = [...carriedOut].filter(
+			(d) => proposals.get(d)?.removes,
+		).length;
+		for (const address of gone) {
+			const who = { text: shortAddress(address), who: address };
 			out.push({
 				key: `agent-:${address}`,
 				at: null,
-				parts: say`An API wallet is no longer approved: ${{ text: shortAddress(address), who: address }}. It was removed, replaced, or it expired.`,
+				parts:
+					removals >= gone.length
+						? say`An API wallet is no longer approved: ${who}. A proposal that removes an API wallet was carried out.`
+						: say`An API wallet is no longer approved: ${who}. It was removed, replaced, or it expired.`,
 				go: { kind: "tab", tab: "overview" },
 			});
 		}

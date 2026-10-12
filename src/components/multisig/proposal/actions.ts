@@ -115,6 +115,8 @@ export function submitReads(network: Network): SendReads {
 		validators: async () =>
 			(await client.validatorSummaries({ fresh: true })).data,
 		clock: async () => (await client.exchangeTime()).data,
+		agents: async (user) =>
+			(await client.apiWallets(user, { fresh: true })).data,
 	};
 }
 

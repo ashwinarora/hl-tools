@@ -16,6 +16,7 @@ import {
 	type Hex,
 	hasErrors,
 	type Issue,
+	isAgentRemoval,
 	issue,
 	type Move,
 	moveOf,
@@ -37,6 +38,7 @@ import {
 	userSignedSpec,
 	WITHDRAWAL_FEE_USDC,
 	withdrawalOutcome,
+	ZERO_ADDRESS,
 } from "@hl-tools/core";
 import { ADDRESS_RE } from "#/components/tools/multisig/model";
 import { chainChoiceFor, type InnerChain } from "./chains";
@@ -70,6 +72,7 @@ export type ActionKind =
 	| "usdClassTransfer"
 	| "withdraw3"
 	| "approveAgent"
+	| "removeAgent"
 	| "changeSigners"
 	| StakingKind
 	| "raw";
@@ -108,6 +111,12 @@ export const ACTION_KINDS: readonly {
 			"Let another key act for this account without the signers: trade, and move its money into vaults.",
 	},
 	{
+		kind: "removeAgent",
+		label: "Remove API wallet",
+		description:
+			"Take an API wallet's permission to act for this account away again.",
+	},
+	{
 		kind: "changeSigners",
 		label: "Change signers",
 		description:
@@ -122,6 +131,22 @@ export const ACTION_KINDS: readonly {
 		description: "Any other user-signed action, written as JSON.",
 	},
 ];
+
+/** Every sentence of Remove API wallet. */
+export const REMOVE_AGENT = {
+	/** How a wallet is called in a sentence: by its name, or as the one without. */
+	called: (name: string) => (name ? `named "${name}"` : "without a name"),
+	missing: (name: string) =>
+		`This treasury has no API wallet ${name ? `named "${name}"` : "without a name"}: there is nothing to remove, and Hyperliquid would refuse it.`,
+	none: "This treasury has no API wallet: there is nothing to remove.",
+	unread:
+		"The API wallets could not be read from Hyperliquid, so there is nothing to choose from yet.",
+	reading: "Reading the API wallets from Hyperliquid…",
+	what: "That wallet stops acting for the treasury once this is carried out. Nothing else changes: balances, positions and open orders stay as they are.",
+	/** Hyperliquid takes one removal at a time ("User has pending agent removal"). */
+	oneAtATime:
+		"Hyperliquid takes one removal at a time: submit a second one a minute or two after the first.",
+} as const;
 
 /** One of the two balances of a manual account. */
 export type PocketChoice = "perps" | "spot";
@@ -160,6 +185,12 @@ export interface ActionForm {
 	readonly agentAddress: string;
 	readonly agentName: string;
 	/**
+	 * Remove API wallet: the name of the wallet to remove, as Hyperliquid
+	 * knows it ("" is the one approved without a name); null while none is
+	 * chosen.
+	 */
+	readonly removeAgent: string | null;
+	/**
 	 * A change of signers, as the action itself carries it (see `wantedSet`):
 	 * "" while untouched, the signer set as a JSON string, or "null" for the
 	 * conversion back to a normal account.
@@ -190,6 +221,7 @@ export const DEFAULT_FORM: ActionForm = {
 	toPerp: "perp",
 	agentAddress: "",
 	agentName: "",
+	removeAgent: null,
 	signers: "",
 	validator: "",
 	toValidator: "",
@@ -229,6 +261,10 @@ export interface BuildContext {
 	readonly receiver?: Receiver | null;
 	/** What is known about the address an API wallet approval names. */
 	readonly agent?: Receiver | null;
+	/** The treasury's API wallets: absent while they are being read, null when they could not be. */
+	readonly agents?:
+		| readonly { readonly name: string; readonly address: string }[]
+		| null;
 	/** What Hyperliquid said about the addresses that would be new signers. */
 	readonly signerChecks?: ReadonlyMap<string, SignerCheck>;
 	/** What Hyperliquid said about the treasury's staking and the validators; null or absent while unread. */
@@ -653,7 +689,19 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				issues,
 				false,
 			);
-			if (agent && agent === treasury) {
+			if (agent === ZERO_ADDRESS) {
+				// it would build a removal under the label of an approval
+				const zero = issues.findIndex((i) => i.code === "address.zero");
+				if (zero >= 0) issues.splice(zero, 1);
+				issues.push(
+					issue(
+						"agent.zero",
+						"error",
+						"The zero address approves nobody: Hyperliquid reads it as removing the API wallet of this name. To remove one, choose Remove API wallet.",
+						{ path: "action.agentAddress" },
+					),
+				);
+			} else if (agent && agent === treasury) {
 				issues.push(
 					issue(
 						"agent.self",
@@ -683,6 +731,43 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				...head,
 				agentAddress: agent ?? "",
 				agentName: form.agentName.trim(),
+				nonce: ctx.nonce,
+			});
+		}
+		case "removeAgent": {
+			const path = "action.removeAgent";
+			const name = form.removeAgent;
+			if (name === null) {
+				issues.push(
+					issue("field.required", "error", "Choose the API wallet to remove.", {
+						path,
+					}),
+				);
+				return done(null);
+			}
+			if (ctx.agents === null) {
+				issues.push(
+					issue(
+						"agents.unread",
+						"warning",
+						"This treasury's API wallets could not be read from Hyperliquid. If it has none of this name, Hyperliquid refuses the removal.",
+						{ path },
+					),
+				);
+			} else if (ctx.agents && !ctx.agents.some((a) => a.name === name)) {
+				// Hyperliquid answers "Extra agent does not exist."
+				issues.push(
+					issue("agent.missing", "error", REMOVE_AGENT.missing(name), {
+						path,
+					}),
+				);
+			}
+			// the zero address approves nobody: it removes the wallet of this name
+			return done({
+				type: "approveAgent",
+				...head,
+				agentAddress: ZERO_ADDRESS,
+				agentName: name,
 				nonce: ctx.nonce,
 			});
 		}
@@ -887,6 +972,9 @@ export function actionTypeOf(
 			return "sendAsset";
 		case "changeSigners":
 			return "convertToMultiSigUser";
+		// a removal is an approval of the zero address
+		case "removeAgent":
+			return "approveAgent";
 		// one or two actions, known only once the staking balance is read; none
 		// of them is numbered after the ones on record
 		case "stake":
@@ -1106,6 +1194,13 @@ export function formFromAction(
 				toPerp: action.toPerp === false ? "spot" : "perp",
 			};
 		case "approveAgent":
+			// the zero address is a removal: the form that names the wallet by its name
+			if (isAgentRemoval(action))
+				return {
+					...base,
+					kind: "removeAgent",
+					removeAgent: str(action.agentName),
+				};
 			return {
 				...base,
 				kind: "approveAgent",
@@ -1210,6 +1305,8 @@ export function fieldOf(i: Issue): keyof ActionForm | null {
 			return "agentAddress";
 		case "action.agentName":
 			return "agentName";
+		case "action.removeAgent":
+			return "removeAgent";
 		case "action.signers":
 			return "signers";
 		case "action.validator":

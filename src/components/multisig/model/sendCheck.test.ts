@@ -88,6 +88,7 @@ function reads(over: Partial<Record<keyof SendReads, unknown>> = {}) {
 			{ address: Y },
 		] as Validator[]),
 		clock: answer("clock", null),
+		agents: answer("agents", [{ name: "lab" }, { name: "" }]),
 	};
 	return { r, asked };
 }
@@ -190,6 +191,50 @@ describe("checkBeforeSubmit", () => {
 		).toEqual([]);
 		// an answer that is not a mode at all
 		expect(await codes(asset("", "5"), { mode: 7 })).toEqual([]);
+	});
+
+	it("stops the removal of an API wallet that is gone, and reads nothing else for it", async () => {
+		const remove = (agentName: string): PlainObject => ({
+			type: "approveAgent",
+			agentAddress: `0x${"0".repeat(40)}`,
+			agentName,
+			nonce: 1,
+		});
+		const { r, asked } = reads();
+		expect(await checkBeforeSubmit(payload(remove("lab")), r)).toEqual([]);
+		expect(asked).toEqual(["agents treasury"]);
+		// the one without a name
+		expect(await codes(remove(""))).toEqual([]);
+		// removed or replaced since the proposal was made
+		const gone = await checkBeforeSubmit(
+			payload(remove("rebalancer")),
+			reads().r,
+		);
+		expect(gone).toEqual([
+			{
+				code: "agent-missing",
+				message:
+					'This treasury has no API wallet named "rebalancer": there is nothing to remove, and Hyperliquid would refuse it.',
+			},
+		]);
+		expect(
+			(
+				await checkBeforeSubmit(
+					payload(remove("")),
+					reads({ agents: [{ name: "lab" }] }).r,
+				)
+			)[0]?.message,
+		).toContain("no API wallet without a name");
+		// a list that could not be read stops nothing
+		expect(
+			await codes(remove("rebalancer"), { agents: new Error("timeout") }),
+		).toEqual([]);
+		// an approval is no removal: nothing here bears on it
+		const approve = await checkBeforeSubmit(
+			payload({ ...remove("x"), agentAddress: RECIPIENT }),
+			reads().r,
+		);
+		expect(approve).toEqual([]);
 	});
 
 	it("stops a send to one of HyperEVM's own addresses, whatever the mode and the balances", async () => {

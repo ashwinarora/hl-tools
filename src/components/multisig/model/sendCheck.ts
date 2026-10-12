@@ -10,6 +10,7 @@
 import {
 	accountMode,
 	type Delegation,
+	isAgentRemoval,
 	judgeStakingSteps,
 	type Network,
 	type PlainObject,
@@ -20,6 +21,7 @@ import {
 	stakingActionOf,
 	type Validator,
 } from "@hl-tools/core";
+import { REMOVE_AGENT } from "./actions";
 import { shortAddress } from "./parts";
 import { preflight, type Refusal, receiverOf, spotAvailable } from "./send";
 import { STAKING_REFUSALS, stakingFacts } from "./staking";
@@ -50,6 +52,8 @@ export interface SendReads {
 	validators(): Promise<readonly Validator[] | null>;
 	/** Hyperliquid's own clock in milliseconds; null when it did not say. */
 	clock(): Promise<number | null>;
+	/** Every API wallet of the account, the one without a name included. */
+	agents(user: string): Promise<readonly { readonly name: string }[]>;
 }
 
 interface Checked {
@@ -70,6 +74,7 @@ export async function checkBeforeSubmit(
 	if (action.type === "convertToMultiSigUser")
 		return checkNewSigners(action, multiSigUser, reads);
 	if (stakingActionOf(action)) return checkStaking([payload], reads, now);
+	if (isAgentRemoval(action)) return checkRemoval(action, multiSigUser, reads);
 	const shape = sendShape(action);
 	// nothing here bears on an action that moves no money
 	if (!shape && action.type !== "withdraw3") return [];
@@ -88,6 +93,24 @@ export async function checkBeforeSubmit(
 		receiver: role === null ? null : receiverOf(role, receiverMode),
 		self: multiSigUser,
 	});
+}
+
+/**
+ * Removing an API wallet: Hyperliquid refuses it ("Extra agent does not
+ * exist.") when the account has no API wallet of that name any more. Days may
+ * have passed since the proposal was made: the wallet may have been removed
+ * by another proposal, or replaced.
+ */
+async function checkRemoval(
+	action: PlainObject,
+	multiSigUser: string,
+	reads: SendReads,
+): Promise<Refusal[]> {
+	const agents = await orNull(reads.agents(multiSigUser));
+	const name = typeof action.agentName === "string" ? action.agentName : "";
+	// a list that was not read stops nothing
+	if (!agents || agents.some((a) => a.name === name)) return [];
+	return [{ code: "agent-missing", message: REMOVE_AGENT.missing(name) }];
 }
 
 /**

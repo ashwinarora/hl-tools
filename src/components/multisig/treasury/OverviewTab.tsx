@@ -246,6 +246,8 @@ export function OverviewTab({
 	const signed = useLastSigned(network, address, signers, !!treasury);
 	const threshold = state.policy?.threshold ?? treasury?.threshold ?? null;
 	const active = state.agents?.filter((g) => g.validUntil > now).length ?? null;
+	// a proposal is made by a signer of an account that is still a multi-sig
+	const canPropose = !frozen && !!me && signers.includes(me);
 
 	const hydrated = usePrefsHydrated();
 	const prefsKey = treasuryKey(network, address);
@@ -539,14 +541,31 @@ export function OverviewTab({
 									<PersonRow
 										key={g.address}
 										trailing={
-											expired ? (
-												<Tag>expired</Tag>
-											) : (
-												<Tag tone={soon ? "warn" : "gray"}>
-													{soon ? "expires " : ""}
-													{fromNow(g.validUntil, now)}
-												</Tag>
-											)
+											<span className="inline-flex items-center gap-2">
+												{expired ? (
+													<Tag>expired</Tag>
+												) : (
+													<Tag tone={soon ? "warn" : "gray"}>
+														{soon ? "expires " : ""}
+														{fromNow(g.validUntil, now)}
+													</Tag>
+												)}
+												{canPropose && (
+													<Link
+														to="/multisig/propose"
+														search={{
+															treasury: address,
+															kind: "removeAgent",
+															agent: g.name,
+															network,
+														}}
+														className={linkButtonSm}
+														aria-label={`Remove the API wallet ${g.name || "without a name"}`}
+													>
+														Remove
+													</Link>
+												)}
+											</span>
 										}
 									>
 										<b className="text-sm font-semibold">

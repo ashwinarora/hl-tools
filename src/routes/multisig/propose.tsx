@@ -10,11 +10,15 @@ export const Route = createFileRoute("/multisig/propose")({
 		treasury?: string;
 		supersedes?: string;
 		kind?: string;
+		agent?: string;
 		network?: string;
 	} => ({
 		treasury: typeof s.treasury === "string" ? s.treasury : undefined,
 		supersedes: typeof s.supersedes === "string" ? s.supersedes : undefined,
 		kind: typeof s.kind === "string" ? s.kind : undefined,
+		// Remove API wallet: the wallet's name as Hyperliquid lists it, which is
+		// public; "" is the one approved without a name
+		agent: typeof s.agent === "string" ? s.agent : undefined,
 		// the form's network: without it a reload would take whatever the header holds by then
 		network: typeof s.network === "string" ? s.network : undefined,
 	}),
@@ -22,12 +26,13 @@ export const Route = createFileRoute("/multisig/propose")({
 });
 
 function ProposePage() {
-	const { treasury, supersedes, kind, network } = Route.useSearch();
+	const { treasury, supersedes, kind, agent, network } = Route.useSearch();
 	return (
 		<ProposeScreen
 			treasury={treasury}
 			supersedes={supersedes}
 			kind={kind}
+			agent={agent}
 			network={network}
 		/>
 	);

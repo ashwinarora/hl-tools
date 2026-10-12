@@ -510,6 +510,23 @@ describe("describeAction details", () => {
 		expect(describeAction(SAMPLES.approveAgent as PlainObject).flags).toEqual([
 			"agent_bypass",
 		]);
+		// the zero address approves nobody: it removes the wallet of that name
+		const removal = describeAction({
+			...SAMPLES.approveAgent,
+			agentAddress: `0x${"0".repeat(40)}`,
+		} as PlainObject);
+		expect(removal.headline).toBe('Remove the API wallet named "lab"');
+		expect(removal.lines[0]).toContain("stops acting for the account");
+		expect(removal.flags).toEqual([]);
+		// the zero address is no party to it
+		expect(removal.parties).toEqual([]);
+		expect(
+			describeAction({
+				...SAMPLES.approveAgent,
+				agentAddress: `0x${"0".repeat(40)}`,
+				agentName: "",
+			} as PlainObject).headline,
+		).toBe("Remove the API wallet without a name");
 		expect(
 			describeAction(SAMPLES.approveBuilderFee as PlainObject).headline,
 		).toBe(`Approve builder ${B} up to 0.01%`);

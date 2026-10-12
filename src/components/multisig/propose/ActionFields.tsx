@@ -1,4 +1,9 @@
-import { type AccountMode, MULTISIG_FACTS, type Network } from "@hl-tools/core";
+import {
+	type AccountMode,
+	type AgentInfo,
+	MULTISIG_FACTS,
+	type Network,
+} from "@hl-tools/core";
 import type { ReactNode } from "react";
 import {
 	Field,
@@ -9,11 +14,17 @@ import {
 } from "#/components/hub/layout";
 import { Callout } from "#/components/hub/status";
 import { cn } from "#/lib/utils";
-import type { ActionForm, PocketChoice, Receiver } from "../model/actions";
+import {
+	type ActionForm,
+	type PocketChoice,
+	REMOVE_AGENT,
+	type Receiver,
+} from "../model/actions";
 import { API_WALLET_PROPOSE } from "../model/apiWallet";
 import { RELAY_COPY } from "../model/relay/copy";
 import type { CostLine } from "../model/send";
 import { shortAddress } from "../model/stage";
+import { fromNow } from "../model/time";
 import { useNames, Who } from "../names/Names";
 import { Help } from "../shell/Help";
 
@@ -147,6 +158,9 @@ export function ActionFields({
 	cost,
 	from,
 	movable,
+	agents,
+	agentsFailed,
+	now,
 }: {
 	form: ActionForm;
 	set: <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => void;
@@ -168,6 +182,12 @@ export function ActionFields({
 	from: PocketChoice;
 	/** What can be moved now from each balance; null while not read. */
 	movable: { readonly perps: string | null; readonly spotUsdc: string | null };
+	/** The treasury's API wallets; null while they are not read. */
+	agents: readonly AgentInfo[] | null;
+	/** The read of the API wallets failed. */
+	agentsFailed: boolean;
+	/** The page's clock, for what has expired. */
+	now: number;
 }) {
 	const unified = mode?.kind === "unified";
 	const destination = (hint: ReactNode) => (
@@ -377,6 +397,70 @@ export function ActionFields({
 						/>
 					</Field>
 				</>
+			);
+		case "removeAgent":
+			return (
+				<Field
+					label="API wallet to remove"
+					trailing={<Help k="apiWallet" />}
+					error={error("removeAgent")}
+					hint={
+						<>
+							{REMOVE_AGENT.what} {REMOVE_AGENT.oneAtATime}
+						</>
+					}
+				>
+					{agents === null ? (
+						<p className="text-[13px] text-muted-foreground">
+							{agentsFailed ? REMOVE_AGENT.unread : REMOVE_AGENT.reading}
+						</p>
+					) : agents.length === 0 ? (
+						<p className="text-[13px] text-muted-foreground">
+							{REMOVE_AGENT.none}
+						</p>
+					) : (
+						<div
+							role="radiogroup"
+							aria-label="API wallet to remove"
+							className="flex flex-col gap-1.5"
+						>
+							{agents.map((a) => {
+								const on = form.removeAgent === a.name;
+								return (
+									// biome-ignore lint/a11y/useSemanticElements: the ARIA radio pattern on buttons, as in the hub's Segmented
+									<button
+										key={a.address}
+										type="button"
+										role="radio"
+										aria-checked={on}
+										onClick={() => set("removeAgent", a.name)}
+										className={cn(
+											"flex flex-wrap items-center gap-x-2.5 gap-y-0.5 rounded-md border px-3 py-2 text-left text-sm transition-colors",
+											on
+												? "border-brand bg-brand-soft"
+												: "border-border-strong bg-surface hover:bg-surface-2",
+										)}
+									>
+										<span className="font-semibold">
+											{a.name || "(unnamed)"}
+										</span>
+										<span
+											className="font-mono text-xs text-muted-foreground"
+											title={a.address}
+										>
+											{shortAddress(a.address)}
+										</span>
+										<span className="ml-auto text-xs text-subtle-foreground">
+											{a.validUntil <= now
+												? "expired"
+												: `expires ${fromNow(a.validUntil, now)}`}
+										</span>
+									</button>
+								);
+							})}
+						</div>
+					)}
+				</Field>
 			);
 		case "raw":
 			return (

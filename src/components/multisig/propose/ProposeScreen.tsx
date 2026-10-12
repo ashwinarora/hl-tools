@@ -125,6 +125,8 @@ export function ProposeScreen(props: {
 	supersedes?: string;
 	/** The kind of action the form opens on, when a link asks for one. */
 	kind?: string;
+	/** For Remove API wallet: the wallet's name ("" is the one without a name). */
+	agent?: string;
 	/** The network in the link; a link without one takes the header's and is rewritten. */
 	network?: string;
 }) {
@@ -140,10 +142,12 @@ export function ProposeScreen(props: {
 		<ProposeForm
 			// a link that asks for another kind, or to re-propose another proposal,
 			// starts a new form: the form on screen is always the one the link names
-			key={`${page.network}:${props.treasury ?? ""}:${props.kind ?? ""}:${props.supersedes ?? ""}`}
+			// (and for a removal, another wallet: "remove A" then "remove B")
+			key={`${page.network}:${props.treasury ?? ""}:${props.kind ?? ""}:${props.supersedes ?? ""}:${props.agent === undefined ? "" : `agent=${props.agent}`}`}
 			treasury={props.treasury}
 			supersedes={props.supersedes}
 			kind={props.kind}
+			agent={props.agent}
 			network={page.network}
 		/>
 	);
@@ -158,11 +162,13 @@ function ProposeForm({
 	treasury,
 	supersedes,
 	kind,
+	agent,
 	network,
 }: {
 	treasury?: string;
 	supersedes?: string;
 	kind?: string;
+	agent?: string;
 	network: Network;
 }) {
 	const hydrated = useNetworkHydrated();
@@ -174,6 +180,9 @@ function ProposeForm({
 		if (kind === "convertBack")
 			return { ...DEFAULT_FORM, kind: "changeSigners", signers: "null" };
 		const asked = ACTION_KINDS.find((k) => k.kind === kind)?.kind;
+		// the Overview's "Remove" names the wallet; without a name there is one to choose
+		if (asked === "removeAgent")
+			return { ...DEFAULT_FORM, kind: asked, removeAgent: agent ?? null };
 		return asked ? { ...DEFAULT_FORM, kind: asked } : DEFAULT_FORM;
 	});
 	const [attempted, setAttempted] = useState(false);
@@ -345,6 +354,8 @@ function ProposeForm({
 		mode: !hydrated || state.modePending ? undefined : state.mode,
 		receiver: lookup.receiver,
 		agent: agentLookup.receiver,
+		// absent while they are on their way; null once the read has failed
+		agents: state.agents ?? (state.agentsError ? null : undefined),
 		signerChecks: signerLookups.checks,
 		createdBy: wallet.address,
 		supersedes: superseded?.digest ?? null,
@@ -715,6 +726,9 @@ function ProposeForm({
 											cost={cost}
 											from={sourcePocket(form, context(previewNonce))}
 											movable={movable}
+											agents={state.agents}
+											agentsFailed={!!state.agentsError}
+											now={now}
 										/>
 									)}
 								</div>

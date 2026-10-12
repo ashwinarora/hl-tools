@@ -8,7 +8,7 @@
 import type { Network } from "../network.ts";
 import { RETURN_QUEUE, STAKE_LOCKUP } from "../rules/staking.ts";
 import { WITHDRAWAL_FEE_USDC } from "../rules/transfers.ts";
-import { riskFlags } from "./action.ts";
+import { isAgentRemoval, riskFlags } from "./action.ts";
 import { parseSignersString } from "./signerSet.ts";
 import { waitWords, weiToHype } from "./staking.ts";
 import { withdrawalOutcome } from "./transfer.ts";
@@ -103,7 +103,8 @@ function partiesOf(type: string, action: PlainObject): readonly ActionParty[] {
 			add("destination", action.destinationRecipient);
 			break;
 		case "approveAgent":
-			add("agent", action.agentAddress);
+			// a removal names nobody: the zero address is no party to it
+			if (!isAgentRemoval(action)) add("agent", action.agentAddress);
 			break;
 		case "approveBuilderFee":
 			add("builder", action.builder);
@@ -365,6 +366,15 @@ export function describeAction(
 				].filter(Boolean),
 			);
 		case "approveAgent":
+			if (isAgentRemoval(action))
+				return done(
+					action.agentName
+						? `Remove the API wallet named "${s(action.agentName)}"`
+						: "Remove the API wallet without a name",
+					[
+						"That wallet stops acting for the account: from then on only the signers move anything it could. Hyperliquid refuses the removal when the account has no API wallet of that name.",
+					],
+				);
 			return done(
 				`Approve API wallet ${s(action.agentAddress)}${action.agentName ? ` named "${s(action.agentName)}"` : " as the main (unnamed) agent"}`,
 				[

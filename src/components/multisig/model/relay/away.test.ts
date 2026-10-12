@@ -407,6 +407,53 @@ describe("awayItems: API wallets", () => {
 			}),
 		).toEqual([]);
 	});
+	it("sets a removal that was carried out beside the wallet that is gone, without calling it the cause", () => {
+		const remove = theirs({
+			kind: "approveAgent",
+			agent: null,
+			removes: true,
+			line: "Remove the API wallet named “rebalancer”",
+		});
+		const gone = {
+			mark: { ...MARK, agents: [BOT] },
+			chain: { ledger: null, agents: agents() },
+		};
+		// carried out by somebody else: what is so now first, then the proposal's own line
+		expect(
+			texts({ ...gone, events: [accepted(11, C)], proposals: [remove] }),
+		).toEqual([
+			`An API wallet is no longer approved: ${short(BOT)}. A proposal that removes an API wallet was carried out.`,
+			`Remove the API wallet named “rebalancer” was carried out. Signed by ${short(B)} and ${short(C)}; you did not sign.`,
+		]);
+		// two wallets gone and one removal: which one it took is not known
+		expect(
+			texts({
+				mark: { ...MARK, agents: [BOT, BOT2] },
+				chain: { ledger: null, agents: agents() },
+				events: [accepted(11, C)],
+				proposals: [remove],
+			}).slice(0, 2),
+		).toEqual([
+			`An API wallet is no longer approved: ${short(BOT)}. It was removed, replaced, or it expired.`,
+			`An API wallet is no longer approved: ${short(BOT2)}. It was removed, replaced, or it expired.`,
+		]);
+		// a removal that was refused removed nothing
+		expect(
+			texts({ ...gone, events: [rejected(11, C)], proposals: [remove] })[0],
+		).toBe(
+			`An API wallet is no longer approved: ${short(BOT)}. It was removed, replaced, or it expired.`,
+		);
+		// a removal never counts as an approval that explains a new wallet
+		expect(
+			texts({
+				events: [accepted(11, A)],
+				proposals: [remove],
+				chain: { ledger: null, agents: agents(["rebalancer", BOT]) },
+			}),
+		).toEqual([
+			`An API wallet was approved with no proposal on record: “rebalancer” ${short(BOT)}. It can trade with everything this treasury holds and move it into vaults.`,
+		]);
+	});
 	it("says nothing it has not checked", () => {
 		// the list was never recorded: nothing to compare with
 		expect(

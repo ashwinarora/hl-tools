@@ -36,8 +36,10 @@ import {
 	formFromAction,
 	formFromMove,
 	formFromProposal,
+	REMOVE_AGENT,
 	sourcePocket,
 } from "./actions";
+import { FORBIDDEN_CLAIMS } from "./relay/copy";
 import { type SignerCheck, signersField } from "./signerSet";
 import type { StakingRead } from "./staking";
 
@@ -71,6 +73,7 @@ const form = (over: Partial<ActionForm>): ActionForm => ({
 const codes = (issues: readonly Issue[]) => issues.map((i) => i.code);
 const HEAD = { signatureChainId: "0x3e6", hyperliquidChain: "Testnet" };
 const UPPER = `0x${RECIPIENT.slice(2).toUpperCase()}`;
+const ZERO = "0x0000000000000000000000000000000000000000";
 
 const VALID: Record<string, { form: ActionForm; action: object }> = {
 	sendUsdc: {
@@ -200,6 +203,26 @@ const VALID: Record<string, { form: ActionForm; action: object }> = {
 			nonce: NONCE,
 		},
 	},
+	"removeAgent named": {
+		form: form({ kind: "removeAgent", removeAgent: "lab" }),
+		action: {
+			type: "approveAgent",
+			...HEAD,
+			agentAddress: ZERO,
+			agentName: "lab",
+			nonce: NONCE,
+		},
+	},
+	"removeAgent unnamed": {
+		form: form({ kind: "removeAgent", removeAgent: "" }),
+		action: {
+			type: "approveAgent",
+			...HEAD,
+			agentAddress: ZERO,
+			agentName: "",
+			nonce: NONCE,
+		},
+	},
 	"raw approveBuilderFee": {
 		form: form({
 			kind: "raw",
@@ -244,13 +267,14 @@ const VALID: Record<string, { form: ActionForm; action: object }> = {
 };
 
 describe("buildAction / buildProposalInput", () => {
-	it("lists the ten kinds once each, the three staking forms as one group", () => {
+	it("lists the eleven kinds once each, the three staking forms as one group", () => {
 		expect(ACTION_KINDS.map((k) => k.kind)).toEqual([
 			"sendUsdc",
 			"sendToken",
 			"usdClassTransfer",
 			"withdraw3",
 			"approveAgent",
+			"removeAgent",
 			"changeSigners",
 			"stake",
 			"returnToSpot",
@@ -891,6 +915,8 @@ describe("actionTypeOf", () => {
 		expect(of({ kind: "withdraw3" })).toBe("withdraw3");
 		expect(of({ kind: "usdClassTransfer" })).toBe("usdClassTransfer");
 		expect(of({ kind: "approveAgent" })).toBe("approveAgent");
+		// a removal is an approval of the zero address
+		expect(of({ kind: "removeAgent" })).toBe("approveAgent");
 		expect(of({ kind: "raw", raw: ' {"type":"usdSend","amount":"1"} ' })).toBe(
 			"usdSend",
 		);
@@ -968,7 +994,6 @@ describe("formFromAction: the older ways of sending come back as the send that r
 
 describe("what the audit found the form letting through", () => {
 	const CHECKSUMMED = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed";
-	const ZERO = "0x0000000000000000000000000000000000000000";
 
 	it("stops a withdrawal that is not more than the bridge's fee, and says why", () => {
 		const withdraw = (amount: string) =>
@@ -1027,14 +1052,80 @@ describe("what the audit found the form letting through", () => {
 		expect(codes(send.issues)).toEqual(["address.zero"]);
 		expect(send.issues[0]?.message).toContain("whatever is sent to it is lost");
 		expect(send.action).not.toBeNull();
+		// an approval of the zero address is a removal: the approve form does not build one
 		const agent = buildAction(
-			form({ kind: "approveAgent", agentAddress: ZERO }),
+			form({ kind: "approveAgent", agentAddress: ZERO, agentName: "lab" }),
 			ctx(),
 		);
-		expect(codes(agent.issues)).toEqual(["address.zero"]);
-		expect(agent.issues[0]?.message).toBe(
-			"This is the zero address. Nobody holds its key.",
+		expect(codes(agent.issues)).toEqual(["agent.zero"]);
+		expect(agent.issues[0]?.severity).toBe("error");
+		expect(agent.issues[0]?.message).toContain("choose Remove API wallet");
+		expect(agent.action).toBeNull();
+		expect(fieldOf(agent.issues[0] as Issue)).toBe("agentAddress");
+	});
+
+	it("removes an API wallet by its name, and only one the treasury has", () => {
+		const AGENTS = [
+			{ name: "", address: A },
+			{ name: "lab", address: B },
+		];
+		const remove = (
+			removeAgent: string | null,
+			agents: BuildContext["agents"] = AGENTS,
+		) =>
+			buildAction(form({ kind: "removeAgent", removeAgent }), ctx({ agents }));
+		// none chosen yet
+		const none = remove(null);
+		expect(codes(none.issues)).toEqual(["field.required"]);
+		expect(none.issues[0]?.message).toBe("Choose the API wallet to remove.");
+		expect(none.action).toBeNull();
+		expect(fieldOf(none.issues[0] as Issue)).toBe("removeAgent");
+		// one of its wallets, the one without a name included
+		for (const name of ["lab", ""]) {
+			const r = remove(name);
+			expect(r.issues).toEqual([]);
+			expect(r.action).toMatchObject({
+				type: "approveAgent",
+				agentAddress: ZERO,
+				agentName: name,
+				nonce: NONCE,
+			});
+		}
+		// no wallet of that name: Hyperliquid would answer "Extra agent does not exist."
+		const gone = remove("rebalancer");
+		expect(gone.issues.map((i) => [i.severity, i.code])).toEqual([
+			["error", "agent.missing"],
+		]);
+		expect(gone.issues[0]?.message).toBe(REMOVE_AGENT.missing("rebalancer"));
+		expect(gone.action).toBeNull();
+		expect(remove("", [{ name: "lab", address: B }]).issues[0]?.message).toBe(
+			"This treasury has no API wallet without a name: there is nothing to remove, and Hyperliquid would refuse it.",
 		);
+		// a name is the name: no trimming, no other case
+		expect(codes(remove("Lab").issues)).toEqual(["agent.missing"]);
+		// while the list is on its way nothing is said; when it could not be read, one warning
+		const reading = remove("lab", undefined);
+		expect(reading.issues).toEqual([]);
+		expect(reading.action).not.toBeNull();
+		const unread = remove("lab", null);
+		expect(unread.issues.map((i) => [i.severity, i.code])).toEqual([
+			["warning", "agents.unread"],
+		]);
+		expect(unread.action).not.toBeNull();
+	});
+
+	it("says nothing about a removal that the relay would not also provide", () => {
+		for (const text of [
+			REMOVE_AGENT.missing("lab"),
+			REMOVE_AGENT.missing(""),
+			REMOVE_AGENT.none,
+			REMOVE_AGENT.unread,
+			REMOVE_AGENT.reading,
+			REMOVE_AGENT.what,
+			REMOVE_AGENT.oneAtATime,
+		])
+			for (const pattern of FORBIDDEN_CLAIMS)
+				expect(text, `${pattern}`).not.toMatch(pattern);
 	});
 
 	it("notes an API wallet address that is already in use on Hyperliquid", () => {
@@ -1163,6 +1254,34 @@ describe("changeSigners", () => {
 			chain: "hyperevm",
 			kind: "changeSigners",
 			signers: built.signers,
+		});
+	});
+});
+
+describe("formFromAction: a removal comes back as the form that names the wallet", () => {
+	it("reads an approval of the zero address as Remove API wallet", () => {
+		const removal = {
+			type: "approveAgent",
+			...HEAD,
+			agentAddress: ZERO,
+			agentName: "lab",
+			nonce: NONCE,
+		};
+		expect(formFromAction(removal as never, "testnet")).toMatchObject({
+			kind: "removeAgent",
+			removeAgent: "lab",
+		});
+		// the one without a name is a name too, not "none chosen"
+		expect(
+			formFromAction({ ...removal, agentName: "" } as never, "testnet"),
+		).toMatchObject({ kind: "removeAgent", removeAgent: "" });
+		// an approval stays an approval
+		expect(
+			formFromAction({ ...removal, agentAddress: A } as never, "testnet"),
+		).toMatchObject({
+			kind: "approveAgent",
+			agentAddress: A,
+			agentName: "lab",
 		});
 	});
 });

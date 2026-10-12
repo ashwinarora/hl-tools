@@ -3,7 +3,7 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.9.0",
+	version: "1.10.0",
 	verifiedAt: "2026-10-13",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
@@ -70,6 +70,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.9.0",
 			date: "2026-10-13",
 			note: 'Recorded on testnet through a multi-sig (fixtures/multisig/evm-transfer.json): "Multi-sig user cannot transfer token to EVM" (a send to the token\'s own HyperEVM system address) and "EVM transfer not configured" (a send to another token\'s system address).',
+		},
+		{
+			version: "1.10.0",
+			date: "2026-10-13",
+			note: 'Recorded on testnet through a multi-sig: "Extra agent does not exist." (an approveAgent of the zero address, which removes an API wallet, under a name no API wallet of the account has).',
 		},
 	],
 });
@@ -471,6 +476,16 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		cause:
 			"The account removed or replaced another API wallet a moment ago and Hyperliquid has not finished with it. It takes one removal at a time, and approving a new address under a name in use removes the old one (recorded on testnet: refused a second after a removal, accepted 75 seconds after).",
 		fix: "Wait a minute or two and send it again. For a multi-sig that means proposing it again, since the refused one cannot be reused.",
+		documented: false,
+	},
+	{
+		id: "agent-missing",
+		pattern: /extra agent does not exist/i,
+		example: "Extra agent does not exist.",
+		category: "account",
+		cause:
+			"An approveAgent named the zero address, which removes the API wallet of the given name, and the account has no API wallet of that name: it was removed or replaced already, it expired, or the name is spelled differently (recorded on testnet).",
+		fix: "Read the account's API wallets again. If the wallet is gone there is nothing to remove; for a multi-sig, withdraw the proposal.",
 		documented: false,
 	},
 	{
