@@ -79,6 +79,7 @@ import { toLookUp, wantedSet } from "../model/signerSet";
 import { isStakingKind, planStaking, STAKING } from "../model/staking";
 import { linkTransport } from "../model/transport";
 import { TreasuryNames, useNames } from "../names/Names";
+import { Sentence } from "../names/Sentence";
 import { shareMove } from "../relay/api";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -768,7 +769,18 @@ function ProposeForm({
 									<Field
 										label="Signing window"
 										trailing={<Help k="signingWindow" />}
-										hint={`If created now: ${window.text}. After that the chain rejects it and it must be re-proposed.${numbered.raised ? ` ${NUMBERED_AFTER}` : ""}${actionType === "usdSend" && form.nonceMode === "extended" ? ` ${DATED_AHEAD}` : ""}`}
+										// the moment in the reader's own time, like everywhere in the section
+										hint={
+											<>
+												If created now: <Sentence parts={window.parts} />. After
+												that the chain rejects it and it must be re-proposed.
+												{numbered.raised ? ` ${NUMBERED_AFTER}` : ""}
+												{actionType === "usdSend" &&
+												form.nonceMode === "extended"
+													? ` ${DATED_AHEAD}`
+													: ""}
+											</>
+										}
 									>
 										<Segmented<NonceMode>
 											label="Signing window"
