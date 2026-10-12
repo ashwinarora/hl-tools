@@ -30,8 +30,8 @@ let log: string[];
 /** What the stand-in answers. */
 let spotHype: string;
 let unstaked: string;
-/** Hyperliquid's answer to each post, in order: a refusal, or null for "ok". */
-let exchange: (string | null)[];
+/** Hyperliquid's answer to each post, in order: a refusal, null for "ok", or an error for a request that does not get there. */
+let exchange: (string | null | Error)[];
 let declineAt: number | null;
 
 beforeEach(() => {
@@ -52,6 +52,7 @@ beforeEach(() => {
 		if (String(url).endsWith("/exchange")) {
 			log.push(`post ${body.action.payload.action.type}`);
 			const answer = exchange.shift();
+			if (answer instanceof Error) throw answer;
 			return json(
 				answer
 					? { status: "err", response: answer }
@@ -267,6 +268,40 @@ describe("the finaliser's click on a move of two steps", () => {
 			status: "err",
 			response: "Unknown validator",
 		});
+	});
+
+	it('a request for step 2 that does not get there is not called "nothing was submitted"', async () => {
+		const [one, two] = await move();
+		exchange = [null, new TypeError("Failed to fetch")];
+		const result = await finaliseMove({
+			steps: [await stepOf(one), await stepOf(two)],
+			wallet: walletOfB(),
+			mark: marks().mark,
+		});
+		// step 1 went through and stands; the page titles this "Step 2 was not sent"
+		expect(result).toMatchObject({ ok: false, index: 1, sent: 1 });
+		const said = result.ok ? "" : (result.issues[0]?.message ?? "");
+		expect(said).toBe(
+			"The request for this step did not reach Hyperliquid: The request did not reach the API (network error, blocked request or CORS). The step before it was accepted and stands. This step was not submitted; it is safe to try again.",
+		);
+		expect(said).not.toContain("Nothing was submitted");
+		expect((await stored(one)).receipt?.response).toMatchObject({
+			status: "ok",
+		});
+		expect((await stored(two)).receipt).toBeNull();
+		// the first request not getting there is still "nothing was submitted"
+		globalThis.indexedDB = new IDBFactory();
+		const [three, four] = await move();
+		exchange = [new TypeError("Failed to fetch")];
+		const none = await finaliseMove({
+			steps: [await stepOf(three), await stepOf(four)],
+			wallet: walletOfB(),
+			mark: marks().mark,
+		});
+		expect(none).toMatchObject({ ok: false, index: 0, sent: 0 });
+		expect(none.ok ? "" : none.issues[0]?.message).toContain(
+			"Nothing was submitted; it is safe to try again.",
+		);
 	});
 
 	it("stops before any wallet prompt when Hyperliquid would refuse a step as things stand", async () => {

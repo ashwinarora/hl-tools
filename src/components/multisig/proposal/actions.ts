@@ -230,6 +230,8 @@ async function post(i: {
 	readonly signed: Signed;
 	readonly doc: Doc;
 	readonly mark: (id: StepId, state: StepState) => void;
+	/** In a move: how many steps Hyperliquid accepted before this one, in the same click. */
+	readonly acceptedBefore?: number;
 }): Promise<FinaliseResult> {
 	const { signed, doc, mark } = i;
 	mark("submit", "active");
@@ -253,7 +255,10 @@ async function post(i: {
 			step: "submit",
 			issues: problem(
 				"execute",
-				`The request did not reach Hyperliquid: ${errorMessage(e)} Nothing was submitted; it is safe to try again.`,
+				// in a move, "nothing was submitted" would deny the step before it
+				i.acceptedBefore
+					? `The request for this step did not reach Hyperliquid: ${errorMessage(e)} The step before it was accepted and stands. This step was not submitted; it is safe to try again.`
+					: `The request did not reach Hyperliquid: ${errorMessage(e)} Nothing was submitted; it is safe to try again.`,
 			),
 		};
 	}
@@ -374,6 +379,7 @@ export async function finaliseMove(i: {
 			signed: signed[index] as Signed,
 			doc: s.doc,
 			mark: (id, state) => mark(index, id, state),
+			acceptedBefore: sent,
 		});
 		if (!answer.ok) return { ...answer, index, sent };
 		sent += 1;
