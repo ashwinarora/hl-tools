@@ -46,6 +46,7 @@ import {
 	type MarkChain,
 	markAfter,
 } from "../model/relay/away";
+import { relayIssue } from "../model/relay/errors";
 import { acceptNicknames } from "../model/relay/nicknames";
 import { planPush, publishRow } from "../model/relay/push";
 import { latestMarks } from "../model/relay/rows";
@@ -628,25 +629,96 @@ describe("several wallets signed in in one browser", () => {
 		expect(renewed.error).not.toBeNull();
 	});
 
-	it("an ended session's access token is not looked up again: it works until it runs out", async () => {
-		// Known and stated (DECISIONS.md): the relay reads the wallet from the
-		// token and never asks whether the session behind it still exists. What
-		// "Sign out" guarantees is that this browser holds nothing any more and
-		// that the session cannot be renewed; a copy of the access token taken
-		// earlier is good for at most its remaining hour.
+	it("an ended session's access token stops working at once, not when it runs out", async () => {
+		// Before relay_live_sessions the relay read the wallet from the token and
+		// never asked whether the session behind it still existed: a copy of the
+		// access token taken before "Sign out" worked for the rest of its hour.
 		const here = newBrowser();
 		const one = newAccount();
+		const two = newAccount();
 		await signInWith(here.clientFor(one.address), one.account);
+		await signInWith(here.clientFor(two.address), two.account);
 		const { access_token } = JSON.parse(
 			here.map.get(slotKey(one.address)) as string,
 		) as { access_token: string };
-		expect(await endSession(one.address, here.slots, end)).toBe("ended");
+		/** Whoever holds a copy of the first wallet's access token, and nothing else. */
 		const copy = createClient(stack().url, stack().key, {
 			auth: { persistSession: false, autoRefreshToken: false },
 			global: { headers: { Authorization: `Bearer ${access_token}` } },
 		});
+		// while the session lives, the copy works
+		expect((await copy.rpc("whoami")).data).toBe(one.address);
+
+		expect(await endSession(one.address, here.slots, end)).toBe("ended");
+
+		// refused, and told why, on a function, on a read and on a write
 		const who = await copy.rpc("whoami");
-		expect(who.data).toBe(one.address);
+		expect(who.data).toBeNull();
+		expect(who.status).toBe(401);
+		expect(who.error?.message).toBe("relay.session_ended");
+		const read = await copy.from("treasuries").select("address");
+		expect(read.status).toBe(401);
+		expect(read.error?.message).toBe("relay.session_ended");
+		const write = await copy
+			.from("treasury_requests")
+			.insert({ network: NET, address: newAccount().address, kind: "add" });
+		expect(write.status).toBe(401);
+		expect(codes(relayIssue(write.error))).toBe("relay.session_ended");
+		// its channel can no longer be joined either
+		let state: ChannelState | null = null;
+		const leave = subscribeWallet(
+			copy,
+			one.address,
+			() => {},
+			(s) => {
+				state = s;
+			},
+		);
+		await until(() => state === "refused" || state === "down", 8000);
+		expect(state).not.toBe("joined");
+		leave();
+
+		// the other wallet in the same browser is as it was
+		expect(
+			(await listTreasuries(here.clientFor(two.address))).issue,
+		).toBeNull();
+		expect(await sessionWallet(here.clientFor(two.address))).toBe(two.address);
+	});
+
+	it("tells a page whose session was ended behind its back, instead of showing it nothing", async () => {
+		// The page still holds the session (its slot is full), but the relay has
+		// ended it: another device signed everything out, or an operator did.
+		const here = newBrowser();
+		const one = newAccount();
+		await signInWith(here.clientFor(one.address), one.account);
+		const { session } = (await here.clientFor(one.address).auth.getSession())
+			.data;
+		await sql`delete from auth.sessions where id = ${
+			JSON.parse(
+				Buffer.from(
+					(session?.access_token ?? "").split(".")[1] ?? "",
+					"base64url",
+				).toString(),
+			).session_id as string
+		}`;
+		const listed = await listTreasuries(here.clientFor(one.address));
+		expect(listed.data).toBeNull();
+		expect(codes(listed.issue)).toBe("relay.session_ended");
+		// and the next check of the slot empties it: the wallet is asked to sign in again
+		expect(
+			await probeFor(here.clientFor(one.address), one.address, here.slots),
+		).toBe("none");
+		expect(storedWallets(here.slots)).toEqual([]);
+	});
+
+	it("leaves a request with no session alone: the publishable key by itself is refused nothing new", async () => {
+		// the gate is for signed-in requests; an anonymous one sees what it saw before (nothing)
+		const anon = createClient(stack().url, stack().key, {
+			auth: { persistSession: false, autoRefreshToken: false },
+		});
+		const read = await anon.from("treasuries").select("address");
+		expect(read.error?.message).not.toBe("relay.session_ended");
+		expect(read.data ?? []).toEqual([]);
 	});
 
 	it("carries the session of the single-slot time over, with no new signature", async () => {
