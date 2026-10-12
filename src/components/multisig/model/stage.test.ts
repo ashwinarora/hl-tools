@@ -754,6 +754,11 @@ describe("a proposal somebody said no to", () => {
 		expect(s.phase).toBe("collecting");
 		expect(s.standing?.objected.map((o) => o.signer)).toEqual([C]);
 		expect(s.standing?.blocked).toBeNull();
+		// the one who said no is not listed among those who "can still sign"
+		expect(s.detail).toContain("can still sign");
+		expect(s.detail).not.toContain(shortAddress(C));
+		const without = await stage(p, { wallet: B });
+		expect(without.detail).toContain(shortAddress(C));
 		expect(s.saidNo).toBe(false);
 		// a no is not a veto: the finaliser can still sign and submit
 		expect(s.canExecute).toBe(true);

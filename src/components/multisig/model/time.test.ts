@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+	agoWords,
 	fromNow,
 	isoDateTime,
 	localDateTime,
+	untilWords,
 	utcDateTime,
 	zoneLabel,
 } from "./time";
@@ -71,5 +73,37 @@ describe("fromNow", () => {
 		expect(fromNow(T - 1, T)).toBe("less than a minute ago");
 		expect(fromNow(T - 5 * min, T)).toBe("5 minutes ago");
 		expect(fromNow(T - 3 * day, T)).toBe("3 days ago");
+	});
+});
+
+describe("agoWords: something that has happened is never told as still to come", () => {
+	const T = Date.UTC(2026, 9, 12, 12, 0);
+	it("reads like fromNow for a moment in the past", () => {
+		expect(agoWords(T - 2 * 3_600_000, T)).toBe("2 hours ago");
+		expect(agoWords(T - 20_000, T)).toBe("less than a minute ago");
+	});
+	it("takes a stamp that lies ahead of this clock, or on it, for just now", () => {
+		// the relay's clock a little ahead, or a page clock read a while ago
+		expect(agoWords(T + 20_000, T)).toBe("less than a minute ago");
+		expect(agoWords(T + 5 * 60_000, T)).toBe("less than a minute ago");
+		expect(agoWords(T, T)).toBe("less than a minute ago");
+	});
+});
+
+describe("untilWords", () => {
+	const T = Date.UTC(2026, 9, 12, 12, 0);
+	const H = 3_600_000;
+	it("gives days and hours, hours, then minutes as the moment comes closer", () => {
+		expect(untilWords(T + 54 * H, T)).toBe("in 2 days 6 hours");
+		expect(untilWords(T + 48 * H, T)).toBe("in 2 days");
+		expect(untilWords(T + 25 * H, T)).toBe("in 1 day 1 hour");
+		expect(untilWords(T + 23 * H + 59 * 60_000, T)).toBe("in 23 hours");
+		expect(untilWords(T + H, T)).toBe("in 1 hour");
+		expect(untilWords(T + 59 * 60_000, T)).toBe("in 59 minutes");
+		expect(untilWords(T + 30_000, T)).toBe("in less than a minute");
+	});
+	it("reads a moment that has passed as fromNow does, and nothing for what is not a time", () => {
+		expect(untilWords(T - 2 * H, T)).toBe("2 hours ago");
+		expect(untilWords(Number.NaN, T)).toBe("—");
 	});
 });

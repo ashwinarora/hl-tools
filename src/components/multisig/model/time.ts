@@ -114,3 +114,13 @@ export function untilWords(ms: number, now: number): string {
 		? `in ${plural(days, "day")}`
 		: `in ${plural(days, "day")} ${plural(rest, "hour")}`;
 }
+
+/**
+ * How long ago something happened that has happened: "2 hours ago", "less
+ * than a minute ago". Never "in …": the relay's clock can run a little ahead
+ * of the reader's, and a page's own clock is read only every so often, so a
+ * fresh stamp can lie a moment in what the page takes for the future.
+ */
+export function agoWords(at: number, now: number): string {
+	return fromNow(Math.min(at, now - 1), now);
+}

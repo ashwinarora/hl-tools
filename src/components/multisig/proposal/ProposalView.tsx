@@ -283,6 +283,8 @@ export function ProposalView({
 		headerNetwork: header,
 		// who said no: an objection, counted against the live signers like a signature
 		objections: doc.relay.objections,
+		// one clock for the page: the same event reads the same age wherever it is said
+		now: clock,
 	});
 	const role = ROLE[stage.role];
 	const description = useMemo(
@@ -701,6 +703,7 @@ export function ProposalView({
 									have={ready?.have ?? 0}
 									need={ready?.need ?? null}
 									signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
+									now={clock}
 								/>
 							)}
 						</div>
@@ -713,6 +716,7 @@ export function ProposalView({
 								closed={CLOSED.has(stage.phase)}
 								seen={seen}
 								objected={stage.standing?.objected}
+								now={clock}
 							/>
 							<TellCoSigners proposal={proposal} doc={doc} />
 							<SharePanel

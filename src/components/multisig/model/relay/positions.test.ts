@@ -285,7 +285,7 @@ describe("the sentences, as approved", () => {
 			now: NOW,
 		});
 		expect(read(all?.detail ?? null)).toBe(
-			"Alice, Bob and you said no, so no signer is left and 3 must sign. It goes ahead only if 3 of them change their minds. Otherwise it lapses on 2026-10-14 16:20, in 1 day 6 hours.",
+			"Alice, Bob and you said no, so no signer is left and 3 must sign. It goes ahead only if 3 of you change your minds. Otherwise it lapses on 2026-10-14 16:20, in 1 day 6 hours.",
 		);
 		const mine = blockedText({
 			standing: standing({
@@ -302,6 +302,79 @@ describe("the sentences, as approved", () => {
 		expect(read(mine?.detail ?? null)).toMatch(
 			/^You said no, so only 1 signer is left and 2 must sign\. It goes ahead only if you change your mind\./,
 		);
+	});
+
+	it("speaks to the reader who is one of those who said no, not about them", () => {
+		// found in the browser: "…and you said no… only if one of them changes their mind"
+		const s = standing({
+			signers: three,
+			threshold: 2,
+			finaliser: ALICE,
+			objections: [no(BOB), no(CAROL, 1)],
+		});
+		const asCarol = blockedText({
+			standing: s,
+			finaliser: ALICE,
+			me: CAROL,
+			lapsesAt: LAPSES,
+			now: NOW,
+		});
+		expect(read(asCarol?.detail ?? null)).toMatch(
+			/^Bob and you said no, so only 1 signer is left and 2 must sign\. It goes ahead only if one of you changes your mind\./,
+		);
+		// somebody who did not say no reads about the others
+		const asAlice = blockedText({
+			standing: s,
+			finaliser: ALICE,
+			me: ALICE,
+			lapsesAt: LAPSES,
+			now: NOW,
+		});
+		expect(read(asAlice?.detail ?? null)).toMatch(
+			/^Bob and Carol said no, .* only if one of them changes their mind\./,
+		);
+	});
+
+	it("never tells a no in the future, however the clocks stand", () => {
+		// The relay stamps a no with its own clock, and a page reads its clock
+		// only every so often: found in the browser as "You said no, in less
+		// than a minute." right after the click.
+		const ahead = { signer: CAROL, at: NOW + 20_000 };
+		const s = standing({
+			signers: three,
+			threshold: 2,
+			finaliser: BOB,
+			objections: [ahead],
+		});
+		expect(
+			read(ownPosition({ standing: s, me: CAROL, finaliser: BOB, now: NOW })),
+		).toBe("You said no, less than a minute ago.");
+		expect(read(objectionNote(s, ALICE, NOW))).toBe(
+			"Carol said no to this, less than a minute ago.",
+		);
+		expect(
+			read(
+				objectionLine({
+					standing: s,
+					signed: [],
+					signers: three,
+					me: null,
+					now: NOW,
+				}),
+			),
+		).toMatch(/^Carol said no, less than a minute ago\./);
+		// at the very moment, too
+		const same = standing({
+			signers: three,
+			threshold: 2,
+			finaliser: BOB,
+			objections: [{ signer: CAROL, at: NOW }],
+		});
+		expect(
+			read(
+				ownPosition({ standing: same, me: CAROL, finaliser: BOB, now: NOW }),
+			),
+		).toBe("You said no, less than a minute ago.");
 	});
 
 	it("the finaliser said no", () => {

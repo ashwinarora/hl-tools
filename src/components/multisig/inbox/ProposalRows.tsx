@@ -73,10 +73,13 @@ export function ProposalRows({
 										{FLAG_TEXT[f]?.label ?? f}
 									</Tag>
 								))}
-								{p.objected.length > 0 && !p.blocked && (
-									// amber: a no is a position the others should know of, not a fault
-									<Tag tone="warn">{saidNoTag(p.objected.length, against)}</Tag>
-								)}
+								{p.objected.length > 0 &&
+									!p.blocked &&
+									// the reader's own, alone, is said once: on the right
+									!(against && p.objected.length === 1) && (
+										// amber: a no is a position the others should know of, not a fault
+										<Tag tone="warn">{saidNoTag(p.objected.length, false)}</Tag>
+									)}
 								{closing && (
 									<span
 										className={closing.soon ? "text-warning" : undefined}

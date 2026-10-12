@@ -17,7 +17,6 @@ import { Sentence } from "../names/Sentence";
 import { useOpenProposals } from "../relay/openProposals";
 import { Help } from "../shell/Help";
 import { Btn, Card, Tag } from "../shell/kit";
-import { useNow } from "../shell/live";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
 import type { WalletSigner } from "../useWalletSigner";
 import {
@@ -49,6 +48,7 @@ export function YourPart({
 	have,
 	need,
 	signers,
+	now,
 }: {
 	proposal: Proposal;
 	stage: Stage;
@@ -59,13 +59,14 @@ export function YourPart({
 	need: number | null;
 	/** The treasury's signers as Hyperliquid reports them now. */
 	signers: readonly Address[];
+	/** The page's clock: one for every age said on it. */
+	now: number;
 }) {
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
 	const [outcome, setOutcome] = useState<Outcome | null>(null);
 	const [steps, setSteps] = useState<Record<StepId, StepState> | null>(null);
 	const [failure, setFailure] = useState<readonly Issue[] | null>(null);
 	const [confirm, setConfirm] = useState(false);
-	const now = useNow(60_000);
 	const [finishing, setFinishing] = useState(false);
 	const open = useOpenProposals();
 

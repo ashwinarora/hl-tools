@@ -387,6 +387,9 @@ export function deriveStage(input: StageInput): Stage {
 		const missing = joinParts(
 			// the reader is "you", first
 			[...r.missing]
+				// somebody who said no is not waited for: their position is known
+				// (and stands two lines further down the page)
+				.filter((a) => !position?.objected.some((o) => o.signer === a))
 				.sort((a, b) => Number(b === wallet) - Number(a === wallet))
 				.map((a) => [a === wallet ? { text: "you", who: a } : who(a)]),
 			", ",

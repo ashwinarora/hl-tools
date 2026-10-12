@@ -16,7 +16,7 @@
  */
 import type { Address } from "@hl-tools/core";
 import { joinParts, type Part, part, say, whoPart } from "../parts";
-import { fromNow, untilWords } from "../time";
+import { agoWords, untilWords } from "../time";
 
 export interface Objection {
 	readonly signer: Address;
@@ -130,7 +130,7 @@ export function objectionLine(i: {
 	);
 	const when =
 		objected.length === 1
-			? `, ${fromNow((objected[0] as Objection).at, i.now)}`
+			? `, ${agoWords((objected[0] as Objection).at, i.now)}`
 			: "";
 	const said = say`${who} said no${when}.`;
 	if (i.standing.blocked) return said;
@@ -163,7 +163,7 @@ export function objectionNote(
 		true,
 	);
 	return others.length === 1
-		? say`${who} said no to this, ${fromNow((others[0] as Objection).at, now)}.`
+		? say`${who} said no to this, ${agoWords((others[0] as Objection).at, now)}.`
 		: say`${who} said no to this.`;
 }
 
@@ -178,7 +178,7 @@ export function ownPosition(i: {
 	if (!mine) return null;
 	return i.me === i.finaliser
 		? say`You said no. You are the one who has to submit this, so it cannot go ahead unless you change your mind.`
-		: say`You said no, ${fromNow(mine.at, i.now)}.`;
+		: say`You said no, ${agoWords(mine.at, i.now)}.`;
 }
 
 /** The two states in which a proposal cannot go ahead as things stand. */
@@ -205,12 +205,18 @@ export function blockedText(i: {
 			s.left === 0
 				? "no signer is left"
 				: `only ${plural(s.left, "signer is", "signers are")} left`;
+		// the reader among those who said no is spoken to, not about
+		const among = s.objected.some((o) => o.signer === me);
 		const back =
 			s.objected.length === 1
-				? say`${names([(s.objected[0] as Objection).signer], me, false)} ${s.objected[0]?.signer === me ? "change your mind" : "changes their mind"}`
+				? say`${names([(s.objected[0] as Objection).signer], me, false)} ${among ? "change your mind" : "changes their mind"}`
 				: short === 1
-					? say`one of them changes their mind`
-					: say`${String(short)} of them change their minds`;
+					? among
+						? say`one of you changes your mind`
+						: say`one of them changes their mind`
+					: among
+						? say`${String(short)} of you change your minds`
+						: say`${String(short)} of them change their minds`;
 		return {
 			headline: say`Cannot pass as things stand`,
 			detail: say`${who(true)} said no, so ${only} and ${String(s.threshold)} must sign. It goes ahead only if ${back}. ${end}`,

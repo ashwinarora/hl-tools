@@ -2,7 +2,7 @@ import type { Address, Policy, Proposal } from "@hl-tools/core";
 import { RELAY_COPY } from "../model/relay/copy";
 import type { Objection } from "../model/relay/positions";
 import { seenBy, seenLabel, type ViewRow } from "../model/relay/views";
-import { fromNow, localDateTime, utcDateTime } from "../model/time";
+import { agoWords, localDateTime, utcDateTime } from "../model/time";
 import { Who } from "../names/Names";
 import { Help } from "../shell/Help";
 import { Card, PersonRow, Pips, Tag } from "../shell/kit";
@@ -33,6 +33,7 @@ export function SignaturesPanel({
 	closed = false,
 	seen = null,
 	objected = NOBODY,
+	now: given,
 }: {
 	proposal: Proposal;
 	/** The live signer set; null while unknown. */
@@ -46,8 +47,11 @@ export function SignaturesPanel({
 	seen?: SeenInfo | null;
 	/** The current signers who said no: an objection, shown on their row. */
 	objected?: readonly Objection[];
+	/** The page's clock, when the page has one: every age on it is then told alike. */
+	now?: number;
 }) {
-	const now = useNow();
+	const ticking = useNow();
+	const now = given ?? ticking;
 	const finaliser = proposal.payload.outerSigner;
 	const signers = policy?.authorizedUsers ?? [];
 	const need = policy && policy.threshold > 0 ? policy.threshold : null;
@@ -102,7 +106,7 @@ export function SignaturesPanel({
 										tone="warn"
 										title={`${localDateTime(no.at)} (${utcDateTime(no.at)})`}
 									>
-										said no · {fromNow(no.at, now)}
+										said no · {agoWords(no.at, now)}
 									</Tag>
 								) : label === null ? (
 									<Tag>checking…</Tag>
