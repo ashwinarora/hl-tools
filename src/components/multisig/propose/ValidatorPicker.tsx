@@ -1,8 +1,13 @@
 import { Decimal, type Network, type Validator } from "@hl-tools/core";
 import { useMemo, useState } from "react";
 import { TextInput } from "#/components/hub/layout";
-import { amountText, compareAmount } from "../model/chain/columns";
-import { ratePercent, STAKING, validatorState } from "../model/staking";
+import { compareAmount } from "../model/chain/columns";
+import {
+	ratePercent,
+	STAKING,
+	validatorState,
+	wholeHype,
+} from "../model/staking";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
 import { Tag } from "../shell/kit";
@@ -118,8 +123,7 @@ export function ValidatorPicker({
 				id: "stake",
 				header: "Total stake",
 				numeric: true,
-				cell: (r) =>
-					`${amountText(r.v.stake, { maxDecimals: 0 })} HYPE · ${r.share.toFixed(2)}%`,
+				cell: (r) => `${wholeHype(r.v.stake)} HYPE · ${r.share.toFixed(2)}%`,
 			},
 		],
 		[chosen, onChange, label],

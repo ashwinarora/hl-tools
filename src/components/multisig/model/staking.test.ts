@@ -31,6 +31,7 @@ import {
 	validatorLabel,
 	validatorState,
 	waitWords,
+	wholeHype,
 } from "./staking";
 
 const v = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
@@ -163,6 +164,12 @@ describe("the words of staking", () => {
 			time: 1,
 		};
 		expect(actionLine(send, VALIDATORS)).toBe(describeAction(send).headline);
+	});
+	it("gives a validator's total stake in whole HYPE, cut as Hyperliquid's own page cuts it", () => {
+		expect(wholeHype("6470703.95005698")).toBe("6,470,703");
+		expect(wholeHype("99742056.82732467")).toBe("99,742,056");
+		expect(wholeHype("0.99")).toBe("0");
+		expect(wholeHype("12")).toBe("12");
 	});
 	it("knows its three kinds", () => {
 		expect(STAKING_KINDS).toEqual(["stake", "returnToSpot", "moveStake"]);

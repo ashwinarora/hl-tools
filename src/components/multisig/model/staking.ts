@@ -414,6 +414,14 @@ export function stakingActions(
 	});
 }
 
+/**
+ * A validator's total stake in whole HYPE, cut and not rounded, as
+ * Hyperliquid's own staking page shows it: 6,470,703.96 reads "6,470,703"
+ * there, and the two tables are meant to be compared.
+ */
+export const wholeHype = (stake: string): string =>
+	Decimal.parse(stake).roundToDecimals(0, "down").toDisplay();
+
 /** Hyperliquid's own estimate for a validator, as a percentage: "2.17%". Null when it gives none. */
 export function ratePercent(v: Validator): string | null {
 	const rate = expectedRate(v);
