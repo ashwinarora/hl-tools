@@ -377,6 +377,31 @@ export class InfoClient<N extends Network> {
 	}
 
 	/**
+	 * Hyperliquid's own clock, in milliseconds (`exchangeStatus`). A lockup
+	 * ends by this clock, not by the reader's: a device that runs fast would
+	 * otherwise send an unstake too early. Null when the answer carries no time.
+	 */
+	async exchangeTime(
+		options: { signal?: AbortSignal } = {},
+	): Promise<Observed<number | null, N>> {
+		const r = await this.info<unknown>(
+			{ type: "exchangeStatus" },
+			{ ...options, fresh: true },
+		);
+		const time =
+			r.data && typeof r.data === "object"
+				? (r.data as { time?: unknown }).time
+				: null;
+		return {
+			...r,
+			data:
+				typeof time === "number" && Number.isSafeInteger(time) && time > 0
+					? time
+					: null,
+		};
+	}
+
+	/**
 	 * An account's staking balance. Staking is on no WebSocket channel, so it
 	 * is asked for. Null when the answer has a shape this version cannot read.
 	 */

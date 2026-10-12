@@ -215,6 +215,32 @@ describe("InfoClient staking methods", () => {
 		]);
 	});
 
+	it("reads Hyperliquid's own clock, fresh every time, and nothing from an answer without one", async () => {
+		const { seen, transport } = fakeTransport({
+			exchangeStatus: { specialStatuses: null, time: 1791827287580 },
+		});
+		const client = new InfoClient("testnet", { transport, now: () => 5 });
+		expect((await client.exchangeTime()).data).toBe(1791827287580);
+		expect((await client.exchangeTime()).data).toBe(1791827287580);
+		expect(seen).toEqual([
+			{ type: "exchangeStatus" },
+			{ type: "exchangeStatus" },
+		]);
+		for (const answer of [
+			null,
+			"down",
+			{},
+			{ time: "now" },
+			{ time: -1 },
+			{ time: 1.5 },
+		]) {
+			const other = new InfoClient("testnet", {
+				transport: fakeTransport({ exchangeStatus: answer }).transport,
+			});
+			expect((await other.exchangeTime()).data).toBeNull();
+		}
+	});
+
 	it("answer null for a shape they cannot read, and are never served from a cache", async () => {
 		const { seen, transport } = fakeTransport({
 			delegatorSummary: "down for maintenance",

@@ -48,6 +48,8 @@ export interface SendReads {
 	}>;
 	/** Every validator of the network. */
 	validators(): Promise<readonly Validator[] | null>;
+	/** Hyperliquid's own clock in milliseconds; null when it did not say. */
+	clock(): Promise<number | null>;
 }
 
 interface Checked {
@@ -150,6 +152,11 @@ export async function checkMoveBeforeSubmit(
  * Hyperliquid would refuse is read off its own figures: the spot HYPE that is
  * not on hold, the staking balance, the stakes with the end of their
  * lockups, the returns already waiting, and the list of validators.
+ *
+ * A lockup ends by Hyperliquid's clock. Where an unstake is among the steps
+ * that clock is asked for, so a device that runs fast does not send one a
+ * few seconds early (it would be refused, and the proposal's number spent).
+ * Where it does not answer, the device's clock is what there is.
  */
 async function checkStaking(
 	payloads: readonly Checked[],
@@ -162,10 +169,12 @@ async function checkStaking(
 		return step ? [step] : [];
 	});
 	if (!first || steps.length !== payloads.length) return [];
-	const [spot, staking, validators] = await Promise.all([
+	const timed = steps.some((s) => s.kind === "unstake");
+	const [spot, staking, validators, theirs] = await Promise.all([
 		orNull(reads.spot(first.multiSigUser)),
 		orNull(reads.staking(first.multiSigUser)),
 		orNull(reads.validators()),
+		timed ? orNull(reads.clock()) : null,
 	]);
 	const verdict = judgeStakingSteps(
 		steps,
@@ -175,7 +184,7 @@ async function checkStaking(
 			validators,
 			spotAvailable: spotAvailable(spot, "HYPE"),
 		}),
-		now,
+		typeof theirs === "number" ? theirs : now,
 		first.network,
 	);
 	if (!verdict) return [];

@@ -87,6 +87,7 @@ function reads(over: Partial<Record<keyof SendReads, unknown>> = {}) {
 			{ address: X },
 			{ address: Y },
 		] as Validator[]),
+		clock: answer("clock", null),
 	};
 	return { r, asked };
 }
@@ -350,6 +351,28 @@ describe("checkBeforeSubmit: a staking step", () => {
 			"unstake-lockup",
 		]);
 		expect(await codeOf(unstake(1), {}, LOCKED_UNTIL)).toEqual([]);
+	});
+	it("judges a lockup by Hyperliquid's clock where it says the time, whatever the device's says", async () => {
+		// the device runs 10 seconds fast: by its clock the lockup is over
+		const fast = LOCKED_UNTIL + 10_000;
+		expect(await codeOf(unstake(1), { clock: LOCKED_UNTIL - 1 }, fast)).toEqual(
+			["unstake-lockup"],
+		);
+		expect(await codeOf(unstake(1), { clock: LOCKED_UNTIL }, fast)).toEqual([]);
+		// the device runs slow: Hyperliquid's clock says the lockup is over
+		expect(
+			await codeOf(unstake(1), { clock: LOCKED_UNTIL }, LOCKED_UNTIL - 9_000),
+		).toEqual([]);
+		// no answer, or none with a time: the device's clock is what there is
+		for (const clock of [new Error("network"), null])
+			expect(await codeOf(unstake(1), { clock }, fast)).toEqual([]);
+		// asked only where a step depends on the time
+		const quiet = reads({ spot: HYPE_SPOT });
+		await checkBeforeSubmit(payload(stake(50)), quiet.r, 5_000);
+		expect(quiet.asked).not.toContain("clock");
+		const timed = reads({ spot: HYPE_SPOT });
+		await checkBeforeSubmit(payload(unstake(1)), timed.r, 5_000);
+		expect(timed.asked).toContain("clock");
 	});
 	it("a read that fails stops nothing", async () => {
 		const down = new Error("network");
