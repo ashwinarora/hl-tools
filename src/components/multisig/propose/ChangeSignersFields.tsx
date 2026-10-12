@@ -293,6 +293,7 @@ export function ChangeSignersFields({
 									size="sm"
 									variant="outline"
 									onClick={() => write([...wanted.entries, r.address], k)}
+									aria-label={`${CHANGE.undo}: keep ${r.address}`}
 								>
 									{CHANGE.undo}
 								</Btn>
@@ -301,6 +302,7 @@ export function ChangeSignersFields({
 									size="sm"
 									variant="outline"
 									onClick={() => remove(r.address)}
+									aria-label={`${CHANGE.remove} ${r.address}`}
 								>
 									{CHANGE.remove}
 								</Btn>
