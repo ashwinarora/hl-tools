@@ -12,6 +12,13 @@ interface Known {
 }
 
 const REFUSALS: Record<string, Known> = {
+	// The gate in front of the API (relay_live_sessions): the token is still
+	// within its hour, but the session it was issued for has been ended.
+	"relay.session_ended": {
+		severity: "warning",
+		message: "This wallet's sign-in here has ended.",
+		fix: "Sign in again.",
+	},
 	"relay.rate_limited": {
 		message: "The relay's hourly limit for this was reached.",
 		fix: "Wait a while and retry; links and files have no limit.",
@@ -104,6 +111,23 @@ export function isUnreachable(e: unknown): boolean {
 		/failed to fetch|fetch failed|networkerror|load failed|network request failed|econnrefused|unable to connect/i.test(
 			message,
 		)
+	);
+}
+
+/** The stable message of the gate in front of the API (relay_live_sessions). */
+export const SESSION_ENDED = "relay.session_ended";
+
+/**
+ * Whether an answer from the relay says "the session this token was issued
+ * for has ended". Not an expired token (the client renews that by itself) and
+ * not a refusal of one row: the wallet is no longer signed in.
+ */
+export function saysSessionEnded(status: number, body: unknown): boolean {
+	return (
+		status === 401 &&
+		!!body &&
+		typeof body === "object" &&
+		(body as { message?: unknown }).message === SESSION_ENDED
 	);
 }
 

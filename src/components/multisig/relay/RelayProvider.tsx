@@ -15,7 +15,7 @@ import { generateSiweNonce } from "viem/siwe";
 import { useAccount, useSignMessage } from "wagmi";
 import { NO_WALLET, walletInBrowser } from "#/lib/signerWallets";
 import { useWalletBusy } from "#/store/walletBusyStore";
-import { relayIssue } from "../model/relay/errors";
+import { relayIssue, SESSION_ENDED } from "../model/relay/errors";
 import {
 	connectedWallet,
 	identityStep,
@@ -27,6 +27,7 @@ import {
 import { reconnectDelay } from "../model/relay/reconnect";
 import {
 	adoptLegacy,
+	forgetWallet,
 	hasSlot,
 	overLimit,
 	RELAY_USED_KEY,
@@ -38,6 +39,7 @@ import {
 	browserSlots,
 	endStoredSession,
 	getRelayClient,
+	onSessionEnded,
 	type RelayClient,
 } from "./client";
 import { relayConfig } from "./config";
@@ -250,6 +252,20 @@ function RelaySession({
 		},
 		[config, slots, letGo],
 	);
+
+	// The relay says a wallet's session has ended (signed out elsewhere, or
+	// ended by whoever runs the relay): what its slot holds is dead. The wallet
+	// is asked to sign in again, and told why.
+	useEffect(() => {
+		if (!slots) return;
+		return onSessionEnded((gone) => {
+			const now = latest.current;
+			const wasInUse = now.wallet === gone && now.slot !== "none";
+			forgetWallet(slots, gone);
+			letGo(gone);
+			if (wasInUse) setIssue(relayIssue({ message: SESSION_ENDED }));
+		});
+	}, [slots, letGo]);
 
 	// The session ending on its own (renewal refused, signed out in another tab).
 	useEffect(() => {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isDuplicate, isUnreachable, relayIssue } from "./errors";
+import {
+	isDuplicate,
+	isUnreachable,
+	relayIssue,
+	SESSION_ENDED,
+	saysSessionEnded,
+} from "./errors";
 
 const pg = (code: string, message: string, details: string | null = null) => ({
 	code,
@@ -147,5 +153,41 @@ describe("isDuplicate", () => {
 		expect(isDuplicate(pg("23503", "fk"))).toBe(false);
 		expect(isDuplicate(null)).toBe(false);
 		expect(isDuplicate("23505")).toBe(false);
+	});
+});
+
+describe("the relay saying a session has ended (relay_live_sessions)", () => {
+	const body = {
+		code: SESSION_ENDED,
+		message: SESSION_ENDED,
+		details: "This session has ended: it was signed out, or it has run out.",
+		hint: "Sign in again.",
+	};
+
+	it("is told apart from every other answer", () => {
+		expect(saysSessionEnded(401, body)).toBe(true);
+		expect(saysSessionEnded(403, body)).toBe(false);
+		expect(saysSessionEnded(200, body)).toBe(false);
+		expect(
+			saysSessionEnded(401, { code: "PGRST301", message: "JWT expired" }),
+		).toBe(false);
+		for (const other of [null, undefined, "relay.session_ended", 7, []])
+			expect(saysSessionEnded(401, other)).toBe(false);
+	});
+
+	it("is worded as a sign-in that has ended, with what to do", () => {
+		const i = relayIssue({ ...body, status: 401 });
+		expect(i.code).toBe(SESSION_ENDED);
+		expect(i.severity).toBe("warning");
+		expect(i.message).toBe(body.details);
+		expect(i.fix).toBe("Sign in again.");
+		// without the relay's own sentence the page has one of its own
+		expect(relayIssue({ message: SESSION_ENDED }).message).toBe(
+			"This wallet's sign-in here has ended.",
+		);
+		// an expired token stays what it was
+		expect(relayIssue({ code: "PGRST301", message: "JWT expired" }).code).toBe(
+			"relay.session_expired",
+		);
 	});
 });

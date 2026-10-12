@@ -10,13 +10,50 @@
  */
 import type { Address } from "@hl-tools/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isUnreachable } from "../model/relay/errors";
+import { isUnreachable, saysSessionEnded } from "../model/relay/errors";
 import type { Slots } from "../model/relay/wallets";
 import { type RelayConfig, relayAuthOptions } from "./config";
 
 export type RelayClient = SupabaseClient;
 
 const clients = new Map<Address, Promise<RelayClient>>();
+
+type Ended = (wallet: Address) => void;
+const endedListeners = new Set<Ended>();
+
+/**
+ * Hear when the relay says a wallet's session has ended (a request made as
+ * that wallet came back `relay.session_ended`). Returns the way to stop.
+ */
+export function onSessionEnded(listener: Ended): () => void {
+	endedListeners.add(listener);
+	return () => {
+		endedListeners.delete(listener);
+	};
+}
+
+/**
+ * `fetch` for one wallet's client: the answer is handed on untouched, and when
+ * it is the relay's "this session has ended" the listeners are told whose.
+ */
+export function watchFetch(
+	wallet: Address,
+	base: typeof fetch = (input, init) => fetch(input, init),
+): typeof fetch {
+	return async (input, init) => {
+		const res = await base(input, init);
+		if (res.status === 401) {
+			try {
+				const body: unknown = await res.clone().json();
+				if (saysSessionEnded(res.status, body))
+					for (const listener of [...endedListeners]) listener(wallet);
+			} catch {
+				// not the relay's answer: nothing to tell
+			}
+		}
+		return res;
+	};
+}
 
 /** The client for one wallet: made once, the same one on every later call. */
 export function getRelayClient(
@@ -30,6 +67,7 @@ export function getRelayClient(
 			createClient(config.url, config.key, {
 				// the very store the slots are read from, so the two cannot disagree
 				auth: relayAuthOptions(key, browserSlots() ?? undefined),
+				global: { fetch: watchFetch(key) },
 			}),
 		);
 		clients.set(key, made);
