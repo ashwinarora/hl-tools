@@ -3,12 +3,14 @@ import { useEffect } from "react";
 import { radioGroupKeyDown } from "#/lib/radioGroup";
 import { cn } from "#/lib/utils";
 import { useNetworkHint } from "#/store/networkHintStore";
-import { useNetworkStore } from "#/store/networkStore";
+import { useNetworkHydrated, useNetworkStore } from "#/store/networkStore";
 
 /**
  * Global mainnet/testnet switch. The active segment is styled from
  * <html data-network>, which an inline script sets before hydration, so the
- * persisted choice renders correctly on first paint.
+ * persisted choice renders correctly on first paint. What it tells a screen
+ * reader waits for the stored choice: until then neither segment is announced
+ * as chosen, because the server cannot know which one is.
  */
 export default function NetworkSwitch({
 	compact = false,
@@ -18,6 +20,7 @@ export default function NetworkSwitch({
 	const network = useNetworkStore((s) => s.network);
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
 	const pendingOn = useNetworkHint((s) => s.pendingOn);
+	const restored = useNetworkHydrated();
 
 	useEffect(() => {
 		document.documentElement.setAttribute("data-network", network);
@@ -27,6 +30,7 @@ export default function NetworkSwitch({
 		<div
 			role="radiogroup"
 			aria-label="Network"
+			aria-busy={!restored}
 			className="inline-flex items-center rounded-md border border-border bg-surface-2 p-0.5"
 			onKeyDown={(e) => radioGroupKeyDown(e, NETWORKS, network, setNetwork)}
 		>
@@ -36,7 +40,7 @@ export default function NetworkSwitch({
 					key={n}
 					type="button"
 					role="radio"
-					aria-checked={network === n}
+					aria-checked={restored && network === n}
 					tabIndex={network === n ? 0 : -1}
 					data-net-seg={n}
 					onClick={() => setNetwork(n)}

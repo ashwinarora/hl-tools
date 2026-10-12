@@ -70,8 +70,10 @@ function RelaySession({
 	const { openConnectModal } = useConnectModal();
 	const connected = address ? (address.toLowerCase() as Address) : null;
 
-	// The server renders "signed out"; whether a session is stored is only known after mount.
-	const [session, setSession] = useState<Session>({ status: "none" });
+	// Whether a session is stored is only known after mount. Until then the page
+	// says it is checking, never "sign in": the server's HTML can stay on screen
+	// for a while on a slow connection, in front of someone who is signed in.
+	const [session, setSession] = useState<Session>({ status: "restoring" });
 	const [signingIn, setSigningIn] = useState(false);
 	const [issue, setIssue] = useState<Issue | null>(null);
 	const [channel, setChannel] = useState<ChannelState | null>(null);
