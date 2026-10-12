@@ -13,7 +13,7 @@ import {
 	type RiskFlag,
 } from "@hl-tools/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { moveSentence, pairMoves } from "../model/move";
+import { loneStep, moveSentence, pairMoves } from "../model/move";
 import { assembleProposal, countedSigners } from "../model/relay/assemble";
 import { type InboxEntry, moveEntry } from "../model/relay/inbox";
 import { standing } from "../model/relay/positions";
@@ -36,6 +36,11 @@ export interface OpenProposal extends InboxEntry {
 	 * except what `moveEntry` says of the two together.
 	 */
 	readonly steps?: readonly [OpenProposal, OpenProposal];
+	/**
+	 * Set on an item that stands alone and is one step of a move whose other
+	 * step is not in this list (`loneStep`): its number.
+	 */
+	readonly lone?: 1 | 2;
 }
 
 type Assembly = Awaited<ReturnType<typeof assembleProposal>>;
@@ -163,7 +168,15 @@ export function useOpenProposals() {
 					},
 				}),
 			).map((x) => x.item);
-			return { items: listed, unverified, issues };
+			const digests = new Set(items.map((item) => item.digest));
+			return {
+				items: listed.map((item) => {
+					const lone = item.steps ? null : loneStep(item.proposal, digests);
+					return lone ? { ...item, lone } : item;
+				}),
+				unverified,
+				issues,
+			};
 		},
 		staleTime: 5_000,
 		// a ping can be missed (a dropped connection): look again once a minute anyway

@@ -15,6 +15,8 @@ import {
 	type Move,
 	otherStep,
 	type Proposal,
+	stakingActionOf,
+	stepNumber,
 	type Validator,
 } from "@hl-tools/core";
 import type { Part } from "./parts";
@@ -296,6 +298,32 @@ export function deriveMoveStage(
 }
 
 // ------------------------------------------------------------------- lists
+
+/**
+ * What a list may say of an item that stands alone and says it is one step of
+ * a move: its number, where the item is a staking step itself and the other
+ * step is not in the list at all. `listed` is every digest of the list,
+ * before any pairing.
+ *
+ * The tie is a claim nobody signed, and a list has not judged it. So where
+ * both steps are listed and were not made one item, the claim did not hold up
+ * and is not repeated; and a send that says "step 1 of 2" is not given the tag.
+ */
+export function loneStep(
+	p: Proposal,
+	listed: ReadonlySet<string>,
+): 1 | 2 | null {
+	const other = otherStep(p);
+	if (!other || listed.has(other)) return null;
+	return stakingActionOf(p.payload.action) ? stepNumber(p) : null;
+}
+
+/**
+ * The hover text of that tag. Why the other step is not listed is not known
+ * from a list, so none of the reasons is asserted.
+ */
+export const LONE_STEP_HINT =
+	"This proposal was made as one step of a move of two. The other step is not among the ones listed here: it was carried out, it was closed, or it was never shared.";
 
 /** What a list has to hold of an item for a move to be told: the document, and who proposed it. */
 export interface Listed {

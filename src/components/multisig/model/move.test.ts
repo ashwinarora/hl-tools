@@ -11,7 +11,9 @@ import { A, B, C, makeProposal, NONCE, NOW, POLICY, signAs } from "#/test/keys";
 import { HELP_JARGON } from "./help";
 import {
 	deriveMoveStage,
+	LONE_STEP_HINT,
 	leftOpenNote,
+	loneStep,
 	type MovePhase,
 	moveRefs,
 	moveSentence,
@@ -427,6 +429,27 @@ describe("a list with the two steps of a move made one item", () => {
 		expect(labels([item(two, "2"), item(send, "send")])).toEqual(["2", "send"]);
 		expect(labels([item(one, "1")])).toEqual(["1"]);
 	});
+	it("a lone step is tagged with its number only where the list can stand behind it", () => {
+		const [one, two] = tieSteps(moveIn(NONCE), stake(NONCE + 1));
+		const only = (...ps: Proposal[]) => new Set(ps.map((p) => p.digest));
+		// the other step is not listed: carried out, closed, or never shared
+		expect(loneStep(two, only(two, send))).toBe(2);
+		expect(loneStep(one, only(one))).toBe(1);
+		// both are listed and were not made one item: the tie did not hold up
+		expect(loneStep(one, only(one, two))).toBeNull();
+		expect(loneStep(two, only(one, two))).toBeNull();
+		// a proposal that stands alone
+		expect(loneStep(send, only(send))).toBeNull();
+		// a send that says it is a step of a move is not given the tag
+		const [forged] = tieSteps(send, stake(NONCE + 1));
+		expect(loneStep(forged, only(forged))).toBeNull();
+		// why the other step is not listed is not known, so no reason is asserted
+		expect(LONE_STEP_HINT).toContain("it was carried out, it was closed, or");
+		expect(LONE_STEP_HINT).not.toMatch(/no longer waiting/);
+		for (const word of [...FORBIDDEN_CLAIMS, ...HELP_JARGON])
+			expect(LONE_STEP_HINT).not.toMatch(word);
+	});
+
 	it("takes the relay's word for who proposed each, and ties nothing it contradicts", () => {
 		const [one, two] = tieSteps(moveIn(NONCE), stake(NONCE + 1));
 		expect(labels([item(one, "1", A), item(two, "2", B)])).toEqual(["1", "2"]);

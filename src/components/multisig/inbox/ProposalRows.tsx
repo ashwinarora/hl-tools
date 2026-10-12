@@ -1,6 +1,7 @@
-import { type Address, stepNumber } from "@hl-tools/core";
+import type { Address } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { FLAG_TEXT } from "#/components/tools/multisig/EnvelopeView";
+import { LONE_STEP_HINT } from "../model/move";
 import { closes } from "../model/nonce";
 import { finishLabel, inboxGroup } from "../model/relay/inbox";
 import { blockedTag, saidNoTag } from "../model/relay/positions";
@@ -35,7 +36,6 @@ export function ProposalRows({
 				const closing =
 					p.open && !p.stuck && !p.frozen ? closes(p.row.expiresAt, now) : null;
 				const against = p.objected.includes(me);
-				const step = p.steps ? null : stepNumber(p.proposal);
 				return (
 					<Link
 						key={`${p.network}:${p.treasury}:${p.digest}`}
@@ -55,12 +55,7 @@ export function ProposalRows({
 										2 steps
 									</Tag>
 								) : (
-									step !== null && (
-										// the other step is done or closed: this one is what is left
-										<Tag title="One step of a move of two. The other step is no longer waiting.">
-											step {step} of 2
-										</Tag>
-									)
+									p.lone && <Tag title={LONE_STEP_HINT}>step {p.lone} of 2</Tag>
 								)}
 								<span>
 									by{" "}
