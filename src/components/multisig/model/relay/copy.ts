@@ -42,6 +42,10 @@ export const RELAY_COPY = {
 		"Your wallet will show the treasury, the finaliser, the destination and the amount. Check them there.",
 	shareOnlyHere:
 		"This proposal is only in this browser. Share it and your co-signers see it in their pending list.",
+	shareMoveOnlyHere:
+		"This move is only in this browser. Share it and your co-signers see its two steps as one item in their pending list.",
+	shareMoveHalf:
+		"Only one step of this move has been shared, so your co-signers see half of it. Share the other step too.",
 	createdShared:
 		"Your co-signers see it in their pending list as soon as it is created.",
 	// A signer's no: an objection the others see, never an ending.

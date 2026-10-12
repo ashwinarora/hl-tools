@@ -11,6 +11,7 @@ import { A, B, C, makeProposal, NONCE, NOW, POLICY, signAs } from "#/test/keys";
 import { HELP_JARGON } from "./help";
 import {
 	deriveMoveStage,
+	leftOpenNote,
 	type MovePhase,
 	moveRefs,
 	moveSentence,
@@ -129,6 +130,49 @@ describe("what two steps mean together", () => {
 			]);
 			expect(m.executeReason).not.toBeNull();
 		}
+	});
+
+	it('a step answered "duplicate nonce" is never said to be not carried out', () => {
+		const duplicate = (detail: string) =>
+			step("refused", {
+				detail,
+				failedAttempt: { id: "nonce-duplicate" } as Stage["failedAttempt"],
+			});
+		// its number was used before: by a refusal, or by a submission that
+		// went through and whose answer never got here
+		const one = deriveMoveStage([duplicate("Look first."), ready()]);
+		expect([one.phase, one.unsure, one.settled]).toEqual(["halted", 0, true]);
+		expect(one.headline).toBe(
+			"Step 1 may be carried out already · look before proposing again",
+		);
+		expect(one.detail).toBe(
+			"Step 1: Look first. Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.",
+		);
+		const two = deriveMoveStage([done(), duplicate("Look first.")]);
+		expect([two.phase, two.unsure]).toEqual(["broken", 1]);
+		expect(two.headline).toBe("Step 1 was carried out · step 2 may be too");
+		expect(two.detail).toBe("Step 2: Look first.");
+		for (const m of [one, two])
+			expect(`${m.headline} ${m.detail} ${m.executeReason}`).not.toContain(
+				"not carried out",
+			);
+		// any other refusal is what it was before
+		const plain = deriveMoveStage([step("refused"), ready()]);
+		expect([plain.unsure, plain.headline]).toEqual([
+			null,
+			"Step 1 was not carried out, so step 2 is not sent",
+		]);
+		expect(deriveMoveStage([done(), step("refused")]).unsure).toBeNull();
+		expect(deriveMoveStage([ready(), ready()]).unsure).toBeNull();
+	});
+
+	it("a move that is over but still open on the relay says who can clear it", () => {
+		expect(leftOpenNote(true)).toBe(
+			"What is left of this move cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again.",
+		);
+		expect(leftOpenNote(false)).toBe(
+			"What is left of this move cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it and propose it again.",
+		);
 	});
 
 	it("step 1 is never sent alone when step 2 can no longer follow", () => {

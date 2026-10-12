@@ -113,7 +113,31 @@ export interface MoveStage {
 	readonly signed: number;
 	/** The move is over, one way or the other: nothing more to sign or send. */
 	readonly settled: boolean;
+	/**
+	 * The step (0 or 1) Hyperliquid answered "duplicate nonce" to: its number
+	 * had been used before, so it may be carried out already, by a submission
+	 * whose answer never got here. Nothing is then said to be "not carried
+	 * out". Null otherwise.
+	 */
+	readonly unsure: 0 | 1 | null;
 }
+
+/**
+ * Refused with "duplicate nonce": whether the step was carried out is not
+ * known from the answer, in either direction.
+ */
+const mayBeDone = (s: StepView): boolean =>
+	s.stage.phase === "refused" &&
+	s.stage.failedAttempt?.id === "nonce-duplicate";
+
+/**
+ * Under "Your part" of a move that is over while the relay still holds a step
+ * of it open (a refused step stays open there until it is withdrawn or lapses).
+ */
+export const leftOpenNote = (canWithdraw: boolean): string =>
+	canWithdraw
+		? "What is left of this move cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again."
+		: "What is left of this move cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it and propose it again.";
 
 const count = (s: StepView) => `${s.have} of ${s.need ?? "?"}`;
 
@@ -137,6 +161,7 @@ export function deriveMoveStage(
 		prompts: 0,
 		signed: 0,
 		settled: true,
+		unsure: null as 0 | 1 | null,
 	};
 	if (first === "waiting" || second === "waiting")
 		return {
@@ -155,6 +180,16 @@ export function deriveMoveStage(
 			detail: "Nothing more to sign.",
 			executeReason: "Both steps were carried out.",
 		};
+	if (first === "over" && mayBeDone(one))
+		return {
+			...base,
+			phase: "halted",
+			unsure: 0,
+			headline:
+				"Step 1 may be carried out already · look before proposing again",
+			detail: `Step 1: ${one.stage.detail} Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.`,
+			executeReason: "Step 1 may be carried out already.",
+		};
 	if (first === "over")
 		return {
 			...base,
@@ -162,6 +197,15 @@ export function deriveMoveStage(
 			headline: "Step 1 was not carried out, so step 2 is not sent",
 			detail: `Step 1: ${one.stage.headline}. The second step makes sense only after the first, so it stays where it is. Propose the move again if it is still wanted.`,
 			executeReason: "Step 1 was not carried out.",
+		};
+	if (first === "done" && second === "over" && mayBeDone(two))
+		return {
+			...base,
+			phase: "broken",
+			unsure: 1,
+			headline: "Step 1 was carried out · step 2 may be too",
+			detail: `Step 2: ${two.stage.detail}`,
+			executeReason: "Step 2 may be carried out already.",
 		};
 	if (first === "done" && second === "over")
 		return {
@@ -207,6 +251,7 @@ export function deriveMoveStage(
 		),
 		signed,
 		settled: false,
+		unsure: null,
 	};
 	const held = pending.find((s) => HELD_BY_A_NO.has(s.stage.phase));
 	if (held)

@@ -94,6 +94,7 @@ import {
 	reportExecution,
 	requestTreasury,
 	setNickname,
+	shareMove,
 	withdrawMove,
 	withdrawProposal,
 } from "./api";
@@ -1604,6 +1605,40 @@ describe("a move of two steps", () => {
 					])
 				).issue,
 			),
+		).toBe("relay.not_allowed");
+		expect((await read(a, x)).row).toBeNull();
+		expect((await read(a, y)).row).toBeNull();
+	});
+
+	it("shared from its page: both steps with the proposer's signatures, and the step that is missing when one is there", async () => {
+		const signedBy = async (p: Proposal, w: TestWallet): Promise<Proposal> => {
+			const s = await signProposal(p, viemSigner(w.account));
+			if (!s.signature) throw new Error(JSON.stringify(s.issues));
+			return { ...p, signatures: [s.signature] };
+		};
+		const [first, second] = move();
+		const steps = [await signedBy(first, c), await signedBy(second, c)];
+		expect((await shareMove(c.client, c.address, steps)).issue).toBeNull();
+		for (const step of steps) {
+			const seen = await read(a, step);
+			expect(seen.row?.status).toBe("open");
+			expect(seen.row?.signatures.map((x) => x.signer)).toEqual([c.address]);
+		}
+		// half shared (an older page shared step 1 alone): the same write adds the other
+		const [third, fourth] = move();
+		await publishProposal(c.client, c.address, publishRow(third));
+		expect((await read(a, fourth)).row).toBeNull();
+		expect(
+			(await shareMove(c.client, c.address, [third, await signedBy(fourth, c)]))
+				.issue,
+		).toBeNull();
+		const other = await read(a, fourth);
+		expect(other.row?.status).toBe("open");
+		expect(other.row?.signatures.map((x) => x.signer)).toEqual([c.address]);
+		// somebody who is no signer shares neither step
+		const [x, y] = move();
+		expect(
+			codes((await shareMove(outsider.client, outsider.address, [x, y])).issue),
 		).toBe("relay.not_allowed");
 		expect((await read(a, x)).row).toBeNull();
 		expect((await read(a, y)).row).toBeNull();

@@ -14,7 +14,12 @@ import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useNetwork } from "#/store/networkStore";
 import { refreshStaking } from "../live/useStaking";
 import { explorerTxUrl } from "../model/chain/columns";
-import { deriveMoveStage, type MovePhase, moveSentence } from "../model/move";
+import {
+	deriveMoveStage,
+	leftOpenNote,
+	type MovePhase,
+	moveSentence,
+} from "../model/move";
 import { refusalNote } from "../model/refusal";
 import { RELAY_COPY, signHint } from "../model/relay/copy";
 import { relayActions } from "../model/relay/status";
@@ -163,20 +168,40 @@ export function MoveView({
 		one.state.policy && one.state.policy.authorizedUsers.length > 0
 			? one.state.policy.authorizedUsers
 			: (listed?.signers ?? NO_SIGNERS);
-	const repropose = (
+	// Proposed again from step 1 the form names the whole move; from step 2,
+	// that step alone, which is what is left once step 1 was carried out.
+	const again = (from: Proposal, label: string) => (
 		<Link
 			to="/multisig/propose"
 			search={{
 				treasury: target.address,
-				// once step 1 was carried out only step 2 is left to propose again:
-				// naming it fills the form with that step alone
-				supersedes: stage.phase === "broken" ? second.digest : first.digest,
+				supersedes: from.digest,
 				network: target.network,
 			}}
 			className={linkButtonSm}
 		>
-			Propose it again
+			{label}
 		</Link>
+	);
+	const repropose =
+		stage.phase === "broken" ? (
+			again(second, "Propose it again")
+		) : stage.unsure === 0 ? (
+			// whether step 1 was carried out is not known from the answer: the
+			// reader looks, then proposes what is really left
+			<div className="flex flex-wrap items-center gap-2">
+				{again(first, "Propose the whole move again")}
+				{again(second, "Propose only step 2")}
+			</div>
+		) : (
+			again(first, "Propose it again")
+		);
+	// a refused step stays open on the relay until it is withdrawn or lapses
+	const leftOpen = steps.some(
+		(s) =>
+			s.doc.relay.known &&
+			s.doc.relay.row?.status === "open" &&
+			!s.doc.relay.expired,
 	);
 	const relayIssues = [...issues[0], ...issues[1]].filter((i) =>
 		i.code.startsWith("relay."),
@@ -313,7 +338,7 @@ export function MoveView({
 									me={me}
 								/>
 							))}
-							{!stage.settled && (
+							{(!stage.settled || leftOpen) && (
 								<MovePart
 									// what one wallet did is not said to the next one that connects
 									key={wallet.address ?? "nobody"}
@@ -349,12 +374,16 @@ export function MoveView({
 									/>
 								</div>
 							))}
-							<TellCoSigners proposal={first} doc={docs[0]} />
+							<TellCoSigners
+								proposal={first}
+								doc={docs[0]}
+								also={{ proposal: second, doc: docs[1] }}
+							/>
 							<SharePanel
 								proposal={first}
 								store={docs[0].store}
 								also={[{ proposal: second, store: docs[1].store }]}
-								secondary={docs[0].relay.known}
+								secondary={docs[0].relay.known && docs[1].relay.known}
 							/>
 						</div>
 					</div>
@@ -406,6 +435,10 @@ function StepCard({
 	const open = !CLOSED.has(stage.phase);
 	const onRecord = staking.record;
 	const done = stage.phase === "submitted" || stage.phase === "carried-out";
+	// "duplicate nonce": the step's number was used before, so it may be
+	// carried out already; what the staking history shows is said here too
+	const duplicate = stage.failedAttempt?.id === "nonce-duplicate";
+	const before = duplicate ? "proposing it again" : "submitting";
 	return (
 		<Card
 			title={`Step ${number} of 2`}
@@ -449,7 +482,7 @@ function StepCard({
 				</p>
 			))}
 			{open && staking.noPay && <Amber>{staking.noPay}</Amber>}
-			{open && onRecord?.kind === "likely" && (
+			{(open || duplicate) && onRecord?.kind === "likely" && (
 				<Amber>
 					Hyperliquid's staking history shows a step like this one on{" "}
 					<When at={onRecord.time} />. It may be this step, already carried out:
@@ -462,14 +495,14 @@ function StepCard({
 					>
 						Look at that transaction
 					</a>{" "}
-					before submitting.
+					before {before}.
 				</Amber>
 			)}
-			{open && onRecord?.kind === "unchecked" && (
+			{(open || duplicate) && onRecord?.kind === "unchecked" && (
 				<Amber>
 					Hyperliquid's staking history shows several steps like this one, and
 					the explorer did not say whether one of them is this step. Look at the
-					treasury's Staking history before submitting.
+					treasury's Staking history before {before}.
 				</Amber>
 			)}
 			{stage.failedAttempt && (
@@ -478,7 +511,7 @@ function StepCard({
 					className="mt-3"
 					title={`Hyperliquid refused this step: ${stage.failedAttempt.message}`}
 				>
-					{refusalNote(stage.failedAttempt)}
+					{duplicate ? stage.detail : refusalNote(stage.failedAttempt)}
 				</Callout>
 			)}
 			{!done && !open && !stage.failedAttempt && (
@@ -558,11 +591,14 @@ function MovePart({
 	});
 	const keys = (which: "takeBack" | "withdraw" | "sayNo" | "takeBackNo") =>
 		steps.flatMap((s, i) => (offered[i]?.[which] ? [keyOf(s.proposal)] : []));
+	// a move that is over is only ever cleared away: nothing about it is
+	// signed, objected to or taken back any more
+	const over = stage.settled;
 	const can = {
-		takeBack: keys("takeBack"),
+		takeBack: over ? [] : keys("takeBack"),
 		withdraw: keys("withdraw"),
-		sayNo: keys("sayNo"),
-		takeBackNo: keys("takeBackNo"),
+		sayNo: over ? [] : keys("sayNo"),
+		takeBackNo: over ? [] : keys("takeBackNo"),
 	};
 
 	/** One write that covers every step named: the relay takes all of them or none. */
@@ -718,13 +754,15 @@ function MovePart({
 		can.sayNo.length > 0 ||
 		can.takeBackNo.length > 0;
 	const off = wallet.busy || busy;
-	const note = stage.canExecute
-		? `Your wallet is asked ${stage.prompts} times. Then step ${(stage.toSend[0] ?? 0) + 1} is sent${toSend.length > 1 ? ", and step 2 once Hyperliquid has accepted it" : ""}.`
-		: stage.canSign
-			? `${toSign.length > 1 ? "One wallet prompt for each step. " : ""}${signHint(toSign[0]?.proposal.payload.action ?? {})}`
-			: stage.signed > 0 && stage.toSign.length === 0
-				? `You signed ${stage.signed === 2 ? "both steps" : "what is left to sign"}. ${isFinaliser ? "" : `The finaliser ${shortAddress(finaliser)} submits.`}`
-				: (stage.executeReason ?? "");
+	const note = over
+		? leftOpenNote(can.withdraw.length > 0)
+		: stage.canExecute
+			? `Your wallet is asked ${stage.prompts} times. Then step ${(stage.toSend[0] ?? 0) + 1} is sent${toSend.length > 1 ? ", and step 2 once Hyperliquid has accepted it" : ""}.`
+			: stage.canSign
+				? `${toSign.length > 1 ? "One wallet prompt for each step. " : ""}${signHint(toSign[0]?.proposal.payload.action ?? {})}`
+				: stage.signed > 0 && stage.toSign.length === 0
+					? `You signed ${stage.signed === 2 ? "both steps" : "what is left to sign"}. ${isFinaliser ? "" : `The finaliser ${shortAddress(finaliser)} submits.`}`
+					: (stage.executeReason ?? "");
 
 	return (
 		<Card
@@ -830,14 +868,15 @@ function MovePart({
 					{note}
 				</p>
 			)}
-			{(can.sayNo.length > 0 ||
-				can.takeBackNo.length > 0 ||
-				can.withdraw.length > 0) && (
-				<p className="mt-2 text-xs text-subtle-foreground">
-					A no, its taking back and a withdrawal cover both steps: they are one
-					move.
-				</p>
-			)}
+			{!over &&
+				(can.sayNo.length > 0 ||
+					can.takeBackNo.length > 0 ||
+					can.withdraw.length > 0) && (
+					<p className="mt-2 text-xs text-subtle-foreground">
+						A no, its taking back and a withdrawal cover both steps: they are
+						one move.
+					</p>
+				)}
 			{confirm && (
 				<Callout
 					tone="warning"

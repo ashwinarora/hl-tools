@@ -12,13 +12,14 @@ import {
 	type Issue,
 	issue,
 	type Network,
+	type Proposal,
 	type Receipt,
 } from "@hl-tools/core";
 import { receiptText } from "../model/relay/assemble";
 import type { MarkChain } from "../model/relay/away";
 import { isDuplicate, relayIssue } from "../model/relay/errors";
 import type { NicknameRow } from "../model/relay/nicknames";
-import type { PublishRow } from "../model/relay/push";
+import { type PublishRow, publishRow } from "../model/relay/push";
 import {
 	type EventRow,
 	eventRows,
@@ -720,6 +721,37 @@ export function publishMove(
 		() => client.from("proposals").insert([...rows]),
 		(row) => publishProposal(client, as, row),
 	);
+}
+
+/**
+ * Share a move as it is in this browser: its steps in one write (all of them
+ * or none; a step the relay has already counts as done), then the session
+ * wallet's own signature on each. Sharing one step and not the other would
+ * put half a move in the co-signers' lists.
+ */
+export async function shareMove(
+	client: RelayClient,
+	as: Address,
+	steps: readonly Proposal[],
+): Promise<Result<true>> {
+	const shared = await publishMove(client, as, steps.map(publishRow));
+	if (shared.issue) return shared;
+	for (const p of steps) {
+		const mine = p.signatures.find((x) => x.signer === as);
+		if (!mine) continue;
+		const signed = await addSignature(
+			client,
+			as,
+			{
+				network: p.payload.network,
+				treasury: p.payload.multiSigUser,
+				digest: p.digest,
+			},
+			mine,
+		);
+		if (signed.issue) return signed;
+	}
+	return { data: true, issue: null };
 }
 
 /** Withdraw the open proposals of a move as their proposer: all of them, or none. */

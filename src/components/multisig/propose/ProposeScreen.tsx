@@ -72,7 +72,6 @@ import {
 	proposalNonce,
 } from "../model/nonce";
 import { RELAY_COPY } from "../model/relay/copy";
-import { publishRow } from "../model/relay/push";
 import { reproposeSource } from "../model/repropose";
 import { isItself } from "../model/selfTreasury";
 import { costLine, spotAvailable } from "../model/send";
@@ -80,7 +79,7 @@ import { toLookUp, wantedSet } from "../model/signerSet";
 import { isStakingKind, planStaking, STAKING } from "../model/staking";
 import { linkTransport } from "../model/transport";
 import { TreasuryNames, useNames } from "../names/Names";
-import { addSignature, publishMove } from "../relay/api";
+import { shareMove } from "../relay/api";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
 import { Help } from "../shell/Help";
@@ -556,26 +555,7 @@ function ProposeForm({
 			// browser" and offers to share it again.
 			if (sharing && relay.client && relay.wallet) {
 				// both steps of a move in one write: the relay takes both or neither
-				const shared = await publishMove(
-					relay.client,
-					relay.wallet,
-					saved.map(publishRow),
-				);
-				if (!shared.issue)
-					for (const p of saved) {
-						const mine = p.signatures.find((x) => x.signer === relay.wallet);
-						if (mine)
-							await addSignature(
-								relay.client,
-								relay.wallet,
-								{
-									network: p.payload.network,
-									treasury: p.payload.multiSigUser,
-									digest: p.digest,
-								},
-								mine,
-							);
-					}
+				await shareMove(relay.client, relay.wallet, saved);
 				void client.invalidateQueries({ queryKey: ["relay", relay.wallet] });
 			}
 			void navigate({
