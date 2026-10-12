@@ -8,7 +8,7 @@ import {
 import { useNetwork } from "#/store/networkStore";
 import { CREATE } from "../model/create";
 import { RELAY_COPY } from "../model/relay/copy";
-import { groupInbox } from "../model/relay/inbox";
+import { groupInbox, orderMatters } from "../model/relay/inbox";
 import { type OpenProposal, useOpenProposals } from "../relay/openProposals";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -46,9 +46,19 @@ export function InboxScreen() {
 		(p) => !(hydrated && hidden.includes(treasuryKey(p.network, p.treasury))),
 	);
 	const groups = groupInbox(shown, me, network);
-	// Oldest first where the reader submits: Hyperliquid takes a treasury's USDC
-	// sends only in the order they were proposed, so working down the list is safe.
+	// Oldest first where the reader submits: the kinds Hyperliquid takes only in
+	// the order they were proposed are then safe to work down the list.
 	const finish = [...groups.finish].sort((a, b) => a.row.nonce - b.row.nonce);
+	// said only when it applies: two such actions waiting on one treasury
+	const perTreasury = new Map<string, unknown[]>();
+	for (const p of finish) {
+		const key = treasuryKey(p.network, p.treasury);
+		perTreasury.set(key, [
+			...(perTreasury.get(key) ?? []),
+			p.proposal.payload.action,
+		]);
+	}
+	const ordered = [...perTreasury.values()].some(orderMatters);
 	const total =
 		groups.finish.length +
 		groups.sign.length +
@@ -81,8 +91,10 @@ export function InboxScreen() {
 						</Card>
 						<p className="mx-0.5 mt-1.5 text-xs text-subtle-foreground">
 							You were named finaliser on these. One click signs what is left
-							and submits. Oldest first: Hyperliquid takes a treasury's USDC
-							sends in the order they were proposed.
+							and submits.
+							{ordered
+								? " Some of these have to go in order: finish the older one first."
+								: ""}
 						</p>
 					</section>
 				)}
