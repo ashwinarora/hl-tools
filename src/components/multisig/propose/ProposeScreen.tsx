@@ -132,7 +132,9 @@ export function ProposeScreen(props: {
 	});
 	return (
 		<ProposeForm
-			key={`${page.network}:${props.treasury ?? ""}`}
+			// a link that asks for another kind, or to re-propose another proposal,
+			// starts a new form: the form on screen is always the one the link names
+			key={`${page.network}:${props.treasury ?? ""}:${props.kind ?? ""}:${props.supersedes ?? ""}`}
 			treasury={props.treasury}
 			supersedes={props.supersedes}
 			kind={props.kind}
@@ -329,6 +331,12 @@ function ProposeForm({
 					fieldOf(i) === field,
 			)
 			.map((i) => i.message);
+	// what stops Create, in the form's own sentences
+	const blockers = [
+		...new Set(
+			issues.filter((i) => i.severity === "error").map((i) => i.message),
+		),
+	];
 	const otherIssues = issues.filter(
 		(i) =>
 			(i.severity !== "error" || fieldOf(i) === null) &&
@@ -343,8 +351,11 @@ function ProposeForm({
 		spotUsdc: spotAvailable(state.spot, "USDC"),
 	};
 	const cost =
-		// to the treasury itself there is no receiver to describe: the note under the field says what it is
-		lookup.state === "idle" || destinationOf(form) === address
+		// To the treasury itself, or to the zero address, there is no receiver to
+		// describe: the note under the field says what it is.
+		lookup.state === "idle" ||
+		destinationOf(form) === address ||
+		destinationOf(form) === ZERO_ADDRESS
 			? null
 			: costLine({
 					action: draft.sketch,
