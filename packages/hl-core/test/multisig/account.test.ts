@@ -1,8 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	type AccountInput,
+	allApiWallets,
 	assessAccount,
 	formatHype,
+	unnamedApiWallet,
 } from "../../src/multisig/index.ts";
 import { A, B, C, codes, NOW, POLICY, SPARE, TREASURY } from "./_helpers.ts";
 
@@ -213,5 +216,99 @@ describe("formatHype", () => {
 		expect(formatHype(1_000_000_000_000_000_000n)).toBe("1");
 		expect(formatHype(1_234_567_890_000_000_000n)).toBe("1.234567");
 		expect(formatHype(500_000_000_000_000n)).toBe("0.0005");
+	});
+});
+
+describe("the API wallet approved without a name (fixtures/multisig/agent-unnamed.json)", () => {
+	interface Step {
+		about: string;
+		action: { agentAddress: string; agentName: string };
+		answer: { status: string };
+		after: {
+			extraAgents: { name: string; address: string; validUntil: number }[];
+			webData3: unknown;
+			userRole: { role: string };
+		};
+	}
+	const fx = JSON.parse(
+		readFileSync(
+			new URL("../../fixtures/multisig/agent-unnamed.json", import.meta.url),
+			"utf8",
+		),
+	) as { steps: [Step, Step] };
+	const [approved, removed] = fx.steps;
+
+	it("is not in `extraAgents`, and is read from `webData3`", () => {
+		expect(approved.answer.status).toBe("ok");
+		expect(approved.action.agentName).toBe("");
+		// the list of named wallets is the same before and after
+		expect(approved.after.extraAgents).toEqual(removed.after.extraAgents);
+		expect(approved.after.extraAgents.map((a) => a.address)).not.toContain(
+			approved.action.agentAddress,
+		);
+		expect(unnamedApiWallet(approved.after.webData3)).toEqual({
+			name: "",
+			address: approved.action.agentAddress,
+			validUntil: 1793047055525,
+		});
+		expect(approved.after.userRole.role).toBe("agent");
+	});
+
+	it("is listed first, before the named ones", () => {
+		const all = allApiWallets(
+			approved.after.extraAgents,
+			approved.after.webData3,
+		);
+		expect(all?.map((a) => a.name)).toEqual(["", "lab", "rebalancer"]);
+		expect(all?.[0]?.address).toBe(approved.action.agentAddress);
+	});
+
+	it("is gone after an approval of the zero address with no name", () => {
+		expect(removed.answer.status).toBe("ok");
+		expect(removed.action.agentAddress).toBe(`0x${"0".repeat(40)}`);
+		expect(removed.action.agentName).toBe("");
+		expect(unnamedApiWallet(removed.after.webData3)).toBeNull();
+		expect(
+			allApiWallets(removed.after.extraAgents, removed.after.webData3),
+		).toEqual(removed.after.extraAgents);
+		expect(removed.after.userRole.role).toBe("missing");
+	});
+
+	it("does not pass a list off as complete when the answer does not say", () => {
+		const named = approved.after.extraAgents;
+		for (const unreadable of [
+			null,
+			undefined,
+			"webData3",
+			{},
+			{ userState: null },
+			{ userState: {} },
+			// the field is there, and is no address
+			{ userState: { agentAddress: 7, agentValidUntil: 1 } },
+			{ userState: { agentAddress: "0x1234", agentValidUntil: 1 } },
+			// an address with no expiry
+			{
+				userState: {
+					agentAddress: approved.action.agentAddress,
+					agentValidUntil: null,
+				},
+			},
+		]) {
+			expect(unnamedApiWallet(unreadable)).toBeUndefined();
+			expect(allApiWallets(named, unreadable)).toBeNull();
+		}
+	});
+
+	it("reads an address in any case, and counts one key approved both ways once", () => {
+		const upper = approved.action.agentAddress
+			.toUpperCase()
+			.replace("0X", "0x");
+		const web = { userState: { agentAddress: upper, agentValidUntil: 5 } };
+		expect(unnamedApiWallet(web)?.address).toBe(approved.action.agentAddress);
+		const both = [{ name: "bot", address: upper, validUntil: 9 }];
+		expect(allApiWallets(both, web)).toEqual(both);
+		expect(allApiWallets([], web)).toEqual([
+			{ name: "", address: approved.action.agentAddress, validUntil: 5 },
+		]);
 	});
 });

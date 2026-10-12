@@ -23,8 +23,9 @@ export const policyQueryOptions = (network: Network, user: string) =>
 export const agentsQueryOptions = (network: Network, user: string) =>
 	queryOptions({
 		queryKey: ["multisig-agents", network, user.toLowerCase()],
+		// the named ones and the one without a name, which `extraAgents` leaves out
 		queryFn: ({ signal }) =>
-			infoClient(network).extraAgents(user, { fresh: true, signal }),
+			infoClient(network).apiWallets(user, { fresh: true, signal }),
 		staleTime: 10_000,
 		retry: 1,
 	});

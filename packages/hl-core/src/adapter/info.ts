@@ -9,6 +9,7 @@
 
 import { HttpTransport } from "@nktkas/hyperliquid";
 import { type Observed, observed, toAddress } from "../identity.ts";
+import { allApiWallets } from "../multisig/account.ts";
 import {
 	type Delegation,
 	parseDelegations,
@@ -50,6 +51,7 @@ export const DEFAULT_TTLS: Readonly<Record<string, number>> = {
 	userRole: 10_000,
 	userAbstraction: 10_000,
 	extraAgents: 10_000,
+	webData3: 10_000,
 	clearinghouseState: 10_000,
 	spotClearinghouseState: 10_000,
 	openOrders: 10_000,
@@ -346,6 +348,38 @@ export class InfoClient<N extends Network> {
 		return this.info<readonly AgentInfo[]>(
 			{ type: "extraAgents", user: user.toLowerCase() },
 			options,
+		);
+	}
+
+	/**
+	 * Every API wallet of a user: the named ones (`extraAgents`) and the one
+	 * approved without a name, which that list leaves out and `webData3`
+	 * carries. Fails when either read fails or does not say: a list that may
+	 * be short one wallet must not be shown as the list.
+	 */
+	async apiWallets(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<readonly AgentInfo[], N>> {
+		const body = { type: "webData3", user: user.toLowerCase() };
+		const [named, web] = await Promise.all([
+			this.extraAgents(user, options),
+			this.info<unknown>(body, options),
+		]);
+		const all = allApiWallets(named.data, web.data);
+		if (!all)
+			throw new InfoRequestError(
+				this.network,
+				body,
+				"The answer does not say whether the account has an API wallet without a name.",
+				200,
+				null,
+			);
+		return observed(
+			this.network,
+			"extraAgents + webData3",
+			all,
+			Math.min(named.observedAt, web.observedAt),
 		);
 	}
 

@@ -109,6 +109,72 @@ describe("InfoClient account methods", () => {
 		await client.extraAgents(USER);
 		expect(seen.length).toBe(12);
 	});
+	it("lists every API wallet: the named ones and the one without a name, which `extraAgents` leaves out", async () => {
+		const named = [
+			{
+				name: "lab",
+				address: "0x008d90fc2bebe284380f32bd9632f6922b701bc5",
+				validUntil: 1799175795549,
+			},
+		];
+		const unnamed = "0xd7532a99c52cd216b4123115eac148a3ec9f93d5";
+		const { seen, transport } = fakeTransport({
+			extraAgents: named,
+			webData3: {
+				userState: { agentAddress: unnamed, agentValidUntil: 1793047055525 },
+			},
+		});
+		let now = 5_000;
+		const client = new InfoClient("testnet", { transport, now: () => now++ });
+		const all = await client.apiWallets(USER);
+		expect(all.data).toEqual([
+			{ name: "", address: unnamed, validUntil: 1793047055525 },
+			...named,
+		]);
+		expect(all.network).toBe("testnet");
+		// as old as the older of the two answers
+		expect(all.observedAt).toBe(5_002);
+		expect(seen).toEqual([
+			{ type: "extraAgents", user: USER.toLowerCase() },
+			{ type: "webData3", user: USER.toLowerCase() },
+		]);
+		// an account with none
+		const none = new InfoClient("testnet", {
+			transport: fakeTransport({
+				extraAgents: named,
+				webData3: {
+					userState: { agentAddress: null, agentValidUntil: null },
+				},
+			}).transport,
+		});
+		expect((await none.apiWallets(USER)).data).toEqual(named);
+	});
+	it("fails rather than show a list that may be short one wallet", async () => {
+		// the second read fails
+		const down = new InfoClient("testnet", {
+			transport: fakeTransport({ extraAgents: [] }).transport,
+		});
+		await expect(down.apiWallets(USER)).rejects.toThrow(/unexpected webData3/);
+		// it answers, and does not say
+		const silent = new InfoClient("testnet", {
+			transport: fakeTransport({ extraAgents: [], webData3: {} }).transport,
+		});
+		await expect(silent.apiWallets(USER)).rejects.toMatchObject({
+			name: "InfoRequestError",
+			message:
+				"The answer does not say whether the account has an API wallet without a name.",
+			body: { type: "webData3", user: USER.toLowerCase() },
+		});
+		// the first read fails
+		const half = new InfoClient("testnet", {
+			transport: fakeTransport({
+				webData3: { userState: { agentAddress: null } },
+			}).transport,
+		});
+		await expect(half.apiWallets(USER)).rejects.toThrow(
+			/unexpected extraAgents/,
+		);
+	});
 	it("`fresh` asks the network whatever is cached, and later readers get the new answer", async () => {
 		const answers: Record<string, unknown> = {
 			userToMultiSigSigners: {

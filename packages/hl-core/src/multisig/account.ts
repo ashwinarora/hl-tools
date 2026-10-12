@@ -14,13 +14,59 @@ export interface AgentInput {
 	readonly validUntil: number;
 }
 
+/**
+ * The API wallet approved without a name, read from `webData3`. Hyperliquid
+ * lists only the named ones in `extraAgents`; the unnamed one is under
+ * `userState` there (`agentAddress`, `agentValidUntil`; measured on testnet,
+ * fixtures/multisig/agent-unnamed.json). Null: the account has none.
+ * Undefined: the answer does not say.
+ */
+export function unnamedApiWallet(
+	webData3: unknown,
+): AgentInput | null | undefined {
+	const state = (webData3 as { userState?: unknown } | null)?.userState;
+	if (!state || typeof state !== "object" || !("agentAddress" in state))
+		return undefined;
+	const { agentAddress, agentValidUntil } = state as Record<string, unknown>;
+	if (agentAddress === null) return null;
+	if (
+		typeof agentAddress !== "string" ||
+		!/^0x[0-9a-fA-F]{40}$/.test(agentAddress) ||
+		typeof agentValidUntil !== "number"
+	)
+		return undefined;
+	return {
+		name: "",
+		address: agentAddress.toLowerCase(),
+		validUntil: agentValidUntil,
+	};
+}
+
+/**
+ * Every API wallet of an account: the unnamed one first, then the named
+ * ones. Null when the answer about the unnamed one cannot be read: a list
+ * that may be short one wallet is not a list to show.
+ */
+export function allApiWallets(
+	named: readonly AgentInput[],
+	webData3: unknown,
+): readonly AgentInput[] | null {
+	const unnamed = unnamedApiWallet(webData3);
+	if (unnamed === undefined) return null;
+	// one key approved both ways is one wallet: its name says more
+	return unnamed &&
+		!named.some((a) => a.address.toLowerCase() === unnamed.address)
+		? [unnamed, ...named]
+		: named;
+}
+
 export interface AccountInput {
 	readonly address: Address;
 	/** `userToMultiSigSigners`: null when not a multi-sig user. */
 	readonly policy: Policy | null;
 	/** `userRole`, fetched only for non-multisig addresses; null when not fetched. */
 	readonly role: UserRole | null;
-	/** `extraAgents`; null when the call failed. */
+	/** Every API wallet (`allApiWallets`); null when the read failed. */
 	readonly agents: readonly AgentInput[] | null;
 	/** Per-signer policy: a Policy = nested multi-sig, null = plain user, undefined = not checked. */
 	readonly signerPolicies: Readonly<Record<string, Policy | null | undefined>>;

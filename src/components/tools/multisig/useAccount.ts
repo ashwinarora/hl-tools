@@ -70,7 +70,7 @@ export function useAccount(
 			const client = infoClient(network);
 			const [policy, agents, perp, spot, openOrders] = await Promise.all([
 				section(client.multiSigSigners(address)),
-				section(client.extraAgents(address)),
+				section(client.apiWallets(address)),
 				section(client.clearinghouseState(address)),
 				section(client.spotClearinghouseState(address)),
 				section(client.openOrders(address)),
@@ -80,6 +80,8 @@ export function useAccount(
 			const requests = [
 				["userToMultiSigSigners", policy.ok],
 				["extraAgents", agents.ok],
+				// carries the API wallet approved without a name
+				["webData3", agents.ok],
 				["clearinghouseState", perp.ok],
 				["spotClearinghouseState", spot.ok],
 				["openOrders", openOrders.ok],

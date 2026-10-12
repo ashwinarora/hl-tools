@@ -1,0 +1,100 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-12 (UTC). An API wallet approved without a name for a 2-of-3 multi-sig (lab keys, through the multi-sig envelope), then removed with the zero address and no name. `extraAgents` never lists it: it is in `webData3`, under `userState`. Answers are Hyperliquid's.",
+	"network": "testnet",
+	"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+	"steps": [
+		{
+			"about": "approve an API wallet without a name",
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0xd7532a99c52cd216b4123115eac148a3ec9f93d5",
+				"agentName": "",
+				"nonce": 1791837454884
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"extraAgents": [
+					{
+						"name": "lab",
+						"address": "0x008d90fc2bebe284380f32bd9632f6922b701bc5",
+						"validUntil": 1799175795549
+					},
+					{
+						"name": "rebalancer",
+						"address": "0x6148a9f1de8fbc8f72ce24b867066753d24c0695",
+						"validUntil": 1799447777461
+					}
+				],
+				"webData3": {
+					"userState": {
+						"agentAddress": "0xd7532a99c52cd216b4123115eac148a3ec9f93d5",
+						"agentValidUntil": 1793047055525,
+						"cumLedger": "32.07",
+						"serverTime": 1791837491026,
+						"isVault": false,
+						"user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"optOutOfSpotDusting": true
+					}
+				},
+				"userRole": {
+					"role": "agent",
+					"data": {
+						"user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148"
+					}
+				}
+			}
+		},
+		{
+			"about": "remove it: the zero address and no name",
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0x0000000000000000000000000000000000000000",
+				"agentName": "",
+				"nonce": 1791837509823
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"extraAgents": [
+					{
+						"name": "lab",
+						"address": "0x008d90fc2bebe284380f32bd9632f6922b701bc5",
+						"validUntil": 1799175795549
+					},
+					{
+						"name": "rebalancer",
+						"address": "0x6148a9f1de8fbc8f72ce24b867066753d24c0695",
+						"validUntil": 1799447777461
+					}
+				],
+				"webData3": {
+					"userState": {
+						"agentAddress": null,
+						"agentValidUntil": null,
+						"cumLedger": "32.07",
+						"serverTime": 1791837513727,
+						"isVault": false,
+						"user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"optOutOfSpotDusting": true
+					}
+				},
+				"userRole": {
+					"role": "missing"
+				}
+			}
+		}
+	]
+}
