@@ -8,6 +8,32 @@
  * waiting.
  */
 
+/**
+ * Remembers that a service said "no more for now" and that nothing should be
+ * asked of it for a while. Hyperliquid's explorer answers every look-up with
+ * the same refusal once a network address has used up its allowance for the
+ * day: asking on, three times per transaction, only adds requests.
+ */
+export class Rest {
+	private readonly ms: number;
+	private readonly now: () => number;
+	private until = 0;
+
+	constructor(ms: number, now: () => number = Date.now) {
+		this.ms = ms;
+		this.now = now;
+	}
+
+	/** The service refused: rest from now on. */
+	start(): void {
+		this.until = this.now() + this.ms;
+	}
+
+	get resting(): boolean {
+		return this.now() < this.until;
+	}
+}
+
 export interface PacerOptions {
 	/** How many may start at once after a quiet spell. */
 	readonly burst: number;

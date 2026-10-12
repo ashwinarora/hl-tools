@@ -4,6 +4,7 @@
  * per hash, paced, a few at a time) and compared with the proposal's action.
  */
 import {
+	ExplorerAllowanceError,
 	type ExplorerTx,
 	explorerTxDetails,
 	type LedgerRow,
@@ -19,7 +20,7 @@ import {
 	type RowProposal,
 	rowProposal,
 } from "../model/chain/match";
-import { Pacer } from "../model/chain/pace";
+import { Pacer, Rest } from "../model/chain/pace";
 
 /**
  * One explorer request weighs 40 of the 1200 a network address may spend in a
@@ -36,8 +37,26 @@ function pacer(network: Network): Pacer {
 	return p;
 }
 
+/**
+ * Once the explorer says a network address has used up its allowance for the
+ * day, it says so to every look-up. Nothing more is asked for ten minutes;
+ * then one look-up finds out whether that is still so.
+ */
+const EXPLORER_REST_MS = 10 * 60_000;
+const rests = new Map<Network, Rest>();
+function rest(network: Network): Rest {
+	let r = rests.get(network);
+	if (!r) {
+		r = new Rest(EXPLORER_REST_MS);
+		rests.set(network, r);
+	}
+	return r;
+}
+
 /** The explorer answered, and does not know the hash (it can lag the ledger by a moment). */
 class UnknownHash extends Error {}
+/** Not asked: the explorer said a moment ago that the day's allowance is used up. */
+class Resting extends Error {}
 
 const ZERO_HASH = /^0x0+$/;
 const key = (network: Network, hash: string) =>
@@ -68,18 +87,29 @@ export function useTxLookups(
 			}: {
 				signal: AbortSignal;
 			}): Promise<ExplorerTx> => {
+				if (rest(network).resting) throw new Resting();
 				await pacer(network).turn();
 				// the screen that asked may be gone by the time its turn comes
 				// (another treasury was opened): then nothing is asked at all
 				signal.throwIfAborted();
-				const r = await explorerTxDetails(network, hash, { signal });
-				if (!r.data.found) throw new UnknownHash(r.data.reason);
-				return r.data.tx;
+				// the look-up ahead of this one may have been refused meanwhile
+				if (rest(network).resting) throw new Resting();
+				try {
+					const r = await explorerTxDetails(network, hash, { signal });
+					if (!r.data.found) throw new UnknownHash(r.data.reason);
+					return r.data.tx;
+				} catch (e) {
+					if (e instanceof ExplorerAllowanceError) rest(network).start();
+					throw e;
+				}
 			},
 			// a transaction never changes; an answer is kept for the session
 			staleTime: Number.POSITIVE_INFINITY,
 			gcTime: 60 * 60_000,
-			retry: 2,
+			// a refusal for the day is not tried again: it would be refused again
+			retry: (failures: number, error: Error) =>
+				failures < 2 &&
+				!(error instanceof ExplorerAllowanceError || error instanceof Resting),
 			retryDelay: 4_000,
 			refetchOnWindowFocus: false,
 			refetchOnReconnect: false,

@@ -8,7 +8,7 @@
  */
 import { type Observed, observed } from "../identity.ts";
 import { type Network, networkConfig } from "../network.ts";
-import { InfoRequestError } from "./info.ts";
+import { type InfoBody, InfoRequestError } from "./info.ts";
 
 /** One explorer transaction, as `userDetails` lists it and `txDetails` returns it. */
 export interface ExplorerTx {
@@ -150,12 +150,34 @@ export type ExplorerTxLookup =
 const TX_HASH = /^0x[0-9a-fA-F]{64}$/;
 
 /**
+ * The explorer refused a look-up because this network address has used up its
+ * allowance for the day. Measured on testnet (2026-10-12): "More than 100
+ * archived blocks queried in one day", answered with HTTP 200 to every
+ * look-up from then on, a transaction three seconds old included. It says
+ * nothing about the hash, so it is an error and never "not found"; a caller
+ * should stop asking for a while instead of trying again.
+ */
+export class ExplorerAllowanceError extends InfoRequestError {
+	constructor(
+		network: Network,
+		body: InfoBody,
+		message: string,
+		status: number,
+	) {
+		super(network, body, message, status);
+		this.name = "ExplorerAllowanceError";
+	}
+}
+const ALLOWANCE_SPENT = /queried in one day/i;
+
+/**
  * Look one transaction up by hash. For a multi-sig transaction `user` is the
  * multi-sig account and `action` the inner action exactly as it was signed;
  * a rejected attempt is found too, with `error` set. Measured on testnet
  * (2026-10-11): the hash of a transfer is known about 0.2 s after the ledger
  * shows it; an unknown hash answers 200 with `{"type":"error"}`, a malformed
- * one HTTP 422. One request, weight 40.
+ * one HTTP 422. One request, weight 40. Throws `ExplorerAllowanceError` once
+ * the day's allowance is used up.
  */
 export async function explorerTxDetails<N extends Network>(
 	network: N,
@@ -199,6 +221,12 @@ export async function explorerTxDetails<N extends Network>(
 		message?: unknown;
 		tx?: unknown;
 	};
+	if (
+		answer.type === "error" &&
+		typeof answer.message === "string" &&
+		ALLOWANCE_SPENT.test(answer.message)
+	)
+		throw new ExplorerAllowanceError(network, body, answer.message, res.status);
 	if (answer.type === "error")
 		return observed(
 			network,

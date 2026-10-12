@@ -67,5 +67,14 @@
     "error": "Invalid multi-sig threshold"
    }
   }
+ },
+ {
+  "name": "allowance-spent",
+  "hash": "0xad6e1fc27a97e7e5aee7042b87bee001090037a8159b06b75136cb15399bc1d0",
+  "status": 200,
+  "body": {
+   "type": "error",
+   "message": "More than 100 archived blocks queried in one day"
+  }
  }
 ]

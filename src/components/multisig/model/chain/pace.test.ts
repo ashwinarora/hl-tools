@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Pacer } from "./pace";
+import { Pacer, Rest } from "./pace";
 
 function setup(burst: number, everyMs: number) {
 	let time = 0;
@@ -36,6 +36,29 @@ function setup(burst: number, everyMs: number) {
 	};
 	return { pacer, started, ask, advance, timers: () => timers.length };
 }
+
+describe("Rest", () => {
+	it("asks nothing for its length after a refusal, then lets one try again", () => {
+		let now = 1_000;
+		const rest = new Rest(600_000, () => now);
+		expect(rest.resting).toBe(false);
+		rest.start();
+		expect(rest.resting).toBe(true);
+		now += 599_999;
+		expect(rest.resting).toBe(true);
+		now += 1;
+		expect(rest.resting).toBe(false);
+		// refused again: another rest, counted from then
+		rest.start();
+		now += 300_000;
+		expect(rest.resting).toBe(true);
+	});
+	it("runs on the real clock by default", () => {
+		const rest = new Rest(60_000);
+		rest.start();
+		expect(rest.resting).toBe(true);
+	});
+});
 
 describe("Pacer", () => {
 	it("lets a burst through at once, then one every interval, in order", async () => {

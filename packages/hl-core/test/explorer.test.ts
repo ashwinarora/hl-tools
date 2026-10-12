@@ -4,12 +4,13 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	EXPLORER_PAGE_CAP,
+	ExplorerAllowanceError,
 	explorerTxDetails,
 	explorerUserDetails,
 	InfoRequestError,
 } from "../src/index.ts";
 
-/** Answers recorded from the testnet explorer on 2026-10-11. */
+/** Answers recorded from the testnet explorer on 2026-10-11 ("allowance-spent" on 2026-10-12). */
 const RECORDED = JSON.parse(
 	readFileSync(
 		join(
@@ -239,6 +240,18 @@ describe("explorerTxDetails", () => {
 			reason: "The explorer does not know this hash.",
 		});
 		expect(silent.source).toContain("https://rpc.hyperliquid.xyz/explorer");
+	});
+	it('a used-up allowance is an error, never "not found"', async () => {
+		// answered to every look-up once the day's allowance is spent: it says
+		// nothing about the hash
+		const rec = recorded("allowance-spent");
+		const asked = explorerTxDetails("testnet", rec.hash, {
+			fetch: fetchWith(rec.status, rec.body),
+		});
+		await expect(asked).rejects.toBeInstanceOf(ExplorerAllowanceError);
+		await expect(asked).rejects.toThrow(
+			"More than 100 archived blocks queried in one day",
+		);
 	});
 	it("a malformed hash is never sent; the explorer's own 422 reads the same way", async () => {
 		const rec = recorded("malformed");
