@@ -16,16 +16,17 @@ import {
 	planMove,
 	planReturn,
 	planStake,
-	RETURN_QUEUE_LINE,
-	STAKE_LOCKUP_LINE,
+	returnQueueLine,
 	type StakingAction,
 	type StakingEvent,
 	type StakingFacts,
+	stakeLockupLine,
 	stakingActionOf,
 	stakingFields,
 	stakingRefusal,
 	type Validator,
 	validatorPays,
+	waitWords,
 	weiToHype,
 } from "../../src/multisig/index.ts";
 import {
@@ -107,11 +108,15 @@ describe("the rule set", () => {
 	});
 
 	it("is what the sentences of an action say", () => {
-		// the sentences spell the lengths out; a change to the rule has to change them
-		expect(STAKE_LOCKUP_LINE).toContain("1 day");
-		expect(STAKE_LOCKUP_LINE).toContain("2 minutes on testnet");
-		expect(RETURN_QUEUE_LINE).toContain("7 days");
-		expect(RETURN_QUEUE_LINE).toContain("5 minutes on testnet");
+		// the sentences are written from the rule, so a change to it changes them
+		expect(stakeLockupLine("mainnet")).toContain("for 1 day");
+		expect(stakeLockupLine("testnet")).toContain("for 2 minutes");
+		expect(returnQueueLine("mainnet")).toContain("7 days after");
+		expect(returnQueueLine("testnet")).toContain("5 minutes after");
+		expect(waitWords(60_000)).toBe("1 minute");
+		expect(waitWords(5 * 3_600_000)).toBe("5 hours");
+		expect(waitWords(3_600_000)).toBe("1 hour");
+		expect(waitWords(7 * 86_400_000)).toBe("7 days");
 	});
 
 	it("matches what testnet did: the lockup of a top-up, and its sharp end", () => {

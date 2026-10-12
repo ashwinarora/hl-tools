@@ -3,8 +3,8 @@ import { L1_ACTION_SHAPES } from "../../src/canonical.ts";
 import {
 	describeAction,
 	type PlainObject,
-	RETURN_QUEUE_LINE,
-	STAKE_LOCKUP_LINE,
+	returnQueueLine,
+	stakeLockupLine,
 } from "../../src/multisig/index.ts";
 import { USER_SIGNED_SPECS } from "../../src/rules/signing.ts";
 import { A, B, ORDER, RECIPIENT, usdSend } from "./_helpers.ts";
@@ -515,7 +515,25 @@ describe("describeAction details", () => {
 		).toBe(`Approve builder ${B} up to 0.01%`);
 		const stake = describeAction(SAMPLES.tokenDelegate as PlainObject);
 		expect(stake.headline).toBe(`Stake 1 HYPE with validator ${B}`);
-		expect(stake.lines).toEqual([STAKE_LOCKUP_LINE]);
+		// the wait of the network the action names for itself, in one verb
+		expect(stake.lines).toEqual([
+			"A stake cannot be unstaked for 2 minutes after it is made or added to.",
+		]);
+		expect(
+			describeAction({
+				...SAMPLES.tokenDelegate,
+				hyperliquidChain: "Mainnet",
+			} as PlainObject).lines,
+		).toEqual([
+			"A stake cannot be unstaked for 1 day after it is made or added to.",
+		]);
+		// an action that names no network this version knows: both lengths
+		const { hyperliquidChain: _, ...nowhere } =
+			SAMPLES.tokenDelegate as PlainObject;
+		expect(describeAction(nowhere).lines).toEqual([stakeLockupLine(null)]);
+		expect(stakeLockupLine(null)).toBe(
+			"A stake cannot be unstaked for 1 day after it is made or added to (2 minutes on testnet).",
+		);
 		const unstake = describeAction({
 			...SAMPLES.tokenDelegate,
 			isUndelegate: true,
@@ -529,7 +547,15 @@ describe("describeAction details", () => {
 		expect(back.headline).toBe(
 			"Return 0.00000005 HYPE from the staking balance to the spot balance",
 		);
-		expect(back.lines).toEqual([RETURN_QUEUE_LINE]);
+		expect(back.lines).toEqual([
+			"Hyperliquid releases a return to spot 5 minutes after it is carried out, with no further signature.",
+		]);
+		expect(returnQueueLine("mainnet")).toBe(
+			"Hyperliquid releases a return to spot 7 days after it is carried out, with no further signature.",
+		);
+		expect(returnQueueLine(null)).toBe(
+			"Hyperliquid releases a return to spot 7 days after it is carried out (5 minutes on testnet), with no further signature.",
+		);
 		// an amount that is no whole number is shown as it stands, never guessed
 		expect(
 			describeAction({ ...SAMPLES.cDeposit, wei: "1.5" } as PlainObject)

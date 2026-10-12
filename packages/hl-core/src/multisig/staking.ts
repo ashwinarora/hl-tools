@@ -38,6 +38,16 @@ const timeOf = (v: unknown): number | null =>
 // ------------------------------------------------------------------ amounts
 
 /** The integer an action carries, as HYPE: 100000000 is "1". Null for anything that is not a whole, non-negative number. */
+/** A wait in words, in its largest whole unit: "2 minutes", "5 hours", "1 day". */
+export function waitWords(ms: number): string {
+	const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+	const minutes = Math.round(ms / 60_000);
+	if (minutes < 60) return plural(minutes, "minute");
+	const hours = Math.round(minutes / 60);
+	if (hours < 24) return plural(hours, "hour");
+	return plural(Math.round(hours / 24), "day");
+}
+
 export function weiToHype(wei: unknown): string | null {
 	const ok =
 		typeof wei === "bigint"

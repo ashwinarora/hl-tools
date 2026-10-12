@@ -5,10 +5,12 @@
  * decimals, integers for USD micro-units), never re-rounded.
  */
 
+import type { Network } from "../network.ts";
+import { RETURN_QUEUE, STAKE_LOCKUP } from "../rules/staking.ts";
 import { WITHDRAWAL_FEE_USDC } from "../rules/transfers.ts";
 import { riskFlags } from "./action.ts";
 import { parseSignersString } from "./signerSet.ts";
-import { weiToHype } from "./staking.ts";
+import { waitWords, weiToHype } from "./staking.ts";
 import { withdrawalOutcome } from "./transfer.ts";
 import type { PlainObject, RiskFlag } from "./types.ts";
 
@@ -52,11 +54,26 @@ export interface ActionDescription {
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 
-/** The two waits of staking, as rules/staking.ts has them (a test holds the two together). */
-export const STAKE_LOCKUP_LINE =
-	"A stake cannot be removed for 1 day after it is made or added to (2 minutes on testnet).";
-export const RETURN_QUEUE_LINE =
-	"Hyperliquid releases a return to spot 7 days after it is carried out (5 minutes on testnet), with no further signature.";
+/** The network a user-signed action names for itself; null when it names none this version knows. */
+const networkOf = (action: PlainObject): Network | null =>
+	action.hyperliquidChain === "Mainnet"
+		? "mainnet"
+		: action.hyperliquidChain === "Testnet"
+			? "testnet"
+			: null;
+
+/**
+ * The two waits of staking, in the lengths of rules/staking.ts: the
+ * network's own where the action names its network, both otherwise.
+ */
+export const stakeLockupLine = (network: Network | null): string =>
+	network
+		? `A stake cannot be unstaked for ${waitWords(STAKE_LOCKUP[network].ms)} after it is made or added to.`
+		: `A stake cannot be unstaked for ${waitWords(STAKE_LOCKUP.mainnet.ms)} after it is made or added to (${waitWords(STAKE_LOCKUP.testnet.ms)} on testnet).`;
+export const returnQueueLine = (network: Network | null): string =>
+	network
+		? `Hyperliquid releases a return to spot ${waitWords(RETURN_QUEUE[network].ms)} after it is carried out, with no further signature.`
+		: `Hyperliquid releases a return to spot ${waitWords(RETURN_QUEUE.mainnet.ms)} after it is carried out (${waitWords(RETURN_QUEUE.testnet.ms)} on testnet), with no further signature.`;
 
 /** A staking action's integer as HYPE; as it stands when it is not a whole number. */
 const hype = (wei: unknown): string => {
@@ -368,7 +385,7 @@ export function describeAction(
 					)
 				: done(
 						`Stake ${hype(action.wei)} with validator ${s(action.validator)}`,
-						[STAKE_LOCKUP_LINE],
+						[stakeLockupLine(networkOf(action))],
 					);
 		case "cDeposit":
 			return done(
@@ -380,7 +397,7 @@ export function describeAction(
 		case "cWithdraw":
 			return done(
 				`Return ${hype(action.wei)} from the staking balance to the spot balance`,
-				[RETURN_QUEUE_LINE],
+				[returnQueueLine(networkOf(action))],
 			);
 		case "linkStakingUser":
 			return done(

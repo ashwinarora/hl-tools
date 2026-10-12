@@ -43,6 +43,7 @@ import {
 	stakingFields,
 	type Validator,
 	validatorPays,
+	waitWords,
 } from "@hl-tools/core";
 import { addressField, amountField } from "./fields";
 import { shortAddress } from "./parts";
@@ -93,16 +94,7 @@ export interface StakingPlan {
 
 // ------------------------------------------------------------------- words
 
-const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
-
-/** A wait in words: "1 day", "7 days", "2 minutes". */
-export function waitWords(ms: number): string {
-	const minutes = Math.round(ms / 60_000);
-	if (minutes < 60) return plural(minutes, "minute");
-	const hours = Math.round(minutes / 60);
-	if (hours < 24) return plural(hours, "hour");
-	return plural(Math.round(hours / 24), "day");
-}
+export { waitWords };
 export const lockupWords = (network: Network): string =>
 	waitWords(STAKE_LOCKUP[network].ms);
 export const queueWords = (network: Network): string =>
