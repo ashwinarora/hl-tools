@@ -409,8 +409,31 @@ describe("a list that can never reach its number (raised by the audit, 2026-10-1
 		);
 	});
 
-	it("leaves a list alone that still reaches its number without the zero address", () => {
-		expect(thresholdLines(3, 2, 1)).toEqual(thresholdLines(3, 2));
+	it("counts only the signers who can sign, below the fully locked case too", () => {
+		// three real signers and the zero address, 3 of 4: one combination can sign
+		expect(thresholdLines(4, 3, 1)).toEqual({
+			summary: "All 3 signers who can sign must sign every time.",
+			stolen: "Stolen keys: 2 are not enough to move anything. 3 are.",
+			lost: "Lost keys: 1 lost key locks it for good.",
+			warning:
+				"One lost key locks the account for good. Hyperliquid has no recovery.",
+		});
+		// 1 of 4: two can be lost, not three
+		expect(thresholdLines(4, 1, 1)).toMatchObject({
+			summary: "Any one of the 3 signers who can sign can act alone.",
+			lost: "Lost keys: with 2 lost it still works. With 3 lost it is locked for good.",
+		});
+		expect(thresholdLines(4, 2, 1)?.summary).toBe(
+			"Any 2 of the 3 signers who can sign can act.",
+		);
+		// one real signer next to the zero address
+		expect(thresholdLines(2, 1, 1)).toEqual({
+			summary: "Only one of these can ever sign, and acts alone.",
+			stolen: "Stolen keys: that 1 key is enough to take everything.",
+			lost: "Lost keys: if it is lost, the account is locked for good.",
+			warning:
+				"One key controls the account: nobody holds the zero address's key.",
+		});
 		expect(thresholdLines(3, 2, 0)).toEqual(thresholdLines(3, 2));
 	});
 });

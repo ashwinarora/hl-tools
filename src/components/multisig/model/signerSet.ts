@@ -510,7 +510,8 @@ export function thresholdLines(
 	unable = 0,
 ): ThresholdLines | null {
 	if (k === null || n < 1 || k < 1 || k > n) return null;
-	const spare = n - k;
+	// Everything below counts the signers who can sign: a key nobody holds is
+	// neither a spare for a lost one nor one a thief could use.
 	const able = n - unable;
 	if (able < k) {
 		// Hyperliquid takes such a list. Nothing could ever be signed for the
@@ -526,22 +527,29 @@ export function thresholdLines(
 				"With this list the account is locked for good the moment it takes effect: nobody holds the zero address's key, and Hyperliquid has no recovery.",
 		};
 	}
-	if (n === 1) {
+	const spare = able - k;
+	if (able === 1) {
 		return {
-			summary: "The one signer acts alone.",
+			summary:
+				unable === 0
+					? "The one signer acts alone."
+					: "Only one of these can ever sign, and acts alone.",
 			stolen: "Stolen keys: that 1 key is enough to take everything.",
 			lost: "Lost keys: if it is lost, the account is locked for good.",
 			warning:
-				"One key controls the account. This only changes which key that is.",
+				unable === 0
+					? "One key controls the account. This only changes which key that is."
+					: "One key controls the account: nobody holds the zero address's key.",
 		};
 	}
+	const who = unable === 0 ? "signers" : "signers who can sign";
 	return {
 		summary:
-			k === n
-				? `All ${n} signers must sign every time.`
+			k === able
+				? `All ${able} ${who} must sign every time.`
 				: k === 1
-					? `Any one of the ${n} signers can act alone.`
-					: `Any ${k} of the ${n} signers can act.`,
+					? `Any one of the ${able} ${who} can act alone.`
+					: `Any ${k} of the ${able} ${who} can act.`,
 		stolen:
 			k === 1
 				? "Stolen keys: 1 key is enough to take everything."
@@ -553,7 +561,7 @@ export function thresholdLines(
 		warning:
 			k === 1
 				? "Any one signer alone controls everything."
-				: k === n
+				: k === able
 					? "One lost key locks the account for good. Hyperliquid has no recovery."
 					: null,
 	};

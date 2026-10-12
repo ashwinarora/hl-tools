@@ -160,7 +160,17 @@ describe("the wizard's sentences", () => {
 		expect(CREATE.before(TREASURY, 1, 1, 1)).toMatch(
 			/nobody can send anything from 0x.*Nobody can undo it\.$/,
 		);
-		expect(CREATE.before(TREASURY, 2, 3, 1)).toBe(
+		// below that, the sentence counts the signers who can sign
+		expect(CREATE.before(TREASURY, 2, 3, 1)).toContain(
+			"Only all 2 signers above who can sign together can.",
+		);
+		expect(CREATE.before(TREASURY, 1, 4, 1)).toContain(
+			"Any 1 of the 3 signers above who can sign can.",
+		);
+		expect(CREATE.before(TREASURY, 1, 2, 1)).toContain(
+			"The one signer above who can sign can.",
+		);
+		expect(CREATE.before(TREASURY, 2, 3, 0)).toBe(
 			CREATE.before(TREASURY, 2, 3),
 		);
 		expect(CREATE.button(TREASURY, 2, 3)).toMatch(

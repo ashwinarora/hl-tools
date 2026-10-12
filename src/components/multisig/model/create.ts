@@ -72,17 +72,22 @@ export const CREATE = {
 		"Money can still be sent to this address on Hyperliquid as before.",
 	],
 	/** Above the button: what is about to change, in place of any confirmation. */
-	before: (account: string, k: number, n: number, unable = 0) =>
-		// a list that can never reach its number (the zero address): nobody is left
-		n - unable < k
-			? `After this, nobody can send anything from ${shortAddress(account)} on Hyperliquid, not its own key and not these signers. Nobody can undo it.`
-			: `After this, ${shortAddress(account)}'s own key can no longer send anything on Hyperliquid. ${
-					n === 1
-						? "The one signer above can."
-						: k === n
-							? `Only all ${n} signers above together can.`
-							: `Any ${k} of the ${n} signers above can.`
-				} Only they can undo it.`,
+	before: (account: string, k: number, n: number, unable = 0) => {
+		// counted among the signers who can sign: nobody holds the zero address's key
+		const able = n - unable;
+		if (able < k)
+			return `After this, nobody can send anything from ${shortAddress(account)} on Hyperliquid, not its own key and not these signers. Nobody can undo it.`;
+		const who = unable === 0 ? "signers above" : "signers above who can sign";
+		return `After this, ${shortAddress(account)}'s own key can no longer send anything on Hyperliquid. ${
+			able === 1
+				? unable === 0
+					? "The one signer above can."
+					: "The one signer above who can sign can."
+				: k === able
+					? `Only all ${able} ${who} together can.`
+					: `Any ${k} of the ${able} ${who} can.`
+		} Only they can undo it.`;
+	},
 	button: (account: string, k: number, n: number) =>
 		`Convert ${shortAddress(account)} into a ${k}-of-${n} treasury`,
 	buttonIdle: "Convert this account",
