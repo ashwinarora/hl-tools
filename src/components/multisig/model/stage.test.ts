@@ -287,6 +287,62 @@ describe("deriveStage", () => {
 		).toBe("declined");
 	});
 
+	it("a vault action is signed as a code where the build has the signing network", async () => {
+		const vault = makeProposal({
+			action: {
+				type: "vaultTransfer",
+				vaultAddress: "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+				isDeposit: true,
+				usd: 5_000_000,
+			},
+		});
+		expect(vault.meta.kind).toBe("l1");
+		const here = { walletChainId: 998, codeSigning: true };
+		const s = await stage(vault, { wallet: A, ...here });
+		expect([s.phase, s.canSign, s.signsCode]).toEqual([
+			"collecting",
+			true,
+			true,
+		]);
+		// the wallet has to go to the signing network, whatever chain it is on
+		expect([s.requiredChain?.id, s.onRequiredChain]).toEqual([1337, false]);
+		expect(
+			(await stage(vault, { wallet: A, ...here, walletChainId: 1337 }))
+				.onRequiredChain,
+		).toBe(true);
+		// a code signature counts like any other: the finaliser can finish
+		const signed = await signAs(vault, 1);
+		const asB = await stage(signed, { wallet: B, ...here });
+		expect([asB.canExecute, asB.executeAddsSignature]).toEqual([true, true]);
+		// a readable action is not a code
+		expect((await stage(makeProposal(), here)).signsCode).toBe(false);
+
+		// a build without the network can read it and check it, not sign it
+		const none = await stage(signed, { wallet: B });
+		expect([none.phase, none.canSign, none.canExecute]).toEqual([
+			"unsupported",
+			false,
+			false,
+		]);
+		expect(none.headline).toBe(
+			"A vault action: this copy of the app cannot sign it",
+		);
+		// acting for a vault or a sub-account, or with an expiry, is another use of the family
+		for (const payload of [
+			{ ...vault.payload, vaultAddress: TREASURY },
+			{ ...vault.payload, expiresAfter: NOW + DAY },
+		]) {
+			const t = await stage({ ...vault, payload }, { wallet: A, ...here });
+			expect([t.phase, t.headline, t.canSign]).toEqual([
+				"unsupported",
+				"An L1 action: inspect only",
+				false,
+			]);
+		}
+		// what was accepted reads as submitted, with or without the network
+		expect((await stage({ ...signed, receipt: OK })).phase).toBe("submitted");
+	});
+
 	it("refuses L1 actions and documents that set unsigned fields", async () => {
 		const base = await signAs(makeProposal(), 1);
 		const l1: Proposal = { ...base, meta: { ...base.meta, kind: "l1" } };

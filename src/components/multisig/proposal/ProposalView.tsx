@@ -36,6 +36,7 @@ import { refusalNote } from "../model/refusal";
 import { RELAY_COPY } from "../model/relay/copy";
 import { costLine, modeRefusal } from "../model/send";
 import { changeSummary } from "../model/signerSet";
+import { signingNetwork } from "../model/signingNetwork";
 import {
 	deriveStage,
 	type Phase,
@@ -308,6 +309,7 @@ export function ProposalView({
 					? { txHash: onRecord.hash as Hex, seenBy: "page" }
 					: null,
 		heldUntil: stakingStep.heldUntil,
+		codeSigning: signingNetwork() !== null,
 		closedUnknown: row?.status === "unknown",
 		overtaken,
 		headerNetwork: header,

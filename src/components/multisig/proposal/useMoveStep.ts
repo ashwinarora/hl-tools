@@ -16,6 +16,7 @@ import { CONTROL_REFRESH_MS } from "../live/useControl";
 import { receiptOk } from "../model/history";
 import type { StepView } from "../model/move";
 import type { TreasuryRow } from "../model/relay/rows";
+import { signingNetwork } from "../model/signingNetwork";
 import { deriveStage, type Stage } from "../model/stage";
 import { useExecutionReporter } from "../relay/useExecutionReporter";
 import type { ProposalDoc } from "./useProposalDoc";
@@ -102,6 +103,7 @@ export function useMoveStep(
 		headerNetwork: shared.header,
 		objections: doc.relay.objections,
 		heldUntil: staking.heldUntil,
+		codeSigning: signingNetwork() !== null,
 		now: shared.clock,
 	});
 

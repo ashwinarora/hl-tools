@@ -12,9 +12,10 @@ import { useState } from "react";
 import { Callout, IssueList } from "#/components/hub/status";
 import { useNetworkStore } from "#/store/networkStore";
 import { refreshStaking } from "../live/useStaking";
-import { RELAY_COPY, signHint } from "../model/relay/copy";
+import { finishHint, RELAY_COPY, signHint } from "../model/relay/copy";
 import { objectionNote, ownPosition } from "../model/relay/positions";
 import { relayActions } from "../model/relay/status";
+import { CODE_COPY } from "../model/signingNetwork";
 import { type Stage, shortAddress } from "../model/stage";
 import { untilWords } from "../model/time";
 import { Sentence } from "../names/Sentence";
@@ -31,6 +32,7 @@ import {
 	type StepState,
 	signInner,
 } from "./actions";
+import { CodePanel } from "./CodePanel";
 import type { ProposalDoc } from "./useProposalDoc";
 
 const FRESH: Record<StepId, StepState> = {
@@ -73,6 +75,9 @@ export function YourPart({
 	const [failure, setFailure] = useState<readonly Issue[] | null>(null);
 	const [confirm, setConfirm] = useState(false);
 	const [finishing, setFinishing] = useState(false);
+	// the wallet answered that it lacks the signing network: the code panel offers to add it
+	const [needsNetwork, setNeedsNetwork] = useState(false);
+	const [addFailed, setAddFailed] = useState<string | null>(null);
 	const open = useOpenProposals();
 	const queries = useQueryClient();
 
@@ -107,37 +112,63 @@ export function YourPart({
 			: null;
 	const adds = stage.executeAddsSignature;
 	const chain = stage.requiredChain;
+	// this click asks the wallet for a code: a finaliser who only submits signs none
+	const signsCodeNow =
+		stage.signsCode && (stage.canSign || (stage.canExecute && adds));
 
-	const sign = () =>
-		void wallet.run("Waiting for the wallet…", async () => {
-			setOutcome(null);
-			setFailure(null);
-			setOutcome((await signInner(proposal, stage, wallet, doc.store)).outcome);
+	const doSign = async () => {
+		setOutcome(null);
+		setFailure(null);
+		const done = (await signInner(proposal, stage, wallet, doc.store)).outcome;
+		// not a failure: the wallet has to be given the network first
+		if (!done.ok && done.needsNetwork) setNeedsNetwork(true);
+		else {
+			setNeedsNetwork(false);
+			setOutcome(done);
+		}
+	};
+	const sign = () => void wallet.run("Waiting for the wallet…", doSign);
+
+	const doSubmit = async () => {
+		setOutcome(null);
+		setFailure(null);
+		setSteps(FRESH);
+		setFinishing(true);
+		const result = await finalise({
+			proposal,
+			stage,
+			wallet,
+			doc,
+			mark: (id, state) => setSteps((s) => ({ ...(s ?? FRESH), [id]: state })),
 		});
+		setFinishing(false);
+		if (!result.ok && result.needsNetwork) {
+			setNeedsNetwork(true);
+			return;
+		}
+		setNeedsNetwork(false);
+		if (!result.ok) setFailure(result.issues);
+		// a staking step that went through changed what the treasury has in staking
+		else if (result.accepted && stakingActionOf(proposal.payload.action))
+			void refreshStaking(
+				queries,
+				proposal.payload.network,
+				proposal.payload.multiSigUser,
+			);
+	};
+	const submit = () => void wallet.run("Waiting for the wallet…", doSubmit);
 
-	const submit = () =>
+	/** One approval in the wallet adds the network; then what was asked for goes on. */
+	const addNetwork = () =>
 		void wallet.run("Waiting for the wallet…", async () => {
-			setOutcome(null);
-			setFailure(null);
-			setSteps(FRESH);
-			setFinishing(true);
-			const result = await finalise({
-				proposal,
-				stage,
-				wallet,
-				doc,
-				mark: (id, state) =>
-					setSteps((s) => ({ ...(s ?? FRESH), [id]: state })),
-			});
-			setFinishing(false);
-			if (!result.ok) setFailure(result.issues);
-			// a staking step that went through changed what the treasury has in staking
-			else if (result.accepted && stakingActionOf(proposal.payload.action))
-				void refreshStaking(
-					queries,
-					proposal.payload.network,
-					proposal.payload.multiSigUser,
-				);
+			setAddFailed(null);
+			const added = await wallet.addSigningNetwork();
+			if (!added.ok) {
+				setAddFailed(added.error);
+				return;
+			}
+			setNeedsNetwork(false);
+			await (stage.canExecute ? doSubmit() : doSign());
 		});
 
 	const rows: { id: StepId; label: string }[] = [
@@ -187,8 +218,14 @@ export function YourPart({
 						);
 					})}
 				</ol>
+				{stage.signsCode && adds && (
+					// the first prompt shows the code: it has to be on the page to compare
+					<div className="mt-3">
+						<CodePanel payload={proposal.payload} />
+					</div>
+				)}
 				<p className="mt-3 text-[13px] text-muted-foreground">
-					{signHint(proposal.payload.action)}
+					{finishHint(proposal.payload.action, adds, stage.signsCode)}
 				</p>
 			</Card>
 		);
@@ -209,7 +246,7 @@ export function YourPart({
 						? "Your signature completes the threshold. Two wallet prompts, then it is sent."
 						: "One wallet prompt, then it is sent."
 					: stage.canSign
-						? `${signHint(proposal.payload.action)}${chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
+						? `${signHint(proposal.payload.action)}${stage.signsCode ? ` ${CODE_COPY.signedUnder}` : chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
 						: stage.hasSigned
 							? stage.phase === "ready"
 								? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to submit.`
@@ -303,11 +340,22 @@ export function YourPart({
 					</span>
 				</p>
 			)}
+			{signsCodeNow && (
+				<div className="mb-3">
+					<CodePanel
+						payload={proposal.payload}
+						needsNetwork={needsNetwork}
+						busy={wallet.busy}
+						onAdd={addNetwork}
+						failed={addFailed}
+					/>
+				</div>
+			)}
 			{any && (
 				<div className="flex flex-wrap items-center gap-2">
 					{stage.canExecute ? (
 						<Btn
-							variant="brand"
+							variant={needsNetwork ? "outline" : "brand"}
 							disabled={wallet.busy || doc.relay.busy}
 							onClick={submit}
 						>
@@ -315,7 +363,7 @@ export function YourPart({
 						</Btn>
 					) : stage.canSign ? (
 						<Btn
-							variant="brand"
+							variant={needsNetwork ? "outline" : "brand"}
 							disabled={wallet.busy || doc.relay.busy}
 							onClick={sign}
 						>

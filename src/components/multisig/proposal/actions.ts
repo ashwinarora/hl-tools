@@ -21,6 +21,7 @@ import {
 	checkMoveBeforeSubmit,
 	type SendReads,
 } from "../model/sendCheck";
+import { envelopeChainOf } from "../model/signingNetwork";
 import { type Stage, shortAddress } from "../model/stage";
 import { submitEnvelope, withReceipt } from "../model/submit";
 import type { WalletSigner } from "../useWalletSigner";
@@ -28,7 +29,12 @@ import type { ProposalDoc } from "./useProposalDoc";
 
 export type Outcome =
 	| { readonly ok: true }
-	| { readonly ok: false; readonly issues: readonly Issue[] };
+	| {
+			readonly ok: false;
+			readonly issues: readonly Issue[];
+			/** The wallet does not have the signing network yet: the page offers to add it. */
+			readonly needsNetwork?: true;
+	  };
 
 const problem = (code: string, message: string): Issue[] => [
 	{ code, severity: "error", message },
@@ -48,7 +54,17 @@ export async function signInner(
 	if (!stage.requiredChain)
 		return fail("This action does not state a signing chain.");
 	const got = await wallet.signerFor(stage.requiredChain.hex);
-	if (!got.ok) return fail(got.error);
+	if (!got.ok)
+		return got.needsNetwork
+			? {
+					outcome: {
+						ok: false,
+						issues: problem("wallet", got.error),
+						needsNetwork: true,
+					},
+					proposal,
+				}
+			: fail(got.error);
 	const signed = await signProposal(proposal, got.signer, {
 		expectedSigner: wallet.address ?? undefined,
 	});
@@ -68,6 +84,8 @@ export type FinaliseResult =
 			readonly ok: false;
 			readonly step: StepId;
 			readonly issues: readonly Issue[];
+			/** The wallet does not have the signing network yet: the page offers to add it. */
+			readonly needsNetwork?: true;
 	  };
 
 /** What the check before submit is handed: every figure read from Hyperliquid now, never from a cache. */
@@ -105,6 +123,8 @@ type Failure = {
 	readonly ok: false;
 	readonly step: StepId;
 	readonly issues: readonly Issue[];
+	/** The wallet does not have the signing network yet: the page offers to add it. */
+	readonly needsNetwork?: true;
 };
 
 /** What was signed for one proposal and is ready to be posted. */
@@ -164,14 +184,25 @@ async function signToSubmit(i: {
 		mark(step, "failed");
 		return { ok: false, step, issues };
 	};
-	const chain = stage.requiredChain;
+	// The finaliser's own signature is the readable kind under an ordinary
+	// chain, also when the action inside is a code. Read before anything is
+	// signed: the wallet's chain as it was when the click was made.
+	const chain = envelopeChainOf(
+		proposal.payload.action,
+		network,
+		wallet.chainId,
+	);
 	if (!chain) return stop("envelope", problem("execute", "No signing chain."));
 
 	let current = proposal;
 	if (stage.executeAddsSignature) {
 		mark("inner", "active");
 		const signed = await signInner(current, stage, wallet, doc.store);
-		if (!signed.outcome.ok) return stop("inner", signed.outcome.issues);
+		if (!signed.outcome.ok)
+			return {
+				...stop("inner", signed.outcome.issues),
+				...(signed.outcome.needsNetwork ? { needsNetwork: true as const } : {}),
+			};
 		current = signed.proposal;
 		mark("inner", "done");
 	}
@@ -323,6 +354,8 @@ export type MoveResult =
 			readonly issues: readonly Issue[];
 			/** How many were posted and accepted before this. */
 			readonly sent: number;
+			/** The wallet does not have the signing network yet: the page offers to add it. */
+			readonly needsNetwork?: true;
 	  };
 
 /**

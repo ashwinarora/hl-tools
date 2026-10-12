@@ -138,6 +138,9 @@ const SIGN_HINTS: Readonly<Record<string, string>> = {
 		"Your wallet will show the treasury, the finaliser and the address of the API wallet. Check them there.",
 	usdClassTransfer:
 		"Your wallet will show the treasury, the finaliser, the amount and the direction. Check them there.",
+	// signed as a code: the wallet shows no field of the action
+	vaultTransfer:
+		"Your wallet will show a code, not the action: the field “connectionId”. Compare it with the code on this page before you sign.",
 	// the staking actions carry HYPE as a whole number with 8 decimals
 	cDeposit: STAKING_WEI_HINT,
 	cWithdraw: STAKING_WEI_HINT,
@@ -166,10 +169,35 @@ export function signHint(action: {
 	return SIGN_HINTS[type] ?? SIGN_HINT_OTHER;
 }
 
+/**
+ * The finaliser's own prompt, the one around the signers' signatures: it
+ * never shows the action, whatever kind the action is.
+ */
+const FINALISER_ONLY =
+	"Your wallet will show “multiSigActionHash”: it stands for the action together with the signatures collected. This is your signature as finaliser.";
+const FINALISER_LAST =
+	"The last prompt is your signature as finaliser: it shows “multiSigActionHash”, which stands for the action together with the signatures collected.";
+
+/**
+ * Under the steps while a finaliser's click runs. With `adds`, the
+ * finaliser's own signature on the action comes first; `explained` when the
+ * page already says what that prompt shows (the panel with the code).
+ */
+export function finishHint(
+	action: Parameters<typeof signHint>[0],
+	adds: boolean,
+	explained = false,
+): string {
+	if (!adds) return FINALISER_ONLY;
+	return explained ? FINALISER_LAST : `${signHint(action)} ${FINALISER_LAST}`;
+}
+
 export const SIGN_HINT_TEXTS: readonly string[] = [
 	...Object.values(SIGN_HINTS),
 	SIGN_HINT_OTHER,
 	SIGN_HINT_BACK,
+	FINALISER_ONLY,
+	FINALISER_LAST,
 ];
 
 /**

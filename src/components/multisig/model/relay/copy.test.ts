@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	afterRejection,
 	FORBIDDEN_CLAIMS,
+	finishHint,
 	gateOthers,
 	othersSummary,
 	RELAY_COPY,
@@ -42,6 +43,26 @@ describe("relay copy", () => {
 		for (const pattern of FORBIDDEN_CLAIMS) {
 			expect(text, `${pattern} in "${text}"`).not.toMatch(pattern);
 		}
+	});
+
+	it("says what the finaliser's own prompt shows, which is never the action", () => {
+		// only submitting: one prompt, and it is not the action's
+		const only = finishHint({ type: "vaultTransfer" }, false);
+		expect(only).toContain("multiSigActionHash");
+		expect(only).not.toContain("connectionId");
+		expect(finishHint({ type: "sendAsset" }, false)).toBe(only);
+		// signing too: the action's own prompt first, then the finaliser's
+		const both = finishHint({ type: "sendAsset" }, true);
+		expect(both.startsWith(RELAY_COPY.underSign)).toBe(true);
+		expect(both).toContain("The last prompt is your signature as finaliser");
+		expect(finishHint({ type: "vaultTransfer" }, true)).toContain(
+			"connectionId",
+		);
+		// the code has its own panel: the line under it speaks of the last prompt only
+		expect(finishHint({ type: "vaultTransfer" }, true, true)).toMatch(
+			/^The last prompt is your signature as finaliser/,
+		);
+		expect(finishHint({ type: "vaultTransfer" }, false, true)).toBe(only);
 	});
 
 	it("says what the wallet will show for the kind of action being signed", () => {

@@ -33,7 +33,7 @@ import {
 	standing,
 } from "./relay/positions";
 import { switchSentence } from "./selfTreasury";
-import { signingChainOf } from "./signingNetwork";
+import { CODE_COPY, isVaultAction, signingChainOf } from "./signingNetwork";
 
 export { shortAddress };
 
@@ -127,6 +127,11 @@ export interface StageInput {
 	 * all the same; only submitting waits.
 	 */
 	readonly heldUntil?: number | null;
+	/**
+	 * This build has the signing network (model/signingNetwork.ts), so a vault
+	 * action, which is signed as a code under it, can be signed here.
+	 */
+	readonly codeSigning?: boolean;
 }
 
 export interface Stage {
@@ -141,6 +146,11 @@ export interface Stage {
 		readonly label: string;
 	} | null;
 	readonly onRequiredChain: boolean;
+	/**
+	 * The action is signed as a code (a vault action): the wallet cannot show
+	 * it, and the page shows the code it will show instead.
+	 */
+	readonly signsCode: boolean;
 	readonly canSign: boolean;
 	readonly signReason: string | null;
 	readonly canExecute: boolean;
@@ -342,10 +352,14 @@ export function deriveStage(input: StageInput): Stage {
 			policy && policy.authorizedUsers.length === 0
 				? say`Hyperliquid reports no signers for this account any more: it is a normal account again, as this proposal asks. Nothing more to sign.`
 				: say`The treasury's signers on Hyperliquid are the ones this proposal asks for. Nothing more to sign.`;
-	} else if (p.meta.kind === "l1") {
+	} else if (p.meta.kind === "l1" && !isVaultAction(p.payload)) {
 		phase = "unsupported";
 		head = say`An L1 action: inspect only`;
 		body = say`Orders, cancels and other L1 actions are outside the signer. It can be read and checked here, not signed.`;
+	} else if (p.meta.kind === "l1" && !input.codeSigning) {
+		phase = "unsupported";
+		head = say`${CODE_COPY.absentHead}`;
+		body = say`${CODE_COPY.absentBody}`;
 	} else if (unsignedFields) {
 		phase = "unsupported";
 		head = say`This document sets a vault address or an expiry`;
@@ -497,6 +511,7 @@ export function deriveStage(input: StageInput): Stage {
 		hasSigned,
 		requiredChain,
 		onRequiredChain,
+		signsCode: p.meta.kind === "l1",
 		canSign,
 		signReason,
 		canExecute,

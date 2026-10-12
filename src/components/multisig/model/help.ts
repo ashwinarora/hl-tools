@@ -139,6 +139,14 @@ export const HELP = {
 		title: "Expected rate",
 		body: "Hyperliquid's own estimate of what a stake with this validator earns in a year, after its commission, from the last 7 days: the figure Hyperliquid's staking page shows first. It is an estimate and it changes. Nobody is recommended here.",
 	},
+	signingCode: {
+		title: "Signing a code",
+		body: "Hyperliquid has two ways of signing. For most actions a wallet shows every field. For a vault action it shows only a code that stands for the action. This page works the same code out from the proposal, so the two can be compared before signing.",
+	},
+	signingNetwork: {
+		title: "The signing network",
+		body: "A wallet signs a code only while it is on a network numbered 1337, so the wallet has to hold one. Nothing is ever sent on that network and it holds no money. After signing, the wallet goes back to the network it was on.",
+	},
 	moveSteps: {
 		title: "Two steps, one move",
 		body: "Hyperliquid takes one action at a time, and this takes two. They are two proposals, shown as one. Each signer signs both, and the finaliser sends the second only once Hyperliquid has accepted the first.",
