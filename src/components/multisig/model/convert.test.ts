@@ -201,7 +201,7 @@ describe("runConvert", () => {
 });
 
 describe("convertChain", () => {
-	it("stays on the wallet's chain when this section can ask it to sign there", () => {
+	it("stays on the wallet's chain when it is a chain of the network being converted", () => {
 		expect(convertChain(998, "testnet")).toEqual({
 			hex: "0x3e6",
 			id: 998,
@@ -211,17 +211,37 @@ describe("convertChain", () => {
 			hex: "0x66eee",
 			switches: false,
 		});
-		// the other network's chain is as good: Hyperliquid accepts any
-		expect(convertChain(42161, "testnet")).toMatchObject({
-			hex: "0xa4b1",
-			switches: false,
-		});
 		expect(convertChain(999, "mainnet")).toMatchObject({
 			hex: "0x3e7",
 			switches: false,
 		});
+		expect(convertChain(42161, "mainnet")).toMatchObject({
+			hex: "0xa4b1",
+			switches: false,
+		});
 	});
-	it("asks for HyperEVM otherwise", () => {
+	it("never signs a conversion under the other network's chain", () => {
+		// the audit's case: a mainnet conversion, the wallet on HyperEVM testnet (998)
+		expect(convertChain(998, "mainnet")).toEqual({
+			hex: "0x3e7",
+			id: 999,
+			switches: true,
+		});
+		expect(convertChain(421614, "mainnet")).toMatchObject({
+			hex: "0x3e7",
+			switches: true,
+		});
+		// and the mirror image
+		expect(convertChain(999, "testnet")).toMatchObject({
+			hex: "0x3e6",
+			switches: true,
+		});
+		expect(convertChain(42161, "testnet")).toMatchObject({
+			hex: "0x3e6",
+			switches: true,
+		});
+	});
+	it("asks for this network's HyperEVM from any other chain", () => {
 		expect(convertChain(1, "mainnet")).toEqual({
 			hex: "0x3e7",
 			id: 999,

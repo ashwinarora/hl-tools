@@ -148,17 +148,24 @@ export async function runConvert(
 }
 
 /**
- * The chain a conversion is signed under. Hyperliquid accepts any (measured:
- * fixtures/multisig/plain-convert.json), so the wallet stays where it is when
- * this section can ask it to sign there, and is asked to switch to HyperEVM
- * only otherwise.
+ * The chain a conversion is signed under: one of the network being converted
+ * on, as a proposal's is. Hyperliquid would accept any chain here (measured:
+ * fixtures/multisig/plain-convert.json), and the wizard used to keep whatever
+ * chain the wallet was on. The first mainnet run showed what that looks like:
+ * a wallet prompt saying chain 998, HyperEVM's test network, next to
+ * "Mainnet", on the one action that hands an account over. So the wallet
+ * stays where it is only when that is already a chain of this network
+ * (HyperEVM or Arbitrum), and is asked to switch to this network's HyperEVM
+ * otherwise.
  */
 export function convertChain(
 	walletChainId: number | null,
 	network: Network,
 ): { readonly hex: Hex; readonly id: number; readonly switches: boolean } {
 	const here = walletChainId === null ? null : knownChain(walletChainId);
-	if (here) return { hex: here.hex, id: here.id, switches: false };
+	const ofThisNetwork = Object.values(INNER_CHAINS[network]);
+	if (here && ofThisNetwork.some((c) => c.id === here.id))
+		return { hex: here.hex, id: here.id, switches: false };
 	const home = INNER_CHAINS[network].hyperevm;
 	return { hex: home.hex, id: home.id, switches: true };
 }
