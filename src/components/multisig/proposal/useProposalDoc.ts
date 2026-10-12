@@ -179,7 +179,16 @@ async function readRemote(client: RelayClient, digest: Hex): Promise<Remote> {
 	return { found, issues, removed, carriedOut, views };
 }
 
-export function useProposalDoc(digest: string | undefined): ProposalDoc {
+/**
+ * `arrived` is a copy the page was handed with this digest (the other step of
+ * a move that came in one link). It stands in while this browser's history
+ * has none, so a move opened where nothing can be stored is still shown
+ * whole and not as its first step alone.
+ */
+export function useProposalDoc(
+	digest: string | undefined,
+	arrived: Proposal | null = null,
+): ProposalDoc {
 	const queries = useQueryClient();
 	const relay = useRelay();
 	const client = relay.client;
@@ -221,7 +230,12 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 	// The page renders the same object until the document really changes, so a
 	// refetch that returns the same proposal does not restart the judgement.
 	const stored = local.data?.proposal ?? null;
-	const held = memory && (!digest || memory.digest === digest) ? memory : null;
+	const held =
+		memory && (!digest || memory.digest === digest)
+			? memory
+			: arrived && arrived.digest === digest
+				? arrived
+				: null;
 	const raw = stored ?? held;
 	const text = raw ? encodeProposal(raw) : null;
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `text` is the document; `raw` is a fresh object on every load
@@ -410,8 +424,7 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 			} catch (e) {
 				// no history: merge with what this page already holds, in memory
 				setStorageError(errorMessage(e));
-				const before =
-					memory && memory.digest === incoming.digest ? memory : null;
+				const before = held && held.digest === incoming.digest ? held : null;
 				const merged = before ? await mergeProposals(incoming, before) : null;
 				const next = merged?.merged ?? incoming;
 				setMemory(next);
@@ -434,7 +447,7 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 			}
 			return result;
 		},
-		[client, me, memory, invalidateLocal, push],
+		[client, me, held, invalidateLocal, push],
 	);
 
 	const act = useCallback(
@@ -474,10 +487,13 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 				await rewriteProposal(digest, async (p) => without(p));
 				await invalidateLocal(digest);
 			} catch {
-				setMemory((m) => without(m));
+				// no history: the copy the page holds, which may be the one it was handed
+				setMemory((m) =>
+					without(m ?? (arrived && arrived.digest === digest ? arrived : null)),
+				);
 			}
 		},
-		[invalidateLocal],
+		[invalidateLocal, arrived],
 	);
 
 	const forgetSignature = useCallback(

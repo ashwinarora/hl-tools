@@ -1,4 +1,10 @@
-import { type Issue, judgeMove, otherStep, stepNumber } from "@hl-tools/core";
+import {
+	type Issue,
+	judgeMove,
+	otherStep,
+	type Proposal,
+	stepNumber,
+} from "@hl-tools/core";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { FileQuestion, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -42,6 +48,8 @@ function ProposalScreen() {
 		| { state: "none" }
 		| { state: "failed"; issues: readonly Issue[] }
 	>({ state: "checking" });
+	/** The further steps a link carried, kept for where this browser cannot store them. */
+	const [arrived, setArrived] = useState<readonly Proposal[]>([]);
 
 	// A link's fragment carries the whole document. Read it once, merge it into the history,
 	// strip it from the address bar and continue under the digest.
@@ -66,8 +74,10 @@ function ProposalScreen() {
 			return;
 		}
 		let cancelled = false;
+		setArrived(rest);
 		void (async () => {
-			// the other step first, so the page finds the move whole when it opens
+			// the other step first, so the page finds the move whole when it opens;
+			// where nothing can be stored, `arrived` is the copy the page shows
 			for (const other of rest) await saveProposal(other).catch(() => null);
 			const saved = await store(first);
 			if (cancelled) return;
@@ -86,7 +96,10 @@ function ProposalScreen() {
 	// A proposal that says it is one step of a move: the other step is opened
 	// too, and the two are shown as one page when they bear the claim out.
 	const otherDigest = doc.proposal ? otherStep(doc.proposal) : null;
-	const other = useProposalDoc(otherDigest ?? undefined);
+	const other = useProposalDoc(
+		otherDigest ?? undefined,
+		arrived.find((p) => p.digest === otherDigest) ?? null,
+	);
 	if (doc.proposal && link.state !== "failed") {
 		if (otherDigest && other.loading && !other.proposal)
 			return (
