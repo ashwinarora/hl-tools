@@ -13,8 +13,8 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
 	buildEnvelope,
-	canonicalEnvelopeAction,
 	createProposal,
+	hashedEnvelopeAction,
 	type Proposal,
 	recoverInnerSigner,
 	signEnvelope,
@@ -312,7 +312,9 @@ describe(`oracle vs @nktkas/hyperliquid (${RUNS} runs, seed ${SEED})`, () => {
 				expect(ourOuter.issues).toEqual([]);
 				const theirOuter = await signMultiSigAction({
 					wallet: account(s.leader),
-					action: canonicalEnvelopeAction(request) as never,
+					// what Hyperliquid hashes: the envelope as sent, but for a mode
+					// switch (modeSwitch.test.ts has that case against the SDK)
+					action: hashedEnvelopeAction(request) as never,
 					nonce: p.payload.nonce,
 					isTestnet,
 					vaultAddress: p.payload.vaultAddress ?? undefined,

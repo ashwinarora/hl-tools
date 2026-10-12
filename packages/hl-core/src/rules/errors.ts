@@ -3,7 +3,7 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.10.0",
+	version: "1.11.0",
 	verifiedAt: "2026-10-13",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
@@ -75,6 +75,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.10.0",
 			date: "2026-10-13",
 			note: 'Recorded on testnet through a multi-sig: "Extra agent does not exist." (an approveAgent of the zero address, which removes an API wallet, under a name no API wallet of the account has).',
+		},
+		{
+			version: "1.11.0",
+			date: "2026-10-13",
+			note: 'Recorded on testnet through a multi-sig (fixtures/multisig/mode-switch.json): "Cannot disable unified account with open positions, open orders, or active TWAP orders" (a switch back to a manual account while anything is open; the same answer to userSetAbstraction and to userDexAbstraction).',
 		},
 	],
 });
@@ -497,6 +502,17 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		cause:
 			"The account already has as many named API wallets as Hyperliquid allows it (three for an account with little traded volume). Approving one more under a new name is refused.",
 		fix: "Remove an API wallet that is no longer used, or approve the new address under a name already in use, which replaces that wallet.",
+		documented: false,
+	},
+	{
+		id: "unified-busy",
+		pattern: /cannot disable unified account with open positions/i,
+		example:
+			"Cannot disable unified account with open positions, open orders, or active TWAP orders",
+		category: "account",
+		cause:
+			"The account asked to leave unified mode while it has an open position, a resting order or a running TWAP order. Hyperliquid switches back to separate perps and spot balances only when nothing is open (recorded on testnet through a multi-sig).",
+		fix: "Close the positions and cancel the orders first (for a multi-sig, with an API wallet), then ask again. For a multi-sig that is a new proposal: the refused one cannot be reused.",
 		documented: false,
 	},
 	{

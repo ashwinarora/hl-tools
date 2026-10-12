@@ -7,10 +7,12 @@
  *                    outerSigner, …fields} in HyperliquidSignTransaction/1/signatureChainId.
  * Envelope (outer):  keccak(msgpack({signatureChainId, signatures, payload}) ‖ nonce ‖ vault ‖ expires)
  *                    → EIP-712 HyperliquidTransaction:SendMultiSig{hyperliquidChain, multiSigActionHash, nonce}.
+ *                    One field is hashed otherwise than it is sent: see `hashedEnvelopeAction`.
  */
 import { type Issue, issue } from "../issues.ts";
 import { fromPlain, type JsonObject } from "../json.ts";
 import { type Network, networkConfig } from "../network.ts";
+import { ABSTRACTION_ENVELOPE_CODES } from "../rules/multisig.ts";
 import {
 	enrichSpecForMultiSig,
 	SEND_MULTISIG_SPEC,
@@ -152,6 +154,31 @@ export function canonicalEnvelopeAction(req: EnvelopeRequest): PlainObject {
 	};
 }
 
+/**
+ * The envelope action as Hyperliquid hashes it for the leader's signature.
+ * It is the action as sent, with one measured exception: the `abstraction`
+ * of a `userSetAbstraction` is hashed as its one-letter code
+ * (`ABSTRACTION_ENVELOPE_CODES`). Only the leader's hash sees this: what is
+ * posted, and what each signer signs, keep the name.
+ */
+export function hashedEnvelopeAction(req: EnvelopeRequest): PlainObject {
+	const canonical = canonicalEnvelopeAction(req);
+	const inner = req.action.payload.action;
+	const code =
+		inner.type === "userSetAbstraction" && typeof inner.abstraction === "string"
+			? ABSTRACTION_ENVELOPE_CODES[inner.abstraction]
+			: undefined;
+	if (code === undefined) return canonical;
+	return {
+		...canonical,
+		payload: {
+			...(canonical.payload as PlainObject),
+			// spread first: the key keeps its place in the action
+			action: { ...inner, abstraction: code },
+		},
+	};
+}
+
 export interface EnvelopeDigestResult {
 	readonly digest: Hex | null;
 	readonly typedData: TypedDataPayload | null;
@@ -164,7 +191,7 @@ export function envelopeDigest(
 	req: EnvelopeRequest,
 	network: Network,
 ): EnvelopeDigestResult {
-	const { type: _type, ...hashed } = canonicalEnvelopeAction(req);
+	const { type: _type, ...hashed } = hashedEnvelopeAction(req);
 	let actionHash: Hex;
 	try {
 		actionHash = l1ActionHash(

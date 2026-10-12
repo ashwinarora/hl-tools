@@ -84,7 +84,10 @@ describe("what an API wallet reaches, as testnet answered", () => {
 		expect(fact("agent-reach")).toMatch(/vaultTransfer/);
 		expect(fact("signer-kinds")).toMatch(/vault/);
 		expect(fact("convert-own-key")).toMatch(/any signing chain/);
-		expect(MULTISIG_RULES.version).toBe("1.3.0");
+		// what an API wallet reaches came with 1.3.0
+		expect(
+			MULTISIG_RULES.changelog.find((c) => c.version === "1.3.0")?.note,
+		).toMatch(/What an API wallet reaches/);
 		expect(new Set(MULTISIG_FACTS.map((f) => f.id)).size).toBe(
 			MULTISIG_FACTS.length,
 		);

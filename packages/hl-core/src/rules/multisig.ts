@@ -8,8 +8,8 @@ export const NKTKAS_SIGNING: RuleSource = {
 export const MULTISIG_RULES = defineRuleSet({
 	id: "multisig",
 	title: "Native multi-sig",
-	version: "1.3.0",
-	verifiedAt: "2026-10-12",
+	version: "1.4.0",
+	verifiedAt: "2026-10-13",
 	summary:
 		"A multi-sig user is an ordinary account whose own key can no longer send; up to 10 authorized users sign, a leader (an authorized user, or a funded API wallet of one) collects at least `threshold` distinct signatures and submits a `multiSig` envelope. Inner L1 actions are hashed as `[multiSigUser, outerSigner, action]` with the envelope's nonce, vault and expiry; inner user-signed actions gain `payloadMultiSigUser` and `outerSigner` after `hyperliquidChain`. The leader signs `HyperliquidTransaction:SendMultiSig{hyperliquidChain, multiSigActionHash, nonce}` over the envelope with inner signatures trimmed. Only the leader's nonce set is used; the multi-sig user's rate limit is charged. An envelope Hyperliquid refuses still uses up its number for that leader, so a refused proposal has to be made again. An account's USDC sends (`usdSend`) are taken only in increasing order of their `time`: once a newer one is carried out, an older pending send or bridge withdrawal is refused. Every other kind of action is taken in any order.",
 	sources: [
@@ -38,6 +38,11 @@ export const MULTISIG_RULES = defineRuleSet({
 			version: "1.3.0",
 			date: "2026-10-12",
 			note: "What an API wallet reaches, and who can be a signer (fixtures/multisig/agent-reach.json, plain-convert.json). An API wallet approved for an account, a multi-sig included, can with no signer deposit the account's USDC into a vault (`vaultTransfer`) and move it between the account's own balances (`agentSendAsset`); it cannot send to another account, and a user-signed action it signs counts as coming from the API wallet's own account. So \"trades, cannot withdraw\" was true but left out the vaults. As authorized users Hyperliquid accepts ordinary accounts, other multi-sig users and API wallet addresses that have received funds; it refuses an API wallet that never received funds, a vault and a sub-account. An account that is already a signer elsewhere can convert itself and keeps signing and leading for the others. The first conversion is accepted under any signing chain, and an account that never received funds cannot send it. Not measured: a vault other than the testnet HLP vault, an API wallet's vault withdrawal after the lock-up, sub-accounts.",
+		},
+		{
+			version: "1.4.0",
+			date: "2026-10-13",
+			note: 'Switching the account mode through an envelope (fixtures/multisig/mode-switch.json). For `userSetAbstraction`, Hyperliquid hashes the envelope with `abstraction` written as a one-letter code ("u" for unifiedAccount, "i" for disabled) while the posted action and the signers\' own signatures keep the long name: a leader who signs the envelope as posted is answered "Invalid multi-sig outer signer". Not documented. To unified is taken with a position and resting orders open (the perps and spot USDC become one balance); back to manual is refused while anything is open ("Cannot disable unified account with open positions, open orders, or active TWAP orders") and taken otherwise, the USDC staying in spot. Asking for the mode the account is already in is accepted and changes nothing. Not measured: portfolio margin, the letter for any other mode.',
 		},
 	],
 });
@@ -80,6 +85,18 @@ export const API_WALLET_REACH: Readonly<
 };
 
 /** The chain rejects an 11th authorized user (`Too many multi-sig signers`). */
+/**
+ * How Hyperliquid writes a `userSetAbstraction`'s `abstraction` when it
+ * hashes the envelope around it: a one-letter code in place of the name the
+ * action itself carries. Only letters seen accepted on testnet are here
+ * (fixtures/multisig/mode-switch.json); a name without one is hashed as it
+ * stands, and Hyperliquid then refuses the leader's signature.
+ */
+export const ABSTRACTION_ENVELOPE_CODES: Readonly<Record<string, string>> = {
+	unifiedAccount: "u",
+	disabled: "i",
+};
+
 export const MAX_SIGNERS = 10;
 /** `threshold` must be in [1, signers.length] (`Invalid multi-sig threshold`). */
 export const MIN_THRESHOLD = 1;

@@ -5,9 +5,11 @@ import {
 	envelopeDigest,
 	explainExchangeError,
 	fromPlain,
+	hashedEnvelopeAction,
 	MULTISIG_SAMPLES,
 	type Network,
 	nonceWindow,
+	type PlainObject,
 	type Proposal,
 	proposalFlags,
 	stringifyJson,
@@ -274,6 +276,14 @@ export function ProposalResult({
 	// a document that was never submitted does not say which chain its envelope will be signed under
 	const envelopeAssumed = !parsed.request && !chosenChainId;
 	const outer = envelopeDigest(request, network);
+	// a mode switch is hashed otherwise than it is sent (core: hashedEnvelopeAction)
+	const hashedInner = (
+		hashedEnvelopeAction(request).payload as { action: PlainObject }
+	).action;
+	const modeCode =
+		hashedInner.abstraction !== request.action.payload.action.abstraction
+			? String(hashedInner.abstraction)
+			: null;
 	const window = nonceWindow(proposal.payload.nonce);
 	const receipt = proposal.receipt;
 	const receiptExplained = receipt
@@ -564,6 +574,14 @@ export function ProposalResult({
 					lang="json"
 					maxHeight="24rem"
 				/>
+				{modeCode && (
+					<p className="mt-2 text-xs text-muted-foreground">
+						This is the body as it is sent. For the leader's signature
+						Hyperliquid hashes it with <code>abstraction</code> written as the
+						one-letter code <code>"{modeCode}"</code>: the digest above is
+						computed that way (measured on testnet, not documented).
+					</p>
+				)}
 			</Panel>
 		</div>
 	);

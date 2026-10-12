@@ -425,6 +425,20 @@ export function describeAction(
 				`${action.enabled ? "Enable" : "Disable"} HIP-3 dex abstraction for ${s(action.user)}`,
 			);
 		case "userSetAbstraction":
+			// the two switches measured through a multi-sig, in words; any other mode as it is named
+			if (action.abstraction === "unifiedAccount")
+				return done("Switch to a unified account: one balance", [
+					"The perps and spot USDC become one balance. Positions and open orders stay as they are.",
+					"Afterwards the account sends only from that one balance: a send made the older way, or a move between perps and spot, is refused.",
+				]);
+			if (action.abstraction === "disabled")
+				return done(
+					"Switch to a manual account: separate perps and spot balances",
+					[
+						"Hyperliquid refuses this while the account has an open position, an open order or a running TWAP order.",
+						"The USDC stays in the spot balance afterwards. Moving it to perps is a separate step.",
+					],
+				);
 			return done(
 				`Set abstraction mode "${s(action.abstraction)}" for ${s(action.user)}`,
 			);

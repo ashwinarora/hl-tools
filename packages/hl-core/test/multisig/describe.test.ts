@@ -599,9 +599,16 @@ describe("describeAction details", () => {
 				enabled: false,
 			} as PlainObject).headline,
 		).toContain("Disable");
+		// the measured switches are said in words (see modeSwitch.test.ts)
 		expect(
 			describeAction(SAMPLES.userSetAbstraction as PlainObject).headline,
-		).toContain("unifiedAccount");
+		).toBe("Switch to a unified account: one balance");
+		expect(
+			describeAction({
+				...SAMPLES.userSetAbstraction,
+				abstraction: "dexAbstraction",
+			} as PlainObject).headline,
+		).toContain('"dexAbstraction"');
 		expect(
 			describeAction(SAMPLES.userPortfolioMargin as PlainObject).headline,
 		).toContain("Disable portfolio margin");
