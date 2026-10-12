@@ -1,18 +1,29 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+	afterStakingAction,
 	type Delegation,
 	expectedRate,
 	explainExchangeError,
 	hypeToWei,
+	judgeStakingSteps,
+	lockupOf,
 	parseDelegations,
 	parseDelegatorHistory,
 	parseDelegatorSummary,
 	parseValidators,
 	pendingReturns,
+	planMove,
+	planReturn,
+	planStake,
 	RETURN_QUEUE_LINE,
 	STAKE_LOCKUP_LINE,
+	type StakingAction,
 	type StakingEvent,
+	type StakingFacts,
+	stakingActionOf,
+	stakingFields,
+	stakingRefusal,
 	type Validator,
 	validatorPays,
 	weiToHype,
@@ -585,5 +596,371 @@ describe("validators", () => {
 		expect(validatorPays(read({ commission: null, stats: [] }))).toEqual({
 			pays: true,
 		});
+	});
+});
+
+// ------------------------------------------------------------------ moves
+
+const X = HYPURR;
+const Y = INACTIVE;
+const FACTS: StakingFacts = {
+	spotAvailable: "400",
+	undelegated: "50",
+	delegations: [{ validator: X, amount: "1000", lockedUntil: 1_000 }],
+	pendingReturns: 0,
+	validators: [X, Y, JAILED],
+};
+const UNKNOWN: StakingFacts = {
+	spotAvailable: null,
+	undelegated: null,
+	delegations: null,
+	pendingReturns: null,
+	validators: null,
+};
+const NOW = 5_000;
+
+describe("a staking action as posted", () => {
+	it.each([
+		[
+			{ type: "cDeposit", wei: 2000000 },
+			{ kind: "moveIn", amount: "0.02" },
+		],
+		[
+			{ type: "cWithdraw", wei: 100000000n },
+			{ kind: "return", amount: "1" },
+		],
+		[
+			{ type: "tokenDelegate", validator: X, wei: 1, isUndelegate: false },
+			{ kind: "stake", amount: "0.00000001", validator: X },
+		],
+		[
+			{
+				type: "tokenDelegate",
+				validator: X.toUpperCase().replace("0X", "0x"),
+				wei: 5,
+				isUndelegate: true,
+			},
+			{ kind: "unstake", amount: "0.00000005", validator: X },
+		],
+	])("an action as posted is read (%#)", (action, expected) => {
+		expect(stakingActionOf(action)).toEqual(expected);
+		// and written back as Hyperliquid takes it
+		const back = stakingFields(expected as StakingAction);
+		expect(stakingActionOf(back)).toEqual(expected);
+	});
+	it.each([
+		[{ type: "cDeposit", wei: "1.5" }],
+		[{ type: "cDeposit" }],
+		[{ type: "tokenDelegate", validator: "0x12", wei: 1 }],
+		[{ type: "usdSend", wei: 1 }],
+		["cDeposit"],
+		[null],
+	])("%j is not a staking action", (action) => {
+		expect(stakingActionOf(action)).toBeNull();
+	});
+	it("writes the fields Hyperliquid takes, and nothing for an amount it cannot carry", () => {
+		expect(stakingFields({ kind: "moveIn", amount: "0.02" })).toEqual({
+			type: "cDeposit",
+			wei: 2000000,
+		});
+		expect(stakingFields({ kind: "return", amount: "1" })).toEqual({
+			type: "cWithdraw",
+			wei: 100000000,
+		});
+		expect(
+			stakingFields({ kind: "unstake", amount: "1", validator: X }),
+		).toEqual({
+			type: "tokenDelegate",
+			validator: X,
+			wei: 100000000,
+			isUndelegate: true,
+		});
+		expect(
+			stakingFields({ kind: "stake", amount: "1", validator: X }),
+		).toMatchObject({
+			isUndelegate: false,
+		});
+		expect(stakingFields({ kind: "moveIn", amount: "0.000000001" })).toBeNull();
+	});
+});
+
+describe("working out a move", () => {
+	it("stake: what is missing in the staking balance is moved in from spot first", () => {
+		// the staking balance already holds 50, and 100 is to be staked
+		expect(
+			planStake({ amount: "100", validator: X, undelegated: "50" }),
+		).toEqual([
+			{ kind: "moveIn", amount: "50" },
+			{ kind: "stake", amount: "100", validator: X },
+		]);
+		expect(
+			planStake({ amount: "100", validator: X, undelegated: "0" }),
+		).toEqual([
+			{ kind: "moveIn", amount: "100" },
+			{ kind: "stake", amount: "100", validator: X },
+		]);
+		expect(
+			planStake({ amount: "0.02", validator: X, undelegated: "0.0004" })[0],
+		).toEqual({ kind: "moveIn", amount: "0.0196" });
+	});
+	it("stake: one action when the staking balance already covers it", () => {
+		const only = [{ kind: "stake", amount: "100", validator: X }];
+		expect(
+			planStake({ amount: "100", validator: X, undelegated: "100" }),
+		).toEqual(only);
+		expect(
+			planStake({ amount: "100", validator: X, undelegated: "250.5" }),
+		).toEqual(only);
+	});
+	it("return: what is missing unstaked is unstaked from the validator named first", () => {
+		expect(planReturn({ amount: "100", undelegated: "60", from: X })).toEqual([
+			{ kind: "unstake", amount: "40", validator: X },
+			{ kind: "return", amount: "100" },
+		]);
+		expect(
+			planReturn({ amount: "100", undelegated: "100", from: null }),
+		).toEqual([{ kind: "return", amount: "100" }]);
+		// a validator is named and not needed: nothing is unstaked
+		expect(planReturn({ amount: "100", undelegated: "120", from: X })).toEqual([
+			{ kind: "return", amount: "100" },
+		]);
+	});
+	it("return: no plan when something has to be unstaked and nobody is named", () => {
+		expect(
+			planReturn({ amount: "100", undelegated: "60", from: null }),
+		).toBeNull();
+	});
+	it("move: unstake from one, stake with the other", () => {
+		expect(planMove({ amount: "100", from: X, to: Y })).toEqual([
+			{ kind: "unstake", amount: "100", validator: X },
+			{ kind: "stake", amount: "100", validator: Y },
+		]);
+	});
+});
+
+describe("what Hyperliquid would answer", () => {
+	const factsOf = (s: FixtureState): StakingFacts => ({
+		spotAvailable: s.spotAvailable,
+		undelegated: s.undelegated,
+		delegations: parseDelegations(s.delegations),
+		pendingReturns: s.pendingReturns,
+		validators: [HYPURR, JAILED, INACTIVE],
+	});
+	const answerOf = (s: FixtureStep): string | null =>
+		s.answer.status === "ok" ? null : explainExchangeError(s.answer, 200).id;
+
+	it.each(STAKING_FIXTURE.steps)("as testnet did: $about", (s) => {
+		const action = stakingActionOf(s.action) as StakingAction;
+		expect(stakingRefusal(action, factsOf(s.before), s.sentAt)).toBe(
+			answerOf(s),
+		);
+	});
+
+	it.each(
+		STAKING_FIXTURE.steps.filter((s) => s.answer.status === "ok"),
+	)("and leaves behind what testnet reported: $about", (s) => {
+		const action = stakingActionOf(s.action) as StakingAction;
+		const after = afterStakingAction(
+			factsOf(s.before),
+			action,
+			s.history?.time ?? 0,
+			"testnet",
+		);
+		const reported = factsOf(s.after);
+		const byValidator = (list: readonly Delegation[] | null) =>
+			[...(list ?? [])].sort((a, b) => (a.validator < b.validator ? -1 : 1));
+		expect(after.spotAvailable).toBe(reported.spotAvailable);
+		expect(after.undelegated).toBe(reported.undelegated);
+		expect(after.pendingReturns).toBe(reported.pendingReturns);
+		expect(byValidator(after.delegations)).toEqual(
+			byValidator(reported.delegations),
+		);
+	});
+
+	it("refuses nothing on a fact it does not have", () => {
+		for (const action of [
+			{ kind: "moveIn", amount: "1e9" },
+			{ kind: "stake", amount: "1e9", validator: X },
+			{ kind: "unstake", amount: "1e9", validator: X },
+			{ kind: "return", amount: "1e9" },
+		] as StakingAction[])
+			expect(stakingRefusal(action, UNKNOWN, NOW)).toBeNull();
+	});
+	it("an unstake from a validator the account has nothing with", () => {
+		expect(
+			stakingRefusal(
+				{ kind: "unstake", amount: "1", validator: Y },
+				FACTS,
+				NOW,
+			),
+		).toBe("unstake-balance");
+	});
+	it("an unstake while the stake is locked, whatever the amount", () => {
+		expect(
+			stakingRefusal(
+				{ kind: "unstake", amount: "1", validator: X },
+				FACTS,
+				999,
+			),
+		).toBe("unstake-lockup");
+		expect(
+			stakingRefusal(
+				{ kind: "unstake", amount: "1", validator: X },
+				FACTS,
+				1_000,
+			),
+		).toBeNull();
+		// two reasons at once: the lockup is the one named (which one Hyperliquid names was not measured)
+		expect(
+			stakingRefusal(
+				{ kind: "unstake", amount: "5000", validator: X },
+				FACTS,
+				999,
+			),
+		).toBe("unstake-lockup");
+	});
+	it("a stake with an address that is no validator is named before its amount", () => {
+		expect(
+			stakingRefusal(
+				{
+					kind: "stake",
+					amount: "5000",
+					validator: "0x00000000000000000000000000000000000000aa",
+				},
+				FACTS,
+				NOW,
+			),
+		).toBe("validator-unknown");
+	});
+	it("a sixth return is named before its amount", () => {
+		expect(
+			stakingRefusal(
+				{ kind: "return", amount: "5000" },
+				{ ...FACTS, pendingReturns: 5 },
+				NOW,
+			),
+		).toBe("return-queue-full");
+	});
+});
+
+describe("what an action leaves behind", () => {
+	it("a first stake with a validator is locked for the network's lockup", () => {
+		const after = afterStakingAction(
+			FACTS,
+			{ kind: "stake", amount: "20", validator: Y },
+			NOW,
+			"mainnet",
+		);
+		expect(after.undelegated).toBe("30");
+		expect(after.delegations).toEqual([
+			{ validator: X, amount: "1000", lockedUntil: 1_000 },
+			{ validator: Y, amount: "20", lockedUntil: NOW + DAY },
+		]);
+	});
+	it("adding to a stake locks all of it again", () => {
+		const after = afterStakingAction(
+			FACTS,
+			{ kind: "stake", amount: "20", validator: X },
+			NOW,
+			"testnet",
+		);
+		expect(after.delegations).toEqual([
+			{ validator: X, amount: "1020", lockedUntil: NOW + 2 * MINUTE },
+		]);
+	});
+	it("an unstake keeps the lockup as it was, and a stake removed whole leaves the list", () => {
+		const part = afterStakingAction(
+			FACTS,
+			{ kind: "unstake", amount: "400", validator: X },
+			NOW,
+			"testnet",
+		);
+		expect(part.undelegated).toBe("450");
+		expect(part.delegations).toEqual([
+			{ validator: X, amount: "600", lockedUntil: 1_000 },
+		]);
+		const whole = afterStakingAction(
+			FACTS,
+			{ kind: "unstake", amount: "1000", validator: X },
+			NOW,
+			"testnet",
+		);
+		expect(whole.delegations).toEqual([]);
+	});
+	it("what was not known stays unknown", () => {
+		for (const action of [
+			{ kind: "moveIn", amount: "1" },
+			{ kind: "stake", amount: "1", validator: X },
+			{ kind: "unstake", amount: "1", validator: X },
+			{ kind: "return", amount: "1" },
+		] as StakingAction[])
+			expect(afterStakingAction(UNKNOWN, action, NOW, "testnet")).toEqual(
+				UNKNOWN,
+			);
+	});
+});
+
+describe("the steps of a move, in order", () => {
+	const judge = (actions: StakingAction[], facts: StakingFacts, now = NOW) =>
+		judgeStakingSteps(actions, facts, now, "testnet");
+	const stake100 = planStake({
+		amount: "100",
+		validator: X,
+		undelegated: "50",
+	});
+
+	it("the second step is judged against what the first leaves behind", () => {
+		// staking 100 alone would be refused: only 50 is there before the move in
+		expect(stakingRefusal(stake100[1] as StakingAction, FACTS, NOW)).toBe(
+			"stake-balance",
+		);
+		expect(judge(stake100, FACTS)).toBeNull();
+	});
+	it("names the step that would be refused, and the reason", () => {
+		expect(judge(stake100, { ...FACTS, spotAvailable: "10" })).toEqual({
+			index: 0,
+			refusal: "staking-deposit-funds",
+		});
+		expect(judge(stake100, { ...FACTS, validators: [Y] })).toEqual({
+			index: 1,
+			refusal: "validator-unknown",
+		});
+		const back = planReturn({ amount: "100", undelegated: "50", from: X });
+		expect(judge(back ?? [], FACTS, 999)).toEqual({
+			index: 0,
+			refusal: "unstake-lockup",
+		});
+		expect(judge(back ?? [], { ...FACTS, pendingReturns: 5 })).toEqual({
+			index: 1,
+			refusal: "return-queue-full",
+		});
+		expect(judge(back ?? [], FACTS)).toBeNull();
+	});
+	it("a move to another validator goes through in one go", () => {
+		expect(
+			judge(planMove({ amount: "1000", from: X, to: Y }), FACTS),
+		).toBeNull();
+		expect(judge(planMove({ amount: "1001", from: X, to: Y }), FACTS)).toEqual({
+			index: 0,
+			refusal: "unstake-balance",
+		});
+	});
+	it("nothing to do, nothing refused", () => {
+		expect(judge([], FACTS)).toBeNull();
+	});
+});
+
+describe("when an unstake can be submitted", () => {
+	it("is the end of the lockup of the stake it takes from", () => {
+		const stakes = FACTS.delegations ?? [];
+		expect(
+			lockupOf({ kind: "unstake", amount: "1", validator: X }, stakes),
+		).toBe(1_000);
+		expect(
+			lockupOf({ kind: "unstake", amount: "1", validator: Y }, stakes),
+		).toBeNull();
+		expect(
+			lockupOf({ kind: "stake", amount: "1", validator: X }, stakes),
+		).toBeNull();
 	});
 });

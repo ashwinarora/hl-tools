@@ -1,7 +1,8 @@
 /**
  * Staking, read off the measured table (rules/staking.ts;
  * fixtures/multisig/staking.json): what Hyperliquid reports about an
- * account's HYPE in staking and about validators.
+ * account's HYPE in staking and about validators, which actions bring about
+ * a move, and what Hyperliquid would answer to them as things stand.
  *
  * HYPE amounts are decimal strings in their canonical form, as everywhere in
  * the account data; the actions carry them as integers with 8 decimals.
@@ -9,7 +10,12 @@
  */
 import { Decimal } from "../decimal.ts";
 import type { Network } from "../network.ts";
-import { HYPE_WEI_DECIMALS, RETURN_QUEUE } from "../rules/staking.ts";
+import {
+	HYPE_WEI_DECIMALS,
+	MAX_PENDING_RETURNS,
+	RETURN_QUEUE,
+	STAKE_LOCKUP,
+} from "../rules/staking.ts";
 
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 
@@ -337,4 +343,302 @@ export function validatorPays(
 					? "no-rate"
 					: null;
 	return why ? { pays: false, why } : { pays: true };
+}
+
+// ------------------------------------------------------------------ actions
+
+/**
+ * A staking action, in HYPE.
+ *   moveIn   spot to the staking balance        (`cDeposit`)
+ *   stake    the staking balance to a validator (`tokenDelegate`)
+ *   unstake  a validator to the staking balance (`tokenDelegate`, isUndelegate)
+ *   return   the staking balance to spot        (`cWithdraw`)
+ */
+export type StakingAction =
+	| { readonly kind: "moveIn"; readonly amount: string }
+	| {
+			readonly kind: "stake" | "unstake";
+			readonly amount: string;
+			readonly validator: string;
+	  }
+	| { readonly kind: "return"; readonly amount: string };
+
+/** An action as posted, read as a staking action. Null for any other action, and for one whose amount or validator cannot be read. */
+export function stakingActionOf(action: unknown): StakingAction | null {
+	const a = record(action);
+	const amount = weiToHype(a?.wei);
+	if (!a || amount === null) return null;
+	switch (a.type) {
+		case "cDeposit":
+			return { kind: "moveIn", amount };
+		case "cWithdraw":
+			return { kind: "return", amount };
+		case "tokenDelegate": {
+			const validator = addressOf(a.validator);
+			return validator === null
+				? null
+				: {
+						kind: a.isUndelegate === true ? "unstake" : "stake",
+						amount,
+						validator,
+					};
+		}
+		default:
+			return null;
+	}
+}
+
+/**
+ * The fields Hyperliquid takes for a staking action (the chain fields and
+ * the number are the proposal's). Null when the amount cannot be carried
+ * exactly.
+ */
+export function stakingFields(
+	a: StakingAction,
+): Record<string, unknown> | null {
+	const wei = hypeToWei(a.amount);
+	if (wei === null) return null;
+	switch (a.kind) {
+		case "moveIn":
+			return { type: "cDeposit", wei };
+		case "return":
+			return { type: "cWithdraw", wei };
+		default:
+			return {
+				type: "tokenDelegate",
+				validator: a.validator,
+				wei,
+				isUndelegate: a.kind === "unstake",
+			};
+	}
+}
+
+// ------------------------------------------------------------------ a move
+
+const dec = (v: string): Decimal => Decimal.parse(v);
+/** `want` minus `have`, or null when nothing is missing. */
+function missing(want: string, have: string): string | null {
+	const short = dec(want).sub(dec(have));
+	return short.isPositive() ? short.toString() : null;
+}
+
+/**
+ * "This much staked with this validator": what the staking balance does not
+ * already hold unstaked is moved in from spot first. One action or two.
+ */
+export function planStake(i: {
+	readonly amount: string;
+	readonly validator: string;
+	/** In the staking balance and not staked. */
+	readonly undelegated: string;
+}): StakingAction[] {
+	const short = missing(i.amount, i.undelegated);
+	const stake: StakingAction = {
+		kind: "stake",
+		amount: i.amount,
+		validator: i.validator,
+	};
+	return short === null ? [stake] : [{ kind: "moveIn", amount: short }, stake];
+}
+
+/**
+ * "This much back in spot": what the staking balance does not already hold
+ * unstaked is unstaked from `from` first. Null when something has to be
+ * unstaked and no validator is named.
+ */
+export function planReturn(i: {
+	readonly amount: string;
+	readonly undelegated: string;
+	readonly from: string | null;
+}): StakingAction[] | null {
+	const short = missing(i.amount, i.undelegated);
+	const back: StakingAction = { kind: "return", amount: i.amount };
+	if (short === null) return [back];
+	return i.from === null
+		? null
+		: [{ kind: "unstake", amount: short, validator: i.from }, back];
+}
+
+/** "This much from one validator to another": unstake, then stake. */
+export function planMove(i: {
+	readonly amount: string;
+	readonly from: string;
+	readonly to: string;
+}): StakingAction[] {
+	return [
+		{ kind: "unstake", amount: i.amount, validator: i.from },
+		{ kind: "stake", amount: i.amount, validator: i.to },
+	];
+}
+
+// ------------------------------------------------------------------ the judge
+
+/**
+ * What is known about an account's staking when an action is judged. A fact
+ * that could not be read is null, and an unknown fact refuses nothing.
+ */
+export interface StakingFacts {
+	/** Spot HYPE that is not on hold. */
+	readonly spotAvailable: string | null;
+	/** In the staking balance and not staked. */
+	readonly undelegated: string | null;
+	readonly delegations: readonly Delegation[] | null;
+	/** How many returns are waiting. */
+	readonly pendingReturns: number | null;
+	/** Every validator's address. */
+	readonly validators: readonly string[] | null;
+}
+
+/** A refusal Hyperliquid would give, by its id in the error catalogue. */
+export type StakingRefusal =
+	| "staking-deposit-funds"
+	| "stake-balance"
+	| "validator-unknown"
+	| "unstake-lockup"
+	| "unstake-balance"
+	| "return-balance"
+	| "return-queue-full";
+
+const exceeds = (amount: string, have: string | null): boolean =>
+	have !== null && dec(amount).gt(dec(have));
+
+/**
+ * The refusal this action would meet as things stand at `now`, or null.
+ * Where two reasons hold at once, which of them Hyperliquid names was not
+ * measured; the one named here comes first in the code below.
+ */
+export function stakingRefusal(
+	action: StakingAction,
+	facts: StakingFacts,
+	now: number,
+): StakingRefusal | null {
+	switch (action.kind) {
+		case "moveIn":
+			return exceeds(action.amount, facts.spotAvailable)
+				? "staking-deposit-funds"
+				: null;
+		case "stake":
+			if (facts.validators && !facts.validators.includes(action.validator))
+				return "validator-unknown";
+			return exceeds(action.amount, facts.undelegated) ? "stake-balance" : null;
+		case "unstake": {
+			if (!facts.delegations) return null;
+			const stake = facts.delegations.find(
+				(d) => d.validator === action.validator,
+			);
+			if (stake && stake.lockedUntil > now) return "unstake-lockup";
+			return exceeds(action.amount, stake?.amount ?? "0")
+				? "unstake-balance"
+				: null;
+		}
+		default:
+			if (
+				facts.pendingReturns !== null &&
+				facts.pendingReturns >= MAX_PENDING_RETURNS
+			)
+				return "return-queue-full";
+			return exceeds(action.amount, facts.undelegated)
+				? "return-balance"
+				: null;
+	}
+}
+
+const plus = (have: string | null, amount: string): string | null =>
+	have === null ? null : dec(have).add(dec(amount)).toString();
+const minus = (have: string | null, amount: string): string | null =>
+	have === null ? null : dec(have).sub(dec(amount)).toString();
+
+/**
+ * What stands after Hyperliquid has carried the action out at `now`. A stake
+ * (a first one or an addition) locks everything staked with that validator
+ * for the network's lockup; a stake removed completely leaves the list.
+ */
+export function afterStakingAction(
+	facts: StakingFacts,
+	action: StakingAction,
+	now: number,
+	network: Network,
+): StakingFacts {
+	switch (action.kind) {
+		case "moveIn":
+			return {
+				...facts,
+				spotAvailable: minus(facts.spotAvailable, action.amount),
+				undelegated: plus(facts.undelegated, action.amount),
+			};
+		case "return":
+			return {
+				...facts,
+				undelegated: minus(facts.undelegated, action.amount),
+				pendingReturns:
+					facts.pendingReturns === null ? null : facts.pendingReturns + 1,
+			};
+		default: {
+			const staking = action.kind === "stake";
+			const old = facts.delegations?.find(
+				(d) => d.validator === action.validator,
+			);
+			const others = facts.delegations?.filter((d) => d !== old);
+			const held = dec(old?.amount ?? "0");
+			const amount = staking
+				? held.add(dec(action.amount))
+				: held.sub(dec(action.amount));
+			return {
+				...facts,
+				undelegated: staking
+					? minus(facts.undelegated, action.amount)
+					: plus(facts.undelegated, action.amount),
+				delegations: !others
+					? null
+					: !amount.isPositive()
+						? others
+						: [
+								...others,
+								{
+									validator: action.validator,
+									amount: amount.toString(),
+									lockedUntil:
+										staking || !old
+											? now + STAKE_LOCKUP[network].ms
+											: old.lockedUntil,
+								},
+							],
+			};
+		}
+	}
+}
+
+/**
+ * The first of these actions Hyperliquid would refuse when they are carried
+ * out in order from `now`, each judged against what the ones before it leave
+ * behind. Null when none would be.
+ */
+export function judgeStakingSteps(
+	actions: readonly StakingAction[],
+	facts: StakingFacts,
+	now: number,
+	network: Network,
+): { readonly index: number; readonly refusal: StakingRefusal } | null {
+	let state = facts;
+	for (const [index, action] of actions.entries()) {
+		const refusal = stakingRefusal(action, state, now);
+		if (refusal) return { index, refusal };
+		state = afterStakingAction(state, action, now, network);
+	}
+	return null;
+}
+
+/**
+ * When the lockup of the stake an unstake takes from ends; null for any
+ * other action and when the account has no stake with that validator. An
+ * unstake can be signed before this and is refused if submitted before it.
+ */
+export function lockupOf(
+	action: StakingAction,
+	delegations: readonly Delegation[],
+): number | null {
+	return action.kind === "unstake"
+		? (delegations.find((d) => d.validator === action.validator)?.lockedUntil ??
+				null)
+		: null;
 }
