@@ -51,7 +51,7 @@ import {
 import { relayIssue } from "../model/relay/errors";
 import { acceptNicknames } from "../model/relay/nicknames";
 import { standing } from "../model/relay/positions";
-import { planPush, publishRow } from "../model/relay/push";
+import { planPush, publishBlocker, publishRow } from "../model/relay/push";
 import { latestMarks, type ProposalRow } from "../model/relay/rows";
 import { buildSignInMessage } from "../model/relay/siwe";
 import { buildTimeline } from "../model/relay/timeline";
@@ -1709,6 +1709,127 @@ describe("a move of two steps", () => {
 			codes((await addObjections(a.client, a.address, keys(m))).issue),
 		).toBe("relay.proposal_closed");
 		expect((await rows()).map((r) => r?.objections)).toEqual([[], []]);
+	});
+});
+
+describe("a vault deposit or withdrawal", () => {
+	const VAULT = "0xdfc24b077bc1425ad1dea75bcb6f8158e10df303";
+	/** A vault proposal as the form makes it: an L1 action, proposed by a, finalised by b. */
+	async function vaultProposal(
+		title: string,
+		signers: TestWallet[] = [],
+		action: Record<string, unknown> = {},
+	): Promise<Proposal> {
+		const now = Date.now();
+		const made = createProposal(
+			{
+				network: NET,
+				multiSigUser: treasury,
+				outerSigner: b.address,
+				action: {
+					type: "vaultTransfer",
+					vaultAddress: VAULT,
+					isDeposit: true,
+					usd: 5_000_000,
+					...action,
+				},
+				nonce: now,
+				title,
+				createdBy: a.address,
+			},
+			{ now },
+		);
+		if (!made.proposal) throw new Error(JSON.stringify(made.issues));
+		let p = made.proposal;
+		for (const w of signers) {
+			const s = await signProposal(p, viemSigner(w.account), { at: now });
+			if (!s.signature) throw new Error(JSON.stringify(s.issues));
+			p = { ...p, signatures: [...p.signatures, s.signature] };
+		}
+		return p;
+	}
+
+	it("is shared, and a co-signer reads it and verifies the hash signature in their own client", async () => {
+		const p = await vaultProposal("integration: vault deposit", [a]);
+		expect(p.meta.kind).toBe("l1");
+		expect(publishBlocker(p)).toBeNull();
+		expect(
+			(await publishProposal(a.client, a.address, publishRow(p))).issue,
+		).toBeNull();
+		expect(
+			(await addSignature(a.client, a.address, keyOf(p), sigOf(p, a))).issue,
+		).toBeNull();
+		const seen = await read(b, p);
+		expect(seen.issues).toEqual([]);
+		expect(seen.proposal?.digest).toBe(p.digest);
+		expect(seen.proposal?.meta.kind).toBe("l1");
+		expect(seen.proposal?.payload).toEqual(p.payload);
+		expect(seen.signers).toEqual([a.address]);
+		// the finaliser's own result closes it, as it closes any proposal
+		expect(
+			(await recordReceipt(b.client, b.address, keyOf(p), receipt(true))).issue,
+		).toBeNull();
+		expect((await read(a, p)).row?.status).toBe("accepted");
+	});
+
+	it("is never closed on a report: its action carries no number of its own", async () => {
+		const p = await vaultProposal("integration: vault report", [], {
+			isDeposit: false,
+		});
+		expect(
+			(await publishProposal(a.client, a.address, publishRow(p))).issue,
+		).toBeNull();
+		const hash = `0x${"5a".repeat(32)}`;
+		expect(
+			codes(
+				(await reportExecution(a.client, a.address, keyOf(p), hash as never))
+					.issue,
+			),
+		).toBe("relay.report_unnumbered");
+		expect((await listReports(a.client, keyOf(p))).data?.rows ?? []).toEqual(
+			[],
+		);
+		expect((await read(b, p)).row?.status).toBe("open");
+	});
+
+	it("is refused in any other shape, and so is every other action signed as a hash", async () => {
+		const p = await vaultProposal("integration: vault shape");
+		const row = publishRow(p);
+		// written past the browser's own check, as another client could
+		const extra = {
+			...row,
+			document: row.document.replace('"usd":5000000', '"usd":5000000,"x":1'),
+		};
+		expect(extra.document).not.toBe(row.document);
+		expect(
+			codes((await publishProposal(a.client, a.address, extra)).issue),
+		).toBe("relay.document_mismatch");
+		const claimed = {
+			...row,
+			document: row.document.replace('"kind":"l1"', '"kind":"user-signed"'),
+		};
+		expect(claimed.document).not.toBe(row.document);
+		expect(
+			codes((await publishProposal(a.client, a.address, claimed)).issue),
+		).toBe("relay.document_mismatch");
+		const now = Date.now();
+		const noop = createProposal(
+			{
+				network: NET,
+				multiSigUser: treasury,
+				outerSigner: b.address,
+				action: { type: "noop" },
+				nonce: now,
+				createdBy: a.address,
+			},
+			{ now },
+		).proposal as Proposal;
+		expect(publishBlocker(noop)).toMatch(/only a vault deposit or withdrawal/);
+		expect(
+			codes(
+				(await publishProposal(a.client, a.address, publishRow(noop))).issue,
+			),
+		).toBe("relay.document_mismatch");
 	});
 });
 

@@ -33,7 +33,7 @@ const REFUSALS: Record<string, Known> = {
 	},
 	"relay.document_mismatch": {
 		message:
-			"The relay refused the document: it does not match the row it was sent with.",
+			"The relay refused the document: it does not match the row it was sent with, or it is not a kind of proposal the relay takes.",
 		fix: "Reload the proposal and retry. If it persists, pass it on as a file.",
 	},
 	"relay.treasury_frozen": {
@@ -61,6 +61,10 @@ const REFUSALS: Record<string, Known> = {
 	"relay.report_ambiguous": {
 		message:
 			"Another proposal has the same action and number with a different finaliser, so Hyperliquid's record cannot tell which one was carried out.",
+	},
+	"relay.report_unnumbered": {
+		message:
+			"This kind of action carries no number of its own, so Hyperliquid's record of a transaction cannot say which proposal it came from.",
 	},
 	"relay.nickname_invalid": {
 		message: "That nickname cannot be used.",

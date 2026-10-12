@@ -7,7 +7,14 @@
  * propose screen, pressing "Share", or recording a result): opening a link or
  * a file never sends anything by itself.
  */
-import type { Address, Hex, Network, Proposal, Receipt } from "@hl-tools/core";
+import type {
+	Address,
+	Hex,
+	Network,
+	PlainObject,
+	Proposal,
+	Receipt,
+} from "@hl-tools/core";
 import { bareDocument } from "./assemble";
 import type { ProposalStatus } from "./rows";
 
@@ -56,13 +63,41 @@ export interface PushInput {
 	readonly explicit: boolean;
 }
 
+const VAULT_FIELDS = ["isDeposit", "type", "usd", "vaultAddress"];
+
+/**
+ * A vault deposit or withdrawal in the exact shape the relay stores: the
+ * mirror of `private.is_vault_action` (relay_vault_proposals.sql), so a
+ * document the relay would refuse is not sent to it. No field more, none
+ * less; the amount a whole positive number of millionths; the vault's
+ * address in lowercase.
+ */
+export function isRelayVaultAction(action: PlainObject): boolean {
+	return (
+		action.type === "vaultTransfer" &&
+		Object.keys(action).sort().join() === VAULT_FIELDS.join() &&
+		typeof action.isDeposit === "boolean" &&
+		typeof action.usd === "number" &&
+		/^[1-9][0-9]{0,15}$/.test(String(action.usd)) &&
+		typeof action.vaultAddress === "string" &&
+		/^0x[0-9a-f]{40}$/.test(action.vaultAddress)
+	);
+}
+
 /** Why a proposal cannot be shared through the relay; null when it can. */
 export function publishBlocker(p: Proposal): string | null {
-	if (p.meta.kind !== "user-signed") {
-		return "Only user-signed actions can be shared through the relay.";
-	}
 	if (p.payload.vaultAddress !== null || p.payload.expiresAfter !== null) {
 		return "A proposal with a vault address or an expiry cannot be shared through the relay.";
+	}
+	// the kind has to be the action's own: a vault deposit or withdrawal is the
+	// one action signed as a code that is shared, and it is never user-signed
+	if (p.payload.action.type === "vaultTransfer") {
+		return p.meta.kind === "l1" && isRelayVaultAction(p.payload.action)
+			? null
+			: "This vault action is not in the form the relay takes, so it cannot be shared through it.";
+	}
+	if (p.meta.kind !== "user-signed") {
+		return "Of the actions signed as a code, only a vault deposit or withdrawal can be shared through the relay.";
 	}
 	return null;
 }
