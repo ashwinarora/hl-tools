@@ -333,10 +333,15 @@ export function parseValidators(raw: unknown): Validator[] | null {
 	);
 }
 
-/** Hyperliquid's estimate of a staker's yearly rate, over the longest window it gives. */
+/**
+ * Hyperliquid's estimate of a staker's yearly rate, over the last 7 days:
+ * the window its own staking page shows first ("7D"; the others are a switch
+ * away there), so the two tables can be compared. The month's, then the
+ * day's, where it gives no week.
+ */
 export function expectedRate(v: Validator): string | null {
 	return (
-		v.month?.expectedRate ?? v.week?.expectedRate ?? v.day?.expectedRate ?? null
+		v.week?.expectedRate ?? v.month?.expectedRate ?? v.day?.expectedRate ?? null
 	);
 }
 

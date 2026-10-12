@@ -569,15 +569,12 @@ describe("validators", () => {
 		expect(parseValidators({ validators: [] })).toBeNull();
 	});
 
-	it("gives Hyperliquid's estimate over the longest window it has", () => {
-		expect(expectedRate(read())).toBe("0.0218");
-		expect(
-			expectedRate(
-				read({
-					stats: [(row().stats as unknown[])[0], (row().stats as unknown[])[1]],
-				}),
-			),
-		).toBe("0.0217");
+	it("gives Hyperliquid's estimate over 7 days, as its own page shows first", () => {
+		const [day, week, month] = row().stats as unknown[];
+		expect(expectedRate(read())).toBe("0.0217");
+		expect(expectedRate(read({ stats: [day, week] }))).toBe("0.0217");
+		// no week: the month's, then the day's
+		expect(expectedRate(read({ stats: [day, month] }))).toBe("0.0218");
 		expect(expectedRate(read({ stats: [(row().stats as unknown[])[0]] }))).toBe(
 			"0.0216",
 		);

@@ -137,7 +137,7 @@ export const HELP = {
 	},
 	expectedRate: {
 		title: "Expected rate",
-		body: "Hyperliquid's own estimate of what a stake with this validator earns in a year, after the validator's commission. It is an estimate and it changes. It is shown as Hyperliquid reports it, and nobody is recommended here.",
+		body: "Hyperliquid's own estimate of what a stake with this validator earns in a year, after its commission, from the last 7 days: the figure Hyperliquid's staking page shows first. It is an estimate and it changes. Nobody is recommended here.",
 	},
 	moveSteps: {
 		title: "Two steps, one move",
