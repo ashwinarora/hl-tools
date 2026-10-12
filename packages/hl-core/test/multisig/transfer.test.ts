@@ -7,11 +7,13 @@ import {
 	landsIn,
 	sendRefusal,
 	sendShape,
+	withdrawalOutcome,
 } from "../../src/multisig/index.ts";
 import {
 	ACCOUNT_MODES,
 	MODE_KINDS,
 	TRANSFER_RULES,
+	WITHDRAWAL_FEE_USDC,
 } from "../../src/rules/transfers.ts";
 
 interface Change {
@@ -608,5 +610,53 @@ describe("activationCharge", () => {
 				paidFrom: "unknown",
 				refusal: null,
 			});
+	});
+});
+
+describe("withdrawalOutcome", () => {
+	const withdraw = (amount: unknown) => ({
+		type: "withdraw3",
+		destination: "0x00000000000000000000000000000000000000aa",
+		amount,
+		time: 1,
+	});
+
+	it("delivers the amount less the bridge's 1 USDC, as seen on mainnet and testnet", () => {
+		// 2 withdrawn through a multi-sig, 1 arrived on Arbitrum (2026-10-12)
+		const two = withdrawalOutcome(withdraw("2"));
+		expect(two?.refusal).toBeNull();
+		expect(two?.arrives?.toString()).toBe("1");
+		expect(withdrawalOutcome(withdraw("12.5"))?.arrives?.toString()).toBe(
+			"11.5",
+		);
+		expect(withdrawalOutcome(withdraw("1.000001"))?.arrives?.toString()).toBe(
+			"0.000001",
+		);
+	});
+
+	it("is refused when the amount is not more than the fee", () => {
+		// exactly the fee was answered "Withdrawal is smaller than fee." on testnet
+		expect(withdrawalOutcome(withdraw("1"))).toEqual({
+			arrives: null,
+			refusal: "withdrawal-below-fee",
+		});
+		expect(withdrawalOutcome(withdraw("1.0"))?.refusal).toBe(
+			"withdrawal-below-fee",
+		);
+		expect(withdrawalOutcome(withdraw("0.5"))?.refusal).toBe(
+			"withdrawal-below-fee",
+		);
+		expect(WITHDRAWAL_FEE_USDC).toBe("1");
+	});
+
+	it("says nothing about what is not a withdrawal with a readable amount", () => {
+		expect(withdrawalOutcome(withdraw(""))).toBeNull();
+		expect(withdrawalOutcome(withdraw("abc"))).toBeNull();
+		expect(withdrawalOutcome(withdraw(2))).toBeNull();
+		expect(
+			withdrawalOutcome({ type: "usdSend", amount: "2", destination: "0x" }),
+		).toBeNull();
+		expect(withdrawalOutcome(null)).toBeNull();
+		expect(withdrawalOutcome("withdraw3")).toBeNull();
 	});
 });

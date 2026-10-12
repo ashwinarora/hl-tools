@@ -418,9 +418,32 @@ describe("describeAction details", () => {
 			describeAction({ type: "spotSend", amount: "1", destination: RECIPIENT })
 				.headline,
 		).toContain("? (spot)");
-		expect(describeAction(SAMPLES.withdraw3 as PlainObject).headline).toContain(
-			"on Arbitrum",
+		// a testnet withdrawal leaves for Arbitrum's test network, and the bridge keeps its fee
+		const out = describeAction(SAMPLES.withdraw3 as PlainObject);
+		expect(out.headline).toBe(
+			`Withdraw 10 USDC to ${RECIPIENT} on Arbitrum Sepolia`,
 		);
+		expect(out.lines).toEqual([
+			"Leaves Hyperliquid through the bridge.",
+			"The bridge keeps 1 USDC of it as its fee: 9 USDC arrives.",
+		]);
+		const main = describeAction({
+			...(SAMPLES.withdraw3 as PlainObject),
+			hyperliquidChain: "Mainnet",
+		});
+		expect(main.headline).toBe(`Withdraw 10 USDC to ${RECIPIENT} on Arbitrum`);
+		// not more than the fee: said as the refusal it will be
+		expect(
+			describeAction({ ...(SAMPLES.withdraw3 as PlainObject), amount: "1" })
+				.lines[1],
+		).toBe(
+			"The bridge's fee is 1 USDC, and Hyperliquid refuses a withdrawal that is not more than that.",
+		);
+		// an amount that cannot be read: only what is certain
+		expect(
+			describeAction({ ...(SAMPLES.withdraw3 as PlainObject), amount: 7 })
+				.lines,
+		).toEqual(["Leaves Hyperliquid through the bridge."]);
 		expect(
 			describeAction(SAMPLES.usdClassTransfer as PlainObject).headline,
 		).toBe("Move 10 USDC perps → spot");

@@ -3,7 +3,7 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const TRANSFER_RULES = defineRuleSet({
 	id: "transfers",
 	title: "Account modes, transfers and the activation fee",
-	version: "1.1.0",
+	version: "1.2.0",
 	verifiedAt: "2026-10-12",
 	summary:
 		"An account is in one mode (`userAbstraction`): `default` and `disabled` keep a perps and a spot balance apart, `unifiedAccount` has one balance, reported as spot. A manual account can send with `usdSend` (perps to perps), `spotSend` (spot to spot) and `sendAsset` (any pocket to any pocket). A unified account can send only with `sendAsset` from the spot balance. The receiver's mode never refuses a send: a manual receiver gets it in the pocket named, a unified one in its single balance. Sending to an address never used costs 1 USDC once: `usdSend` takes it out of the amount, `spotSend` and `sendAsset` charge it on top. Sending to an address in use costs nothing.",
@@ -26,8 +26,16 @@ export const TRANSFER_RULES = defineRuleSet({
 			date: "2026-10-12",
 			note: 'Sends of an account to itself (fixtures/multisig/self-send.json): into the same balance every way is refused ("Cannot self-transfer." for usdSend and spotSend, "Invalid send" for sendAsset), on a plain account and through a multi-sig. Between a manual account\'s two balances a sendAsset to itself moves the money; on a unified account a sendAsset to itself from spot to perps is accepted and changes nothing.',
 		},
+		{
+			version: "1.2.0",
+			date: "2026-10-12",
+			note: "A bridge withdrawal (withdraw3) pays the bridge's 1 USDC fee out of the amount: 2 USDC withdrawn, 1 USDC arrived on Arbitrum (seen on mainnet and on testnet, through a multi-sig). A withdrawal of exactly 1 USDC is refused with \"Withdrawal is smaller than fee.\" (testnet); a smaller one was not sent and is taken to be refused the same way. The ledger row of a withdrawal carries the action's `time` times 1000 as its `nonce`, and a hash of its own that is not the action's.",
+		},
 	],
 });
+
+/** What the bridge keeps of every withdrawal to Arbitrum, in USDC, out of the amount withdrawn. */
+export const WITHDRAWAL_FEE_USDC = "1";
 
 /** Values of the `userAbstraction` info request. */
 export const ACCOUNT_MODES = [

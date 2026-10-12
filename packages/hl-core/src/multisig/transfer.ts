@@ -16,6 +16,7 @@ import {
 	PERPS_DEX,
 	SPOT_DEX,
 	UNIFIED_DISABLED_ACTIONS,
+	WITHDRAWAL_FEE_USDC,
 } from "../rules/transfers.ts";
 
 export interface AccountMode {
@@ -246,4 +247,30 @@ export function activationCharge(input: {
 	if (spot.sub(fromSpot).gte(FEE)) return charge("spot");
 	if (perps.sub(fromPerps).gte(FEE)) return charge("perps");
 	return charge(null, "transfer-gas");
+}
+
+export interface WithdrawalOutcome {
+	/** What reaches the destination on Arbitrum: the amount less the bridge's fee. Null when refused. */
+	readonly arrives: Decimal | null;
+	/** Hyperliquid refuses a withdrawal that is not more than the fee ("Withdrawal is smaller than fee."). */
+	readonly refusal: "withdrawal-below-fee" | null;
+}
+
+const WITHDRAWAL_FEE = Decimal.parse(WITHDRAWAL_FEE_USDC);
+
+/**
+ * What a bridge withdrawal delivers. The bridge keeps its fee out of the
+ * amount, so the action names more than arrives, and an amount that is not
+ * more than the fee is refused. Null for anything that is not a `withdraw3`
+ * with a readable amount.
+ */
+export function withdrawalOutcome(action: unknown): WithdrawalOutcome | null {
+	if (!action || typeof action !== "object") return null;
+	const a = action as Record<string, unknown>;
+	if (a.type !== "withdraw3" || typeof a.amount !== "string") return null;
+	const amount = Decimal.tryParse(a.amount);
+	if (!amount) return null;
+	return amount.gt(WITHDRAWAL_FEE)
+		? { arrives: amount.sub(WITHDRAWAL_FEE), refusal: null }
+		: { arrives: null, refusal: "withdrawal-below-fee" };
 }

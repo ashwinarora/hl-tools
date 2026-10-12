@@ -5,8 +5,10 @@
  * decimals, integers for USD micro-units), never re-rounded.
  */
 
+import { WITHDRAWAL_FEE_USDC } from "../rules/transfers.ts";
 import { riskFlags } from "./action.ts";
 import { parseSignersString } from "./signerSet.ts";
+import { withdrawalOutcome } from "./transfer.ts";
 import type { PlainObject, RiskFlag } from "./types.ts";
 
 export interface DescribeContext {
@@ -295,11 +297,27 @@ export function describeAction(
 				`Send ${s(action.amount)} ${String(action.token ?? "?").split(":")[0]} (spot) to ${s(action.destination)}`,
 				[`token ${s(action.token)}`],
 			);
-		case "withdraw3":
+		case "withdraw3": {
+			// the testnet bridge leads to Arbitrum's test network
+			const where =
+				action.hyperliquidChain === "Testnet" ? "Arbitrum Sepolia" : "Arbitrum";
+			const out = withdrawalOutcome(action);
 			return done(
-				`Withdraw ${s(action.amount)} USDC to ${s(action.destination)} on Arbitrum`,
-				["Leaves Hyperliquid through the bridge."],
+				`Withdraw ${s(action.amount)} USDC to ${s(action.destination)} on ${where}`,
+				[
+					"Leaves Hyperliquid through the bridge.",
+					...(out?.arrives
+						? [
+								`The bridge keeps ${WITHDRAWAL_FEE_USDC} USDC of it as its fee: ${out.arrives.toString()} USDC arrives.`,
+							]
+						: out?.refusal
+							? [
+									`The bridge's fee is ${WITHDRAWAL_FEE_USDC} USDC, and Hyperliquid refuses a withdrawal that is not more than that.`,
+								]
+							: []),
+				],
 			);
+		}
 		case "usdClassTransfer":
 			return done(
 				`Move ${s(action.amount)} USDC ${action.toPerp ? "spot → perps" : "perps → spot"}`,

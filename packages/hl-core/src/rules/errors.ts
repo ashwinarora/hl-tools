@@ -3,7 +3,7 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.6.0",
+	version: "1.7.0",
 	verifiedAt: "2026-10-12",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
@@ -55,6 +55,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.6.0",
 			date: "2026-10-12",
 			note: 'Recorded on testnet (fixtures/multisig/self-send.json, agent-reach.json, plain-convert.json): "Cannot self-transfer." (a usdSend or spotSend to the sender itself), "Invalid send" (a sendAsset to the sender itself into the same balance), "Multi-sig authorized user cannot be vault or sub-account", and "Agent can only send asset to same user or their sub-accounts." (an API wallet trying to send to another account).',
+		},
+		{
+			version: "1.7.0",
+			date: "2026-10-12",
+			note: 'Recorded on testnet through a multi-sig: "Withdrawal is smaller than fee." (a withdraw3 of exactly the bridge\'s 1 USDC fee).',
 		},
 	],
 });
@@ -497,6 +502,16 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		cause:
 			"A USDC send (usdSend) to an address that was never used on Hyperliquid pays the one-time 1 USDC activation fee out of the amount sent, and this amount is 1 USDC or less.",
 		fix: "Send more than 1 USDC (the receiver gets the amount minus 1), or use sendAsset, which charges the fee on top and delivers the full amount.",
+		documented: false,
+	},
+	{
+		id: "withdrawal-below-fee",
+		pattern: /withdrawal is smaller than fee/i,
+		example: "Withdrawal is smaller than fee.",
+		category: "margin",
+		cause:
+			"A bridge withdrawal (withdraw3) pays the bridge's 1 USDC fee out of the amount withdrawn, and this amount is not more than that.",
+		fix: "Withdraw more than 1 USDC: the destination receives the amount minus 1.",
 		documented: false,
 	},
 	{
