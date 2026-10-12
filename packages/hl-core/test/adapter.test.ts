@@ -175,6 +175,37 @@ describe("InfoClient account methods", () => {
 			/unexpected extraAgents/,
 		);
 	});
+	it("reads an account's vault deposits and a vault's details, parsed", async () => {
+		const VAULT = "0x49D05977597b22e3c73d654c351adde9d9920e18";
+		const { seen, transport } = fakeTransport({
+			userVaultEquities: [
+				{ vaultAddress: VAULT, equity: "5.0", lockedUntilTimestamp: 9 },
+			],
+			vaultDetails: null,
+		});
+		const client = new InfoClient("testnet", { transport });
+		expect((await client.vaultDeposits(USER)).data).toEqual([
+			{ vault: VAULT.toLowerCase(), equity: "5", lockedUntil: 9 },
+		]);
+		// an address that is no vault
+		expect((await client.vault(VAULT)).data).toEqual({ kind: "none" });
+		// with the account whose deposit is asked about
+		await client.vault(VAULT, USER, { fresh: true });
+		expect(seen).toEqual([
+			{ type: "userVaultEquities", user: USER.toLowerCase() },
+			{ type: "vaultDetails", vaultAddress: VAULT.toLowerCase() },
+			{
+				type: "vaultDetails",
+				vaultAddress: VAULT.toLowerCase(),
+				user: USER.toLowerCase(),
+			},
+		]);
+		// an answer that is no list
+		const odd = new InfoClient("testnet", {
+			transport: fakeTransport({ userVaultEquities: {} }).transport,
+		});
+		expect((await odd.vaultDeposits(USER)).data).toBeNull();
+	});
 	it("`fresh` asks the network whatever is cached, and later readers get the new answer", async () => {
 		const answers: Record<string, unknown> = {
 			userToMultiSigSigners: {

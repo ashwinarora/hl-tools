@@ -21,6 +21,12 @@ import {
 	type Validator,
 } from "../multisig/staking.ts";
 import type { Policy } from "../multisig/types.ts";
+import {
+	parseVaultDetails,
+	parseVaultEquities,
+	type VaultDeposit,
+	type VaultLookup,
+} from "../multisig/vault.ts";
 import { type Network, networkConfig } from "../network.ts";
 import {
 	normalizeSettledOutcome,
@@ -52,6 +58,9 @@ export const DEFAULT_TTLS: Readonly<Record<string, number>> = {
 	userAbstraction: 10_000,
 	extraAgents: 10_000,
 	webData3: 10_000,
+	userVaultEquities: 10_000,
+	// a vault's name, leader and terms change rarely; its figures by the hour
+	vaultDetails: 60_000,
 	clearinghouseState: 10_000,
 	spotClearinghouseState: 10_000,
 	openOrders: 10_000,
@@ -451,6 +460,38 @@ export class InfoClient<N extends Network> {
 			options,
 		);
 		return { ...r, data: parseDelegatorSummary(r.data) };
+	}
+
+	/** Every vault an account has money in, each with what it is worth and the end of its lockup. */
+	async vaultDeposits(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<VaultDeposit[] | null, N>> {
+		const r = await this.info<unknown>(
+			{ type: "userVaultEquities", user: user.toLowerCase() },
+			options,
+		);
+		return { ...r, data: parseVaultEquities(r.data) };
+	}
+
+	/**
+	 * What Hyperliquid reports about a vault; with `user`, also that account's
+	 * deposit in it. An address that is no vault answers `none`.
+	 */
+	async vault(
+		vaultAddress: string,
+		user?: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<VaultLookup, N>> {
+		const r = await this.info<unknown>(
+			{
+				type: "vaultDetails",
+				vaultAddress: vaultAddress.toLowerCase(),
+				...(user ? { user: user.toLowerCase() } : {}),
+			},
+			options,
+		);
+		return { ...r, data: parseVaultDetails(r.data) };
 	}
 
 	/** An account's stakes, one per validator, each with the end of its lockup. */

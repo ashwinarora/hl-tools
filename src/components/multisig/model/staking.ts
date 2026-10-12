@@ -207,7 +207,7 @@ export function noPayLine(
 
 /** What Hyperliquid would answer, said to someone about to submit. */
 export const STAKING_REFUSALS: Readonly<Record<StakingRefusal, string>> = {
-	"staking-deposit-funds":
+	"deposit-funds":
 		"This moves more HYPE into the staking balance than the spot balance can release now.",
 	"stake-balance":
 		"This stakes more HYPE than the staking balance holds unstaked now.",
@@ -383,7 +383,7 @@ function wouldRefuseDetail(
 	facts: StakingFacts,
 	label: (address: string) => string,
 ): string {
-	if (refusal === "staking-deposit-funds" && facts.spotAvailable !== null)
+	if (refusal === "deposit-funds" && facts.spotAvailable !== null)
 		return `Spot holds ${hype(facts.spotAvailable)} that is not on hold, and this moves ${hype(step.amount)}.`;
 	if (refusal === "unstake-balance" && step.kind === "unstake") {
 		const held =

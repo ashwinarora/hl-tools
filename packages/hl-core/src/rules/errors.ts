@@ -3,7 +3,7 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.11.0",
+	version: "1.12.0",
 	verifiedAt: "2026-10-13",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
@@ -80,6 +80,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.11.0",
 			date: "2026-10-13",
 			note: 'Recorded on testnet through a multi-sig (fixtures/multisig/mode-switch.json): "Cannot disable unified account with open positions, open orders, or active TWAP orders" (a switch back to a manual account while anything is open; the same answer to userSetAbstraction and to userDexAbstraction).',
+		},
+		{
+			version: "1.12.0",
+			date: "2026-10-13",
+			note: 'Vaults, recorded on testnet through a multi-sig (fixtures/multisig/vaults.json): "Vault deposits must be at least $5.", "Vault is closed.", "This vault does not accept deposits.", "Vault not registered: <address>", "Cannot withdraw during lockup period after depositing." and "Insufficient vault equity for withdrawal". "Insufficient funds available to deposit." is also what a vault deposit gets when the perps balance cannot release that much, so its entry no longer speaks of staking alone (id `deposit-funds`, before `staking-deposit-funds`).',
 		},
 	],
 });
@@ -636,13 +641,63 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		documented: false,
 	},
 	{
-		id: "staking-deposit-funds",
+		id: "deposit-funds",
 		pattern: /insufficient funds available to deposit/i,
 		example: "Insufficient funds available to deposit.",
 		category: "margin",
 		cause:
-			"The action moves more HYPE from the spot balance into staking than the spot balance can release (its total minus what is on hold).",
-		fix: "Lower the amount to the HYPE that is available in spot, or bring more HYPE into the account first.",
+			"A deposit asks for more than the balance it draws on can release. Two actions get these words: a staking deposit (cDeposit), which takes HYPE from the spot balance, total minus what is on hold; and a vault deposit (vaultTransfer), which takes USDC from what the perps balance can withdraw, not from the account value and not from spot (from the one balance of a unified account).",
+		fix: "Lower the amount to what that balance can release. For a vault deposit from a manual account, move USDC from spot to perps first.",
+		documented: false,
+	},
+	{
+		id: "vault-min-deposit",
+		pattern: /vault deposits must be at least/i,
+		example: "Vault deposits must be at least $5.",
+		category: "account",
+		cause:
+			"A vault deposit of less than 5 USDC (recorded on testnet through a multi-sig).",
+		fix: "Deposit 5 USDC or more.",
+		documented: false,
+	},
+	{
+		id: "vault-closed",
+		pattern: /^vault is closed/i,
+		example: "Vault is closed.",
+		category: "account",
+		cause:
+			"The vault's leader has closed it: it takes no more deposits (recorded on testnet).",
+		fix: "Choose another vault. What was deposited before can still be withdrawn.",
+		documented: false,
+	},
+	{
+		id: "vault-no-deposits",
+		pattern: /vault does not accept deposits/i,
+		example: "This vault does not accept deposits.",
+		category: "account",
+		cause:
+			"The vault's leader has switched deposits off (`allowDeposits` false in vaultDetails; recorded on testnet).",
+		fix: "Choose another vault, or ask its leader.",
+		documented: false,
+	},
+	{
+		id: "vault-lockup",
+		pattern: /cannot withdraw during lockup period after depositing/i,
+		example: "Cannot withdraw during lockup period after depositing.",
+		category: "account",
+		cause:
+			"A withdrawal from a vault before the deposit's lockup has ended. The lockup starts again for the whole deposit each time it is added to; userVaultEquities gives its end as lockedUntilTimestamp (recorded on testnet: four days for HLP, 20 seconds for a user vault there).",
+		fix: "Wait until the lockup has ended. For a multi-sig, the proposal can be signed before and submitted after; a submission made too early uses the proposal up.",
+		documented: false,
+	},
+	{
+		id: "vault-equity",
+		pattern: /insufficient vault equity for withdrawal/i,
+		example: "Insufficient vault equity for withdrawal",
+		category: "account",
+		cause:
+			"A withdrawal of more than the account's deposit in that vault is worth now, or from a vault it has nothing in (recorded on testnet).",
+		fix: "Read the deposit again (userVaultEquities) and withdraw that much or less.",
 		documented: false,
 	},
 	{

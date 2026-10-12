@@ -330,7 +330,7 @@ describe("the finaliser's click on a move of two steps", () => {
 		});
 		expect(result).toMatchObject({ ok: false, index: 0, sent: 0 });
 		expect(result.ok ? [] : result.issues.map((i) => i.code)).toEqual([
-			"preflight.staking-deposit-funds",
+			"preflight.deposit-funds",
 		]);
 		expect(result.ok ? "" : result.issues[0]?.message).toContain("Step 1: ");
 		expect(log.filter((l) => /^(sign|post)/.test(l))).toEqual([]);

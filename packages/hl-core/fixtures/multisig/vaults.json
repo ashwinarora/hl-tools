@@ -1,0 +1,1169 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-12/13. Vault deposits and withdrawals (`vaultTransfer`) and one perps-spot move through 2-of-3 multi-sigs (lab keys; every action went through the multi-sig envelope, the vault actions with inner L1 signatures): `unified` is a unified-account treasury, `manual` a manual-mode one that had a BTC position and two resting orders open. `before` and `after` are what Hyperliquid reported about the account and the vault around the action (`clearinghouseState`, `spotClearinghouseState`, `userVaultEquities`, `vaultDetails`); `sentAt` is this machine's clock when it was signed; `answer` is Hyperliquid's; `ledger` is the row the account's ledger then held. HLP locks a deposit for four days; the user vault for 20 seconds on testnet.",
+	"network": "testnet",
+	"accounts": {
+		"manual": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+		"unified": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7"
+	},
+	"vaults": {
+		"HLP": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+		"USER_VAULT": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+		"NO_DEPOSITS": "0x57b2db6fe63b5a3071e0f2d1caebff7657f9ccd7",
+		"CLOSED": "0x011d967eaa3e24177911386e58031036e45e93d3",
+		"NOT_A_VAULT": "0xbf90955d5b93977873ec5cf624508c64e35796f2"
+	},
+	"notes": {
+		"topUp": {
+			"lockedBefore": 1791835333784,
+			"lockedAfter": 1791835363008,
+			"withdrawAtOnce": "Cannot withdraw during lockup period after depositing."
+		},
+		"manualBefore": {
+			"perpsWithdrawable": "4.250465",
+			"perpsValue": "7.046691",
+			"spotUsdc": "12.24",
+			"tried": "5.05"
+		}
+	},
+	"steps": [
+		{
+			"about": "withdraw more than is there",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": false,
+				"usd": 100000000
+			},
+			"sentAt": 1791835247123,
+			"before": {
+				"at": 1791835246950,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "4.293758",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "8.011189",
+					"lockedUntil": 1791832270873
+				},
+				"maxWithdrawable": 8.011189,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "err",
+				"response": "Insufficient vault equity for withdrawal"
+			},
+			"after": {
+				"at": 1791835254440,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "4.293758",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "8.011515",
+					"lockedUntil": 1791832270873
+				},
+				"maxWithdrawable": 8.011515,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": null
+		},
+		{
+			"about": "withdraw everything that can be withdrawn",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": false,
+				"usd": 8011514
+			},
+			"sentAt": 1791835256745,
+			"before": {
+				"at": 1791835256573,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "4.293758",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "8.011492",
+					"lockedUntil": 1791832270873
+				},
+				"maxWithdrawable": 8.011492,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791835264209,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "0.000025",
+					"lockedUntil": 1791832270873
+				},
+				"maxWithdrawable": 0.000025,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": {
+				"time": 1791835261130,
+				"hash": "0x455711a041fa9e6e46d0042b8a17dc0103002985dcfdbd40e91fbcf300fe7858",
+				"delta": {
+					"type": "vaultWithdraw",
+					"vault": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"requestedUsd": "8.011514",
+					"commission": "0.001165",
+					"closingCost": "0.0",
+					"basis": "7.999858",
+					"netWithdrawnUsd": "8.010349"
+				}
+			}
+		},
+		{
+			"about": "deposit less than the minimum",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+				"isDeposit": true,
+				"usd": 500000
+			},
+			"sentAt": 1791835266137,
+			"before": {
+				"at": 1791835265963,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "5.000173",
+					"lockedUntil": 1792177740766
+				},
+				"maxWithdrawable": 5.000173,
+				"vault": {
+					"known": true,
+					"name": "Hyperliquidity Provider (HLP)",
+					"leader": "0x3c83a5cae32a05e88ca6a0350edb540194851a76",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0,
+					"alwaysCloseOnWithdraw": false
+				}
+			},
+			"answer": {
+				"status": "err",
+				"response": "Vault deposits must be at least $5."
+			},
+			"after": {
+				"at": 1791835273793,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "5.000173",
+					"lockedUntil": 1792177740766
+				},
+				"maxWithdrawable": 5.000174,
+				"vault": {
+					"known": true,
+					"name": "Hyperliquidity Provider (HLP)",
+					"leader": "0x3c83a5cae32a05e88ca6a0350edb540194851a76",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0,
+					"alwaysCloseOnWithdraw": false
+				}
+			},
+			"ledger": null
+		},
+		{
+			"about": "deposit into a closed vault",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x011d967eaa3e24177911386e58031036e45e93d3",
+				"isDeposit": true,
+				"usd": 5000000
+			},
+			"sentAt": 1791835275178,
+			"before": {
+				"at": 1791835275001,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": 0,
+				"vault": {
+					"known": true,
+					"name": "vvvvvv",
+					"leader": "0xeffb9c711ec1d3e551a7391dd848290a614c2e63",
+					"isClosed": true,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": false
+				}
+			},
+			"answer": {
+				"status": "err",
+				"response": "Vault is closed."
+			},
+			"after": {
+				"at": 1791835282587,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": 0,
+				"vault": {
+					"known": true,
+					"name": "vvvvvv",
+					"leader": "0xeffb9c711ec1d3e551a7391dd848290a614c2e63",
+					"isClosed": true,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": false
+				}
+			},
+			"ledger": null
+		},
+		{
+			"about": "deposit into a vault that takes no deposits",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x57b2db6fe63b5a3071e0f2d1caebff7657f9ccd7",
+				"isDeposit": true,
+				"usd": 5000000
+			},
+			"sentAt": 1791835283921,
+			"before": {
+				"at": 1791835283746,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": 0,
+				"vault": {
+					"known": true,
+					"name": "ichigo",
+					"leader": "0x3a8c56aa14bd416f43c9b5f582d49650534a39a8",
+					"isClosed": false,
+					"allowDeposits": false,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "err",
+				"response": "This vault does not accept deposits."
+			},
+			"after": {
+				"at": 1791835291108,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": 0,
+				"vault": {
+					"known": true,
+					"name": "ichigo",
+					"leader": "0x3a8c56aa14bd416f43c9b5f582d49650534a39a8",
+					"isClosed": false,
+					"allowDeposits": false,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": null
+		},
+		{
+			"about": "deposit into an address that is no vault",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+				"isDeposit": true,
+				"usd": 5000000
+			},
+			"sentAt": 1791835292143,
+			"before": {
+				"at": 1791835291970,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": null,
+				"vault": {
+					"known": false,
+					"name": null,
+					"leader": null,
+					"isClosed": null,
+					"allowDeposits": null,
+					"leaderCommission": null,
+					"alwaysCloseOnWithdraw": null
+				}
+			},
+			"answer": {
+				"status": "err",
+				"response": "Vault not registered: 0xbf90955d5b93977873ec5cf624508c64e35796f2"
+			},
+			"after": {
+				"at": 1791835299143,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": null,
+				"vault": {
+					"known": false,
+					"name": null,
+					"leader": null,
+					"isClosed": null,
+					"allowDeposits": null,
+					"leaderCommission": null,
+					"alwaysCloseOnWithdraw": null
+				}
+			},
+			"ledger": null
+		},
+		{
+			"about": "deposit more than the balance holds",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": true,
+				"usd": 500000000
+			},
+			"sentAt": 1791835300945,
+			"before": {
+				"at": 1791835300617,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "0.000025",
+					"lockedUntil": 1791832270873
+				},
+				"maxWithdrawable": 0.000025,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "err",
+				"response": "Insufficient funds available to deposit."
+			},
+			"after": {
+				"at": 1791835308214,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "0.000025",
+					"lockedUntil": 1791832270873
+				},
+				"maxWithdrawable": 0.000025,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": null
+		},
+		{
+			"about": "first deposit into a user vault",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": true,
+				"usd": 5000000
+			},
+			"sentAt": 1791835309522,
+			"before": {
+				"at": 1791835309347,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "12.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "0.000025",
+					"lockedUntil": 1791832270873
+				},
+				"maxWithdrawable": 0.000025,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791835316780,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "7.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "5.000025",
+					"lockedUntil": 1791835333784
+				},
+				"maxWithdrawable": 5.000025,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": {
+				"time": 1791835313784,
+				"hash": "0xc7d7f97ef42b4197c951042b8a1b2e01040011648f2e60696ba0a4d1b32f1b82",
+				"delta": {
+					"type": "vaultDeposit",
+					"vault": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+					"usdc": "5.0"
+				}
+			}
+		},
+		{
+			"about": "withdraw at once, inside the lockup",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": false,
+				"usd": 1000000
+			},
+			"sentAt": 1791835318774,
+			"before": {
+				"at": 1791835318452,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "7.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "5.000025",
+					"lockedUntil": 1791835333784
+				},
+				"maxWithdrawable": 5.000025,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "err",
+				"response": "Cannot withdraw during lockup period after depositing."
+			},
+			"after": {
+				"at": 1791835325956,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "7.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "4.999996",
+					"lockedUntil": 1791835333784
+				},
+				"maxWithdrawable": 4.999996,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": null
+		},
+		{
+			"about": "add to a deposit whose lockup had passed",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": true,
+				"usd": 5000000
+			},
+			"sentAt": 1791835338635,
+			"before": {
+				"at": 1791835338457,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "7.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "4.999981",
+					"lockedUntil": 1791835333784
+				},
+				"maxWithdrawable": 4.999981,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791835346107,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "2.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "9.999967",
+					"lockedUntil": 1791835363008
+				},
+				"maxWithdrawable": 9.999967,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": {
+				"time": 1791835343008,
+				"hash": "0xe1d4450ec232fa60e34e042b8a1cef0108005cf45d361932859cf0618136d44b",
+				"delta": {
+					"type": "vaultDeposit",
+					"vault": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+					"usdc": "5.0"
+				}
+			}
+		},
+		{
+			"about": "withdraw at once, after adding",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": false,
+				"usd": 1000000
+			},
+			"sentAt": 1791835348792,
+			"before": {
+				"at": 1791835348618,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "2.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "9.999967",
+					"lockedUntil": 1791835363008
+				},
+				"maxWithdrawable": 9.999967,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "err",
+				"response": "Cannot withdraw during lockup period after depositing."
+			},
+			"after": {
+				"at": 1791835356321,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "2.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "9.999937",
+					"lockedUntil": 1791835363008
+				},
+				"maxWithdrawable": 9.999937,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": null
+		},
+		{
+			"about": "withdraw part after the lockup",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": false,
+				"usd": 3000000
+			},
+			"sentAt": 1791835366519,
+			"before": {
+				"at": 1791835366348,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "2.304107",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "9.999937",
+					"lockedUntil": 1791835363008
+				},
+				"maxWithdrawable": 9.999937,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791835373671,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "5.304106",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "6.999889",
+					"lockedUntil": 1791835363008
+				},
+				"maxWithdrawable": 6.999889,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": {
+				"time": 1791835370725,
+				"hash": "0x6ac42d364bd7d9e86c3d042b8a1eab010600451be6daf8ba0e8cd8890adbb3d3",
+				"delta": {
+					"type": "vaultWithdraw",
+					"vault": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"requestedUsd": "2.999999",
+					"commission": "0.0",
+					"closingCost": "0.0",
+					"basis": "3.000035",
+					"netWithdrawnUsd": "2.999999"
+				}
+			}
+		},
+		{
+			"about": "withdraw from HLP inside its four days",
+			"account": "unified",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+				"isDeposit": false,
+				"usd": 1000000
+			},
+			"sentAt": 1791835375043,
+			"before": {
+				"at": 1791835374869,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "5.304106",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "5.00017",
+					"lockedUntil": 1792177740766
+				},
+				"maxWithdrawable": 5.00017,
+				"vault": {
+					"known": true,
+					"name": "Hyperliquidity Provider (HLP)",
+					"leader": "0x3c83a5cae32a05e88ca6a0350edb540194851a76",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0,
+					"alwaysCloseOnWithdraw": false
+				}
+			},
+			"answer": {
+				"status": "err",
+				"response": "Cannot withdraw during lockup period after depositing."
+			},
+			"after": {
+				"at": 1791835382463,
+				"mode": "unifiedAccount",
+				"perpsWithdrawable": "0.0",
+				"perpsValue": "0.0",
+				"spotUsdc": {
+					"total": "5.304106",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "5.000169",
+					"lockedUntil": 1792177740766
+				},
+				"maxWithdrawable": 5.000169,
+				"vault": {
+					"known": true,
+					"name": "Hyperliquidity Provider (HLP)",
+					"leader": "0x3c83a5cae32a05e88ca6a0350edb540194851a76",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0,
+					"alwaysCloseOnWithdraw": false
+				}
+			},
+			"ledger": null
+		},
+		{
+			"about": "deposit more than perps can release, though the account value and spot would cover it",
+			"account": "manual",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": true,
+				"usd": 5050000
+			},
+			"sentAt": 1791835385491,
+			"before": {
+				"at": 1791835385165,
+				"mode": "default",
+				"perpsWithdrawable": "4.250465",
+				"perpsValue": "7.046691",
+				"spotUsdc": {
+					"total": "12.24",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": 0,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "err",
+				"response": "Insufficient funds available to deposit."
+			},
+			"after": {
+				"at": 1791835392982,
+				"mode": "default",
+				"perpsWithdrawable": "4.250465",
+				"perpsValue": "7.046691",
+				"spotUsdc": {
+					"total": "12.24",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": 0,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": null
+		},
+		{
+			"about": "move 3 USDC from spot to perps",
+			"account": "manual",
+			"action": {
+				"type": "usdClassTransfer",
+				"amount": "3",
+				"toPerp": true
+			},
+			"sentAt": 1791835394471,
+			"before": {
+				"at": 1791835394168,
+				"mode": "default",
+				"perpsWithdrawable": "4.250465",
+				"perpsValue": "7.046691",
+				"spotUsdc": {
+					"total": "12.24",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": 0,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791835398024,
+				"mode": "default",
+				"perpsWithdrawable": "7.254569",
+				"perpsValue": "10.051251",
+				"spotUsdc": {
+					"total": "9.24",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": 0,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": {
+				"time": 1791835395065,
+				"hash": "0x2ca0488eea945a7c2e1a042b8a202e01030060748597794ed068f3e1a9983466",
+				"delta": {
+					"type": "accountClassTransfer",
+					"usdc": "3.0",
+					"toPerp": true
+				}
+			}
+		},
+		{
+			"about": "then deposit 5 USDC",
+			"account": "manual",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": true,
+				"usd": 5000000
+			},
+			"sentAt": 1791835399708,
+			"before": {
+				"at": 1791835399533,
+				"mode": "default",
+				"perpsWithdrawable": "7.254569",
+				"perpsValue": "10.051251",
+				"spotUsdc": {
+					"total": "9.24",
+					"hold": "0.0"
+				},
+				"deposit": null,
+				"maxWithdrawable": 0,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791835406842,
+				"mode": "default",
+				"perpsWithdrawable": "2.254227",
+				"perpsValue": "5.050871",
+				"spotUsdc": {
+					"total": "9.24",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "4.999869",
+					"lockedUntil": 1791835423884
+				},
+				"maxWithdrawable": 4.999869,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": {
+				"time": 1791835403884,
+				"hash": "0x76002ded4294af447779042b8a20bb01020045d2dd97ce1619c8d9400198892f",
+				"delta": {
+					"type": "vaultDeposit",
+					"vault": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+					"usdc": "5.0"
+				}
+			}
+		},
+		{
+			"about": "withdraw 2 USDC after the lockup",
+			"account": "manual",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+				"isDeposit": false,
+				"usd": 2000000
+			},
+			"sentAt": 1791835427400,
+			"before": {
+				"at": 1791835427224,
+				"mode": "default",
+				"perpsWithdrawable": "2.258502",
+				"perpsValue": "5.055621",
+				"spotUsdc": {
+					"total": "9.24",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "5.000232",
+					"lockedUntil": 1791835423884
+				},
+				"maxWithdrawable": 5.000232,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"after": {
+				"at": 1791835434709,
+				"mode": "default",
+				"perpsWithdrawable": "4.256789",
+				"perpsValue": "7.053718",
+				"spotUsdc": {
+					"total": "9.24",
+					"hold": "0.0"
+				},
+				"deposit": {
+					"equity": "3.000087",
+					"lockedUntil": 1791835423884
+				},
+				"maxWithdrawable": 3.000087,
+				"vault": {
+					"known": true,
+					"name": "Crazy Franck",
+					"leader": "0x84014dcf12598d4760349ade2bfd35d815c18c46",
+					"isClosed": false,
+					"allowDeposits": true,
+					"leaderCommission": 0.1,
+					"alwaysCloseOnWithdraw": true
+				}
+			},
+			"ledger": {
+				"time": 1791835431705,
+				"hash": "0xcf5954d3aaafaca5d0d3042b8a22820108006cb945a2cb777322002669a38690",
+				"delta": {
+					"type": "vaultWithdraw",
+					"vault": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+					"user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+					"requestedUsd": "2.0",
+					"commission": "0.000003",
+					"closingCost": "0.0",
+					"basis": "1.999965",
+					"netWithdrawnUsd": "1.999997"
+				}
+			}
+		}
+	]
+}

@@ -17,3 +17,4 @@ export * from "./signerSet.ts";
 export * from "./staking.ts";
 export * from "./transfer.ts";
 export * from "./types.ts";
+export * from "./vault.ts";

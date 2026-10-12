@@ -82,7 +82,12 @@ export function riskFlags(action: PlainObject): RiskFlag[] {
 				: "policy_change",
 		);
 	}
-	if (FUNDS_OUT.has(type)) flags.push("funds_out");
+	// a vault deposit puts the money in the hands of the vault's leader
+	if (
+		FUNDS_OUT.has(type) ||
+		(type === "vaultTransfer" && action.isDeposit === true)
+	)
+		flags.push("funds_out");
 	if (EVM_TOUCHING.has(type)) flags.push("evm_warning");
 	return flags;
 }

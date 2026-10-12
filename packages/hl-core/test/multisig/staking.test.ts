@@ -114,6 +114,8 @@ describe("the rule set", () => {
 		expect(returnQueueLine("mainnet")).toContain("7 days after");
 		expect(returnQueueLine("testnet")).toContain("5 minutes after");
 		expect(waitWords(60_000)).toBe("1 minute");
+		expect(waitWords(20_000)).toBe("20 seconds");
+		expect(waitWords(1_000)).toBe("1 second");
 		expect(waitWords(5 * 3_600_000)).toBe("5 hours");
 		expect(waitWords(3_600_000)).toBe("1 hour");
 		expect(waitWords(7 * 86_400_000)).toBe("7 days");
@@ -144,7 +146,7 @@ describe("the rule set", () => {
 describe("every refusal recorded has its place in the catalogue", () => {
 	const EXPECTED: Record<string, string> = {
 		"stake with nothing like that in the staking balance": "stake-balance",
-		"move in more than spot holds": "staking-deposit-funds",
+		"move in more than spot holds": "deposit-funds",
 		"unstake part of it at once, after the top-up": "unstake-lockup",
 		"stake with an address that is no validator": "validator-unknown",
 		"unstake more than is staked there": "unstake-balance",
@@ -934,7 +936,7 @@ describe("the steps of a move, in order", () => {
 	it("names the step that would be refused, and the reason", () => {
 		expect(judge(stake100, { ...FACTS, spotAvailable: "10" })).toEqual({
 			index: 0,
-			refusal: "staking-deposit-funds",
+			refusal: "deposit-funds",
 		});
 		expect(judge(stake100, { ...FACTS, validators: [Y] })).toEqual({
 			index: 1,

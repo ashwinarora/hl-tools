@@ -428,7 +428,7 @@ describe("checkBeforeSubmit: a staking step", () => {
 		// 410 in spot, 10 of it on hold
 		expect(await check(moveIn(401))).toEqual([
 			{
-				code: "staking-deposit-funds",
+				code: "deposit-funds",
 				message:
 					"This moves more HYPE into the staking balance than the spot balance can release now.",
 			},
@@ -494,7 +494,7 @@ describe("checkBeforeSubmit: a staking step", () => {
 			await codeOf(moveIn(1), {
 				spot: [{ coin: "USDC", total: "5", hold: "0" }],
 			}),
-		).toEqual(["staking-deposit-funds"]);
+		).toEqual(["deposit-funds"]);
 	});
 });
 
@@ -534,7 +534,7 @@ describe("checkMoveBeforeSubmit: the two steps of a move, before either is sent"
 	it("names the step that would be refused, so nothing is sent at all", async () => {
 		expect(await check([moveIn(500), stake(550)])).toEqual([
 			{
-				code: "staking-deposit-funds",
+				code: "deposit-funds",
 				message:
 					"Step 1: This moves more HYPE into the staking balance than the spot balance can release now.",
 			},

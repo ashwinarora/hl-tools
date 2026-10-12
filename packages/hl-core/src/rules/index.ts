@@ -12,6 +12,7 @@ import { RATE_LIMIT_RULES } from "./rateLimits.ts";
 import { SIGNING_RULES } from "./signing.ts";
 import { STAKING_RULES } from "./staking.ts";
 import { TRANSFER_RULES } from "./transfers.ts";
+import { VAULT_RULES } from "./vaults.ts";
 import { WEBSOCKET_RULES } from "./websocket.ts";
 
 export * from "./assetIds.ts";
@@ -28,6 +29,7 @@ export * from "./rateLimits.ts";
 export * from "./signing.ts";
 export * from "./staking.ts";
 export * from "./transfers.ts";
+export * from "./vaults.ts";
 export * from "./websocket.ts";
 
 /** Every versioned rule set, in display order. Drives the /changes page. */
@@ -39,6 +41,7 @@ export const RULE_REGISTRY: readonly RuleSetMeta[] = [
 	MULTISIG_RULES,
 	TRANSFER_RULES,
 	STAKING_RULES,
+	VAULT_RULES,
 	RATE_LIMIT_RULES,
 	ERROR_RULES,
 	COREWRITER_RULES,

@@ -38,9 +38,11 @@ const timeOf = (v: unknown): number | null =>
 // ------------------------------------------------------------------ amounts
 
 /** The integer an action carries, as HYPE: 100000000 is "1". Null for anything that is not a whole, non-negative number. */
-/** A wait in words, in its largest whole unit: "2 minutes", "5 hours", "1 day". */
+/** A wait in words, in its largest whole unit: "20 seconds", "2 minutes", "5 hours", "1 day". */
 export function waitWords(ms: number): string {
 	const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+	// under a minute it would read "0 minutes" (a user vault's lockup on testnet)
+	if (ms < 60_000) return plural(Math.round(ms / 1000), "second");
 	const minutes = Math.round(ms / 60_000);
 	if (minutes < 60) return plural(minutes, "minute");
 	const hours = Math.round(minutes / 60);
@@ -519,7 +521,7 @@ export interface StakingFacts {
 
 /** A refusal Hyperliquid would give, by its id in the error catalogue. */
 export type StakingRefusal =
-	| "staking-deposit-funds"
+	| "deposit-funds"
 	| "stake-balance"
 	| "validator-unknown"
 	| "unstake-lockup"
@@ -543,7 +545,7 @@ export function stakingRefusal(
 	switch (action.kind) {
 		case "moveIn":
 			return exceeds(action.amount, facts.spotAvailable)
-				? "staking-deposit-funds"
+				? "deposit-funds"
 				: null;
 		case "stake":
 			if (facts.validators && !facts.validators.includes(action.validator))

@@ -313,9 +313,7 @@ describe("what Hyperliquid would refuse as things stand", () => {
 	it("more than spot can release is an amber line, not a stop", () => {
 		const p = plan({}, read({ spotAvailable: "10" }));
 		expect(p.steps).toHaveLength(2);
-		expect(codes(p.issues)).toEqual([
-			"staking.would_refuse.staking-deposit-funds",
-		]);
+		expect(codes(p.issues)).toEqual(["staking.would_refuse.deposit-funds"]);
 		expect(p.issues[0]?.severity).toBe("warning");
 		expect(p.issues[0]?.message).toBe(
 			"This moves more HYPE into the staking balance than the spot balance can release now. As things stand Hyperliquid would refuse it (step 1). Spot holds 10 HYPE that is not on hold, and this moves 50 HYPE.",
@@ -526,10 +524,10 @@ describe("every sentence about staking", () => {
 	});
 	it("has a sentence for every refusal the judge can give", () => {
 		expect(Object.keys(STAKING_REFUSALS).sort()).toEqual([
+			"deposit-funds",
 			"return-balance",
 			"return-queue-full",
 			"stake-balance",
-			"staking-deposit-funds",
 			"unstake-balance",
 			"unstake-lockup",
 			"validator-unknown",
