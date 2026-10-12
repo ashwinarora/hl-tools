@@ -10,6 +10,7 @@ import {
 	type MatchCandidate,
 	rowProposal,
 	sameAction,
+	withdrawalNumber,
 } from "./match";
 
 const T = `0x${"f8".repeat(20)}`;
@@ -435,6 +436,105 @@ describe("rowProposal", () => {
 				tx: tx({ error: "nope" }),
 			}),
 		).toEqual({ kind: "none" });
+	});
+});
+
+describe("a bridge withdrawal's ledger row", () => {
+	// as Hyperliquid reports it (mainnet and testnet, 2026-10-12): the row lands
+	// minutes later under the bridge's own hash, and its nonce is the action's time x 1000
+	const withdraw3 = (time = NONCE, amount = "2") => ({
+		type: "withdraw3",
+		destination: DEST,
+		amount,
+		time,
+	});
+	const landed = (time = NONCE, over: Partial<LedgerRow> = {}) =>
+		row({
+			type: "withdraw",
+			time: time + 10 * 60_000,
+			hash: `0x${"ab".repeat(32)}`,
+			amount: "2.0",
+			counterparty: null,
+			delta: { type: "withdraw", usdc: "2.0", nonce: time * 1000, fee: "1.0" },
+			...over,
+		});
+
+	it("reads the action's number out of the row", () => {
+		expect(withdrawalNumber(landed())).toBe(NONCE);
+		// a string, as JSON of a large number may arrive
+		expect(
+			withdrawalNumber(
+				landed(NONCE, {
+					delta: { type: "withdraw", nonce: String(NONCE * 1000) },
+				}),
+			),
+		).toBe(NONCE);
+		// reported in the action's own unit: still that number
+		expect(
+			withdrawalNumber(
+				landed(NONCE, { delta: { type: "withdraw", nonce: NONCE } }),
+			),
+		).toBe(NONCE);
+	});
+
+	it("claims nothing from a row that shows no usable number", () => {
+		expect(withdrawalNumber(row())).toBeNull();
+		for (const nonce of [undefined, null, "abc", 0, -5, 1.5, 12_000, 2 ** 60])
+			expect(
+				withdrawalNumber(landed(NONCE, { delta: { type: "withdraw", nonce } })),
+				String(nonce),
+			).toBeNull();
+	});
+
+	it("is tied to its proposal by that number, with no look-up", () => {
+		const known = [
+			proposal(1, withdraw3()),
+			proposal(2, withdraw3(NONCE + 5_000)),
+			proposal(3),
+		];
+		expect(rowProposal(landed(), T, known, undefined)).toEqual({
+			kind: "matched",
+			digest: digest(1),
+		});
+		// whatever a look-up of the bridge's hash said or did not say
+		expect(rowProposal(landed(), T, known, { state: "failed" })).toEqual({
+			kind: "matched",
+			digest: digest(1),
+		});
+		expect(hashesToLookUp([landed()], known)).toEqual([]);
+	});
+
+	it("says none on record when no proposal has that number: the number was compared", () => {
+		expect(
+			rowProposal(
+				landed(),
+				T,
+				[proposal(2, withdraw3(NONCE + 5_000))],
+				undefined,
+			),
+		).toEqual({ kind: "none" });
+		// a send with the same time is not a withdrawal
+		expect(
+			rowProposal(landed(), T, [proposal(3, usdSend())], undefined),
+		).toEqual({ kind: "none" });
+	});
+
+	it("cannot tell two proposals of the same withdrawal apart", () => {
+		expect(
+			rowProposal(
+				landed(),
+				T,
+				[proposal(1, withdraw3()), proposal(2, withdraw3())],
+				undefined,
+			),
+		).toEqual({ kind: "ambiguous", digests: [digest(1), digest(2)] });
+	});
+
+	it("is left to the transaction when the row shows no number", () => {
+		const bare = landed(NONCE, { delta: { type: "withdraw", usdc: "2.0" } });
+		expect(rowProposal(bare, T, [proposal(1, withdraw3())], undefined)).toEqual(
+			{ kind: "checking" },
+		);
 	});
 });
 

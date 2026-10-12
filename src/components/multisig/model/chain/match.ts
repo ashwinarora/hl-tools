@@ -108,6 +108,46 @@ function agrees(row: LedgerRow, action: PlainObject): boolean {
 	}
 }
 
+/**
+ * A bridge withdrawal lands in the ledger minutes after the action, under a
+ * hash of its own (the bridge's, which the explorer cannot tie to the
+ * action), but its row carries the action's number: `nonce` is the
+ * `withdraw3`'s `time` times 1000 (seen on mainnet and testnet). So such a
+ * row is tied to its proposal by that number, with certainty and without a
+ * look-up. Null when the row is no withdrawal or shows no number.
+ */
+export function withdrawalNumber(row: LedgerRow): number | null {
+	if (row.type !== "withdraw") return null;
+	const raw = row.delta.nonce;
+	const n =
+		typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
+	if (!Number.isSafeInteger(n) || n <= 0) return null;
+	// the action's time lies shortly before the row's: that tells the two units apart
+	const near = (t: number) =>
+		t <= row.time + LANDS_BEFORE_NONCE_MS &&
+		t >= row.time - LANDS_AFTER_NONCE_MS;
+	if (n % 1000 === 0 && near(n / 1000)) return n / 1000;
+	// should Hyperliquid ever report it in the action's own unit
+	return near(n) ? n : null;
+}
+
+/** The proposals whose withdrawal has exactly that number. */
+function withdrawalsNumbered(
+	time: number,
+	proposals: readonly MatchCandidate[],
+): Hex[] {
+	return [
+		...new Set(
+			proposals
+				.filter(
+					(p) =>
+						p.action.type === "withdraw3" && Number(p.action.time) === time,
+				)
+				.map((p) => p.digest),
+		),
+	];
+}
+
 /** Step 1: which proposals a ledger row could belong to, without asking anyone. */
 export function candidatesFor(
 	row: LedgerRow,
@@ -145,6 +185,8 @@ export function hashesToLookUp(
 	const out = new Set<string>();
 	for (const row of [...ledger].sort((a, b) => b.time - a.time))
 		if (
+			// a withdrawal that shows its number needs no look-up (and its hash would not answer)
+			withdrawalNumber(row) === null &&
 			candidatesFor(row, proposals).kind === "candidates" &&
 			!ZERO_HASH.test(row.hash)
 		)
@@ -257,6 +299,15 @@ export function rowProposal(
 	proposals: readonly MatchCandidate[],
 	lookup: Lookup | undefined,
 ): RowProposal {
+	const number = withdrawalNumber(row);
+	if (number !== null) {
+		const digests = withdrawalsNumbered(number, proposals);
+		if (digests.length === 0) return { kind: "none" };
+		return digests.length === 1
+			? { kind: "matched", digest: digests[0] as Hex }
+			: // the same withdrawal proposed twice with different finalisers
+				{ kind: "ambiguous", digests };
+	}
 	const c = candidatesFor(row, proposals);
 	if (c.kind !== "candidates") return c;
 	if (!lookup || lookup.state === "pending") return { kind: "checking" };
