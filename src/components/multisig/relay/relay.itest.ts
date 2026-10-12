@@ -48,9 +48,11 @@ import {
 } from "../model/relay/away";
 import { relayIssue } from "../model/relay/errors";
 import { acceptNicknames } from "../model/relay/nicknames";
+import { standing } from "../model/relay/positions";
 import { planPush, publishRow } from "../model/relay/push";
-import { latestMarks } from "../model/relay/rows";
+import { latestMarks, type ProposalRow } from "../model/relay/rows";
 import { buildSignInMessage } from "../model/relay/siwe";
+import { buildTimeline } from "../model/relay/timeline";
 import {
 	adoptLegacy,
 	RELAY_LEGACY_KEY,
@@ -58,8 +60,8 @@ import {
 	storedWallets,
 } from "../model/relay/wallets";
 import {
+	addObjection,
 	addSignature,
-	endProposal,
 	getProposal,
 	getRequest,
 	lastSignatureOf,
@@ -81,10 +83,12 @@ import {
 	publishProposal,
 	recordReceipt,
 	recordView,
+	removeObjection,
 	removeSignature,
 	reportExecution,
 	requestTreasury,
 	setNickname,
+	withdrawProposal,
 } from "./api";
 import { endStoredSession } from "./client";
 import { type ChannelState, subscribeWallet } from "./realtime";
@@ -169,6 +173,10 @@ async function proposal(
 	}
 	return p;
 }
+
+/** A decline as an older page would still send it: the relay no longer takes one. */
+const decline = (w: TestWallet, p: Proposal) =>
+	w.client.from("endings").insert({ ...keyOf(p), kind: "declined" });
 
 const keyOf = (p: Proposal): ProposalKey => ({
 	network: NET,
@@ -1061,14 +1069,8 @@ describe("sharing and signing a proposal", () => {
 		).toBe("relay.not_allowed");
 		expect(
 			codes(
-				(
-					await endProposal(
-						outsider.client,
-						outsider.address,
-						keyOf(p),
-						"declined",
-					)
-				).issue,
+				(await withdrawProposal(outsider.client, outsider.address, keyOf(p)))
+					.issue,
 			),
 		).toBe("relay.not_allowed");
 		expect(
@@ -1213,17 +1215,14 @@ describe("ending a proposal", () => {
 		await publishProposal(a.client, a.address, publishRow(p));
 		await addSignature(a.client, a.address, keyOf(p), sigOf(p, a));
 		expect(
-			codes(
-				(await endProposal(c.client, c.address, keyOf(p), "withdrawn")).issue,
-			),
+			codes((await withdrawProposal(c.client, c.address, keyOf(p))).issue),
 		).toBe("relay.not_proposer");
+		// nobody declines any more, whoever they are
+		expect(codes(relayIssue((await decline(a, p)).error))).toBe(
+			"relay.decline_retired",
+		);
 		expect(
-			codes(
-				(await endProposal(a.client, a.address, keyOf(p), "declined")).issue,
-			),
-		).toBe("relay.not_finaliser");
-		expect(
-			(await endProposal(a.client, a.address, keyOf(p), "withdrawn")).issue,
+			(await withdrawProposal(a.client, a.address, keyOf(p))).issue,
 		).toBeNull();
 		const seen = await read(b, p);
 		expect(seen.row?.status).toBe("withdrawn");
@@ -1243,22 +1242,253 @@ describe("ending a proposal", () => {
 			),
 		).toBe("relay.proposal_closed");
 		expect(
-			codes(
-				(await endProposal(b.client, b.address, keyOf(p), "declined")).issue,
-			),
+			codes((await withdrawProposal(b.client, b.address, keyOf(p))).issue),
 		).toBe("relay.proposal_closed");
 		expect(
 			codes((await removeSignature(a.client, a.address, keyOf(p))).issue),
 		).toBe("relay.proposal_closed");
 	});
 
-	it("lets the finaliser decline", async () => {
+	it("no longer lets the finaliser decline: it says no like any other signer", async () => {
 		const p = await proposal("integration: decline");
 		await publishProposal(a.client, a.address, publishRow(p));
+		const refused = await decline(b, p);
+		expect(codes(relayIssue(refused.error))).toBe("relay.decline_retired");
+		expect((await read(c, p)).row?.status).toBe("open");
 		expect(
-			(await endProposal(b.client, b.address, keyOf(p), "declined")).issue,
+			(await addObjection(b.client, b.address, keyOf(p))).issue,
 		).toBeNull();
-		expect((await read(c, p)).row?.status).toBe("declined");
+		const seen = await read(c, p);
+		// said, and nothing ended by it
+		expect(seen.row?.status).toBe("open");
+		expect(seen.row?.objections.map((o) => o.signer)).toEqual([b.address]);
+	});
+});
+
+describe("saying no", () => {
+	const position = (row: ProposalRow | null | undefined) =>
+		standing({
+			signers: [a.address, b.address, c.address],
+			threshold: 2,
+			finaliser: b.address,
+			objections: (row?.objections ?? []).map((o) => ({
+				signer: o.signer,
+				at: o.createdAt,
+			})),
+		});
+	const kinds = async (p: Proposal) =>
+		(await listProposalEvents(a.client, keyOf(p))).data?.rows.map(
+			(e) => e.kind,
+		);
+
+	it("is seen by every co-signer, ends nothing, and is closed to everybody else", async () => {
+		const p = await proposal("integration: a no", [a]);
+		await publishProposal(a.client, a.address, publishRow(p));
+		await addSignature(a.client, a.address, keyOf(p), sigOf(p, a));
+		expect(
+			(await addObjection(c.client, c.address, keyOf(p))).issue,
+		).toBeNull();
+		for (const w of [a, b, c]) {
+			const seen = await read(w, p);
+			expect(seen.row?.status).toBe("open");
+			expect(seen.row?.objections.map((o) => o.signer)).toEqual([c.address]);
+			// the proposer's signature is as it was
+			expect(seen.row?.signatures.map((x) => x.signer)).toEqual([a.address]);
+		}
+		// one signer against it in a 2-of-3: it can still pass
+		expect(position((await read(a, p)).row).blocked).toBeNull();
+		// said twice is said once
+		expect(
+			(await addObjection(c.client, c.address, keyOf(p))).issue,
+		).toBeNull();
+		expect((await read(a, p)).row?.objections).toHaveLength(1);
+		// an outsider reads nothing of it and cannot say anything
+		expect((await getProposal(outsider.client, p.digest)).data?.rows).toEqual(
+			[],
+		);
+		expect(
+			codes(
+				(await addObjection(outsider.client, outsider.address, keyOf(p))).issue,
+			),
+		).toBe("relay.not_allowed");
+		expect(
+			(await outsider.client.from("objections").select("signer")).data,
+		).toEqual([]);
+		// nor can one signer say it in another's name
+		expect(
+			codes((await addObjection(b.client, c.address, keyOf(p))).issue),
+		).toBe("relay.wrong_wallet");
+	});
+
+	it("can be taken back, by the one who said it", async () => {
+		const p = await proposal("integration: a no taken back");
+		await publishProposal(a.client, a.address, publishRow(p));
+		await addObjection(c.client, c.address, keyOf(p));
+		// a co-signer's attempt removes nothing
+		await b.client
+			.from("objections")
+			.delete()
+			.eq("digest", p.digest)
+			.eq("signer", c.address);
+		expect((await read(a, p)).row?.objections).toHaveLength(1);
+		expect(
+			(await removeObjection(c.client, c.address, keyOf(p))).issue,
+		).toBeNull();
+		expect((await read(a, p)).row?.objections).toEqual([]);
+		expect(await kinds(p)).toEqual([
+			"proposal_created",
+			"objection_added",
+			"objection_removed",
+		]);
+	});
+
+	it("is one position at a time: a no takes the signature back, a signature takes the no back", async () => {
+		const p = await proposal("integration: positions", [c]);
+		await publishProposal(a.client, a.address, publishRow(p));
+		await addSignature(c.client, c.address, keyOf(p), sigOf(p, c));
+		expect(
+			(await addObjection(c.client, c.address, keyOf(p))).issue,
+		).toBeNull();
+		let seen = await read(a, p);
+		expect(seen.row?.signatures).toEqual([]);
+		expect(seen.row?.objections.map((o) => o.signer)).toEqual([c.address]);
+		// and signing again replaces the no
+		expect(
+			(await addSignature(c.client, c.address, keyOf(p), sigOf(p, c))).issue,
+		).toBeNull();
+		seen = await read(a, p);
+		expect(seen.row?.objections).toEqual([]);
+		expect(seen.row?.signatures.map((x) => x.signer)).toEqual([c.address]);
+		const history = (await listProposalEvents(a.client, keyOf(p))).data?.rows;
+		expect(history?.map((e) => e.kind)).toEqual([
+			"proposal_created",
+			"signature_added",
+			"signature_removed",
+			"objection_added",
+			"objection_removed",
+			"signature_added",
+		]);
+		// which the signing log tells as three steps, not five
+		const log = buildTimeline(history ?? [], {
+			me: null,
+			line: () => "Send 1 USDC",
+		}).map((e) => partsText(e.parts));
+		expect(log.filter((t) => t.includes("said no"))).toEqual([
+			expect.stringContaining(
+				"said no to Send 1 USDC, taking back their signature.",
+			),
+		]);
+		expect(log[0]).toContain("signed Send 1 USDC, in place of their no.");
+	});
+
+	it("holds a proposal up when enough say no, or its finaliser does, and lets it go when they change their mind", async () => {
+		const p = await proposal("integration: held up", [a]);
+		await publishProposal(a.client, a.address, publishRow(p));
+		await addSignature(a.client, a.address, keyOf(p), sigOf(p, a));
+		// the finaliser alone
+		await addObjection(b.client, b.address, keyOf(p));
+		expect(position((await read(a, p)).row).blocked).toBe("finaliser-no");
+		// and a second signer: fewer are left than must sign
+		await addObjection(c.client, c.address, keyOf(p));
+		const both = await read(a, p);
+		expect(position(both.row)).toMatchObject({
+			left: 1,
+			blocked: "cannot-pass",
+		});
+		// held up, not ended
+		expect(both.row?.status).toBe("open");
+		expect(
+			(await listOpenProposals(a.client)).data?.rows.map((r) => r.digest),
+		).toContain(p.digest);
+		await removeObjection(c.client, c.address, keyOf(p));
+		await removeObjection(b.client, b.address, keyOf(p));
+		expect(position((await read(a, p)).row).blocked).toBeNull();
+		// and it can go on as if nothing had been said
+		const withB = await proposalSignedBy(p, b);
+		expect(
+			(await addSignature(b.client, b.address, keyOf(p), sigOf(withB, b)))
+				.issue,
+		).toBeNull();
+	});
+
+	it("freezes with the proposal: nothing is said, or taken back, once it is withdrawn or has lapsed", async () => {
+		const p = await proposal("integration: a no, then withdrawn");
+		await publishProposal(a.client, a.address, publishRow(p));
+		await addObjection(c.client, c.address, keyOf(p));
+		await withdrawProposal(a.client, a.address, keyOf(p));
+		expect(
+			codes((await addObjection(b.client, b.address, keyOf(p))).issue),
+		).toBe("relay.proposal_closed");
+		expect(
+			codes((await removeObjection(c.client, c.address, keyOf(p))).issue),
+		).toBe("relay.proposal_closed");
+		expect((await read(a, p)).row?.objections).toHaveLength(1);
+
+		const q = await proposal("integration: a no, then lapsed");
+		await publishProposal(a.client, a.address, publishRow(q));
+		await addObjection(c.client, c.address, keyOf(q));
+		await sql`update public.proposals set expires_at = now() - interval '1 second' where digest = ${q.digest}`;
+		expect(
+			codes((await addObjection(b.client, b.address, keyOf(q))).issue),
+		).toBe("relay.proposal_expired");
+		expect(
+			codes((await removeObjection(c.client, c.address, keyOf(q))).issue),
+		).toBe("relay.proposal_expired");
+	});
+
+	it("reaches the co-signers' pages within two seconds", async () => {
+		const p = await proposal("integration: a no, live");
+		await publishProposal(a.client, a.address, publishRow(p));
+		let pings = 0;
+		let state: ChannelState | null = null;
+		const leave = subscribeWallet(
+			a.client,
+			a.address,
+			() => {
+				pings += 1;
+			},
+			(s) => {
+				state = s;
+			},
+		);
+		try {
+			await until(() => state === "joined", 10_000);
+			// joining counts as one ping (the page re-reads on join); let it land
+			await new Promise((r) => setTimeout(r, 600));
+			const before = pings;
+			await addObjection(c.client, c.address, keyOf(p));
+			const took = await until(() => pings > before, 2_000);
+			expect(took).toBeLessThan(2_000);
+		} finally {
+			leave();
+		}
+	});
+
+	it("is limited to thirty an hour per wallet", async () => {
+		// twenty-nine on record for a fresh signer of the same treasury would need
+		// twenty-nine proposals; the entries are what the limit counts
+		const used = Number(
+			(
+				await sql`select count(*)::int as n from public.events
+					where kind = 'objection_added' and actor = ${c.address} and at > now() - interval '1 hour'`
+			)[0]?.n ?? 0,
+		);
+		const some = await proposal("integration: the limit");
+		await publishProposal(a.client, a.address, publishRow(some));
+		await sql`insert into public.events (network, treasury, digest, kind, actor)
+			select ${NET}, ${treasury}, ${some.digest}, 'objection_added', ${c.address}
+			from generate_series(1, ${30 - used})`;
+		expect(
+			codes((await addObjection(c.client, c.address, keyOf(some))).issue),
+		).toBe("relay.rate_limited");
+		// a signature is not held back by it
+		const withC = await proposalSignedBy(some, c);
+		expect(
+			(await addSignature(c.client, c.address, keyOf(some), sigOf(withC, c)))
+				.issue,
+		).toBeNull();
+		await sql`delete from public.events
+			where kind = 'objection_added' and actor = ${c.address} and digest = ${some.digest}`;
 	});
 });
 
@@ -1404,9 +1634,7 @@ describe("a proposal carried out without the tool", () => {
 			),
 		).toBe(false);
 		expect(
-			codes(
-				(await endProposal(a.client, a.address, keyOf(p), "withdrawn")).issue,
-			),
+			codes((await withdrawProposal(a.client, a.address, keyOf(p))).issue),
 		).toBe("relay.proposal_closed");
 
 		// the finaliser's own result, arriving late, makes it a normal accepted proposal
@@ -1724,7 +1952,7 @@ describe("who has seen a proposal", () => {
 
 			// once it is closed, looking leaves nothing
 			expect(
-				(await endProposal(a.client, a.address, keyOf(p), "withdrawn")).issue,
+				(await withdrawProposal(a.client, a.address, keyOf(p))).issue,
 			).toBeNull();
 			await pause(400);
 			const closed = pings;
@@ -1932,7 +2160,7 @@ describe("a newer send carried out before an older one", () => {
 		}
 		expect(overtakenBy(older.payload.action, actions)).not.toBeNull();
 		expect(overtakenBy(newer.payload.action, [])).toBeNull();
-		await endProposal(a.client, a.address, keyOf(older), "withdrawn");
+		await withdrawProposal(a.client, a.address, keyOf(older));
 	});
 });
 
