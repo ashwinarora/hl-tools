@@ -173,7 +173,7 @@ describe("awayItems: an action carried out", () => {
 				proposals: [theirs({ status: "carried_out" })],
 			}),
 		).toEqual([
-			"Send 120 USDC to 0x9a01…77c2 was carried out outside this tool.",
+			"Send 120 USDC to 0x9a01…77c2 was carried out without being reported here.",
 		]);
 		expect(
 			texts({
@@ -181,7 +181,7 @@ describe("awayItems: an action carried out", () => {
 				proposals: [theirs({ status: "carried_out", createdBy: A })],
 			}),
 		).toEqual([
-			"Send 120 USDC to 0x9a01…77c2, which you proposed, was carried out outside this tool.",
+			"Send 120 USDC to 0x9a01…77c2, which you proposed, was carried out without being reported here.",
 		]);
 		// also the signer whose page noticed it: the page did, not the person
 		expect(
@@ -273,7 +273,7 @@ describe("awayItems: the end of something you proposed or signed", () => {
 				proposals: [theirs({ signers: [A, B], status: "carried_out" })],
 			}),
 		).toEqual([
-			"Send 120 USDC to 0x9a01…77c2, which you signed, was carried out outside this tool.",
+			"Send 120 USDC to 0x9a01…77c2, which you signed, was carried out without being reported here.",
 		]);
 		// rejected twice: the last attempt
 		const twice = items({

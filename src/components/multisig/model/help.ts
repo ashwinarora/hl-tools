@@ -156,8 +156,8 @@ export const HELP = {
 		body: "The Signing log is what happened here: who proposed, signed and sent. “On Hyperliquid” is the account's own record of every transfer, trade and order, whoever caused it. The second is the proof. The first explains it.",
 	},
 	outside: {
-		title: "Carried out outside this tool",
-		body: "Hyperliquid carried this action out, but it was not sent from this site. The transaction was looked up on Hyperliquid and the proposal closed, so that nobody signs it a second time.",
+		title: "Carried out, not reported here",
+		body: "Hyperliquid carried this action out, but its result was never reported here: it was submitted while signed out, or some other way. The transaction was looked up on Hyperliquid and the proposal closed, so that nobody signs it a second time.",
 	},
 	away: {
 		title: "While you were away",

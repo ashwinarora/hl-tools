@@ -433,13 +433,13 @@ describe("deriveStage", () => {
 			carriedOut: { txHash: `0x${"72".repeat(32)}` },
 		});
 		expect(s.phase).toBe("carried-out");
-		expect(s.headline).toBe("Carried out outside this tool");
+		expect(s.headline).toBe("Carried out, not reported here");
 		expect(s.detail).toContain("The relay checked the transaction itself");
 		// ready on paper, but there is nothing left to do
 		expect(s.canSign).toBe(false);
 		expect(s.canExecute).toBe(false);
-		expect(s.signReason).toBe("Carried out outside this tool");
-		expect(s.executeReason).toBe("Carried out outside this tool");
+		expect(s.signReason).toBe("Carried out, not reported here");
+		expect(s.executeReason).toBe("Carried out, not reported here");
 		// it outranks a withdrawal: what happened on chain is what happened
 		expect(
 			(

@@ -183,7 +183,7 @@ export function buildTimeline(
 				const noticed = addressList([e.data.reported_by])[0] ?? null;
 				out.push(
 					entry(
-						say`${action(e.digest, true)} was carried out outside this tool. The relay checked the transaction on Hyperliquid${
+						say`${action(e.digest, true)} was carried out without being reported here. The relay checked the transaction on Hyperliquid${
 							noticed ? say`; ${object(noticed)} noticed it` : ""
 						}.`,
 					),

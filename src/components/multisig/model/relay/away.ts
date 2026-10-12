@@ -249,8 +249,8 @@ export function awayItems(i: {
 			case "outside":
 				item(
 					rel
-						? say`${action(p, true)}, which you ${rel}, was carried out outside this tool.`
-						: say`${action(p, true)} was carried out outside this tool.`,
+						? say`${action(p, true)}, which you ${rel}, was carried out without being reported here.`
+						: say`${action(p, true)} was carried out without being reported here.`,
 				);
 				break;
 			case "rejected":

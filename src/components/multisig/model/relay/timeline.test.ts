@@ -322,7 +322,7 @@ describe("buildTimeline", () => {
 				}),
 			]),
 		).toEqual([
-			`Send 120 USDC to 0x9a01…77c2 was carried out outside this tool. The relay checked the transaction on Hyperliquid; ${short(B)} noticed it.`,
+			`Send 120 USDC to 0x9a01…77c2 was carried out without being reported here. The relay checked the transaction on Hyperliquid; ${short(B)} noticed it.`,
 		]);
 		// the one who noticed, reading it
 		expect(
@@ -340,7 +340,7 @@ describe("buildTimeline", () => {
 		expect(
 			texts([eventRow("proposal_carried_out", { id: 5, digest: D1 })]),
 		).toEqual([
-			"Send 120 USDC to 0x9a01…77c2 was carried out outside this tool. The relay checked the transaction on Hyperliquid.",
+			"Send 120 USDC to 0x9a01…77c2 was carried out without being reported here. The relay checked the transaction on Hyperliquid.",
 		]);
 	});
 

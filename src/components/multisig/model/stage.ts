@@ -256,8 +256,9 @@ export function deriveStage(input: StageInput): Stage {
 		body = say`Submitted ${{ text: new Date(at).toISOString(), when: at }}. Nothing more to sign.`;
 	} else if (input.carriedOut) {
 		phase = "carried-out";
-		head = say`Carried out outside this tool`;
-		body = say`Hyperliquid carried this action out, but its result was never recorded here: it was submitted some other way. The relay checked the transaction itself. Nothing more to sign.`;
+		// said this way because the submitter may well have used this page, signed out
+		head = say`Carried out, not reported here`;
+		body = say`Hyperliquid carried this action out, but its result was never reported here: it was submitted while signed out, or some other way. The relay checked the transaction itself. Nothing more to sign.`;
 	} else if (input.closedUnknown) {
 		phase = "closed";
 		head = say`Closed`;
