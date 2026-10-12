@@ -148,6 +148,7 @@ export function proposalOf(
 			createdAt: NONCE,
 			supersedes: null,
 			policyAtCreation: POLICY,
+			steps: null,
 		},
 		receipt: null,
 		...extra,

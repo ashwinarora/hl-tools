@@ -80,6 +80,7 @@ describe("createProposal", () => {
 			createdAt: NOW,
 			supersedes: null,
 			policyAtCreation: null,
+			steps: null,
 		});
 		expect(p.receipt).toBeNull();
 	});
@@ -110,6 +111,7 @@ describe("createProposal", () => {
 				threshold: 1,
 				observedAt: NOW,
 			},
+			steps: null,
 		});
 		expect(codes(r.issues).sort()).toEqual([
 			"address.uppercase",

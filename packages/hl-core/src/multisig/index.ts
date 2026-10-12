@@ -7,6 +7,7 @@ export * from "./diagnose.ts";
 export * from "./digest.ts";
 export * from "./envelope.ts";
 export * from "./errors.ts";
+export * from "./move.ts";
 export * from "./order.ts";
 export * from "./plain.ts";
 export * from "./proposal.ts";

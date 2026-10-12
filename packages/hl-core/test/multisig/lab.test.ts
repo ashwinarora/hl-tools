@@ -163,6 +163,7 @@ function proposalFor(req: EnvelopeRequest): Proposal {
 			createdAt: null,
 			supersedes: null,
 			policyAtCreation: null,
+			steps: null,
 		},
 		receipt: null,
 	};

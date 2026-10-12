@@ -250,6 +250,8 @@ export function createProposal(
 		createdAt: now,
 		supersedes: input.supersedes ?? null,
 		policyAtCreation,
+		// set by `tieSteps`, once both proposals of a move exist
+		steps: null,
 	};
 	return {
 		proposal: {
@@ -335,6 +337,7 @@ const META_KEYS = new Set([
 	"createdAt",
 	"supersedes",
 	"policyAtCreation",
+	"steps",
 ]);
 const TOP_KEYS = new Set([
 	"v",
@@ -625,6 +628,7 @@ export function validateProposal(
 								"meta.policyAtCreation",
 								issues,
 							),
+				steps: stepsOf(m.steps, issues),
 			}
 		: null;
 
@@ -700,17 +704,47 @@ export function validateProposal(
 		);
 		return fail();
 	}
+	const read = meta as ProposalMeta;
+	// a list this proposal is not on is nobody's move
+	const own = digest.digest;
+	const steps = read.steps?.includes(own) ? read.steps : null;
+	if (read.steps && !steps) issues.push(stepsIgnored());
 	return {
 		proposal: {
 			v: 1,
 			payload,
 			digest: digest.digest,
 			signatures,
-			meta: meta as ProposalMeta,
+			meta: { ...read, steps },
 			receipt,
 		},
 		issues,
 	};
+}
+
+const stepsIgnored = (): Issue =>
+	issue(
+		"meta.steps",
+		"warning",
+		"This proposal says it belongs to a move of two steps, but not in a way this page can follow, so it is shown by itself.",
+		{ path: "meta.steps" },
+	);
+
+/**
+ * The two digests of a move. Anything else (another length, a repeat, not
+ * digests) is dropped with a warning and never fails the document: the tie
+ * is a way of showing two proposals, not part of either.
+ */
+function stepsOf(value: unknown, issues: Issue[]): readonly [Hex, Hex] | null {
+	if (value === null || value === undefined) return null;
+	const list = Array.isArray(value)
+		? value.map((v) => (typeof v === "string" ? v.toLowerCase() : ""))
+		: [];
+	const [first, second] = list;
+	if (list.length === 2 && first !== second && list.every((v) => HEX32.test(v)))
+		return [first as Hex, second as Hex];
+	issues.push(stepsIgnored());
+	return null;
 }
 
 function supersedesOf(value: unknown, issues: Issue[]): Hex | null {

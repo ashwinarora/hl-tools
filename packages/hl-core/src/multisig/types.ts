@@ -69,6 +69,13 @@ export interface ProposalMeta {
 	readonly supersedes: Hex | null;
 	/** Signer set observed when the proposal was created; the chain's current set wins. */
 	readonly policyAtCreation: Policy | null;
+	/**
+	 * The two proposals of one move, by digest, in the order they are
+	 * submitted; this proposal is one of them. Null for a proposal that stands
+	 * alone. Unsigned like the rest of `meta`: a reader honours it only after
+	 * `judgeMove` (move.ts) has found the two to be what they claim.
+	 */
+	readonly steps: readonly [Hex, Hex] | null;
 }
 
 /** Appended by the leader after submission so an offline copy can prove what happened. */

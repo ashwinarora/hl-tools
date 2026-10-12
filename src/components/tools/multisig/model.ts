@@ -90,6 +90,7 @@ export function proposalFromRequest(
 				createdAt: null,
 				supersedes: null,
 				policyAtCreation: null,
+				steps: null,
 			},
 			receipt: null,
 		},

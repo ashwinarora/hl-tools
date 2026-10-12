@@ -91,6 +91,11 @@ export function encodeProposal(
 							])
 						: plain(null),
 				],
+				// only a proposal that is part of a move carries the field, so every
+				// other document reads exactly as it did before there were moves
+				...(p.meta.steps
+					? [["steps", plain([...p.meta.steps])] as [string, JsonNode]]
+					: []),
 			]),
 		],
 		[
@@ -226,6 +231,9 @@ export async function mergeProposals(
 		createdAt: a.meta.createdAt ?? b.meta.createdAt,
 		supersedes: a.meta.supersedes ?? b.meta.supersedes,
 		policyAtCreation: a.meta.policyAtCreation ?? b.meta.policyAtCreation,
+		// never filled in from the other copy: null means "stands alone", and a
+		// copy passed around by hand must not be able to tie this proposal to another
+		steps: a.meta.steps,
 	};
 	return {
 		merged: {
