@@ -184,7 +184,7 @@ begin
 	end;
 	perform set_config('tests.detail', d, true);
 end $$;
-select is(current_setting('tests.detail'), 'This proposal was carried out outside this tool.', 'and says so in words');
+select is(current_setting('tests.detail'), 'This proposal was carried out without being reported here.', 'and says so in words');
 
 -- ------------------------------------------------- what the worker will not believe
 select tests.propose(1, 10, 2, 2, tests.now_ms() + 2);
@@ -324,7 +324,7 @@ select tests.propose(1, 10, 2, 7, tests.now_ms() + 7);
 select tests.end_it(1, 10, 7, 'withdrawn');
 select tests.report(3, 10, 7, 70);
 select tests.propose(1, 10, 2, 8, tests.now_ms() + 8);
-select tests.end_it(2, 10, 8, 'declined');
+select tests.declined_before(2, 10, 8);
 select tests.report(3, 10, 8, 80);
 select tests.propose(1, 10, 2, 9, tests.now_ms() + 9);
 update public.proposals set expires_at = now() - interval '1 hour' where digest = tests.digest(9);

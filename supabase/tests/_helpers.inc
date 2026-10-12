@@ -181,6 +181,51 @@ begin
 	values ('testnet', tests.addr(n_treasury), tests.digest(d), p_kind);
 end $$;
 
+-- A proposal declined by its finaliser, as the relay holds them from the time
+-- before relay_objections (a decline is no longer taken). Run as the owner:
+-- the guard is set aside for this one row, the rest of the ending runs as it did.
+create function tests.declined_before(n_by int, n_treasury int, d int) returns void
+language plpgsql as $$
+begin
+	alter table public.endings disable trigger ending_before;
+	insert into public.endings (network, treasury, digest, kind, ended_by)
+	values ('testnet', tests.addr(n_treasury), tests.digest(d), 'declined', tests.addr(n_by));
+	alter table public.endings enable trigger ending_before;
+end $$;
+
+-- Wallet n says no to proposal d of treasury n_treasury, or takes it back.
+create function tests.say_no(n int, n_treasury int, d int, p_network public.network default 'testnet') returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.objections (network, treasury, digest)
+	values (p_network, tests.addr(n_treasury), tests.digest(d));
+end $$;
+
+create function tests.take_back_no(n int, n_treasury int, d int) returns int
+language plpgsql as $$
+declare
+	gone int;
+begin
+	perform tests.claims(n);
+	delete from public.objections
+	where treasury = tests.addr(n_treasury) and digest = tests.digest(d) and signer = tests.addr(n);
+	get diagnostics gone = row_count;
+	return gone;
+end $$;
+
+create function tests.said_no(n_treasury int, d int) returns text[]
+language sql as $$
+	select coalesce(array_agg(signer::text order by signer), '{}') from public.objections
+	where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
+$$;
+
+create function tests.signed(n_treasury int, d int) returns text[]
+language sql as $$
+	select coalesce(array_agg(signer::text order by signer), '{}') from public.signatures
+	where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
+$$;
+
 create function tests.receipt(n int, n_treasury int, d int, p_response text, p_http int default 200, p_at bigint default null) returns void
 language plpgsql as $$
 begin

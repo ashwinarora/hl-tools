@@ -134,8 +134,8 @@ select set_eq(
 	array['treasuries:SELECT', 'treasury_signers:SELECT', 'treasury_requests:SELECT', 'events:SELECT',
 		'proposals:SELECT', 'signatures:SELECT', 'signatures:DELETE', 'endings:SELECT', 'receipts:SELECT',
 		'execution_reports:SELECT', 'nicknames:SELECT', 'nickname_changes:SELECT',
-		'proposal_views:SELECT', 'read_marks:SELECT'],
-	'authenticated holds exactly these table privileges: SELECT everywhere, DELETE on its own signatures');
+		'proposal_views:SELECT', 'read_marks:SELECT', 'objections:SELECT', 'objections:DELETE'],
+	'authenticated holds exactly these table privileges: SELECT everywhere, DELETE on its own signatures and its own no');
 
 select set_eq(
 	$$ select table_name || ':' || string_agg(column_name, ',' order by column_name) from information_schema.column_privileges
@@ -148,7 +148,8 @@ select set_eq(
 		'execution_reports:digest,network,treasury,tx_hash',
 		'nickname_changes:address,name,network,treasury',
 		'proposal_views:digest,network,treasury',
-		'read_marks:chain,event_id,network,treasury'],
+		'read_marks:chain,event_id,network,treasury',
+		'objections:digest,network,treasury'],
 	'and may insert exactly these columns: never who acted, never a status');
 
 select is_empty(
