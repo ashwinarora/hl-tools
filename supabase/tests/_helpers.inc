@@ -17,8 +17,16 @@ language sql immutable as $$
 	select ('7e570000-0000-4000-8000-' || lpad(to_hex(n), 12, '0'))::uuid
 $$;
 
--- A user as Supabase Auth leaves it after a wallet sign-in. `p_written` is the
--- address as the signed message spelled it (Auth keeps that spelling).
+-- The session a test wallet is signed in with (relay_live_sessions: a request
+-- counts only while the session its token names still exists).
+create function tests.session_id(n int) returns uuid
+language sql immutable as $$
+	select ('5e550000-0000-4000-8000-' || lpad(to_hex(n), 12, '0'))::uuid
+$$;
+
+-- A user as Supabase Auth leaves it after a wallet sign-in, with the session
+-- that sign-in opened. `p_written` is the address as the signed message
+-- spelled it (Auth keeps that spelling).
 create function tests.make_wallet(n int, p_written text default null) returns public.address
 language plpgsql as $$
 declare
@@ -32,6 +40,8 @@ begin
 	insert into auth.identities (provider_id, user_id, identity_data, provider, created_at, updated_at)
 	values ('web3:ethereum:' || a, tests.user_id(n),
 		jsonb_build_object('sub', 'web3:ethereum:' || a), 'web3', now(), now());
+	insert into auth.sessions (id, user_id, created_at, updated_at)
+	values (tests.session_id(n), tests.user_id(n), now(), now());
 	return lower(a)::public.address;
 end $$;
 
@@ -40,7 +50,8 @@ end $$;
 create function tests.claims(n int, p_extra jsonb default '{}') returns void
 language sql as $$
 	select set_config('request.jwt.claims',
-		(jsonb_build_object('sub', tests.user_id(n), 'role', 'authenticated') || p_extra)::text, true)
+		(jsonb_build_object('sub', tests.user_id(n), 'role', 'authenticated',
+			'session_id', tests.session_id(n)) || p_extra)::text, true)
 $$;
 
 create function tests.no_claims() returns void
