@@ -87,7 +87,7 @@ function ProposalScreen() {
 						</Link>
 					}
 				>
-					<IssueList issues={link.issues} />
+					<IssueList plain issues={link.issues} />
 				</Callout>
 			) : link.state === "checking" || doc.loading ? (
 				<div
@@ -172,7 +172,7 @@ function Missing({
 						{relayIssue.fix}
 					</Callout>
 				)}
-				{issues.length > 0 && <IssueList issues={issues} />}
+				{issues.length > 0 && <IssueList plain issues={issues} />}
 			</div>
 		);
 	}

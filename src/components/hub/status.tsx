@@ -106,10 +106,16 @@ export function IssueList({
 	issues,
 	empty,
 	onSelectPath,
+	plain = false,
 }: {
 	issues: readonly Issue[];
 	empty?: ReactNode;
 	onSelectPath?: (path: string) => void;
+	/**
+	 * For readers who are not debugging: the sentence and its fix, without the
+	 * field path and the rule's code. The code stays on hover, for a bug report.
+	 */
+	plain?: boolean;
 }) {
 	if (issues.length === 0) return <>{empty ?? null}</>;
 	const order = { error: 0, warning: 1, info: 2 } as const;
@@ -128,6 +134,7 @@ export function IssueList({
 							"flex gap-3 rounded-lg border px-3 py-2.5 text-sm",
 							t.box,
 						)}
+						title={plain ? i.code : undefined}
 					>
 						<t.Icon
 							className={cn("mt-0.5 size-4 shrink-0", t.icon)}
@@ -137,24 +144,30 @@ export function IssueList({
 							<div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
 								<span className="font-medium text-foreground">{i.message}</span>
 							</div>
-							<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-								{i.path &&
-									(onSelectPath ? (
-										<button
-											type="button"
-											className="font-mono text-foreground/80 underline decoration-dotted underline-offset-2 hover:text-foreground"
-											onClick={() => onSelectPath(i.path as string)}
-										>
-											{i.path}
-										</button>
-									) : (
-										<span className="font-mono text-foreground/80">
-											{i.path}
-										</span>
-									))}
-								<span className="font-mono">{i.code}</span>
-								{i.fix && <span>Fix: {i.fix}</span>}
-							</div>
+							{plain ? (
+								i.fix && (
+									<div className="text-xs text-muted-foreground">{i.fix}</div>
+								)
+							) : (
+								<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+									{i.path &&
+										(onSelectPath ? (
+											<button
+												type="button"
+												className="font-mono text-foreground/80 underline decoration-dotted underline-offset-2 hover:text-foreground"
+												onClick={() => onSelectPath(i.path as string)}
+											>
+												{i.path}
+											</button>
+										) : (
+											<span className="font-mono text-foreground/80">
+												{i.path}
+											</span>
+										))}
+									<span className="font-mono">{i.code}</span>
+									{i.fix && <span>Fix: {i.fix}</span>}
+								</div>
+							)}
 						</div>
 					</li>
 				);

@@ -377,12 +377,12 @@ export function YourPart({
 			)}
 			{outcome?.ok === false && (
 				<Callout tone="danger" title="Not signed" className="mt-3">
-					<IssueList issues={outcome.issues} />
+					<IssueList plain issues={outcome.issues} />
 				</Callout>
 			)}
 			{failure && (
 				<Callout tone="danger" title="Not submitted" className="mt-3">
-					<IssueList issues={failure} />
+					<IssueList plain issues={failure} />
 				</Callout>
 			)}
 		</Card>

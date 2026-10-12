@@ -768,7 +768,7 @@ function ProposeForm({
 								)}
 								{otherIssues.length > 0 && (
 									<div className="mt-4">
-										<IssueList issues={otherIssues} />
+										<IssueList plain issues={otherIssues} />
 									</div>
 								)}
 							</Panel>
@@ -855,12 +855,14 @@ function ProposeForm({
 									) : null}
 									{attempted && !draft.input && (
 										<Callout tone="danger" title="Not created yet">
-											Fix the fields marked on the left.
+											{blockers.length === 1
+												? blockers[0]
+												: "Fix the marked fields first."}
 										</Callout>
 									)}
 									{failure && (
 										<Callout tone="danger" title={failure.title}>
-											<IssueList issues={failure.issues} />
+											<IssueList plain issues={failure.issues} />
 										</Callout>
 									)}
 								</div>

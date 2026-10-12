@@ -115,7 +115,7 @@ export function OpenProposal({
 				</div>
 				{issues.length > 0 && (
 					<Callout tone="danger" title="Not a proposal this page can open">
-						<IssueList issues={issues} />
+						<IssueList plain issues={issues} />
 					</Callout>
 				)}
 				{failure && (

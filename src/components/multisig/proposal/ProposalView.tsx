@@ -30,6 +30,7 @@ import { useReceiver } from "../live/useReceiver";
 import { explorerTxUrl } from "../model/chain/columns";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
 import { CHANGE } from "../model/change";
+import { refusalNote } from "../model/refusal";
 import { RELAY_COPY } from "../model/relay/copy";
 import { costLine, modeRefusal } from "../model/send";
 import { changeSummary } from "../model/signerSet";
@@ -523,7 +524,7 @@ export function ProposalView({
 								) : undefined
 							}
 						>
-							{stage.failedAttempt.cause} {stage.failedAttempt.fix}
+							{refusalNote(stage.failedAttempt)}
 						</Callout>
 					)}
 					{blocked && (

@@ -99,7 +99,7 @@ function LinkDialog({ proposal }: { proposal: Proposal }) {
 						<p className="text-xs text-muted-foreground">
 							{published.bytes} characters.
 						</p>
-						<IssueList issues={published.issues} />
+						<IssueList plain issues={published.issues} />
 					</>
 				)}
 				<DialogFooter>
@@ -248,7 +248,7 @@ export function SharePanel({
 							: `Nothing new: still ${result.total} signature${result.total === 1 ? "" : "s"}`
 					}
 				>
-					<IssueList issues={result.issues} />
+					<IssueList plain issues={result.issues} />
 				</Callout>
 			)}
 			{result?.kind === "other" && (
@@ -276,7 +276,7 @@ export function SharePanel({
 			)}
 			{result?.kind === "failed" && (
 				<Callout tone="danger" title="Not a proposal this page can merge">
-					<IssueList issues={result.issues} />
+					<IssueList plain issues={result.issues} />
 				</Callout>
 			)}
 		</div>
