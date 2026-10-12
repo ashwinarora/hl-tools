@@ -31,6 +31,7 @@ import type { RowProposal } from "../chain/match";
 import { joinParts, type Part, part, say } from "../parts";
 import { shortAddress } from "../stage";
 import type { TreasuryTab } from "../tabs";
+import { afterRejection } from "./copy";
 import type { EventRow, ProposalRow, ProposalStatus } from "./rows";
 import { buildTimeline } from "./timeline";
 
@@ -255,7 +256,7 @@ export function awayItems(i: {
 			case "rejected":
 				if (rel && e.actor !== me)
 					item(
-						say`Hyperliquid rejected ${action(p, false)}, which you ${rel}. It can be retried.`,
+						say`Hyperliquid rejected ${action(p, false)}, which you ${rel}. ${afterRejection(e.data.http_status)}`,
 					);
 				break;
 			case "withdrawn":

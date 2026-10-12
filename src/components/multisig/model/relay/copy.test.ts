@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	afterRejection,
 	FORBIDDEN_CLAIMS,
 	RELAY_COPY,
 	SIGN_HINT_TEXTS,
@@ -13,6 +14,9 @@ describe("relay copy", () => {
 	const all: [string, string][] = [
 		...Object.entries(RELAY_COPY),
 		["sign-in statement", SIGN_IN_STATEMENT],
+		["after a rejection (200)", afterRejection(200)],
+		["after a rejection (502)", afterRejection(502)],
+		["after a rejection (unknown)", afterRejection(undefined)],
 		...SIGN_HINT_TEXTS.map((t, i): [string, string] => [`sign hint ${i}`, t]),
 		...REFUSAL_TEXTS.map((t, i): [string, string] => [`refusal ${i}`, t]),
 		// what the page says when it refuses a nickname before asking the relay
@@ -56,6 +60,15 @@ describe("relay copy", () => {
 			"every field of the action",
 		);
 		expect(signHint({})).not.toContain("amount");
+	});
+
+	it("never calls a proposal that Hyperliquid itself refused retryable", () => {
+		// the proposal's number is used up by any answer from Hyperliquid (numberSpent)
+		expect(afterRejection(200)).not.toMatch(/retr|can be sent again/i);
+		expect(afterRejection(200)).toContain("cannot be sent again as it is");
+		// a request that never got there is another matter
+		expect(afterRejection(502)).toContain("can be sent again");
+		expect(afterRejection("200")).toBe("Open it to see why.");
 	});
 
 	it("still lets the checker see what it is meant to catch", () => {

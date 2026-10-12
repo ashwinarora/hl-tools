@@ -201,18 +201,23 @@ describe("buildTimeline", () => {
 		]);
 	});
 
-	it("reports a rejection as retryable", () => {
-		expect(
+	it("never calls a proposal Hyperliquid refused retryable", () => {
+		const rejected = (data: Record<string, unknown>) =>
 			texts([
-				eventRow("submission_recorded", {
-					digest: D1,
-					actor: B,
-					data: { accepted: false },
-				}),
-			]),
-		).toEqual([
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Submitted by ${short(B)}; it can be retried.`,
-		]);
+				eventRow("submission_recorded", { digest: D1, actor: B, data }),
+			])[0];
+		// answered by Hyperliquid: the proposal's number is used up
+		expect(rejected({ accepted: false, http_status: 200 })).toBe(
+			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Submitted by ${short(B)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+		);
+		// never reached Hyperliquid's books: that one can go again
+		expect(rejected({ accepted: false, http_status: 502 })).toBe(
+			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Submitted by ${short(B)}. The request did not get through (HTTP 502), so it can be sent again.`,
+		);
+		// an entry that does not say: nothing is claimed either way
+		expect(rejected({ accepted: false })).toBe(
+			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Submitted by ${short(B)}. Open it to see why.`,
+		);
 	});
 
 	it("falls back to 'a proposal' when the document is not at hand", () => {

@@ -13,6 +13,7 @@ import {
 } from "@hl-tools/core";
 import { joinParts, type Part, part, partsText, say } from "../parts";
 import { shortAddress } from "../stage";
+import { afterRejection } from "./copy";
 import { addressList, type EventRow } from "./rows";
 
 export type { Part } from "../parts";
@@ -201,7 +202,7 @@ export function buildTimeline(
 					entry(
 						e.data.accepted === true
 							? say`${action(e.digest, true)} was accepted by Hyperliquid. Submitted by ${object(e.actor)}.`
-							: say`Hyperliquid rejected ${action(e.digest, false)}. Submitted by ${object(e.actor)}; it can be retried.`,
+							: say`Hyperliquid rejected ${action(e.digest, false)}. Submitted by ${object(e.actor)}. ${afterRejection(e.data.http_status)}`,
 					),
 				);
 				break;

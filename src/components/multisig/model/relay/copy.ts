@@ -92,6 +92,21 @@ export const RELAY_COPY = {
 } as const;
 
 /**
+ * What can be said after "Hyperliquid rejected …" from the history entry
+ * alone, which carries only the HTTP status. An answer from Hyperliquid
+ * itself (200) has used up the proposal's number, whatever the reason was
+ * (see the core's `numberSpent`): it is never called retryable. Anything
+ * else never reached Hyperliquid's record of numbers.
+ */
+export function afterRejection(httpStatus: unknown): string {
+	if (httpStatus === 200)
+		return "It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.";
+	if (typeof httpStatus === "number")
+		return `The request did not get through (HTTP ${httpStatus}), so it can be sent again.`;
+	return "Open it to see why.";
+}
+
+/**
  * What to check in the wallet before signing a proposal, by what the action
  * is: the prompt shows the treasury and the finaliser every time, and then
  * the fields of the action itself.

@@ -64,7 +64,10 @@ const ev = (
 const accepted = (id: number, actor: Address, digest: Hex = D1) =>
 	ev("submission_recorded", id, { actor, digest, data: { accepted: true } });
 const rejected = (id: number, actor: Address) =>
-	ev("submission_recorded", id, { actor, data: { accepted: false } });
+	ev("submission_recorded", id, {
+		actor,
+		data: { accepted: false, http_status: 200 },
+	});
 
 const items = (i: {
 	events?: EventRow[];
@@ -205,7 +208,8 @@ describe("awayItems: the end of something you proposed or signed", () => {
 	const mineToo = theirs({ signers: [A, B], status: "open" });
 	it("tells a rejection, a withdrawal and a decline to those who had a part in it", () => {
 		expect(texts({ events: [rejected(11, C)], proposals: [mineToo] })).toEqual([
-			"Hyperliquid rejected Send 120 USDC to 0x9a01…77c2, which you signed. It can be retried.",
+			// Hyperliquid's own answer uses up the proposal's number: never "it can be retried"
+			"Hyperliquid rejected Send 120 USDC to 0x9a01…77c2, which you signed. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.",
 		]);
 		expect(
 			texts({
