@@ -17,6 +17,7 @@ import {
 	stepNumber,
 	tieSteps,
 	validateProposal,
+	vaultMoveShape,
 } from "../../src/multisig/index.ts";
 import {
 	A,
@@ -475,5 +476,241 @@ describe("whether two proposals are one move", () => {
 		expect(judgeMove(a, b)).toEqual({ move: null, flaw });
 		expect(judgeMove(b, a)).toEqual({ move: null, flaw });
 		expect(moveOf(a, b)).toBeNull();
+	});
+});
+
+describe("a vault deposit in two steps: USDC to perps, then the deposit", () => {
+	const DEPOSIT_VAULT = "0x49d05977597b22e3c73d654c351adde9d9920e18";
+	const HLP = "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0";
+	const toPerps = (
+		amount: string,
+		nonce: number,
+		toPerp = true,
+	): PlainObject => ({
+		type: "usdClassTransfer",
+		...chain(),
+		amount,
+		toPerp,
+		nonce,
+	});
+	const deposit = (
+		usdc: number,
+		isDeposit = true,
+		vaultAddress = DEPOSIT_VAULT,
+	): PlainObject => ({
+		type: "vaultTransfer",
+		vaultAddress,
+		isDeposit,
+		usd: usdc * 1_000_000,
+	});
+	/** An L1 proposal carries its number beside the action, not inside it. */
+	const l1 = (
+		action: PlainObject,
+		nonce: number,
+		over: Partial<ProposalInput> = {},
+	) => proposal(action, { nonce, ...over });
+	const vaultPair = (moved = "30", into = 50) =>
+		tieSteps(proposal(toPerps(moved, NONCE)), l1(deposit(into), NONCE + 1));
+	const withMeta = (
+		p: Proposal,
+		meta: Partial<Proposal["meta"]>,
+	): Proposal => ({
+		...p,
+		meta: { ...p.meta, ...meta },
+	});
+	const withPayload = (
+		p: Proposal,
+		payload: Partial<Proposal["payload"]>,
+	): Proposal => ({ ...p, payload: { ...p.payload, ...payload } });
+
+	it("is one move, named by the deposit, though its steps are signed in two ways", () => {
+		const [first, second] = vaultPair();
+		expect(first.meta.kind).toBe("user-signed");
+		expect(second.meta.kind).toBe("l1");
+		for (const [a, b] of [
+			[first, second],
+			[second, first],
+		] as const) {
+			const judged = judgeMove(a, b);
+			expect(judged.flaw).toBeNull();
+			expect(judged.move).toMatchObject({
+				kind: "vault",
+				amount: "50",
+				vault: DEPOSIT_VAULT,
+				validator: "",
+				to: null,
+			});
+		}
+		expect(moveHeadline(moveOf(first, second) as never)).toBe(
+			`Deposit 50 USDC into vault ${DEPOSIT_VAULT}`,
+		);
+		// HLP by its name
+		const hlp = tieSteps(
+			proposal(toPerps("50", NONCE)),
+			l1(deposit(50, true, HLP), NONCE + 1),
+		);
+		expect(moveHeadline(moveOf(...hlp) as never)).toBe(
+			`Deposit 50 USDC into HLP, Hyperliquid's own vault, ${HLP}`,
+		);
+		// the whole amount may come from spot
+		expect(moveOf(...vaultPair("50", 50))?.amount).toBe("50");
+		// a shape that names no vault still reads as a line
+		expect(
+			moveHeadline({ kind: "vault", amount: "5", validator: "", to: null }),
+		).toBe("Deposit 5 USDC into vault ");
+	});
+
+	it("is a shape of its own: the staking moves stay readable on both steps", () => {
+		expect(
+			vaultMoveShape(toPerps("30", NONCE), {
+				kind: "deposit",
+				vault: DEPOSIT_VAULT,
+				amount: "50",
+			}),
+		).toEqual({
+			kind: "vault",
+			amount: "50",
+			validator: "",
+			to: null,
+			vault: DEPOSIT_VAULT,
+		});
+		const dep = {
+			kind: "deposit" as const,
+			vault: DEPOSIT_VAULT,
+			amount: "50",
+		};
+		for (const first of [
+			// more than the deposit: the headline would understate what moves
+			toPerps("50.000001", NONCE),
+			// the other direction
+			toPerps("30", NONCE, false),
+			toPerps("0", NONCE),
+			{ ...toPerps("30", NONCE), amount: 30 },
+			{ ...toPerps("30", NONCE), amount: "much" },
+			{ ...toPerps("30", NONCE), type: "usdSend" },
+			null,
+			"usdClassTransfer",
+			[toPerps("30", NONCE)],
+		])
+			expect(vaultMoveShape(first, dep)).toBeNull();
+		expect(
+			vaultMoveShape(toPerps("30", NONCE), { ...dep, kind: "withdraw" }),
+		).toBeNull();
+	});
+
+	const FLAWS: [string, MoveFlaw, () => readonly [Proposal, Proposal]][] = [
+		[
+			"the first step moves more than the deposit",
+			"shape",
+			() => vaultPair("60", 50),
+		],
+		[
+			"the first step moves USDC out of perps",
+			"shape",
+			() =>
+				tieSteps(
+					proposal(toPerps("30", NONCE, false)),
+					l1(deposit(50), NONCE + 1),
+				),
+		],
+		[
+			"a send dressed up as the first step of a deposit",
+			"shape",
+			() =>
+				tieSteps(
+					proposal({
+						type: "usdSend",
+						...chain(),
+						destination: RECIPIENT,
+						amount: "30",
+						time: NONCE,
+					}),
+					l1(deposit(50), NONCE + 1),
+				),
+		],
+		[
+			"a staking step in front of a deposit",
+			"shape",
+			() => tieSteps(proposal(moveIn(50, NONCE)), l1(deposit(50), NONCE + 1)),
+		],
+		[
+			"the second step is a withdrawal",
+			"form",
+			() =>
+				tieSteps(
+					proposal(toPerps("30", NONCE)),
+					l1(deposit(50, false), NONCE + 1),
+				),
+		],
+		[
+			"the second step is another action signed as a hash",
+			"form",
+			() =>
+				tieSteps(
+					proposal(toPerps("30", NONCE)),
+					l1({ type: "noop" }, NONCE + 1),
+				),
+		],
+		[
+			"the deposit comes first",
+			"form",
+			() =>
+				tieSteps(l1(deposit(50), NONCE), proposal(toPerps("30", NONCE + 1))),
+		],
+		[
+			"the deposit acts for a vault or sub-account",
+			"form",
+			() => {
+				const [first, second] = vaultPair();
+				return [first, withPayload(second, { vaultAddress: VAULT })];
+			},
+		],
+		[
+			"the deposit carries an expiry",
+			"form",
+			() => {
+				const [first, second] = vaultPair();
+				return [first, withPayload(second, { expiresAfter: NOW })];
+			},
+		],
+		[
+			"the deposit claims to be the readable kind",
+			"form",
+			() => {
+				const [first, second] = vaultPair();
+				return [first, withMeta(second, { kind: "user-signed" })];
+			},
+		],
+		[
+			"a stake claims to be signed as a hash",
+			"form",
+			() => {
+				const [first, second] = pair();
+				return [first, withMeta(second, { kind: "l1" })];
+			},
+		],
+		[
+			"the deposit is numbered before the transfer",
+			"order",
+			() =>
+				tieSteps(
+					proposal(toPerps("30", NONCE + 5)),
+					l1(deposit(50), NONCE + 1),
+				),
+		],
+		[
+			"another finaliser on the deposit",
+			"finaliser",
+			() =>
+				tieSteps(
+					proposal(toPerps("30", NONCE)),
+					l1(deposit(50), NONCE + 1, { outerSigner: B }),
+				),
+		],
+	];
+	it.each(FLAWS)("not when %s", (_name, flaw, make) => {
+		const [a, b] = make();
+		expect(judgeMove(a, b)).toEqual({ move: null, flaw });
+		expect(judgeMove(b, a)).toEqual({ move: null, flaw });
 	});
 });

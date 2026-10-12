@@ -8,12 +8,13 @@
 import type { Network } from "../network.ts";
 import { RETURN_QUEUE, STAKE_LOCKUP } from "../rules/staking.ts";
 import { WITHDRAWAL_FEE_USDC } from "../rules/transfers.ts";
-import { HLP_VAULT, VAULT_LOCKUP } from "../rules/vaults.ts";
+import { VAULT_LOCKUP } from "../rules/vaults.ts";
 import { isAgentRemoval, riskFlags } from "./action.ts";
 import { parseSignersString } from "./signerSet.ts";
 import { waitWords, weiToHype } from "./staking.ts";
 import { withdrawalOutcome } from "./transfer.ts";
 import type { PlainObject, RiskFlag } from "./types.ts";
+import { hlpNetwork, vaultHeadline } from "./vault.ts";
 
 export interface DescribeContext {
 	/** Perp asset index → coin name (from the resolver universe). */
@@ -81,14 +82,6 @@ export const returnQueueLine = (network: Network | null): string =>
 	network
 		? `Hyperliquid releases a return to spot ${waitWords(RETURN_QUEUE[network].ms)} after it is carried out, with no further signature.`
 		: `Hyperliquid releases a return to spot ${waitWords(RETURN_QUEUE.mainnet.ms)} after it is carried out (${waitWords(RETURN_QUEUE.testnet.ms)} on testnet), with no further signature.`;
-
-/** The network on which an address is HLP, Hyperliquid's own vault; null for any other address. */
-const hlpNetwork = (vault: string): Network | null =>
-	vault.toLowerCase() === HLP_VAULT.mainnet
-		? "mainnet"
-		: vault.toLowerCase() === HLP_VAULT.testnet
-			? "testnet"
-			: null;
 
 /**
  * How long a new deposit into a vault is held, in the lengths of
@@ -327,9 +320,12 @@ export function describeAction(
 			return done(`Cancel TWAP ${s(action.t)} on ${coinOf(ctx, action.a)}`);
 		case "vaultTransfer": {
 			const vault = s(action.vaultAddress);
-			const headline = `${action.isDeposit ? "Deposit" : "Withdraw"} ${usd(action.usd)} ${action.isDeposit ? "into" : "from"} ${hlpNetwork(vault) ? "HLP, Hyperliquid's own vault," : "vault"} ${vault}`;
 			return done(
-				headline,
+				vaultHeadline(
+					action.isDeposit ? "deposit" : "withdraw",
+					usd(action.usd),
+					vault,
+				),
 				action.isDeposit
 					? [
 							vaultLockupLine(vault, ctx.network ?? null),

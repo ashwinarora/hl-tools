@@ -105,9 +105,31 @@ export function vaultFields(a: VaultAction): Record<string, unknown> | null {
 			};
 }
 
+/** The network on which an address is HLP, Hyperliquid's own vault; null for any other address. */
+export function hlpNetwork(vault: string): Network | null {
+	const v = vault.toLowerCase();
+	return v === HLP_VAULT.mainnet
+		? "mainnet"
+		: v === HLP_VAULT.testnet
+			? "testnet"
+			: null;
+}
+
+/**
+ * One line for a deposit or a withdrawal: HLP by its name, any other vault
+ * by its address. `what` is the amount with its unit ("5 USDC").
+ */
+export function vaultHeadline(
+	kind: VaultAction["kind"],
+	what: string,
+	vault: string,
+): string {
+	return `${kind === "deposit" ? "Deposit" : "Withdraw"} ${what} ${kind === "deposit" ? "into" : "from"} ${hlpNetwork(vault) ? "HLP, Hyperliquid's own vault," : "vault"} ${vault}`;
+}
+
 /** Whether an address is Hyperliquid's own vault (HLP) on that network. */
 export function isHlp(vault: string, network: Network): boolean {
-	return vault.toLowerCase() === HLP_VAULT[network];
+	return hlpNetwork(vault) === network;
 }
 
 /** How long a new deposit into this vault is held, and whether that length was measured. */
