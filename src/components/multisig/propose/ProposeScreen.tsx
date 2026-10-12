@@ -5,7 +5,6 @@ import {
 	fromPlain,
 	type Issue,
 	infoClient,
-	moveOf,
 	type Network,
 	ORDERED_ACTION_TYPES,
 	orderFloor,
@@ -60,8 +59,7 @@ import {
 	DEFAULT_FORM,
 	destinationOf,
 	fieldOf,
-	formFromAction,
-	formFromMove,
+	formFromProposal,
 	sourcePocket,
 } from "../model/actions";
 import { type InnerChain, innerChain } from "../model/chains";
@@ -227,21 +225,17 @@ function ProposeForm({
 						title: old.meta.title ?? "",
 						note: old.meta.note ?? "",
 					}));
-				// one step of a move: the form that names the whole move, where
-				// the other step is in this browser too
+				// one step of a move: from its first step the form names the whole
+				// move, where the other step is in this browser too; from its
+				// second, only that step (`formFromProposal`)
 				const other = otherStep(old);
 				if (!other) {
-					fill(formFromAction(old.payload.action, old.payload.network));
+					fill(formFromProposal(old, null));
 					return;
 				}
 				return loadProposal(other).then((o) => {
 					if (cancelled) return;
-					const move = o.proposal ? moveOf(old, o.proposal) : null;
-					fill(
-						move
-							? formFromMove(move, old.payload.network)
-							: formFromAction(old.payload.action, old.payload.network),
-					);
+					fill(formFromProposal(old, o.proposal));
 				});
 			})
 			.catch(() => undefined);

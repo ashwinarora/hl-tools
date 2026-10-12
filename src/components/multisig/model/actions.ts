@@ -18,15 +18,18 @@ import {
 	type Issue,
 	issue,
 	type Move,
+	moveOf,
 	type Network,
 	networkConfig,
 	type PlainObject,
 	type Policy,
+	type Proposal,
 	type ProposalInput,
 	sendRefusal,
 	sendShape,
 	signingFamilyFor,
 	stakingActionOf,
+	stepNumber,
 	stringifyJson,
 	toPlain,
 	tryParseJson,
@@ -1143,6 +1146,27 @@ export function formFromMove(
 		validator: move.validator,
 		toValidator: move.to ?? "",
 	};
+}
+
+/**
+ * Pre-fill the form from a proposal that is proposed again. `other` is the
+ * other step where the proposal says it is one step of a move and that step
+ * is at hand.
+ *
+ * From a move's first step the form names the whole move. From its second
+ * step it is that step by itself: that is what is left once the first was
+ * carried out, and naming the whole move there would do the first step a
+ * second time (a move to another validator would unstake twice).
+ */
+export function formFromProposal(
+	old: Proposal,
+	other: Proposal | null,
+): Partial<ActionForm> {
+	const network = old.payload.network;
+	const move = other && stepNumber(old) === 1 ? moveOf(old, other) : null;
+	return move
+		? formFromMove(move, network)
+		: formFromAction(old.payload.action, network);
 }
 
 /** The action as raw JSON, without the three fields this page sets, so the paste is not "overridden" at once. */

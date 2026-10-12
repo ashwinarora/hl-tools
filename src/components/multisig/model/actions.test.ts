@@ -35,6 +35,7 @@ import {
 	fieldOf,
 	formFromAction,
 	formFromMove,
+	formFromProposal,
 	sourcePocket,
 } from "./actions";
 import { type SignerCheck, signersField } from "./signerSet";
@@ -1386,6 +1387,56 @@ describe("the staking forms", () => {
 				toValidator: f.toValidator,
 			});
 		}
+	});
+
+	it("proposed again from its first step a move is the whole move; from its second, only what is left", () => {
+		const whole: ActionForm[] = [
+			form({ kind: "stake", amount: "100", validator: Y }),
+			form({ kind: "returnToSpot", amount: "100", validator: X }),
+			form({ kind: "moveStake", amount: "100", validator: X, toValidator: Y }),
+		];
+		// what is left of each once its first step was carried out
+		const left: Partial<ActionForm>[] = [
+			{ kind: "stake", amount: "100", validator: Y },
+			{ kind: "returnToSpot", amount: "100" },
+			// never the move again: that would unstake from X a second time
+			{ kind: "stake", amount: "100", validator: Y },
+		];
+		whole.forEach((f, i) => {
+			const [first, second] = proposals(f) as [Proposal, Proposal];
+			expect(formFromProposal(first, second).kind).toBe(f.kind);
+			expect(formFromProposal(second, first)).toEqual({
+				chain: "hyperevm",
+				...left[i],
+			});
+			// without the other step at hand a step is only itself
+			expect(formFromProposal(second, null)).toEqual({
+				chain: "hyperevm",
+				...left[i],
+			});
+		});
+	});
+
+	it("what is left of a move to another validator is one stake, once the unstake has landed", () => {
+		const [first, second] = proposals(
+			form({ kind: "moveStake", amount: "100", validator: X, toValidator: Y }),
+		) as [Proposal, Proposal];
+		// step 1 was carried out: 100 sits unstaked in the staking balance
+		const after: StakingRead = {
+			...STAKING,
+			summary: STAKING.summary
+				? { ...STAKING.summary, undelegated: "100" }
+				: null,
+		};
+		const again = buildProposalInputs(
+			form(formFromProposal(second, first)),
+			ctx({ staking: after }),
+		);
+		expect(again.actions.map((a) => a.type)).toEqual(["tokenDelegate"]);
+		expect(again.actions[0]).toMatchObject({
+			validator: Y,
+			isUndelegate: false,
+		});
 	});
 
 	it("a single stake or return comes back as its form; the other two steps stay as they are", () => {

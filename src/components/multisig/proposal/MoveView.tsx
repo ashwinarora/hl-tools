@@ -168,7 +168,9 @@ export function MoveView({
 			to="/multisig/propose"
 			search={{
 				treasury: target.address,
-				supersedes: first.digest,
+				// once step 1 was carried out only step 2 is left to propose again:
+				// naming it fills the form with that step alone
+				supersedes: stage.phase === "broken" ? second.digest : first.digest,
 				network: target.network,
 			}}
 			className={linkButtonSm}
