@@ -50,6 +50,7 @@ import { useNetworkHydrated } from "#/store/networkStore";
 import { useReceiver } from "../live/useReceiver";
 import { useSignerChecks } from "../live/useSignerChecks";
 import { useStaking } from "../live/useStaking";
+import { useVault, useVaultDetails, useVaults } from "../live/useVaults";
 import {
 	ACTION_KINDS,
 	type ActionForm,
@@ -82,8 +83,14 @@ import { reproposeSource } from "../model/repropose";
 import { isItself } from "../model/selfTreasury";
 import { costLine, spotAvailable } from "../model/send";
 import { toLookUp, waitingProposals, wantedSet } from "../model/signerSet";
+import {
+	CODE_COPY,
+	signingChainOf,
+	signingNetwork,
+} from "../model/signingNetwork";
 import { isStakingKind, planStaking, STAKING } from "../model/staking";
 import { linkTransport } from "../model/transport";
+import { isVaultKind, planVault, VAULT, type VaultRead } from "../model/vault";
 import { TreasuryNames, useNames } from "../names/Names";
 import { Sentence } from "../names/Sentence";
 import { shareMove } from "../relay/api";
@@ -104,6 +111,7 @@ import { useWalletSigner } from "../useWalletSigner";
 import { ActionFields } from "./ActionFields";
 import { ChangeSignersFields } from "./ChangeSignersFields";
 import { StakingFields } from "./StakingFields";
+import { VaultFields } from "./VaultFields";
 
 /** Warnings said under the field they are about, not with the general notes. */
 const FIELD_NOTES: ReadonlySet<string> = new Set([
@@ -205,6 +213,9 @@ function ProposeForm({
 	const [superseded, setSuperseded] = useState<Proposal | null>(null);
 	// why a proposal named in the link was not used as the starting point
 	const [notCopied, setNotCopied] = useState<string | null>(null);
+	// "Create and sign" found the wallet without the signing network a vault action needs
+	const [needsNetwork, setNeedsNetwork] = useState(false);
+	const [addFailed, setAddFailed] = useState<string | null>(null);
 
 	const address =
 		treasury && ADDRESS_RE.test(treasury)
@@ -387,6 +398,48 @@ function ProposeForm({
 			)
 		: null;
 
+	// Vaults: the treasury's deposits and the vault the form names, read only
+	// while one of the two vault forms is open.
+	const vaultOn = isVaultKind(form.kind);
+	const vaults = useVaults(vaultOn ? target : null);
+	const vaultTyped = form.vault.trim().toLowerCase();
+	const vaultAsked =
+		vaultOn && hydrated && ADDRESS_RE.test(vaultTyped) ? vaultTyped : null;
+	const vaultLookup = useVault(network, vaultAsked, address);
+	// the names of the vaults the treasury has money in, for the list to pick from
+	const vaultDetails = useVaultDetails(
+		network,
+		vaultOn && form.kind === "vaultWithdraw"
+			? (vaults.deposits?.map((d) => d.vault) ?? [])
+			: [],
+		address,
+	);
+	const vaultNames = useMemo(() => {
+		const names = new Map<string, string>();
+		for (const [vault, l] of vaultDetails)
+			if (l.kind === "vault") names.set(vault, l.vault.name);
+		return names;
+	}, [vaultDetails]);
+	const vaultRead: VaultRead | undefined = vaultOn
+		? {
+				// undefined while it is on its way; null once the read has failed
+				mode: !hydrated || state.modePending ? undefined : state.mode,
+				perps: state.perp?.withdrawable ?? null,
+				spot: spotAvailable(state.spot, "USDC"),
+				deposits: vaults.deposits,
+				vault: vaultLookup.lookup,
+			}
+		: undefined;
+	const vaultPlan =
+		isVaultKind(form.kind) && vaultRead
+			? planVault(
+					{ kind: form.kind, amount: form.amount, vault: form.vault },
+					vaultRead,
+					network,
+					now,
+				)
+			: null;
+
 	const chain = innerChain(network, form.chain);
 	const context = (nonce: number) => ({
 		network,
@@ -421,6 +474,7 @@ function ProposeForm({
 		supersedes: superseded?.digest ?? null,
 		policyAtCreation: state.policy,
 		staking: stakingRead,
+		vault: vaultRead,
 		now,
 	});
 	const numbered = proposalNonce(form.nonceMode, previewNow, floor);
@@ -479,7 +533,7 @@ function ProposeForm({
 	];
 	// a staking form says its own amber lines, next to the steps they are about
 	const saidByForm = new Set(
-		stakingPlan?.issues
+		[...(stakingPlan?.issues ?? []), ...(vaultPlan?.issues ?? [])]
 			.filter((i) => i.severity === "warning")
 			.map((i) => i.code),
 	);
@@ -490,10 +544,12 @@ function ProposeForm({
 			!saidByForm.has(i.code),
 	);
 	const action = prepared?.action ?? null;
-	const described = action ? describeAction(action) : null;
+	const described = action ? describeAction(action, { network }) : null;
 	const secondAction = second?.action ?? null;
 	const twoSteps = drafts.actions.length === 2;
-	const secondDescribed = secondAction ? describeAction(secondAction) : null;
+	const secondDescribed = secondAction
+		? describeAction(secondAction, { network })
+		: null;
 	const flags = prepared?.flags ?? [];
 	const unified = state.mode?.kind === "unified";
 	const movable = {
@@ -515,16 +571,25 @@ function ProposeForm({
 					spot: state.spot,
 				});
 	// a unified treasury has one balance: nothing to move between perps and spot
+	// a vault action is signed as a code: without the signing network this copy cannot sign one
+	const canSignCodes = signingNetwork() !== null;
 	const kinds = ACTION_KINDS.filter(
-		(k) => !(unified && k.kind === "usdClassTransfer"),
+		(k) =>
+			!(unified && k.kind === "usdClassTransfer") &&
+			!(k.group === "vault" && !canSignCodes),
 	);
-	// the three staking forms are one entry here; the choice between them is inside
+	// the three staking forms are one entry here, and so are the two vault
+	// forms; the choice between them is inside
 	const choices = kinds.flatMap((k) =>
 		k.group === "staking"
 			? k.kind === "stake"
 				? [{ value: "staking", label: STAKING.label }]
 				: []
-			: [{ value: k.kind as string, label: k.label }],
+			: k.group === "vault"
+				? k.kind === "vaultDeposit"
+					? [{ value: "vault", label: VAULT.label }]
+					: []
+				: [{ value: k.kind as string, label: k.label }],
 	);
 	const window = describeWindow(previewNonce, previewNow);
 
@@ -590,17 +655,26 @@ function ProposeForm({
 		const [one, two] = made;
 		let proposals: Proposal[] = one && two ? [...tieSteps(one, two)] : made;
 		if (sign) {
-			const got = await wallet.signerFor(chain.hex);
-			if (!got.ok) {
-				setFailure({
-					title: "The wallet did not sign",
-					issues: [{ code: "wallet", severity: "error", message: got.error }],
-				});
-				return;
-			}
+			setNeedsNetwork(false);
 			// one wallet prompt for each step; nothing is created unless all are signed
 			const signedAll: Proposal[] = [];
 			for (const proposal of proposals) {
+				// Each step under its own network: a readable action under the
+				// chain it names, a vault action (a code) under the signing network.
+				const under = signingChainOf(proposal.payload.action)?.hex ?? chain.hex;
+				const got = await wallet.signerFor(under);
+				if (!got.ok) {
+					// not a failure: the wallet has to be given the signing network first
+					if (got.needsNetwork) setNeedsNetwork(true);
+					else
+						setFailure({
+							title: "The wallet did not sign",
+							issues: [
+								{ code: "wallet", severity: "error", message: got.error },
+							],
+						});
+					return;
+				}
 				const signed = await signProposal(proposal, got.signer, {
 					expectedSigner: wallet.address ?? undefined,
 				});
@@ -729,8 +803,10 @@ function ProposeForm({
 								description={
 									stakingOn
 										? "HYPE between spot, the staking balance and a validator."
-										: ACTION_KINDS.find((k) => k.kind === form.kind)
-												?.description
+										: vaultOn
+											? "USDC into a vault, or back out of one."
+											: ACTION_KINDS.find((k) => k.kind === form.kind)
+													?.description
 								}
 							>
 								<div className="space-y-4">
@@ -751,13 +827,37 @@ function ProposeForm({
 									)}
 									<Segmented<string>
 										label="Action"
-										value={stakingOn ? "staking" : form.kind}
+										value={
+											stakingOn ? "staking" : vaultOn ? "vault" : form.kind
+										}
 										onChange={(v) =>
-											set("kind", v === "staking" ? "stake" : (v as ActionKind))
+											set(
+												"kind",
+												v === "staking"
+													? "stake"
+													: v === "vault"
+														? "vaultDeposit"
+														: (v as ActionKind),
+											)
 										}
 										options={choices}
 									/>
-									{stakingPlan ? (
+									{vaultOn && vaultPlan ? (
+										<VaultFields
+											form={form}
+											set={set}
+											error={error}
+											network={network}
+											vaults={vaults}
+											lookup={vaultLookup.lookup}
+											lookupLoading={vaultLookup.loading}
+											names={vaultNames}
+											movable={movable}
+											unified={unified}
+											plan={vaultPlan}
+											now={now}
+										/>
+									) : stakingPlan ? (
 										<StakingFields
 											form={form}
 											set={set}
@@ -1107,6 +1207,43 @@ function ProposeForm({
 										<p className="text-xs text-muted-foreground">
 											Signing asks your wallet twice, once for each step.
 										</p>
+									)}
+									{needsNetwork && (
+										<div
+											data-needs-network
+											className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[13px]"
+										>
+											<p className="flex flex-wrap items-center gap-1 text-warning">
+												<span>{CODE_COPY.missing}</span>
+												<Help k="signingNetwork" />
+											</p>
+											<p className="mt-1 text-muted-foreground">
+												Nothing was created. Add the network, then create and
+												sign again.
+											</p>
+											<div className="mt-2 flex flex-wrap items-center gap-2">
+												<Button
+													variant="brand"
+													disabled={wallet.busy}
+													onClick={() =>
+														void wallet.run(
+															"Waiting for the wallet…",
+															async () => {
+																setAddFailed(null);
+																const added = await wallet.addSigningNetwork();
+																if (added.ok) setNeedsNetwork(false);
+																else setAddFailed(added.error);
+															},
+														)
+													}
+												>
+													{wallet.busy ? CODE_COPY.adding : CODE_COPY.add}
+												</Button>
+											</div>
+											{addFailed && (
+												<p className="mt-2 text-danger">{addFailed}</p>
+											)}
+										</div>
 									)}
 									{itself ? (
 										<SwitchToSigner

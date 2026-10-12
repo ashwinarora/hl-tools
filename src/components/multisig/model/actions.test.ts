@@ -6,6 +6,7 @@ import {
 	judgeMove,
 	type PlainObject,
 	type Proposal,
+	parseVaultDetails,
 	tieSteps,
 	type Validator,
 } from "@hl-tools/core";
@@ -268,7 +269,7 @@ const VALID: Record<string, { form: ActionForm; action: object }> = {
 };
 
 describe("buildAction / buildProposalInput", () => {
-	it("lists the twelve kinds once each, the three staking forms as one group", () => {
+	it("lists the fourteen kinds once each, the staking forms and the vault forms as one group each", () => {
 		expect(ACTION_KINDS.map((k) => k.kind)).toEqual([
 			"sendUsdc",
 			"sendToken",
@@ -281,11 +282,16 @@ describe("buildAction / buildProposalInput", () => {
 			"stake",
 			"returnToSpot",
 			"moveStake",
+			"vaultDeposit",
+			"vaultWithdraw",
 			"raw",
 		]);
 		expect(
 			ACTION_KINDS.filter((k) => k.group === "staking").map((k) => k.label),
 		).toEqual(["Stake", "Return to spot", "Move to another validator"]);
+		expect(
+			ACTION_KINDS.filter((k) => k.group === "vault").map((k) => k.label),
+		).toEqual(["Deposit", "Withdraw"]);
 	});
 
 	for (const [name, v] of Object.entries(VALID)) {
@@ -1366,6 +1372,150 @@ describe("changeSigners", () => {
 			kind: "changeSigners",
 			signers: built.signers,
 		});
+	});
+});
+
+describe("the two vault forms", () => {
+	const VAULT_ADDRESS = "0x49d05977597b22e3c73d654c351adde9d9920e18";
+	const vaultRead = (
+		over: Partial<NonNullable<BuildContext["vault"]>> = {},
+	) => ({
+		mode: MANUAL,
+		perps: "100",
+		spot: "40",
+		deposits: [],
+		vault: parseVaultDetails({
+			name: "Crazy Franck",
+			vaultAddress: VAULT_ADDRESS,
+			leader: RECIPIENT,
+		}),
+		...over,
+	});
+	const deposit = (amount: string, over: Partial<BuildContext> = {}) =>
+		buildProposalInputs(
+			form({ kind: "vaultDeposit", amount, vault: VAULT_ADDRESS }),
+			ctx({ vault: vaultRead(), now: NOW, ...over }),
+		);
+
+	it("builds one proposal for a deposit the perps balance covers: an L1 action with no number of its own", () => {
+		const d = deposit("50");
+		expect(d.issues).toEqual([]);
+		expect(d.actions).toEqual([
+			{
+				type: "vaultTransfer",
+				vaultAddress: VAULT_ADDRESS,
+				isDeposit: true,
+				usd: 50_000_000,
+			},
+		]);
+		expect(d.inputs).toHaveLength(1);
+		const made = createProposal(d.inputs?.[0] as never, { now: NOW });
+		expect(made.issues.filter((i) => i.severity === "error")).toEqual([]);
+		expect(made.proposal?.meta.kind).toBe("l1");
+		expect(made.proposal?.payload.nonce).toBe(NONCE);
+		expect(made.proposal?.payload.vaultAddress).toBeNull();
+	});
+
+	it("builds two proposals when the rest is in spot, which the core takes as one move", () => {
+		const d = deposit("120");
+		expect(d.issues).toEqual([]);
+		expect(d.actions).toEqual([
+			{
+				type: "usdClassTransfer",
+				...HEAD,
+				amount: "20",
+				toPerp: true,
+				nonce: NONCE,
+			},
+			{
+				type: "vaultTransfer",
+				vaultAddress: VAULT_ADDRESS,
+				isDeposit: true,
+				usd: 120_000_000,
+			},
+		]);
+		expect(d.inputs?.map((i) => i.nonce)).toEqual([NONCE, NONCE + 1]);
+		const [first, second] = (d.inputs ?? []).map(
+			(input) =>
+				createProposal({ ...input, createdBy: A } as never, { now: NOW })
+					.proposal as Proposal,
+		);
+		const judged = judgeMove(
+			...tieSteps(first as Proposal, second as Proposal),
+		);
+		expect(judged.flaw).toBeNull();
+		expect(judged.move).toMatchObject({
+			kind: "vault",
+			amount: "120",
+			vault: VAULT_ADDRESS,
+		});
+		// and that move comes back as the deposit form, to work the steps out again
+		expect(formFromMove(judged.move as never, "testnet")).toMatchObject({
+			kind: "vaultDeposit",
+			amount: "120",
+			vault: VAULT_ADDRESS,
+		});
+	});
+
+	it("is blocked where Hyperliquid would refuse, under the field it is about", () => {
+		const small = deposit("4");
+		expect(small.inputs).toBeNull();
+		expect(codes(small.issues)).toEqual(["vault.vault-min-deposit"]);
+		expect(fieldOf(small.issues[0] as Issue)).toBe("amount");
+		const gone = deposit("50", {
+			vault: vaultRead({ vault: { kind: "none" } }),
+		});
+		expect(codes(gone.issues)).toEqual(["vault.vault-unregistered"]);
+		expect(fieldOf(gone.issues[0] as Issue)).toBe("vault");
+		expect(gone.inputs).toBeNull();
+		// nothing read yet: nothing to build, and nothing said
+		const blind = deposit("50", { vault: undefined });
+		expect(blind.actions).toEqual([]);
+		expect(blind.issues).toEqual([]);
+	});
+
+	it("builds a withdrawal, and reads either back as its form", () => {
+		const w = buildProposalInputs(
+			form({ kind: "vaultWithdraw", amount: "20", vault: VAULT_ADDRESS }),
+			ctx({
+				vault: vaultRead({
+					deposits: [{ vault: VAULT_ADDRESS, equity: "100", lockedUntil: 0 }],
+				}),
+				now: NOW,
+			}),
+		);
+		expect(w.issues).toEqual([]);
+		expect(w.actions[0]).toMatchObject({ isDeposit: false, usd: 20_000_000 });
+		expect(formFromAction(w.actions[0] as never, "testnet")).toMatchObject({
+			kind: "vaultWithdraw",
+			amount: "20",
+			vault: VAULT_ADDRESS,
+		});
+		expect(
+			formFromAction(deposit("50").actions[0] as never, "testnet"),
+		).toMatchObject({
+			kind: "vaultDeposit",
+			amount: "50",
+			vault: VAULT_ADDRESS,
+		});
+		expect(actionTypeOf(form({ kind: "vaultDeposit" }))).toBeNull();
+	});
+
+	it("sends a vault action written as raw JSON to its form, and keeps every other L1 action out", () => {
+		const raw = (action: object) =>
+			buildAction(form({ kind: "raw", raw: JSON.stringify(action) }), ctx());
+		const vault = raw({
+			type: "vaultTransfer",
+			vaultAddress: VAULT_ADDRESS,
+			isDeposit: true,
+			usd: 5_000_000,
+		});
+		expect(codes(vault.issues)).toEqual(["raw.vault_out_of_scope"]);
+		expect(vault.issues[0]?.message).toContain("choose “Vault” above");
+		expect(vault.action).toBeNull();
+		const order = raw({ type: "order", orders: [], grouping: "na" });
+		expect(codes(order.issues)).toEqual(["raw.l1_out_of_scope"]);
+		expect(order.action).toBeNull();
 	});
 });
 

@@ -139,6 +139,14 @@ export const HELP = {
 		title: "Expected rate",
 		body: "Hyperliquid's own estimate of what a stake with this validator earns in a year, after its commission, from the last 7 days: the figure Hyperliquid's staking page shows first. It is an estimate and it changes. Nobody is recommended here.",
 	},
+	vault: {
+		title: "Vault",
+		body: "A vault is an account on Hyperliquid that its leader trades with. Others put USDC in and share what the trading makes or loses, less the leader's share of the profit. HLP is Hyperliquid's own vault. Nothing here recommends one.",
+	},
+	vaultLockup: {
+		title: "Vault lockup",
+		body: "A deposit cannot be taken out for a while after it goes in: four days for HLP, one day for other vaults by Hyperliquid's documentation. Adding to a deposit starts the wait again for all of it. A withdrawal can be signed before and submitted after.",
+	},
 	signingCode: {
 		title: "Signing a code",
 		body: "Hyperliquid has two ways of signing. For most actions a wallet shows every field. For a vault action it shows only a code that stands for the action. This page works the same code out from the proposal, so the two can be compared before signing.",

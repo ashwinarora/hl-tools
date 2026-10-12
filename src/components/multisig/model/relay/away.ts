@@ -90,7 +90,7 @@ export function awayProposal(row: ProposalRow, p: Proposal): AwayProposal {
 	return {
 		digest: p.digest,
 		// a staking step in the words of its own page, as every list has it
-		line: actionLine(action),
+		line: actionLine(action, null, p.payload.network),
 		title: p.meta.title ?? null,
 		kind: String(action.type),
 		agent:

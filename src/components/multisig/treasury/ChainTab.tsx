@@ -173,6 +173,15 @@ function ProposalCell({
 			);
 		case "matched":
 			return link(match.digest, titles.get(match.digest) ?? "open");
+		case "likely":
+			return (
+				<span
+					className="text-xs"
+					title="A vault action carries no number of its own, so Hyperliquid's record cannot prove which proposal a row came from. This is the one proposal on record that agrees with it."
+				>
+					likely {link(match.digest, titles.get(match.digest) ?? "open")}
+				</span>
+			);
 		case "ambiguous":
 			return (
 				<span className="text-xs">

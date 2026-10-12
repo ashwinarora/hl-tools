@@ -151,7 +151,7 @@ export function useOpenProposals() {
 							),
 						) !== null,
 					// a staking step in the words of its own page, anything else as the core says it
-					line: actionLine(p.payload.action),
+					line: actionLine(p.payload.action, null, p.payload.network),
 					title: p.meta.title,
 					flags: described.flags,
 				});

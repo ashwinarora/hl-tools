@@ -52,6 +52,11 @@ export function localDateTime(
 	return `${date}, ${time}`;
 }
 
+/** "11 Oct 2026" in the reader's zone: the day alone, where the hour says nothing. */
+export function localDate(ms: number, ctx: TimeContext = {}): string {
+	return valid(ms) ? formatter(ctx, "date").format(ms) : "—";
+}
+
 /** The reader's zone at that moment, as the browser abbreviates it: "GMT+5:30", "CEST". */
 export function zoneLabel(ms: number, ctx: TimeContext = {}): string {
 	if (!valid(ms)) return "";

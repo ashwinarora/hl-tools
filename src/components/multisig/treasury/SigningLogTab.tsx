@@ -122,7 +122,9 @@ export function SigningLogTab({
 			me,
 			line: (digest) => {
 				const p = docs.data?.proposals.get(digest);
-				return p ? actionLine(p.payload.action, validators) : null;
+				return p
+					? actionLine(p.payload.action, validators, p.payload.network)
+					: null;
 			},
 			title: (digest) => docs.data?.proposals.get(digest)?.meta.title ?? null,
 			// the two steps of a move read as one entry where both say the same

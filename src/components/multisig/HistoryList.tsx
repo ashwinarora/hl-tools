@@ -41,7 +41,11 @@ function entriesOf(rows: readonly StoredProposal[]): Entry[] {
 			read.push({
 				row,
 				second: null,
-				what: actionLine(proposal.payload.action),
+				what: actionLine(
+					proposal.payload.action,
+					null,
+					proposal.payload.network,
+				),
 				proposal,
 				// no relay here: the documents' own word for who proposed them is compared
 				proposedBy: null,

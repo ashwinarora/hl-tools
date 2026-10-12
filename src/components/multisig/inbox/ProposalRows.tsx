@@ -45,7 +45,7 @@ export function ProposalRows({
 		p.move
 			? moveSentence(p.move, names[p.network])
 			: stakingActionOf(p.proposal.payload.action)
-				? actionLine(p.proposal.payload.action, names[p.network])
+				? actionLine(p.proposal.payload.action, names[p.network], p.network)
 				: p.line;
 	return (
 		<div className="flex flex-col">

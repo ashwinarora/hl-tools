@@ -12,6 +12,7 @@ import {
 	type Delegation,
 	isAgentRemoval,
 	judgeStakingSteps,
+	judgeVaultSteps,
 	type Network,
 	type PlainObject,
 	parseSignersString,
@@ -20,12 +21,17 @@ import {
 	sendShape,
 	stakingActionOf,
 	type Validator,
+	type VaultDeposit,
+	type VaultLookup,
+	type VaultStep,
+	vaultActionOf,
 } from "@hl-tools/core";
 import { REMOVE_AGENT } from "./actions";
 import { judgeSwitch, type ModeTarget, modeTargetOf } from "./modeSwitch";
 import { shortAddress } from "./parts";
 import { preflight, type Refusal, receiverOf, spotAvailable } from "./send";
 import { STAKING_REFUSALS, stakingFacts } from "./staking";
+import { VAULT_REFUSALS, vaultFacts } from "./vault";
 
 export interface SendReads {
 	/** `userAbstraction` of an account. */
@@ -55,6 +61,10 @@ export interface SendReads {
 	clock(): Promise<number | null>;
 	/** Every API wallet of the account, the one without a name included. */
 	agents(user: string): Promise<readonly { readonly name: string }[]>;
+	/** Every vault the account has money in. */
+	vaultDeposits(user: string): Promise<readonly VaultDeposit[] | null>;
+	/** What Hyperliquid reports about a vault, with that account's deposit in it. */
+	vault(vault: string, user: string): Promise<VaultLookup>;
 	/** How many positions and resting orders the account has open. */
 	open(user: string): Promise<{
 		readonly positions: number;
@@ -80,6 +90,7 @@ export async function checkBeforeSubmit(
 	if (action.type === "convertToMultiSigUser")
 		return checkNewSigners(action, multiSigUser, reads);
 	if (stakingActionOf(action)) return checkStaking([payload], reads, now);
+	if (vaultActionOf(action)) return checkVault([payload], reads, now);
 	if (isAgentRemoval(action)) return checkRemoval(action, multiSigUser, reads);
 	const toMode = modeTargetOf(action);
 	if (toMode) return checkSwitch(toMode, multiSigUser, reads);
@@ -194,6 +205,10 @@ export async function checkMoveBeforeSubmit(
 ): Promise<Refusal[]> {
 	if (payloads.every((p) => stakingActionOf(p.action)))
 		return checkStaking(payloads, reads, now);
+	// a vault action among them: the steps are judged in order, each against
+	// what the one before it leaves behind
+	if (payloads.some((p) => vaultActionOf(p.action)))
+		return checkVault(payloads, reads, now);
 	const each = await Promise.all(
 		payloads.map((p) => checkBeforeSubmit(p, reads, now)),
 	);
@@ -246,6 +261,79 @@ async function checkStaking(
 		{
 			code: verdict.refusal,
 			message: `${which}${STAKING_REFUSALS[verdict.refusal]}`,
+		},
+	];
+}
+
+/** The step a payload is in a vault move: the move to perps, or the vault action. Null for anything else. */
+function vaultStepOf(action: PlainObject): VaultStep | null {
+	const vault = vaultActionOf(action);
+	if (vault) return vault;
+	return action.type === "usdClassTransfer" &&
+		action.toPerp === true &&
+		typeof action.amount === "string"
+		? { kind: "toPerps", amount: action.amount }
+		: null;
+}
+
+/**
+ * A vault deposit or withdrawal, alone or behind the move to perps that
+ * makes room for it. What Hyperliquid would refuse is read off its own
+ * figures: the account's mode and what each balance can release, the vault
+ * as it stands (closed, taking deposits, there at all), and the account's
+ * deposit in it with the end of its lockup.
+ *
+ * As with a stake, a lockup ends by Hyperliquid's clock: for a withdrawal
+ * that clock is asked for, and the device's is what there is when it does
+ * not answer.
+ */
+async function checkVault(
+	payloads: readonly Checked[],
+	reads: SendReads,
+	now: number,
+): Promise<Refusal[]> {
+	const [first] = payloads;
+	const steps = payloads.flatMap((p): VaultStep[] => {
+		const step = vaultStepOf(p.action);
+		return step ? [step] : [];
+	});
+	const target = steps.find(
+		(s): s is Exclude<VaultStep, { kind: "toPerps" }> => s.kind !== "toPerps",
+	);
+	// a pair that is not a vault move is not judged as one
+	if (!first || !target || steps.length !== payloads.length) return [];
+	const user = first.multiSigUser;
+	const timed = target.kind === "withdraw";
+	const [mode, withdrawable, spot, deposits, lookup, theirs] =
+		await Promise.all([
+			orNull(reads.mode(user)),
+			orNull(reads.withdrawable(user)),
+			orNull(reads.spot(user)),
+			orNull(reads.vaultDeposits(user)),
+			orNull(reads.vault(target.vault, user)),
+			timed ? orNull(reads.clock()) : null,
+		]);
+	const verdict = judgeVaultSteps(
+		steps,
+		vaultFacts(
+			{
+				mode: typeof mode === "string" ? accountMode(mode) : null,
+				perps: withdrawable,
+				spot: spotAvailable(spot, "USDC"),
+				deposits,
+				vault: lookup,
+			},
+			target.vault,
+		),
+		typeof theirs === "number" ? theirs : now,
+		first.network,
+	);
+	if (!verdict) return [];
+	const which = steps.length > 1 ? `Step ${verdict.index + 1}: ` : "";
+	return [
+		{
+			code: verdict.refusal,
+			message: `${which}${VAULT_REFUSALS[verdict.refusal]}`,
 		},
 	];
 }

@@ -1,4 +1,8 @@
-import type { PlainObject, Validator } from "@hl-tools/core";
+import {
+	type PlainObject,
+	parseVaultDetails,
+	type Validator,
+} from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import { A, B, C, OUTSIDER, RECIPIENT, TREASURY } from "#/test/keys";
 import {
@@ -38,6 +42,19 @@ const STAKING = {
 	delegations: [{ validator: X, amount: "1000", lockedUntil: LOCKED_UNTIL }],
 };
 const HYPE = 100_000_000;
+const VAULT = "0x49d05977597b22e3c73d654c351adde9d9920e18";
+const vaultStep = (usdc: number, isDeposit = true): PlainObject => ({
+	type: "vaultTransfer",
+	vaultAddress: VAULT,
+	isDeposit,
+	usd: usdc * 1_000_000,
+});
+const toPerps = (amount: string): PlainObject => ({
+	type: "usdClassTransfer",
+	amount,
+	toPerp: true,
+	nonce: 1,
+});
 const moveIn = (hype: number): PlainObject => ({
 	type: "cDeposit",
 	wei: hype * HYPE,
@@ -90,6 +107,13 @@ function reads(over: Partial<Record<keyof SendReads, unknown>> = {}) {
 		clock: answer("clock", null),
 		agents: answer("agents", [{ name: "lab" }, { name: "" }]),
 		open: answer("open", { positions: 0, orders: 0 }),
+		vaultDeposits: answer("vaultDeposits", [
+			{ vault: VAULT, equity: "40", lockedUntil: LOCKED_UNTIL },
+		]),
+		vault: answer(
+			"vault",
+			parseVaultDetails({ name: "V", vaultAddress: VAULT, leader: VAULT }),
+		),
 	};
 	return { r, asked };
 }
@@ -557,5 +581,147 @@ describe("checkMoveBeforeSubmit: the two steps of a move, before either is sent"
 		});
 		expect(out.map((x) => x.code)).toEqual(["transfer-balance"]);
 		expect(await check([])).toEqual([]);
+	});
+});
+
+describe("a vault deposit or withdrawal, before it is submitted", () => {
+	const after = LOCKED_UNTIL + 1;
+	const check = (action: PlainObject, over = {}, now = after) =>
+		checkBeforeSubmit(payload(action), reads(over).r, now);
+	const codesOf = async (action: PlainObject, over = {}, now = after) =>
+		(await check(action, over, now)).map((x) => x.code);
+
+	it("reads the treasury and the vault, and lets a sound deposit through", async () => {
+		const { r, asked } = reads();
+		expect(await checkBeforeSubmit(payload(vaultStep(50)), r, after)).toEqual(
+			[],
+		);
+		expect(asked.sort()).toEqual([
+			"mode treasury",
+			"spot treasury",
+			"vault receiver",
+			"vaultDeposits treasury",
+			"withdrawable treasury",
+		]);
+	});
+
+	it("stops a deposit Hyperliquid would refuse, in its own order of reasons", async () => {
+		// a manual account's deposit takes from perps only: 100 there, 100 in spot
+		expect(await check(vaultStep(101))).toEqual([
+			{
+				code: "deposit-funds",
+				message:
+					"This deposits more USDC than the treasury can move into a vault now.",
+			},
+		]);
+		expect(await codesOf(vaultStep(4))).toEqual(["vault-min-deposit"]);
+		expect(await codesOf(vaultStep(50), { vault: { kind: "none" } })).toEqual([
+			"vault-unregistered",
+		]);
+		expect(
+			await codesOf(vaultStep(50), {
+				vault: parseVaultDetails({
+					name: "V",
+					vaultAddress: VAULT,
+					leader: VAULT,
+					isClosed: true,
+				}),
+			}),
+		).toEqual(["vault-closed"]);
+		expect(
+			await codesOf(vaultStep(50), {
+				vault: parseVaultDetails({
+					name: "V",
+					vaultAddress: VAULT,
+					leader: VAULT,
+					allowDeposits: false,
+				}),
+			}),
+		).toEqual(["vault-no-deposits"]);
+		// a unified account draws on its one balance, reported in spot
+		expect(
+			await codesOf(vaultStep(150), {
+				mode: "unifiedAccount",
+				spot: [{ coin: "USDC", total: "200", hold: "0" }],
+			}),
+		).toEqual([]);
+		expect(
+			await codesOf(vaultStep(150), {
+				mode: "unifiedAccount",
+				spot: [{ coin: "USDC", total: "200", hold: "60" }],
+			}),
+		).toEqual(["deposit-funds"]);
+	});
+
+	it("holds a withdrawal back until the lockup has ended by Hyperliquid's clock, then asks what is there", async () => {
+		const { r, asked } = reads({ clock: LOCKED_UNTIL - 1 });
+		expect(
+			(await checkBeforeSubmit(payload(vaultStep(5, false)), r, after)).map(
+				(x) => x.code,
+			),
+		).toEqual(["vault-lockup"]);
+		expect(asked).toContain("clock");
+		expect(await codesOf(vaultStep(5, false), { clock: LOCKED_UNTIL })).toEqual(
+			[],
+		);
+		// the device's clock when Hyperliquid's does not answer
+		expect(
+			await codesOf(
+				vaultStep(5, false),
+				{ clock: new Error("x") },
+				LOCKED_UNTIL - 9,
+			),
+		).toEqual(["vault-lockup"]);
+		expect(await codesOf(vaultStep(41, false))).toEqual(["vault-equity"]);
+		expect(await codesOf(vaultStep(5, false), { vaultDeposits: [] })).toEqual([
+			"vault-equity",
+		]);
+	});
+
+	it("stops nothing for a fact it could not read", async () => {
+		const down = new Error("timeout");
+		expect(
+			await codesOf(vaultStep(5000), {
+				mode: down,
+				withdrawable: down,
+				spot: down,
+				vault: down,
+				vaultDeposits: down,
+			}),
+		).toEqual([]);
+		// the mode unread: which balance a deposit draws on is not known
+		expect(await codesOf(vaultStep(5000), { mode: down })).toEqual([]);
+		expect(await codesOf(vaultStep(5, false), { vaultDeposits: down })).toEqual(
+			[],
+		);
+	});
+
+	it("judges a two-step deposit in order: the move to perps makes room for the deposit", async () => {
+		const pair = (moved: string, into: number) => [
+			payload(toPerps(moved)),
+			payload(vaultStep(into)),
+		];
+		const judge = async (moved: string, into: number, over = {}) =>
+			(
+				await checkMoveBeforeSubmit(pair(moved, into), reads(over).r, after)
+			).map((x) => `${x.code}: ${x.message.slice(0, 7)}`);
+		// 100 in perps, 100 in spot: 50 over makes 150
+		expect(await judge("50", 150)).toEqual([]);
+		// the deposit alone would be refused
+		expect(await codesOf(vaultStep(150))).toEqual(["deposit-funds"]);
+		expect(await judge("50", 151)).toEqual(["deposit-funds: Step 2:"]);
+		expect(await judge("101", 150)).toEqual(["transfer-balance: Step 1:"]);
+		// read once for the pair, not once for each step
+		const { r, asked } = reads();
+		await checkMoveBeforeSubmit(pair("50", 150), r, after);
+		expect(asked.filter((a) => a === "withdrawable treasury")).toHaveLength(1);
+	});
+
+	it("leaves a pair that is no vault move to the checks of its own steps", async () => {
+		const odd = [
+			payload({ type: "approveAgent", agentAddress: VAULT }),
+			payload(vaultStep(50)),
+		];
+		expect(await checkMoveBeforeSubmit(odd, reads().r, after)).toEqual([]);
 	});
 });

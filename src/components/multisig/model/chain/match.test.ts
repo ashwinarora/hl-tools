@@ -656,3 +656,166 @@ describe("staking rows of the ledger", () => {
 		expect(hashesToLookUp([landed], proposals)).toEqual([]);
 	});
 });
+
+describe("vault rows of the ledger", () => {
+	const VAULT = "0x49d05977597b22e3c73d654c351adde9d9920e18";
+	const HLP = "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0";
+	const vaultAction = (
+		usdc: number,
+		isDeposit = true,
+		vaultAddress = VAULT,
+	) => ({
+		type: "vaultTransfer",
+		vaultAddress,
+		isDeposit,
+		usd: Math.round(usdc * 1_000_000),
+	});
+	/** The rows as Hyperliquid wrote them on testnet (fixtures/multisig/vaults.json). */
+	const deposited = (usdc = "5.0", over: Partial<LedgerRow> = {}) =>
+		row({
+			type: "vaultDeposit",
+			direction: "within",
+			amount: usdc,
+			counterparty: VAULT,
+			fromVenue: "perp",
+			toVenue: "vault",
+			fee: null,
+			feeToken: null,
+			delta: { type: "vaultDeposit", vault: VAULT, usdc },
+			...over,
+		});
+	const withdrawn = (
+		requestedUsd = "2.999999",
+		over: Partial<LedgerRow> = {},
+	) =>
+		row({
+			type: "vaultWithdraw",
+			direction: "within",
+			amount: requestedUsd,
+			counterparty: VAULT,
+			fromVenue: "vault",
+			toVenue: "perp",
+			fee: null,
+			feeToken: null,
+			delta: {
+				type: "vaultWithdraw",
+				vault: VAULT,
+				user: T,
+				requestedUsd,
+				commission: "0.0",
+				closingCost: "0.0",
+				basis: "3.000035",
+				netWithdrawnUsd: requestedUsd,
+			},
+			...over,
+		});
+
+	it("ties a deposit to the one proposal that agrees with it, as likely and never as certain", () => {
+		const proposals = [
+			proposal(1, vaultAction(5)),
+			// another amount, another vault, the other direction, another kind
+			proposal(2, vaultAction(6)),
+			proposal(3, vaultAction(5, true, HLP)),
+			proposal(4, vaultAction(5, false)),
+			proposal(5),
+		];
+		expect(candidatesFor(deposited(), proposals)).toEqual({
+			kind: "candidates",
+			digests: [digest(1)],
+		});
+		// with no look-up at all: the transaction could not say which proposal it was
+		expect(rowProposal(deposited(), T, proposals, undefined)).toEqual({
+			kind: "likely",
+			digest: digest(1),
+		});
+		// and a transaction that carries the very same action changes nothing
+		expect(
+			rowProposal(deposited(), T, proposals, {
+				state: "found",
+				tx: tx({ action: vaultAction(5) as never }),
+			}),
+		).toEqual({ kind: "likely", digest: digest(1) });
+		expect(hashesToLookUp([deposited()], proposals)).toEqual([]);
+	});
+
+	it("does not tell two proposals for the same deposit apart", () => {
+		const twins = [
+			proposal(1, vaultAction(5)),
+			proposal(2, vaultAction(5), { nonce: NONCE + 60_000 }),
+		];
+		expect(rowProposal(deposited(), T, twins, undefined)).toEqual({
+			kind: "ambiguous",
+			digests: [digest(1), digest(2)],
+		});
+	});
+
+	it("says none on record for a deposit no proposal asked for (an API wallet can make one)", () => {
+		expect(rowProposal(deposited(), T, [proposal(5)], undefined)).toEqual({
+			kind: "none",
+		});
+		// a proposal from outside the window in which its number could have landed
+		expect(
+			rowProposal(
+				deposited(),
+				T,
+				[
+					proposal(1, vaultAction(5), {
+						nonce: NONCE - LANDS_AFTER_NONCE_MS - 10_000,
+					}),
+				],
+				undefined,
+			),
+		).toEqual({ kind: "none" });
+	});
+
+	it("ties a withdrawal by what was asked for, which the row may show a millionth short", () => {
+		const proposals = [
+			proposal(1, vaultAction(3, false)),
+			proposal(2, vaultAction(2.9, false)),
+			proposal(3, vaultAction(3, true)),
+		];
+		// 3 USDC asked for stood in the row as "2.999999"
+		expect(rowProposal(withdrawn("2.999999"), T, proposals, undefined)).toEqual(
+			{
+				kind: "likely",
+				digest: digest(1),
+			},
+		);
+		expect(rowProposal(withdrawn("3.0"), T, proposals, undefined)).toEqual({
+			kind: "likely",
+			digest: digest(1),
+		});
+		// further off than rounding, or more than was asked: not that proposal
+		expect(rowProposal(withdrawn("2.99999"), T, proposals, undefined)).toEqual({
+			kind: "none",
+		});
+		expect(rowProposal(withdrawn("3.000001"), T, proposals, undefined)).toEqual(
+			{
+				kind: "none",
+			},
+		);
+		// a row that does not say what was asked for is tied to nothing
+		const silent = withdrawn("3.0");
+		expect(
+			rowProposal(
+				{ ...silent, delta: { type: "vaultWithdraw", vault: VAULT } },
+				T,
+				proposals,
+				undefined,
+			),
+		).toEqual({ kind: "none" });
+	});
+
+	it("ties nothing to an action whose amount or vault cannot be read", () => {
+		for (const odd of [
+			{ ...vaultAction(5), usd: "5000000" },
+			{ ...vaultAction(5), usd: 0 },
+			{ ...vaultAction(5), vaultAddress: null },
+		])
+			expect(
+				rowProposal(deposited(), T, [proposal(1, odd)], undefined),
+			).toEqual({
+				kind: "none",
+			});
+	});
+});

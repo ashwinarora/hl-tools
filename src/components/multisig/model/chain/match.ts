@@ -21,6 +21,7 @@ import {
 	type Hex,
 	type LedgerRow,
 	type PlainObject,
+	usdToUsdc,
 	weiToHype,
 } from "@hl-tools/core";
 
@@ -53,7 +54,27 @@ const CAUSE: Readonly<Record<string, string>> = {
 	withdraw: "withdraw3",
 	// the move into staking; the row of a return that landed has no action behind it
 	cStakingTransfer: "cDeposit",
+	vaultDeposit: "vaultTransfer",
+	vaultWithdraw: "vaultTransfer",
 };
+
+/**
+ * Rows of a vault action. Such an action carries no number of its own, so
+ * two deposits of one amount into one vault are the same action whoever made
+ * them (another proposal, the treasury's own API wallet), and the
+ * transaction behind a row cannot say which proposal it was. A row is
+ * therefore tied to a proposal as "likely" at most, with no look-up.
+ */
+const UNNUMBERED: ReadonlySet<string> = new Set([
+	"vaultDeposit",
+	"vaultWithdraw",
+]);
+
+/**
+ * How far below the amount asked a withdrawal's row may stand: Hyperliquid
+ * recorded "2.999999" for 3 USDC asked (fixtures/multisig/vaults.json).
+ */
+const WITHDRAW_ROW_SLACK = Decimal.parse("0.000002");
 
 /**
  * not-applicable  the account did not do this (money arrived, a liquidation):
@@ -112,6 +133,25 @@ function agrees(row: LedgerRow, action: PlainObject): boolean {
 		case "cDeposit":
 			// the action carries HYPE as a whole number with 8 decimals
 			return sameAmount(weiToHype(action.wei), d.amount);
+		case "vaultTransfer": {
+			const asked = usdToUsdc(action.usd);
+			if (asked === null || !sameAddress(action.vaultAddress, d.vault))
+				return false;
+			if (row.type === "vaultDeposit")
+				return action.isDeposit === true && sameAmount(asked, d.usdc);
+			// the row says what was asked for, to within a millionth or two
+			const recorded =
+				typeof d.requestedUsd === "string"
+					? Decimal.tryParse(d.requestedUsd)
+					: null;
+			const short = recorded ? Decimal.parse(asked).sub(recorded) : null;
+			return (
+				action.isDeposit === false &&
+				!!short &&
+				!short.isNegative() &&
+				short.lte(WITHDRAW_ROW_SLACK)
+			);
+		}
 		default:
 			return true;
 	}
@@ -201,6 +241,8 @@ export function hashesToLookUp(
 		if (
 			// a withdrawal that shows its number needs no look-up (and its hash would not answer)
 			withdrawalNumber(row) === null &&
+			// a vault row's transaction cannot say which proposal it was
+			!UNNUMBERED.has(row.type) &&
 			candidatesFor(row, proposals).kind === "candidates" &&
 			!ZERO_HASH.test(row.hash)
 		)
@@ -298,6 +340,11 @@ export type RowProposal =
 	/** The explorer did not answer, or does not know the hash: nothing is claimed. */
 	| { readonly kind: "unchecked" }
 	| { readonly kind: "matched"; readonly digest: Hex }
+	/**
+	 * One proposal on record agrees with everything the row shows, and the
+	 * action carries no number that would make it proof (a vault action).
+	 */
+	| { readonly kind: "likely"; readonly digest: Hex }
 	| { readonly kind: "ambiguous"; readonly digests: readonly Hex[] };
 
 /** How a look-up of a row's transaction stands. */
@@ -325,6 +372,10 @@ export function rowProposal(
 	}
 	const c = candidatesFor(row, proposals);
 	if (c.kind !== "candidates") return c;
+	if (UNNUMBERED.has(row.type))
+		return c.digests.length === 1
+			? { kind: "likely", digest: c.digests[0] as Hex }
+			: { kind: "ambiguous", digests: c.digests };
 	if (!lookup || lookup.state === "pending") return { kind: "checking" };
 	if (lookup.state !== "found") return { kind: "unchecked" };
 	const wanted = new Set(c.digests);

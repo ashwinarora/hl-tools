@@ -36,6 +36,7 @@ import {
 	toPlain,
 	tryParseJson,
 	userSignedSpec,
+	vaultActionOf,
 	WITHDRAWAL_FEE_USDC,
 	withdrawalOutcome,
 	ZERO_ADDRESS,
@@ -68,6 +69,13 @@ import {
 	type StakingRead,
 	stakingActions,
 } from "./staking";
+import {
+	planVault,
+	VAULT,
+	type VaultKind,
+	type VaultRead,
+	vaultActions,
+} from "./vault";
 
 /**
  * `sendUsdc` and `sendToken` both build a `sendAsset`: the one way of sending
@@ -85,6 +93,7 @@ export type ActionKind =
 	| "accountMode"
 	| "changeSigners"
 	| StakingKind
+	| VaultKind
 	| "raw";
 
 export const ACTION_KINDS: readonly {
@@ -92,7 +101,7 @@ export const ACTION_KINDS: readonly {
 	readonly label: string;
 	readonly description: string;
 	/** Kinds a chooser shows as one entry, with the choice between them inside. */
-	readonly group?: "staking";
+	readonly group?: "staking" | "vault";
 }[] = [
 	{
 		kind: "sendUsdc",
@@ -141,6 +150,8 @@ export const ACTION_KINDS: readonly {
 	{ kind: "stake", ...STAKING.kinds.stake, group: "staking" },
 	{ kind: "returnToSpot", ...STAKING.kinds.returnToSpot, group: "staking" },
 	{ kind: "moveStake", ...STAKING.kinds.moveStake, group: "staking" },
+	{ kind: "vaultDeposit", ...VAULT.kinds.vaultDeposit, group: "vault" },
+	{ kind: "vaultWithdraw", ...VAULT.kinds.vaultWithdraw, group: "vault" },
 	{
 		kind: "raw",
 		label: "Raw JSON",
@@ -234,6 +245,8 @@ export interface ActionForm {
 	 */
 	readonly validator: string;
 	readonly toValidator: string;
+	/** Vault deposit and withdrawal: the vault's address. */
+	readonly vault: string;
 	readonly raw: string;
 	/** The leader: the signer expected to complete and submit. */
 	readonly finaliser: string;
@@ -258,6 +271,7 @@ export const DEFAULT_FORM: ActionForm = {
 	signers: "",
 	validator: "",
 	toValidator: "",
+	vault: "",
 	raw: "",
 	finaliser: "",
 	chain: "hyperevm",
@@ -307,6 +321,8 @@ export interface BuildContext {
 	readonly waiting?: SwitchFacts["waiting"];
 	/** What Hyperliquid said about the addresses that would be new signers. */
 	readonly signerChecks?: ReadonlyMap<string, SignerCheck>;
+	/** What Hyperliquid said about the treasury's balances and deposits and about the vault in the form; null or absent while unread. */
+	readonly vault?: VaultRead | null;
 	/** What Hyperliquid said about the treasury's staking and the validators; null or absent while unread. */
 	readonly staking?: StakingRead | null;
 	/** The page's clock, for what is still locked; the proposal's number when absent. */
@@ -901,6 +917,21 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				: [];
 			return done(first ?? null, rest);
 		}
+		case "vaultDeposit":
+		case "vaultWithdraw": {
+			const plan = planVault(
+				{ kind: form.kind, amount: form.amount, vault: form.vault },
+				ctx.vault,
+				ctx.network,
+				ctx.now ?? ctx.nonce,
+			);
+			issues.push(...plan.issues);
+			// each step is its own proposal, numbered one after the other
+			const [first, ...rest] = plan.steps
+				? vaultActions(plan.steps, head, ctx.nonce)
+				: [];
+			return done(first ?? null, rest);
+		}
 		case "raw": {
 			const action = rawAction(form.raw, head, ctx.nonce, issues);
 			if (action) warnAboutSend(action, ctx, issues);
@@ -968,12 +999,23 @@ function rawAction(
 		);
 		return null;
 	}
+	if (type === "vaultTransfer") {
+		issues.push(
+			issue(
+				"raw.vault_out_of_scope",
+				"error",
+				"A vault deposit or withdrawal has its own form: choose “Vault” above. It checks the vault and the balances, and works out the steps.",
+				{ path },
+			),
+		);
+		return null;
+	}
 	if (family !== "user-signed") {
 		issues.push(
 			issue(
 				"raw.l1_out_of_scope",
 				"error",
-				`"${type}" is an L1 action (orders, cancels, leverage, vault and sub-account moves). Those are not proposals here.`,
+				`"${type}" is an L1 action (orders, cancels, leverage, sub-account moves). Of those, only vault deposits and withdrawals are proposals here, through the Vault form.`,
 				{
 					path,
 					fix: "To trade with multi-sig funds, propose an API wallet and trade with its key.",
@@ -1051,6 +1093,9 @@ export function actionTypeOf(
 		case "stake":
 		case "returnToSpot":
 		case "moveStake":
+		// likewise one or two, known once the balances are read
+		case "vaultDeposit":
+		case "vaultWithdraw":
 			return null;
 		case "raw": {
 			const parsed = tryParseJson(form.raw.trim());
@@ -1293,6 +1338,14 @@ export function formFromAction(
 			// form then works the steps out again from what the treasury holds
 			// now. The other two staking steps mean nothing by themselves there
 			// and stay as they are.
+			const vault = vaultActionOf(action);
+			if (vault)
+				return {
+					...base,
+					kind: vault.kind === "deposit" ? "vaultDeposit" : "vaultWithdraw",
+					amount: vault.amount,
+					vault: vault.vault,
+				};
 			const staking = stakingActionOf(action);
 			if (staking?.kind === "stake")
 				return {
@@ -1310,7 +1363,7 @@ export function formFromAction(
 
 /** Pre-fill the form from a move of two steps (re-proposing it): the form that names its end. */
 export function formFromMove(
-	move: Pick<Move, "kind" | "amount" | "validator" | "to" | "steps">,
+	move: Pick<Move, "kind" | "amount" | "validator" | "to" | "steps" | "vault">,
 	network: Network,
 ): Partial<ActionForm> {
 	const chain =
@@ -1318,6 +1371,14 @@ export function formFromMove(
 			str(move.steps[0].payload.action.signatureChainId),
 			network,
 		) ?? undefined;
+	// a deposit in two steps: the form names the deposit and works the steps out again
+	if (move.kind === "vault")
+		return {
+			...(chain ? { chain } : {}),
+			kind: "vaultDeposit",
+			amount: move.amount,
+			vault: move.vault ?? "",
+		};
 	return {
 		...(chain ? { chain } : {}),
 		kind:
@@ -1393,6 +1454,8 @@ export function fieldOf(i: Issue): keyof ActionForm | null {
 			return "validator";
 		case "action.toValidator":
 			return "toValidator";
+		case "action.vaultAddress":
+			return "vault";
 		case "action":
 		case "action.type":
 			return "raw";

@@ -49,6 +49,7 @@ import {
 } from "@hl-tools/core";
 import { addressField, amountField } from "./fields";
 import { shortAddress } from "./parts";
+import { vaultActionLine } from "./vault";
 
 /**
  * stake         this much staked with a validator
@@ -142,11 +143,14 @@ export function stepSentence(
 export function actionLine(
 	action: PlainObject,
 	validators?: readonly Validator[] | null,
+	/** The proposal's network: a vault action names none, and HLP is HLP on its own network only. */
+	network?: Network,
 ): string {
 	const step = stakingActionOf(action);
-	return step
-		? stepSentence(step, validators)
-		: describeAction(action).headline;
+	if (step) return stepSentence(step, validators);
+	// a vault step in the words of its own page, never in staking's
+	const vault = network ? vaultActionLine(action, network) : null;
+	return vault ?? describeAction(action, { network }).headline;
 }
 
 export const STAKING = {
