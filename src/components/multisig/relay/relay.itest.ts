@@ -486,6 +486,37 @@ describe("several wallets signed in in one browser", () => {
 		expect(filed.filter((r) => r.requested_by === one.address)).toHaveLength(1);
 	});
 
+	it("joins each wallet's channel with that wallet's own session", async () => {
+		// The channel is private to its wallet. With both signed in in one
+		// browser, the first wallet's client is let into the first wallet's
+		// channel, and the second wallet's client is refused there: the join
+		// carries the session of the client it was made through, not of
+		// whoever signed in last.
+		const here = newBrowser();
+		const one = newAccount();
+		const two = newAccount();
+		await signInWith(here.clientFor(one.address), one.account);
+		await signInWith(here.clientFor(two.address), two.account);
+		const join = (client: ReturnType<typeof here.clientFor>) => {
+			let state: ChannelState | null = null;
+			const leave = subscribeWallet(
+				client,
+				one.address,
+				() => {},
+				(s) => {
+					state = s;
+				},
+			);
+			return { leave, state: () => state };
+		};
+		const own = join(here.clientFor(one.address));
+		const other = join(here.clientFor(two.address));
+		await until(() => own.state() === "joined", 8000);
+		await until(() => other.state() === "refused", 8000);
+		own.leave();
+		other.leave();
+	});
+
 	it("signs one wallet out and leaves the other signed in", async () => {
 		const here = newBrowser();
 		const one = newAccount();
