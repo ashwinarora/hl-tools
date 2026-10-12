@@ -2,7 +2,7 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Link } from "@tanstack/react-router";
 import { LogOut, Wallet } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount, useConnectors, useDisconnect } from "wagmi";
 import { short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
@@ -29,6 +29,37 @@ export function Avatar({ className = "size-7" }: { className?: string }) {
 			aria-hidden
 			className={`${className} shrink-0 rounded-full bg-gradient-to-br from-brand to-info`}
 		/>
+	);
+}
+
+/**
+ * False once the page has looked and found no wallet in this browser: nothing
+ * injected, none announced (EIP-6963), and not inside a Safe app. The picker
+ * offers no QR code to a phone wallet (that would reach WalletConnect's
+ * relay, see `signerWallets.ts`), so such a visitor is told what to do.
+ */
+export function useWalletFound(): boolean {
+	const connectors = useConnectors();
+	const mounted = useMounted();
+	if (!mounted) return true;
+	return (
+		typeof (window as { ethereum?: unknown }).ethereum !== "undefined" ||
+		window.parent !== window ||
+		connectors.some((c) => c.type === "injected" && c.id !== "injected")
+	);
+}
+
+export const NO_WALLET =
+	"No wallet was found in this browser. Install a wallet extension, or open this page in your wallet's own browser.";
+
+/** Under a "Connect" button, when there is nothing to connect to. */
+export function NoWalletNote({ className }: { className?: string }) {
+	const found = useWalletFound();
+	if (found) return null;
+	return (
+		<output className={cn("block text-xs text-warning", className)}>
+			{NO_WALLET}
+		</output>
 	);
 }
 
@@ -200,6 +231,7 @@ export function WalletBox() {
 					<>
 						<b className="text-sm font-semibold">No wallet connected</b>
 						{connect("Connect wallet")}
+						<NoWalletNote />
 					</>
 				)}
 			</div>
@@ -260,7 +292,10 @@ export function WalletBox() {
 							: `Sign in as ${short(w.address)}`}
 					</Btn>
 				) : (
-					connect("Connect wallet")
+					<>
+						{connect("Connect wallet")}
+						<NoWalletNote />
+					</>
 				)}
 				<Btn size="sm" variant="ghost" onClick={relay.signOut}>
 					Sign out {short(relay.sessionWallet)}
@@ -328,6 +363,7 @@ export function WalletBox() {
 				{relay.signingIn ? "Waiting for your wallet…" : RELAY_COPY.signInButton}
 			</Btn>
 			{problem}
+			{!w.connected && <NoWalletNote />}
 			<SmallPrint />
 			{!w.connected && (
 				<Btn

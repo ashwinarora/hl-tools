@@ -32,9 +32,11 @@ const noEthereumRpc = custom(
  * under (HyperEVM 999 / 998, Arbitrum One / Sepolia; a wallet can only be
  * asked to switch to a chain this config knows), plus Ethereum.
  *
- * Wallets: `SIGNER_WALLET_GROUPS`, RainbowKit's default list without the
- * generic "WalletConnect" entry, whose modal reports the page URL to a third
- * party (see `signerWallets.ts`). Installed wallets are still detected.
+ * Wallets: `SIGNER_WALLET_GROUPS`, the wallets in this browser and nothing
+ * that reaches a third party: no WalletConnect entry or QR fallback, no
+ * Coinbase pop-up (see `signerWallets.ts`). Installed wallets are detected.
+ * `projectId` is something `getDefaultConfig` insists on; with this list no
+ * WalletConnect connector is ever created.
  *
  * Storage: its own key, so the two sections that connect a wallet keep
  * separate connection state.
