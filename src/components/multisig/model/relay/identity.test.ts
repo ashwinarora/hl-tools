@@ -1,6 +1,7 @@
 import type { Address } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import {
+	connectedWallet,
 	type Identity,
 	type IdentityEvent,
 	identityStep,
@@ -176,6 +177,29 @@ describe("signing in and out", () => {
 			run([wallet(A, false)]),
 		])
 			expect(identityStep(s, { type: "retry" })).toBe(s);
+	});
+});
+
+describe("which wallet counts as connected", () => {
+	const mixed = "0x00000000000000000000000000000000000000A1";
+
+	it("is the one the wallet stack calls connected, in lowercase", () => {
+		expect(connectedWallet({ address: mixed, isConnected: true })).toBe(A);
+	});
+
+	it("is none while the stack names an address but has not finished connecting", () => {
+		// after a reload: the first connector has answered, the others are still being asked
+		expect(connectedWallet({ address: mixed, isConnected: false })).toBeNull();
+		expect(
+			connectedWallet({ address: undefined, isConnected: false }),
+		).toBeNull();
+		expect(connectedWallet({ address: null, isConnected: true })).toBeNull();
+		// and for those frames the page is checking, not signed out and not in use
+		const onA = run([wallet(A, true), probed(1, "ready")]);
+		expect(view(onA, null, { walletStatus: "connecting" })).toEqual({
+			mode: "restoring",
+			wallet: null,
+		});
 	});
 });
 

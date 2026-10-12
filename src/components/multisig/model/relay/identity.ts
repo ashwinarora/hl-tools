@@ -110,6 +110,23 @@ export function stillAsked(
 	return s.wallet === wallet && s.turn === turn;
 }
 
+/**
+ * The wallet that counts as connected, for the rail and for the relay alike.
+ * The wallet stack has to say so itself: while it is still working through
+ * its connectors after a load it can already name an address without calling
+ * it a connection, and a page that took the address alone showed, for a few
+ * frames, a relay in use next to "no wallet connected" (found in the
+ * browser, 2026-10-12).
+ */
+export function connectedWallet(account: {
+	readonly address?: string | null;
+	readonly isConnected: boolean;
+}): Address | null {
+	return account.isConnected && account.address
+		? (account.address.toLowerCase() as Address)
+		: null;
+}
+
 export type IdentityMode = "signed-out" | "restoring" | "on" | "unreachable";
 
 export interface IdentityView {

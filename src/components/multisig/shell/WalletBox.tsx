@@ -13,6 +13,7 @@ import { useWalletBusy } from "#/store/walletBusyStore";
 import { useSelfTreasury } from "../live/useSelfTreasury";
 import { chainLabel } from "../model/chains";
 import { othersSummary, RELAY_COPY } from "../model/relay/copy";
+import { connectedWallet } from "../model/relay/identity";
 import { selfTag } from "../model/selfTreasury";
 import { useRelay } from "../relay/useRelay";
 import { Help } from "./Help";
@@ -63,11 +64,14 @@ export function NoWalletNote({ className }: { className?: string }) {
 
 /** The connected wallet as it appears in the rail and the mobile bar. */
 export function useShellWallet() {
-	const { address, chainId, isConnected, connector } = useAccount();
+	const account = useAccount();
+	const { chainId, connector } = account;
 	const { disconnect } = useDisconnect();
 	const { openConnectModal } = useConnectModal();
 	const mounted = useMounted();
-	const connected = mounted && isConnected && !!address;
+	// the same definition of "connected" as the relay's (`connectedWallet`)
+	const address = mounted ? connectedWallet(account) : null;
+	const connected = address !== null;
 	// with nothing to connect to, the picker would open empty: say why instead
 	const connect = openConnectModal
 		? () => {
@@ -78,7 +82,7 @@ export function useShellWallet() {
 	return {
 		mounted,
 		connected,
-		address: connected ? (address.toLowerCase() as `0x${string}`) : null,
+		address,
 		chainId: connected ? (chainId ?? null) : null,
 		connectorName: connector?.name ?? null,
 		connect,

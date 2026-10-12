@@ -17,6 +17,7 @@ import { NO_WALLET, walletInBrowser } from "#/lib/signerWallets";
 import { useWalletBusy } from "#/store/walletBusyStore";
 import { relayIssue } from "../model/relay/errors";
 import {
+	connectedWallet,
 	identityStep,
 	identityView,
 	NO_IDENTITY,
@@ -82,10 +83,13 @@ function RelaySession({
 	children: ReactNode;
 }) {
 	const queries = useQueryClient();
-	const { address, chainId, status: walletStatus } = useAccount();
+	const account = useAccount();
+	const { chainId, status: walletStatus } = account;
 	const { signMessageAsync } = useSignMessage();
 	const { openConnectModal } = useConnectModal();
-	const connected = address ? (address.toLowerCase() as Address) : null;
+	// one definition of "connected" for the relay and for the rail
+	const connected = connectedWallet(account);
+	const address = connected ? account.address : undefined;
 	const slots = useMemo(() => browserSlots(), []);
 
 	// Whether anything is stored is only known after mount. Until then the page
