@@ -209,7 +209,7 @@ export async function mergeProposals(
 					issue(
 						"merge.signature_dropped",
 						"warning",
-						`${side}.signatures[${i}] claims ${s.signer} but recovers to ${recovered ?? "nothing"}; dropped.`,
+						`The signature filed under ${s.signer} was made by ${recovered ?? "no key that can be recovered"}, so it was left out.`,
 						{ path: `${side}.signatures[${i}]` },
 					),
 				);

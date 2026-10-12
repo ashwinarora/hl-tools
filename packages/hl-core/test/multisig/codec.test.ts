@@ -286,7 +286,10 @@ describe("mergeProposals", () => {
 			},
 		};
 		const r = await mergeProposals(a, b);
-		expect(r.issues[0]?.message).toContain("nothing");
+		expect(r.issues[0]?.message).toContain("no key that can be recovered");
+		// a sentence for a reader; where it sits in the document is the issue's path
+		expect(r.issues[0]?.message).not.toMatch(/signatures\[/);
+		expect(r.issues[0]?.path).toMatch(/^[ab]\.signatures\[\d+\]$/);
 		expect(r.merged?.signatures).toEqual([]);
 		expect(r.merged?.meta).toEqual(b.meta);
 	});
