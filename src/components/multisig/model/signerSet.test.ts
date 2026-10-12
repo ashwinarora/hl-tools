@@ -177,6 +177,15 @@ describe("signerRows: what stands on each row", () => {
 		// in good order: nothing to say about the capitals
 		expect(rows([CHECKSUMMED], { [CHECKSUMMED]: ok })[0]?.level).toBe("ok");
 	});
+	it("says that nobody can sign with the zero address, which Hyperliquid takes as in use", () => {
+		const zero = "0x0000000000000000000000000000000000000000";
+		const r = rows([zero], { [zero]: ok })[0];
+		expect(r?.level).toBe("warning");
+		expect(codes(r?.lines ?? [])).toEqual(["signer.zero", "signer.ok"]);
+		expect(r?.lines[0]?.text).toBe(
+			"This is the zero address. Nobody holds its key, so it can never sign.",
+		);
+	});
 	it("puts the worst line first when several apply", () => {
 		const typo = CHECKSUMMED.replace("5aA", "5Aa");
 		const r = rows([typo], { [typo]: { state: "ready", role: "missing" } })[0];

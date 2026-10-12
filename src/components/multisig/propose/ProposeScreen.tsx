@@ -92,6 +92,15 @@ import { useWalletSigner } from "../useWalletSigner";
 import { ActionFields } from "./ActionFields";
 import { ChangeSignersFields } from "./ChangeSignersFields";
 
+/** Warnings said under the field they are about, not with the general notes. */
+const FIELD_NOTES: ReadonlySet<string> = new Set([
+	"address.checksum",
+	"address.zero",
+	"action.self_send",
+	"withdraw.own_address",
+	"agent.in_use",
+]);
+
 /** Shown only once the user has tried to create: an untouched form is not an error. */
 const REQUIRED = new Set(["field.required", "finaliser.required"]);
 
@@ -244,6 +253,15 @@ function ProposeForm({
 	// use, and which of its balances the money lands in.
 	const lookup = useReceiver(network, hydrated ? destinationOf(form) : null);
 
+	// An API wallet approval: is the address named already in use on Hyperliquid?
+	const agentTyped = form.agentAddress.trim().toLowerCase();
+	const agentLookup = useReceiver(
+		network,
+		hydrated && form.kind === "approveAgent" && ADDRESS_RE.test(agentTyped)
+			? agentTyped
+			: null,
+	);
+
 	// A change of signers: what Hyperliquid says about the addresses that would
 	// be new, asked once each (the signers of now are signers already).
 	const wantedSigners = useMemo(
@@ -273,6 +291,7 @@ function ProposeForm({
 		// absent while it is on its way; null once the read has failed
 		mode: !hydrated || state.modePending ? undefined : state.mode,
 		receiver: lookup.receiver,
+		agent: agentLookup.receiver,
 		signerChecks: signerLookups.checks,
 		createdBy: wallet.address,
 		supersedes: superseded?.digest ?? null,
@@ -300,8 +319,20 @@ function ProposeForm({
 				fieldOf(i) === field &&
 				(attempted || !REQUIRED.has(i.code)),
 		)?.message;
+	// warnings about an address as it was typed stand under its field, where the typo is
+	const notes = (field: keyof ActionForm) =>
+		issues
+			.filter(
+				(i) =>
+					i.severity === "warning" &&
+					FIELD_NOTES.has(i.code) &&
+					fieldOf(i) === field,
+			)
+			.map((i) => i.message);
 	const otherIssues = issues.filter(
-		(i) => i.severity !== "error" || fieldOf(i) === null,
+		(i) =>
+			(i.severity !== "error" || fieldOf(i) === null) &&
+			!FIELD_NOTES.has(i.code),
 	);
 	const action = prepared?.action ?? null;
 	const described = action ? describeAction(action) : null;
@@ -312,7 +343,8 @@ function ProposeForm({
 		spotUsdc: spotAvailable(state.spot, "USDC"),
 	};
 	const cost =
-		lookup.state === "idle"
+		// to the treasury itself there is no receiver to describe: the note under the field says what it is
+		lookup.state === "idle" || destinationOf(form) === address
 			? null
 			: costLine({
 					action: draft.sketch,
@@ -555,6 +587,7 @@ function ProposeForm({
 											form={form}
 											set={set}
 											error={error}
+											notes={notes}
 											network={network}
 											tokens={universe.data?.tokens ?? null}
 											held={

@@ -900,6 +900,114 @@ describe("formFromAction: the older ways of sending come back as the send that r
 	});
 });
 
+describe("what the audit found the form letting through", () => {
+	const CHECKSUMMED = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed";
+	const ZERO = "0x0000000000000000000000000000000000000000";
+
+	it("stops a withdrawal that is not more than the bridge's fee, and says why", () => {
+		const withdraw = (amount: string) =>
+			buildAction(
+				form({ kind: "withdraw3", destination: RECIPIENT, amount }),
+				ctx(),
+			);
+		// exactly the fee was answered "Withdrawal is smaller than fee." on testnet
+		for (const amount of ["1", "1.0", "0.5"]) {
+			const r = withdraw(amount);
+			expect(codes(r.issues), amount).toEqual(["withdraw.below_fee"]);
+			expect(r.action).toBeNull();
+			expect(fieldOf(r.issues[0] as Issue)).toBe("amount");
+		}
+		expect(withdraw("1").issues[0]?.message).toBe(
+			"The bridge keeps 1 USDC of every withdrawal as its fee, so a withdrawal has to be more than 1 USDC. Hyperliquid refuses this one.",
+		);
+		expect(withdraw("1.000001").issues).toEqual([]);
+		expect(withdraw("2").action).not.toBeNull();
+	});
+
+	it("notes a destination whose capitals do not match its checksum, without blocking", () => {
+		const typo = CHECKSUMMED.replace("5aA", "5Aa");
+		const r = buildAction(
+			form({ kind: "sendUsdc", destination: typo, amount: "1" }),
+			ctx(),
+		);
+		expect(r.issues.map((i) => [i.severity, i.code, i.path])).toEqual([
+			["warning", "address.checksum", "action.destination"],
+		]);
+		expect(r.action).not.toBeNull();
+		// written correctly, or in one case only (no checksum to break): nothing to say
+		for (const ok of [CHECKSUMMED, CHECKSUMMED.toLowerCase()])
+			expect(
+				buildAction(
+					form({ kind: "sendUsdc", destination: ok, amount: "1" }),
+					ctx(),
+				).issues,
+			).toEqual([]);
+		// a withdrawal's destination is typed the same way
+		expect(
+			codes(
+				buildAction(
+					form({ kind: "withdraw3", destination: typo, amount: "5" }),
+					ctx(),
+				).issues,
+			),
+		).toEqual(["address.checksum"]);
+	});
+
+	it("says what the zero address is, wherever one is typed", () => {
+		const send = buildAction(
+			form({ kind: "sendUsdc", destination: ZERO, amount: "1" }),
+			ctx(),
+		);
+		expect(codes(send.issues)).toEqual(["address.zero"]);
+		expect(send.issues[0]?.message).toContain("whatever is sent to it is lost");
+		expect(send.action).not.toBeNull();
+		const agent = buildAction(
+			form({ kind: "approveAgent", agentAddress: ZERO }),
+			ctx(),
+		);
+		expect(codes(agent.issues)).toEqual(["address.zero"]);
+		expect(agent.issues[0]?.message).toBe(
+			"This is the zero address. Nobody holds its key.",
+		);
+	});
+
+	it("notes an API wallet address that is already in use on Hyperliquid", () => {
+		const approve = (agent: BuildContext["agent"]) =>
+			buildAction(
+				form({ kind: "approveAgent", agentAddress: A, agentName: "bot" }),
+				ctx({ agent }),
+			);
+		expect(approve(undefined).issues).toEqual([]);
+		expect(approve({ status: "new", mode: null }).issues).toEqual([]);
+		const used = approve({ status: "active", mode: null });
+		expect(used.issues.map((i) => [i.severity, i.code, i.path])).toEqual([
+			["warning", "agent.in_use", "action.agentAddress"],
+		]);
+		expect(used.action).not.toBeNull();
+		expect(
+			approve({ status: "agent", mode: null, agentOf: B }).issues[0]?.message,
+		).toContain("already an API wallet");
+	});
+
+	it("refuses an account-mode switch as raw JSON, before anyone signs", () => {
+		const r = buildAction(
+			form({
+				kind: "raw",
+				raw: JSON.stringify({
+					type: "userSetAbstraction",
+					user: TREASURY,
+					abstraction: "unifiedAccount",
+				}),
+			}),
+			ctx(),
+		);
+		expect(codes(r.issues)).toEqual(["raw.mode_switch_out_of_scope"]);
+		expect(r.issues[0]?.message).toContain("Invalid multi-sig outer signer");
+		expect(r.action).toBeNull();
+		expect(fieldOf(r.issues[0] as Issue)).toBe("raw");
+	});
+});
+
 describe("changeSigners", () => {
 	const change = (signers: string, over: Partial<BuildContext> = {}) =>
 		buildAction(form({ kind: "changeSigners", signers }), ctx(over));

@@ -123,11 +123,21 @@ export function CostNote({ line }: { line: CostLine | null }) {
 	);
 }
 
+/** One amber line per warning about what was typed into the field above. */
+function FieldNotes({ texts }: { texts: readonly string[] }) {
+	return texts.map((t) => (
+		<p key={t} className="text-xs text-warning">
+			{t}
+		</p>
+	));
+}
+
 /** The inputs of the chosen action. Errors come from the model, keyed by field. */
 export function ActionFields({
 	form,
 	set,
 	error,
+	notes,
 	network,
 	tokens,
 	held,
@@ -141,6 +151,8 @@ export function ActionFields({
 	form: ActionForm;
 	set: <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => void;
 	error: (field: keyof ActionForm) => string | undefined;
+	/** Warnings about an address as it was typed, said under its field. */
+	notes: (field: keyof ActionForm) => readonly string[];
 	network: Network;
 	tokens: readonly TokenOption[] | null;
 	/** Token indexes the treasury holds, listed first: a network can have thousands. */
@@ -171,10 +183,12 @@ export function ActionFields({
 				mono
 				value={form.destination}
 				onChange={(e) => set("destination", e.target.value)}
-				onBlur={(e) => set("destination", e.target.value.trim().toLowerCase())}
+				// kept as typed: its capitals are what the checksum warning reads
+				onBlur={(e) => set("destination", e.target.value.trim())}
 				placeholder="0x…"
 				aria-invalid={!!error("destination")}
 			/>
+			<FieldNotes texts={notes("destination")} />
 			<DestinationNames
 				value={form.destination}
 				onPick={(a) => set("destination", a)}
@@ -263,7 +277,7 @@ export function ActionFields({
 					)}
 					{amount(
 						"USDC",
-						"Leaves the perps balance through the bridge; the bridge takes a 1 USDC fee.",
+						"Leaves the perps balance through the bridge. The bridge keeps 1 USDC of this amount as its fee, so the destination receives 1 USDC less.",
 					)}
 				</>
 			);
@@ -342,12 +356,12 @@ export function ActionFields({
 							mono
 							value={form.agentAddress}
 							onChange={(e) => set("agentAddress", e.target.value)}
-							onBlur={(e) =>
-								set("agentAddress", e.target.value.trim().toLowerCase())
-							}
+							// kept as typed, like a destination
+							onBlur={(e) => set("agentAddress", e.target.value.trim())}
 							placeholder="0x…"
 							aria-invalid={!!error("agentAddress")}
 						/>
+						<FieldNotes texts={notes("agentAddress")} />
 					</Field>
 					<Field
 						label="Name (optional)"

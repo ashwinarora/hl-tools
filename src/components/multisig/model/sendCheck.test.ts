@@ -166,6 +166,22 @@ describe("checkBeforeSubmit", () => {
 		).toEqual([]);
 	});
 
+	it("stops a withdrawal that is not more than the bridge's fee", async () => {
+		const withdraw = (amount: string): PlainObject => ({
+			type: "withdraw3",
+			destination: RECIPIENT,
+			amount,
+			time: 1,
+		});
+		expect(await codes(withdraw("1"))).toEqual(["withdrawal-below-fee"]);
+		expect(await codes(withdraw("0.2"))).toEqual(["withdrawal-below-fee"]);
+		// whatever the reads say, and also when they fail
+		expect(
+			await codes(withdraw("1"), { withdrawable: new Error("timeout") }),
+		).toEqual(["withdrawal-below-fee"]);
+		expect(await codes(withdraw("2"))).toEqual([]);
+	});
+
 	describe("a change of signers", () => {
 		const change = (signers: string): PlainObject => ({
 			type: "convertToMultiSigUser",

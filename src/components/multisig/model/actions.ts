@@ -11,12 +11,14 @@ import {
 	type AccountMode,
 	type Address,
 	activationCharge,
+	checksumMismatch,
 	Decimal,
 	fromPlain,
 	type Hex,
 	hasErrors,
 	type Issue,
 	issue,
+	isZeroAddress,
 	type Network,
 	networkConfig,
 	type PlainObject,
@@ -29,6 +31,8 @@ import {
 	toPlain,
 	tryParseJson,
 	userSignedSpec,
+	WITHDRAWAL_FEE_USDC,
+	withdrawalOutcome,
 } from "@hl-tools/core";
 import { ADDRESS_RE } from "#/components/tools/multisig/model";
 import { chainChoiceFor, type InnerChain } from "./chains";
@@ -196,6 +200,8 @@ export interface BuildContext {
 	readonly mode?: AccountMode | null;
 	/** What is known about the destination; null or absent while it is not. */
 	readonly receiver?: Receiver | null;
+	/** What is known about the address an API wallet approval names. */
+	readonly agent?: Receiver | null;
 	/** What Hyperliquid said about the addresses that would be new signers. */
 	readonly signerChecks?: ReadonlyMap<string, SignerCheck>;
 	readonly createdBy?: string | null;
@@ -215,6 +221,8 @@ function addressField(
 	path: string,
 	what: string,
 	issues: Issue[],
+	/** Money is sent to this address (false: it is given a role). */
+	receives = true,
 ): string | null {
 	const v = value.trim();
 	if (!v) {
@@ -233,6 +241,29 @@ function addressField(
 			),
 		);
 		return null;
+	}
+	// two things worth a line where a typo costs money; neither is refused by Hyperliquid
+	if (checksumMismatch(v)) {
+		issues.push(
+			issue(
+				"address.checksum",
+				"warning",
+				"The capital letters do not match this address's checksum. Check it for a typo.",
+				{ path },
+			),
+		);
+	}
+	if (isZeroAddress(v)) {
+		issues.push(
+			issue(
+				"address.zero",
+				"warning",
+				receives
+					? "This is the zero address. Nobody holds its key: whatever is sent to it is lost."
+					: "This is the zero address. Nobody holds its key.",
+				{ path },
+			),
+		);
 	}
 	return v.toLowerCase();
 }
@@ -557,6 +588,21 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 					"withdrawable perps balance",
 					issues,
 				);
+			// the bridge keeps its fee out of the amount: at the fee or below, Hyperliquid refuses
+			if (
+				amount &&
+				withdrawalOutcome({ type: "withdraw3", amount: amount.toString() })
+					?.refusal
+			) {
+				issues.push(
+					issue(
+						"withdraw.below_fee",
+						"error",
+						`The bridge keeps ${WITHDRAWAL_FEE_USDC} USDC of every withdrawal as its fee, so a withdrawal has to be more than ${WITHDRAWAL_FEE_USDC} USDC. Hyperliquid refuses this one.`,
+						{ path: "action.amount" },
+					),
+				);
+			}
 			return done({
 				type: "withdraw3",
 				...head,
@@ -665,6 +711,7 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				"action.agentAddress",
 				"API wallet address",
 				issues,
+				false,
 			);
 			if (agent && agent === treasury) {
 				issues.push(
@@ -672,6 +719,21 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 						"agent.self",
 						"error",
 						"The API wallet cannot be the multi-sig account itself.",
+						{ path: "action.agentAddress" },
+					),
+				);
+			} else if (
+				agent &&
+				(ctx.agent?.status === "active" || ctx.agent?.status === "agent")
+			) {
+				// allowed as far as this page knows; an API wallet is normally a key made only for this
+				issues.push(
+					issue(
+						"agent.in_use",
+						"warning",
+						ctx.agent.status === "agent"
+							? "This address is already an API wallet on Hyperliquid. Check that it is the one you mean."
+							: "This address is already an account in use on Hyperliquid. An API wallet is normally a new key made only for this: check that it is the one you mean.",
 						{ path: "action.agentAddress" },
 					),
 				);
@@ -811,6 +873,17 @@ function rawAction(
 				"raw.convert_out_of_scope",
 				"error",
 				"Changing the signers has its own form: choose “Change signers” above. It checks the new list and says what the change does to waiting proposals.",
+				{ path },
+			),
+		);
+		return null;
+	}
+	if (type === "userSetAbstraction") {
+		issues.push(
+			issue(
+				"raw.mode_switch_out_of_scope",
+				"error",
+				"Switching the account mode cannot be proposed here yet. Hyperliquid refuses it from a multi-sig in the form its documentation gives (“Invalid multi-sig outer signer”), and a refused submission uses up the proposal's number.",
 				{ path },
 			),
 		);

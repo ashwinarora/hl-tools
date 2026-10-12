@@ -15,6 +15,7 @@
 import {
 	type Address,
 	checksumMismatch,
+	isZeroAddress,
 	nonceWindow,
 	type Policy,
 	type Proposal,
@@ -205,6 +206,16 @@ function addedLines(
 				"warning",
 				"signer.checksum",
 				"The capital letters do not match this address's checksum. Check it for a typo.",
+			),
+		);
+	}
+	if (isZeroAddress(address)) {
+		// Hyperliquid takes it (the address has received funds); nobody can sign with it
+		lines.push(
+			line(
+				"warning",
+				"signer.zero",
+				"This is the zero address. Nobody holds its key, so it can never sign.",
 			),
 		);
 	}

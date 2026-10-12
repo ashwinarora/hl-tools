@@ -17,6 +17,8 @@ import {
 	type PlainObject,
 	sendRefusal,
 	sendShape,
+	WITHDRAWAL_FEE_USDC,
+	withdrawalOutcome,
 } from "@hl-tools/core";
 import type { Receiver } from "./actions";
 import { selfRefusal } from "./selfSend";
@@ -167,6 +169,14 @@ export function preflight(action: PlainObject, facts: SendFacts): Refusal[] {
 				"A newer USDC send of this treasury has been carried out, and Hyperliquid takes them only in order. Propose it again.",
 		});
 
+	// the bridge keeps its fee out of the amount; at the fee or below Hyperliquid refuses
+	if (withdrawalOutcome(action)?.refusal) {
+		out.push({
+			code: "withdrawal-below-fee",
+			message: `This withdraws ${String(action.amount)} USDC, and the bridge keeps ${WITHDRAWAL_FEE_USDC} USDC of every withdrawal as its fee: a withdrawal has to be more than that.`,
+		});
+		return out;
+	}
 	// a bridge withdrawal leaves the perps balance like a send does
 	const shape =
 		sendShape(action) ??
