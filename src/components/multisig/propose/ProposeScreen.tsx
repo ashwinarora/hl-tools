@@ -17,7 +17,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FileSignature, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CodeBlock } from "#/components/hub/CodeBlock";
 import {
 	EmptyState,
@@ -352,7 +352,22 @@ function ProposeForm({
 	// the wallet is the treasury account itself: it can draft, never sign
 	const itself = ready && isItself(me, address);
 
+	// One proposal per press: a second click before the first has finished
+	// (a double click, a stuck button) would otherwise make a second proposal.
+	const creating = useRef(false);
+	const [busyCreating, setBusyCreating] = useState(false);
 	const create = async (sign: boolean) => {
+		if (creating.current) return;
+		creating.current = true;
+		setBusyCreating(true);
+		try {
+			await createOnce(sign);
+		} finally {
+			creating.current = false;
+			setBusyCreating(false);
+		}
+	};
+	const createOnce = async (sign: boolean) => {
 		setAttempted(true);
 		setFailure(null);
 		const now = Date.now();
@@ -767,7 +782,11 @@ function ProposeForm({
 										<Button
 											variant="brand"
 											disabled={
-												!ready || !iAmSigner || wallet.busy || orderUnknown
+												!ready ||
+												!iAmSigner ||
+												wallet.busy ||
+												orderUnknown ||
+												busyCreating
 											}
 											onClick={() =>
 												void wallet.run("Waiting for the wallet…", () =>
@@ -781,7 +800,9 @@ function ProposeForm({
 										</Button>
 										<Button
 											variant="outline"
-											disabled={!ready || wallet.busy || orderUnknown}
+											disabled={
+												!ready || wallet.busy || orderUnknown || busyCreating
+											}
 											onClick={() => void create(false)}
 										>
 											Create without signing
