@@ -48,7 +48,7 @@ The app project (`src/**/*.test.ts`, node environment, `fake-indexeddb` where st
 | Suite | What it covers |
 |---|---|
 | `src/lib/idb.test.ts` | Fresh database gets both stores; a version-1 database upgrades and keeps its WebSocket sessions; sessions list newest first, stay bounded to 20, delete; a failed request and a missing IndexedDB reject with a reason |
-| `src/lib/signerWallets.test.ts` | The signer's wallet list never contains RainbowKit's generic WalletConnect entry, whose modal reports the page URL to a third party |
+| `src/lib/signerWallets.test.ts` | The signer's wallet list never contains RainbowKit's generic WalletConnect entry, whose modal reports the page URL to a third party; nor an entry with a WalletConnect QR fallback or Coinbase's pop-up (the connectors of a real wagmi configuration are exactly `injected` and `safe`); "Browser Wallet" only for a provider that injects without announcing itself |
 | `src/lib/detect.test.ts` | Proposal documents and signer links route to the Multisig Signer; envelopes and addresses stay with the inspector; other share links and URLs are not mistaken for proposals; every earlier rule still holds |
 | `multisig/model/actions.test.ts` | Each of the seven kinds builds an action `createProposal` accepts; title, note, proposer and superseded digest carried; amounts canonical and never rounded (`1.0` → `1`, precision errors); address checks and the self-send warning; spot token against the network's list and its decimals; balance excess warns and never blocks; raw JSON limited to user-signed types (L1 and `convertToMultiSigUser` refused, overridden fields noted); finaliser required and from the current signer set; `formFromAction` rebuilds the same action; issue paths map to form fields |
 | `multisig/model/chains.test.ts` | Hex id ↔ number ↔ viem chain for the four offered ids; malformed ids refused; labels for known and unknown chains; a stored id mapped back to the offered choice on its network |
@@ -874,6 +874,67 @@ The same flow with a lab account and the stand-in wallet: sent at 0.1 s, read ba
 - A signer whose last signature is older than the newest 500 is covered by a unit test of the window and an integration test of the one-row read, not by a treasury with that much history.
 - Signers that are API wallets, vaults or sub-accounts were tried by script (above), not through the form on a live conversion.
 - The wizard was not run with a hardware wallet or with WalletConnect.
+
+## 14. Multisig — hardening after the mainnet audit (2026-10-12)
+
+A second session used the signer for a night on mainnet and testnet (three conversions with the wizard, twelve proposals, sends, a bridge withdrawal, sign-in and sign-out in every order) and compared it with the one hosted alternative. It wrote up 27 numbered findings and a list of polish points; its report stays out of the repository because it names personal accounts. This section records what was changed for each finding and how the change was checked.
+
+The browser checks below were made by that session, not by the one that wrote the fixes: Brave with Rabby against this working tree on `http://localhost:3000` and the local relay, on testnet unless a row says mainnet (the mainnet rows are its own re-checks on its own accounts). Each batch was tested only after it was committed, and every row was answered pass or fail.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 91 files, 2,221 (core 1,340, app 881) tests, all passing |
+| Core coverage | `cd packages/hl-core && bunx vitest run --coverage` | 1,340 tests; 100 % statements, branches, functions and lines for `adapter`, `multisig` and `rules` |
+| Relay database | `bun run db:test` | 14 files, 807 pgTAP tests, all passing; `supabase db advisors --local`: no issues. Not reset this time (the auditing session's data was in it); no migration changed |
+| Relay integration | `bun run test:relay` | 53 tests, all passing |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
+
+New test files: `src/lib/thirdParty.test.ts` (no other host in the document head or the stylesheet), `multisig/model/pageNetwork.test.ts`, `repropose.test.ts`, `refusal.test.ts`, `multisig/relay/session.test.ts` (the sign-in swap against a stand-in client). Extended: `src/lib/signerWallets.test.ts` (builds a wagmi configuration and checks its connectors are exactly `injected` and `safe`; what there is to connect to, with a stand-in `window`), core `transfer`, `describe` and `errors` tests (the withdrawal fee), `model/actions`, `send`, `sendCheck`, `convert`, `chain/match`, `relay/away`, `relay/timeline`, `relay/inbox`, `history`, `signerSet`, `create`, `stage`, `help`, and one case in `relay.itest.ts`.
+
+### Findings, what changed, how it was checked
+
+| Finding | What was wrong | Now | Checked |
+|---|---|---|---|
+| F-C1 | "Re-propose" on a testnet proposal, header on mainnet, opened a mainnet form filled with the testnet proposal's fields | the link names the proposal's network; a source of another network or treasury is refused with "Nothing was copied from it" | browser, testnet; and on an address that is a treasury on both networks (mainnet): the form opened for testnet, and moving to mainnet gave an empty form with the sentence. Unit: `repropose.test.ts` |
+| F-C2 | the propose form and the wizard took the network from the header: a reload or a second tab could move a form to the other network | `?network=` in the link; link wins on open, header wins when moved, form rebuilt on any change | browser: reload with the stored network forced to the other one kept the form; a link without a network got it written in; the header's switch moved link and form together. Unit: `pageNetwork.test.ts` |
+| F-015 | the wizard signed a mainnet conversion under whatever chain the wallet was on (998 in the prompt) | a chain of the network being converted on | browser: mainnet prompt "Chain HyperEVM" (999) with the wallet on 998; testnet prompt 998 with the wallet on 999 |
+| F-011 | a withdrawal of 1 USDC or less went all the way to a refusal that used up the number; the form never said the fee comes out of the amount | refused in the form; the preview says what arrives; the check before submitting catches a raw one; the answer is in the catalogue | browser: 1, 0.5 and 1.0 refused with the sentence; 2 gives "1 USDC arrives", 5 gives 4; a raw `withdraw3` of 1 was stopped at Submit with no wallet prompt |
+| F-019 | a bridge withdrawal's ledger row was never tied to its proposal | matched by the row's `nonce` | browser: testnet and mainnet rows now name their proposal |
+| F-022 | a raw `userSetAbstraction` built a proposal Hyperliquid refuses, explained with causes that did not apply | refused in the form with a sentence | browser |
+| F-006, F-007, F-005 | no checksum note on a destination; the zero address accepted silently as a destination and as a signer | amber notes under the field; the field keeps the capitals as typed | browser: send, withdraw, wizard, Change signers |
+| F-008 | withdrawn by the auditor; what was left was a line calling the treasury's own address "in use, costs nothing" | that line is not shown for the treasury itself or the zero address | browser |
+| F-013 | "it can be retried" about a refusal that had used up the number | worded from the HTTP status by one function | browser: Signing log and "while you were away" |
+| F-016 | an API wallet address already in use on Hyperliquid got no note | an amber note | unit only (`actions.test.ts`): the auditing session does not approve API wallets |
+| F-027 | three clicks in one instant on Create made three proposals | one | browser: three same-tick clicks, one proposal |
+| F-024 | fonts came from Google on every load | bundled | browser: hard reload with the cache off, no request to a font host; both faces load from the site. Suite: `thirdParty.test.ts` |
+| F-025 | picking MetaMask or Rainbow without the extension opened a socket to WalletConnect's relay, then again on every load; Base Account opens Coinbase's pop-up | those entries are gone; "Browser Wallet" only for a wallet that injects without announcing itself; with no wallet the buttons say so | browser, fresh context with no wallet, `fetch` and `WebSocket` wrapped: nothing third-party on the click or on a later load, also with the old remembered choice put back by hand. With stand-in providers in an isolated context: a wallet that announces itself gives only its "Installed" row, a provider that only injects gives "Browser Wallet"; with Rabby itself connected the rail shows no note (Rabby's own picker row was seen before the last change, not after). Suite: `signerWallets.test.ts` |
+| F-002 | "Sign in as another wallet" ended the session before the wallet had signed | the session stays until the new one exists | browser: declined, still signed in as the first wallet and back to "live" with no prompt after switching back; signed, the new wallet's treasuries only. Local relay by script: the replaced session's renewal token is refused |
+| F-001 | the server's HTML said "Sign in with your wallet" while the page was still loading: on a slow connection for half a minute, in front of a signed-in signer | the session starts as "checking"; the network switch announces no choice until the stored one is restored | browser, throttled to Fast 3G: "Checking your session…" until the session was read (33 s in the development build), "Sign in" never shown |
+| F-009 | one wallet's "Signature added" stayed on the page after switching to another wallet | the signing panel's state belongs to the connected wallet | browser |
+| F-010 | rule codes and field paths in the section's messages; advice about `buildEnvelope` after an answer the catalogue does not know | a plain issue list in the section (the code on hover); one plain sentence | browser: "Not created yet", the check before submitting, merge errors. The sentence for an unknown answer: unit only |
+| F-012 | the Remove buttons in Change signers shared one accessible name | "Remove 0x…", "Undo: keep 0x…" | browser, accessibility tree |
+| F-014 | "Finish the oldest first" under any two waiting proposals, guided sends included, on the Pending tab and under the inbox's first group | said only when two waiting actions of one treasury are bound by order | browser, Pending tab: two guided sends, nothing; one raw `usdSend` added, nothing; two raw, the sentence. Inbox: one guided send ready, no order sentence; the inbox with two order-bound actions ready was not staged (four more signatures), that half is unit-tested (`inbox.test.ts`) |
+| F-018 | "Sign and submit" on a row that only needed submitting | "Submit" once the finaliser has signed or the others reached the number | browser: Pending tab and inbox |
+| F-023 | a former multi-sig kept its waiting proposals in the rail's and the tab's count, and its API wallet card spoke of signers | listed under a line that says why, not counted; the card's sentences fit an ordinary account | browser |
+| F-017 | a bare "Not Found" under `/multisig` | a page inside the section's frame, HTTP 404 | browser |
+| F-021 | subtle text below AA contrast (4.28:1 on white) | 4.62:1 at worst in the light theme, 4.76:1 in the dark one | browser, light theme: no visible text below 4.5:1 |
+| F-026 | merging a copy with a rewritten note added the note while the page said "Nothing new" | the stored copy's unsigned fields stay as they are | browser, also after leaving the page and coming back |
+| F-020 | on a treasury page the header's network switch did nothing | it leaves for the other network's inbox | browser |
+| Polish | "Fix the fields marked on the left"; the site's skip link landed in front of the section's panel; moving between two propose links by the browser's history kept the old form; the lines about stolen and lost keys counted the zero address as a working key; a merge message began with a field path; "carried out outside this tool" | one blocking sentence, or "Fix the marked fields first."; a second skip link; the form is rebuilt per link; only signers who can sign are counted, and a list nobody can sign with says the account would be locked; a sentence; "carried out, not reported here" | browser, with real key presses for the skip links; the wizard's lines were read, never acted on. The "not reported here" sentences were read in the source: the case could not be provoked a second time |
+
+### Left as it is, and limits
+
+- **F-003** (Rabby shows a red alert on the sign-in message from `http://localhost`): needs the production origin; nothing to change until there is one.
+- **F-004** (a proposal finished while signed out stays pending in the relay until a signer has the treasury page open): as designed; the wording it produced was changed ("carried out, not reported here").
+- **The "Get link" dialog and its tick box**: the one pop-up in the section. It is the hub's sharing rule (DECISIONS.md, "Sharing uses the URL fragment, behind an explicit confirmation") and was left.
+- **Zero address as the only signer**: still only a warning, by the three-level rule, since Hyperliquid takes it; the page now says that nobody could ever sign.
+- Not built in this pass: one session per wallet, a draft of an unsaved propose form, a way for any signer to say no, notifications, staking actions.
+- An answer from Hyperliquid that the catalogue does not know could not be provoked; its sentence is unit-tested.
+- The faucet miner is unchanged: its wallet picker keeps the WalletConnect entries, whose modal contacts WalletConnect and, when it opens, loads its own font from Google.
+- Two signers online at the same moment were not tried in this pass (the auditing session has one wallet).
+- Mainnet was touched only by the auditing session, on its own accounts. No hosted Supabase project.
 
 ## Feedback round 1 (2026-10-04)
 
