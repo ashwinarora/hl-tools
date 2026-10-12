@@ -133,6 +133,10 @@ export async function signIn(
 			w.kind === "rejected",
 		);
 	}
+	// Another wallet's session in this browser ends only from here on, with the
+	// new wallet's signature in hand: a declined prompt leaves it as it was, and
+	// so does a sign-in the relay refuses.
+	const previous = await storedToken(client);
 	try {
 		const { error } = await client.auth.signInWithWeb3({
 			chain: "ethereum",
@@ -159,7 +163,34 @@ export async function signIn(
 			),
 		);
 	}
+	if (previous) await endReplaced(client, previous);
 	return { ok: true, wallet: expected };
+}
+
+/** The access token of the session this client holds now, if any. */
+async function storedToken(client: RelayClient): Promise<string | null> {
+	try {
+		const { data } = await client.auth.getSession();
+		return data.session?.access_token ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Ends, on the relay, the session a new sign-in has just replaced in this
+ * browser (the client has already forgotten it), so its renewal token stops
+ * working. Says nothing when the relay cannot be reached: that session can no
+ * longer be used from here either way.
+ */
+async function endReplaced(client: RelayClient, token: string): Promise<void> {
+	try {
+		const { data } = await client.auth.getSession();
+		if (data.session?.access_token === token) return;
+		await client.auth.admin.signOut(token, "local");
+	} catch {
+		// nothing to do
+	}
 }
 
 /** Ends the session in this browser only; other devices stay signed in. */

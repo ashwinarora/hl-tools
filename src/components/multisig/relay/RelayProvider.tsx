@@ -190,8 +190,8 @@ function RelaySession({
 		);
 		try {
 			const c = await getRelayClient(config);
-			// another wallet's session in this browser ends here
-			if (session.status === "ready") await signOut(c);
+			// Another wallet's session in this browser stays until this one has
+			// signed in (`signIn` replaces it then), so a declined prompt changes nothing.
 			const r = await signIn(
 				c,
 				{
@@ -205,7 +205,9 @@ function RelaySession({
 				queries.removeQueries({ queryKey: ["relay"] });
 				setSession({ status: "ready", client: c, wallet: r.wallet });
 			} else {
-				if (session.status === "ready") setSession({ status: "none" });
+				// the session there was, if any, is still the one in this browser,
+				// unless the relay opened one it then had to end
+				if (!hasStoredSession()) forget();
 				setIssue(r.issue);
 			}
 		} finally {
@@ -213,7 +215,7 @@ function RelaySession({
 			useWalletBusy.getState().end();
 			setSigningIn(false);
 		}
-	}, [address, chainId, config, queries, session.status, signMessageAsync]);
+	}, [address, chainId, config, forget, queries, signMessageAsync]);
 
 	// "Sign in" with no wallet connected opens the picker; the sign-in follows the connection.
 	useEffect(() => {

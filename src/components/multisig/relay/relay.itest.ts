@@ -279,6 +279,45 @@ describe("signing in", () => {
 		expect(r).toMatchObject({ ok: false, cancelled: true });
 	});
 
+	it("keeps the session there was until another wallet has signed in, then ends it (audit F-002)", async () => {
+		const first = await newWallet();
+		const held = (await first.client.auth.getSession()).data.session;
+		const other = newAccount();
+		const deps = () => ({ origin: ORIGIN, nonce: generateSiweNonce() });
+		const declined = await signIn(
+			first.client,
+			{
+				address: other.account.address,
+				chainId: 999,
+				signMessage: async () => {
+					throw Object.assign(new Error("User rejected the request."), {
+						code: 4001,
+					});
+				},
+			},
+			deps(),
+		);
+		expect(declined).toMatchObject({ ok: false, cancelled: true });
+		expect(await sessionWallet(first.client)).toBe(first.address);
+
+		const swapped = await signIn(
+			first.client,
+			{
+				address: other.account.address,
+				chainId: 999,
+				signMessage: (message) => other.account.signMessage({ message }),
+			},
+			deps(),
+		);
+		expect(swapped).toEqual({ ok: true, wallet: other.address });
+		expect(await sessionWallet(first.client)).toBe(other.address);
+		// the replaced session cannot be renewed from anywhere
+		const renewed = await newClient().auth.refreshSession({
+			refresh_token: held?.refresh_token as string,
+		});
+		expect(renewed.error).not.toBeNull();
+	});
+
 	it("is refused for a message that has expired, was signed for another site, or by another key", async () => {
 		const { account } = newAccount();
 		const other = newAccount().account;
