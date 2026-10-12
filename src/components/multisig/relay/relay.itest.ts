@@ -11,10 +11,12 @@
 import {
 	type Address,
 	createProposal,
+	judgeMove,
 	overtakenBy,
 	type Proposal,
 	type Receipt,
 	signProposal,
+	tieSteps,
 	viemSigner,
 } from "@hl-tools/core";
 import { createClient } from "@supabase/supabase-js";
@@ -61,6 +63,7 @@ import {
 } from "../model/relay/wallets";
 import {
 	addObjection,
+	addObjections,
 	addSignature,
 	getProposal,
 	getRequest,
@@ -80,14 +83,18 @@ import {
 	listViews,
 	markRead,
 	type ProposalKey,
+	publishMove,
 	publishProposal,
 	recordReceipt,
 	recordView,
 	removeObjection,
+	removeObjections,
 	removeSignature,
+	removeSignatures,
 	reportExecution,
 	requestTreasury,
 	setNickname,
+	withdrawMove,
 	withdrawProposal,
 } from "./api";
 import { endStoredSession } from "./client";
@@ -1489,6 +1496,184 @@ describe("saying no", () => {
 		).toBeNull();
 		await sql`delete from public.events
 			where kind = 'objection_added' and actor = ${c.address} and digest = ${some.digest}`;
+	});
+});
+
+describe("a move of two steps", () => {
+	const VALIDATOR = "0x946bf3135c7d15e4462b510f74b6e304aabb5b21";
+	/** "Stake 100 HYPE" when 50 has to come from spot first: proposed by c, finalised by b. */
+	function move(): readonly [Proposal, Proposal] {
+		const now = Date.now();
+		const step = (action: Record<string, unknown>, nonce: number) => {
+			const made = createProposal(
+				{
+					network: NET,
+					multiSigUser: treasury,
+					outerSigner: b.address,
+					action: {
+						signatureChainId: "0x3e7",
+						hyperliquidChain: "Mainnet",
+						...action,
+						nonce,
+					},
+					nonce,
+					createdBy: c.address,
+				},
+				{ now },
+			);
+			if (!made.proposal) throw new Error(JSON.stringify(made.issues));
+			return made.proposal;
+		};
+		return tieSteps(
+			step({ type: "cDeposit", wei: 5_000_000_000 }, now),
+			step(
+				{
+					type: "tokenDelegate",
+					validator: VALIDATOR,
+					wei: 10_000_000_000,
+					isUndelegate: false,
+				},
+				now + 1,
+			),
+		);
+	}
+	const keys = (m: readonly Proposal[]) => m.map(keyOf);
+
+	it("is shared whole and read back as one move, by who the relay says proposed it", async () => {
+		const [first, second] = move();
+		expect(
+			(
+				await publishMove(c.client, c.address, [
+					publishRow(first),
+					publishRow(second),
+				])
+			).issue,
+		).toBeNull();
+		const one = await read(a, first);
+		const two = await read(a, second);
+		expect(one.issues).toEqual([]);
+		expect(one.proposal?.meta.steps).toEqual([first.digest, second.digest]);
+		expect(two.proposal?.meta.steps).toEqual([first.digest, second.digest]);
+		const judged = judgeMove(
+			one.proposal as Proposal,
+			two.proposal as Proposal,
+			{ a: one.row?.createdBy ?? null, b: two.row?.createdBy ?? null },
+		);
+		expect(judged.move).toMatchObject({
+			kind: "stake",
+			amount: "100",
+			validator: VALIDATOR,
+		});
+		// the relay stamped the proposer itself; a document's own word would not do
+		expect(one.row?.createdBy).toBe(c.address);
+		expect(
+			judgeMove(one.proposal as Proposal, two.proposal as Proposal, {
+				a: one.row?.createdBy ?? null,
+				b: a.address,
+			}).flaw,
+		).toBe("proposer");
+		// shared again (another tab, a retry): done, not an error
+		expect(
+			(
+				await publishMove(c.client, c.address, [
+					publishRow(first),
+					publishRow(second),
+				])
+			).issue,
+		).toBeNull();
+		// one step was already there: the other is still shared
+		const [third, fourth] = move();
+		await publishProposal(c.client, c.address, publishRow(third));
+		expect(
+			(
+				await publishMove(c.client, c.address, [
+					publishRow(third),
+					publishRow(fourth),
+				])
+			).issue,
+		).toBeNull();
+		expect((await read(a, fourth)).row?.status).toBe("open");
+		// an outsider shares neither
+		const [x, y] = move();
+		expect(
+			codes(
+				(
+					await publishMove(outsider.client, outsider.address, [
+						publishRow(x),
+						publishRow(y),
+					])
+				).issue,
+			),
+		).toBe("relay.not_allowed");
+		expect((await read(a, x)).row).toBeNull();
+		expect((await read(a, y)).row).toBeNull();
+	});
+
+	it("a no, its taking back, signatures taken back and a withdrawal each cover both steps", async () => {
+		const m = move();
+		await publishMove(c.client, c.address, m.map(publishRow));
+		const [first, second] = m;
+		const rows = async () => [
+			(await read(b, first)).row,
+			(await read(b, second)).row,
+		];
+
+		// a signs both, then says no to both: one statement, and both signatures go with it
+		for (const p of m)
+			await addSignature(
+				a.client,
+				a.address,
+				keyOf(p),
+				sigOf(await proposalSignedBy(p, a), a),
+			);
+		expect(
+			(await rows()).map((r) => r?.signatures.map((x) => x.signer)),
+		).toEqual([[a.address], [a.address]]);
+		expect(
+			(await addObjections(a.client, a.address, keys(m))).issue,
+		).toBeNull();
+		for (const r of await rows()) {
+			expect(r?.objections.map((o) => o.signer)).toEqual([a.address]);
+			expect(r?.signatures).toEqual([]);
+			expect(r?.status).toBe("open");
+		}
+		// said again: done
+		expect(
+			(await addObjections(a.client, a.address, keys(m))).issue,
+		).toBeNull();
+		expect(
+			(await removeObjections(a.client, a.address, keys(m))).issue,
+		).toBeNull();
+		expect((await rows()).map((r) => r?.objections)).toEqual([[], []]);
+
+		// b signs both and takes both back
+		for (const p of m)
+			await addSignature(
+				b.client,
+				b.address,
+				keyOf(p),
+				sigOf(await proposalSignedBy(p, b), b),
+			);
+		expect(
+			(await removeSignatures(b.client, b.address, keys(m))).issue,
+		).toBeNull();
+		expect((await rows()).map((r) => r?.signatures)).toEqual([[], []]);
+
+		// only the proposer withdraws, and then both are closed
+		expect(
+			codes((await withdrawMove(b.client, b.address, keys(m))).issue),
+		).toBe("relay.not_proposer");
+		expect((await rows()).map((r) => r?.status)).toEqual(["open", "open"]);
+		expect((await withdrawMove(c.client, c.address, keys(m))).issue).toBeNull();
+		expect((await rows()).map((r) => r?.status)).toEqual([
+			"withdrawn",
+			"withdrawn",
+		]);
+		// nothing more can be said to a closed move, and nothing is half said
+		expect(
+			codes((await addObjections(a.client, a.address, keys(m))).issue),
+		).toBe("relay.proposal_closed");
+		expect((await rows()).map((r) => r?.objections)).toEqual([[], []]);
 	});
 });
 

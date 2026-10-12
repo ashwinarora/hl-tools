@@ -671,6 +671,126 @@ export function removeObjection(
 	);
 }
 
+// ------------------------------------------------------------------- a move
+//
+// A move is two proposals the pages show as one (model/move.ts). The relay
+// knows nothing of that: what it gives is that ONE statement is taken whole
+// or not at all, so its limits, the proposer rule and a step that closed in
+// the meantime never leave a move half shared, half withdrawn or half
+// objected to (pgTAP 170_moves.sql). Every key of a move has the same network
+// and treasury.
+
+/**
+ * One statement for all rows; when the relay refuses it only because one of
+ * them is already there, each row by itself, where that counts as done.
+ */
+async function together<T>(
+	client: RelayClient,
+	as: Address,
+	rows: readonly T[],
+	all: () => PromiseLike<Answer>,
+	each: (row: T) => Promise<Result<true>>,
+): Promise<Result<true>> {
+	const wrong = await wrongWallet(client, as);
+	if (wrong) return { data: null, issue: wrong };
+	try {
+		const { error } = await all();
+		if (!error) return { data: true, issue: null };
+		if (!isDuplicate(error)) return { data: null, issue: relayIssue(error) };
+	} catch (e) {
+		return { data: null, issue: relayIssue(e) };
+	}
+	for (const row of rows) {
+		const one = await each(row);
+		if (one.issue) return one;
+	}
+	return { data: true, issue: null };
+}
+
+/** Share the proposals of a move: all of them, or none. */
+export function publishMove(
+	client: RelayClient,
+	as: Address,
+	rows: readonly PublishRow[],
+): Promise<Result<true>> {
+	return together(
+		client,
+		as,
+		rows,
+		() => client.from("proposals").insert([...rows]),
+		(row) => publishProposal(client, as, row),
+	);
+}
+
+/** Withdraw the open proposals of a move as their proposer: all of them, or none. */
+export function withdrawMove(
+	client: RelayClient,
+	as: Address,
+	keys: readonly ProposalKey[],
+): Promise<Result<true>> {
+	return write(client, as, () =>
+		client
+			.from("endings")
+			.insert(keys.map((key) => ({ ...key, kind: "withdrawn" }))),
+	);
+}
+
+/** Say no to the open proposals of a move: to all of them, or to none. */
+export function addObjections(
+	client: RelayClient,
+	as: Address,
+	keys: readonly ProposalKey[],
+): Promise<Result<true>> {
+	return together(
+		client,
+		as,
+		keys,
+		() => client.from("objections").insert(keys.map((key) => ({ ...key }))),
+		(key) => addObjection(client, as, key),
+	);
+}
+
+/** One statement that removes the session wallet's own rows on the proposals named. */
+function removeOwn(
+	client: RelayClient,
+	as: Address,
+	table: "objections" | "signatures",
+	keys: readonly ProposalKey[],
+): Promise<Result<true>> {
+	const [first] = keys;
+	if (!first) return Promise.resolve({ data: true, issue: null });
+	return write(client, as, () =>
+		client
+			.from(table)
+			.delete()
+			.eq("network", first.network)
+			.eq("treasury", first.treasury)
+			.in(
+				"digest",
+				keys.map((key) => key.digest),
+			)
+			.eq("signer", as),
+	);
+}
+
+/** Take the session wallet's no back from the open proposals of a move. */
+export function removeObjections(
+	client: RelayClient,
+	as: Address,
+	keys: readonly ProposalKey[],
+): Promise<Result<true>> {
+	return removeOwn(client, as, "objections", keys);
+}
+
+/** Take the session wallet's signatures back from the open proposals of a move. */
+export function removeSignatures(
+	client: RelayClient,
+	as: Address,
+	keys: readonly ProposalKey[],
+): Promise<Result<true>> {
+	return removeOwn(client, as, "signatures", keys);
+}
+
 /** Record what Hyperliquid answered. The same attempt twice counts as done. */
 export function recordReceipt(
 	client: RelayClient,
