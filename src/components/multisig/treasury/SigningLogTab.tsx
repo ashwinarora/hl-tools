@@ -8,6 +8,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { download } from "#/lib/download";
+import { type Listed, moveRefs } from "../model/move";
 import { assembleProposal } from "../model/relay/assemble";
 import type { EventRow, TreasuryRow } from "../model/relay/rows";
 import {
@@ -89,11 +90,18 @@ export function SigningLogTab({
 				),
 			);
 			const out = new Map<Hex, Proposal>();
+			const listed: Listed[] = [];
 			for (const row of got.rows) {
 				const a = await assembleProposal(row);
-				if (a.assembled) out.set(row.digest, a.assembled.proposal);
+				if (!a.assembled) continue;
+				out.set(row.digest, a.assembled.proposal);
+				// who proposed each is the relay's word, never the document's
+				listed.push({
+					proposal: a.assembled.proposal,
+					proposedBy: row.createdBy,
+				});
 			}
-			return out;
+			return { proposals: out, moves: moveRefs(listed) };
 		},
 		staleTime: 15_000,
 		retry: 1,
@@ -104,10 +112,12 @@ export function SigningLogTab({
 			buildTimeline(events, {
 				me,
 				line: (digest) => {
-					const p = docs.data?.get(digest);
+					const p = docs.data?.proposals.get(digest);
 					return p ? describeAction(p.payload.action).headline : null;
 				},
-				title: (digest) => docs.data?.get(digest)?.meta.title ?? null,
+				title: (digest) => docs.data?.proposals.get(digest)?.meta.title ?? null,
+				// the two steps of a move read as one entry where both say the same
+				move: (digest) => docs.data?.moves.get(digest) ?? null,
 			}),
 		[events, docs.data, me],
 	);
@@ -121,7 +131,7 @@ export function SigningLogTab({
 				treasury: address,
 				exportedAt: Date.now(),
 				events,
-				proposals: [...(docs.data?.values() ?? [])],
+				proposals: [...(docs.data?.proposals.values() ?? [])],
 			}),
 			"application/json",
 		);

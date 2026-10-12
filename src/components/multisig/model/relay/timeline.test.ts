@@ -528,3 +528,120 @@ describe("historyExport", () => {
 		);
 	});
 });
+
+describe("a move of two steps in the Signing log", () => {
+	const MOVE = "Stake 100 HYPE with 0x946b…5b21";
+	const refs = {
+		[D1]: { step: 1 as const, other: D2, line: MOVE },
+		[D2]: { step: 2 as const, other: D1, line: MOVE },
+	};
+	const moved = (events: EventRow[], me: typeof A | null = A) =>
+		buildTimeline(events, {
+			...ctx(me),
+			move: (d: Hex) => refs[d] ?? null,
+		});
+	const said = (events: EventRow[], me: typeof A | null = A) =>
+		moved(events, me).map(entryText);
+	const both = (
+		kind: Parameters<typeof eventRow>[0],
+		id: number,
+		actor: typeof A,
+		data: Record<string, unknown> = {},
+	) => [
+		eventRow(kind, { id, digest: D1, actor, data }),
+		eventRow(kind, { id: id + 1, digest: D2, actor, data }),
+	];
+
+	it("says once what happened to both steps alike", () => {
+		const events = [
+			...both("proposal_created", 1, A, { finaliser: C }),
+			...both("signature_added", 3, A),
+			...both("signature_added", 5, C),
+			...both("submission_recorded", 7, C, { accepted: true }),
+		];
+		expect(said(events)).toEqual([
+			`${MOVE} (both steps) was accepted by Hyperliquid. Submitted by ${short(C)}.`,
+			`${short(C)} signed ${MOVE} (both steps).`,
+			`You proposed ${MOVE} (both steps) and signed. Finaliser: ${short(C)}.`,
+		]);
+	});
+
+	it("an entry for both steps opens the move, and sorts by its later event", () => {
+		const [entry] = moved(both("signature_added", 5, C));
+		expect(entry).toMatchObject({ id: 6, digest: D1 });
+		expect(entry?.parts).toContainEqual({ text: MOVE, strong: true });
+		expect(entry?.parts).toContainEqual({ text: " (both steps)", quiet: true });
+	});
+
+	it("names the step where the two did not fare alike", () => {
+		// C signed step 1 only; Hyperliquid took step 1 and refused step 2
+		const events = [
+			eventRow("signature_added", { id: 1, digest: D1, actor: C }),
+			eventRow("submission_recorded", {
+				id: 2,
+				digest: D1,
+				actor: C,
+				data: { accepted: true },
+			}),
+			eventRow("submission_recorded", {
+				id: 3,
+				digest: D2,
+				actor: C,
+				data: { accepted: false, http_status: 200 },
+			}),
+		];
+		expect(said(events)).toEqual([
+			`Hyperliquid rejected ${MOVE} (step 2 of 2). Submitted by ${short(C)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+			`${MOVE} (step 1 of 2) was accepted by Hyperliquid. Submitted by ${short(C)}.`,
+			`${short(C)} signed ${MOVE} (step 1 of 2).`,
+		]);
+	});
+
+	it("a proposer who signed only one of the two: each step says its own", () => {
+		const events = [
+			...both("proposal_created", 1, A, { finaliser: C }),
+			eventRow("signature_added", { id: 3, digest: D1, actor: A }),
+		];
+		expect(said(events)).toEqual([
+			`You proposed ${MOVE} (step 1 of 2) and signed. Finaliser: ${short(C)}.`,
+			`You proposed ${MOVE} (step 2 of 2). Finaliser: ${short(C)}.`,
+		]);
+	});
+
+	it("a no to both, a withdrawal of both and a change of mind read as one step each", () => {
+		const noAfterSigning = [
+			eventRow("signature_removed", { id: 1, digest: D1, actor: C }),
+			eventRow("objection_added", { id: 2, digest: D1, actor: C }),
+			eventRow("signature_removed", { id: 3, digest: D2, actor: C }),
+			eventRow("objection_added", { id: 4, digest: D2, actor: C }),
+		];
+		expect(said(noAfterSigning)).toEqual([
+			`${short(C)} said no to ${MOVE} (both steps), taking back their signature.`,
+		]);
+		expect(said(both("objection_removed", 1, C))).toEqual([
+			`${short(C)} took back their no to ${MOVE} (both steps).`,
+		]);
+		expect(said(both("proposal_withdrawn", 1, A))).toEqual([
+			`${MOVE} (both steps) was withdrawn by the proposer, you.`,
+		]);
+	});
+
+	it("does not take together what happened at different times", () => {
+		const events = [
+			eventRow("signature_added", { id: 1, digest: D1, actor: C }),
+			// ten minutes later
+			eventRow("signature_added", { id: 601, digest: D2, actor: C }),
+		];
+		expect(said(events)).toEqual([
+			`${short(C)} signed ${MOVE} (step 2 of 2).`,
+			`${short(C)} signed ${MOVE} (step 1 of 2).`,
+		]);
+	});
+
+	it("a proposal that stands alone reads as before", () => {
+		const alone = `0x${"d3".repeat(32)}` as Hex;
+		expect(
+			said([eventRow("signature_added", { id: 1, digest: alone, actor: C })]),
+		).toEqual([`${short(C)} signed a proposal.`]);
+	});
+});

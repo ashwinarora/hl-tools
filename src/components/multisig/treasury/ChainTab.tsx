@@ -143,6 +143,15 @@ function ProposalCell({
 	switch (match.kind) {
 		case "not-applicable":
 			return null;
+		case "own-step":
+			return (
+				<span
+					className={quiet}
+					title="A return from staking lands by itself when its wait is over. The step that started it is in the Staking tab's history."
+				>
+					Hyperliquid's own step
+				</span>
+			);
 		case "none":
 			return <span className={quiet}>none on record</span>;
 		case "checking":

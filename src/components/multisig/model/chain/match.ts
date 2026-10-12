@@ -21,6 +21,7 @@ import {
 	type Hex,
 	type LedgerRow,
 	type PlainObject,
+	weiToHype,
 } from "@hl-tools/core";
 
 const DAY = 86_400_000;
@@ -50,17 +51,22 @@ const CAUSE: Readonly<Record<string, string>> = {
 	accountClassTransfer: "usdClassTransfer",
 	send: "sendAsset",
 	withdraw: "withdraw3",
+	// the move into staking; the row of a return that landed has no action behind it
+	cStakingTransfer: "cDeposit",
 };
 
 /**
  * not-applicable  the account did not do this (money arrived, a liquidation):
  *                 no proposal could be behind it
+ * own-step        Hyperliquid did this by itself, at the end of something the
+ *                 account started earlier: a return from staking that landed
  * none            the account did it, and no proposal on record could be it
  * candidates      these proposals agree with everything the row shows; the
  *                 transaction has to be looked up to know
  */
 export type RowCandidates =
 	| { readonly kind: "not-applicable" }
+	| { readonly kind: "own-step" }
 	| { readonly kind: "none" }
 	| { readonly kind: "candidates"; readonly digests: readonly Hex[] };
 
@@ -103,6 +109,9 @@ function agrees(row: LedgerRow, action: PlainObject): boolean {
 		case "withdraw3":
 			// the ledger shows what left the account; the action names what arrives (less the fee)
 			return true;
+		case "cDeposit":
+			// the action carries HYPE as a whole number with 8 decimals
+			return sameAmount(weiToHype(action.wei), d.amount);
 		default:
 			return true;
 	}
@@ -155,6 +164,11 @@ export function candidatesFor(
 ): RowCandidates {
 	if (row.direction !== "out" && row.direction !== "within")
 		return { kind: "not-applicable" };
+	// A return from staking lands by itself when its wait is over. The step a
+	// proposal carried out was its start, days earlier, which the ledger does
+	// not show (the account's staking history does).
+	if (row.type === "cStakingTransfer" && row.delta.isDeposit !== true)
+		return { kind: "own-step" };
 	const cause = CAUSE[row.type];
 	const digests = proposals
 		.filter(
@@ -278,6 +292,7 @@ export function judgeTx(
 /** What the "Proposal" cell of one ledger row says. */
 export type RowProposal =
 	| { readonly kind: "not-applicable" }
+	| { readonly kind: "own-step" }
 	| { readonly kind: "none" }
 	| { readonly kind: "checking" }
 	/** The explorer did not answer, or does not know the hash: nothing is claimed. */

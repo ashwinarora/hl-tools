@@ -12,10 +12,14 @@ import { HELP_JARGON } from "./help";
 import {
 	deriveMoveStage,
 	type MovePhase,
+	moveRefs,
 	moveSentence,
 	pairMoves,
 	type StepView,
+	sayOncePerMove,
+	stepMark,
 } from "./move";
+import type { Part } from "./parts";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
 import { deriveStage, type Phase, type Stage } from "./stage";
 
@@ -406,5 +410,92 @@ describe("a list with the two steps of a move made one item", () => {
 				item(b[1], "b2"),
 			]),
 		).toEqual(["stake(a1+a2)", "stake(b1+b2)"]);
+	});
+});
+
+describe("saying once what holds for both steps of a move", () => {
+	const HEAD = { signatureChainId: "0x3e6", hyperliquidChain: "Testnet" };
+	const [one, two] = tieSteps(
+		makeProposal({
+			action: { type: "cDeposit", ...HEAD, wei: 5_000_000_000, nonce: NONCE },
+		}),
+		makeProposal({
+			action: {
+				type: "tokenDelegate",
+				...HEAD,
+				validator: X,
+				wei: 10_000_000_000,
+				isUndelegate: false,
+				nonce: NONCE + 1,
+			},
+			nonce: NONCE + 1,
+		}),
+	);
+	const refs = moveRefs([
+		{ proposal: one, proposedBy: A },
+		{ proposal: two, proposedBy: A },
+		{ proposal: makeProposal({ title: "a send" }), proposedBy: A },
+	]);
+
+	it("knows each step's place in its move, and nothing of a proposal that stands alone", () => {
+		expect(refs.size).toBe(2);
+		expect(refs.get(one.digest)).toEqual({
+			step: 1,
+			other: two.digest,
+			line: "Stake 100 HYPE with 0x946b…5b21",
+		});
+		expect(refs.get(two.digest)).toMatchObject({ step: 2, other: one.digest });
+	});
+
+	interface Line {
+		digest: string | null;
+		parts: Part[];
+		at: number;
+	}
+	const line = (p: Proposal | null, text: string, at = 0): Line => {
+		const ref = p ? refs.get(p.digest) : undefined;
+		return {
+			digest: p?.digest ?? null,
+			parts: [
+				{ text: "the move" },
+				...(ref ? [stepMark(ref.step)] : []),
+				{ text },
+			],
+			at,
+		};
+	};
+	const once = (lines: Line[]) =>
+		sayOncePerMove(
+			lines,
+			{
+				digest: (l) => l.digest as never,
+				parts: (l) => l.parts,
+				at: (l) => l.at,
+			},
+			(d) => refs.get(d) ?? null,
+			(first, parts) => ({ ...first, parts }),
+		).map((l) => l.parts.map((p) => p.text).join(""));
+
+	it("two sentences that say the same of each step become one, of both", () => {
+		expect(once([line(two, " was signed"), line(one, " was signed")])).toEqual([
+			"the move (both steps) was signed",
+		]);
+	});
+	it("sentences that differ, or lie far apart, stay two", () => {
+		expect(
+			once([line(one, " was accepted"), line(two, " was refused")]),
+		).toEqual([
+			"the move (step 1 of 2) was accepted",
+			"the move (step 2 of 2) was refused",
+		]);
+		expect(
+			once([line(one, " was signed", 0), line(two, " was signed", 600_000)]),
+		).toHaveLength(2);
+	});
+	it("leaves everything else alone", () => {
+		expect(once([line(null, " changed"), line(one, " was signed")])).toEqual([
+			"the move changed",
+			"the move (step 1 of 2) was signed",
+		]);
 	});
 });

@@ -31,6 +31,7 @@ import {
 	type Proposal,
 } from "@hl-tools/core";
 import type { RowProposal } from "../chain/match";
+import { type MoveRef, sayOncePerMove, stepMark } from "../move";
 import { joinParts, type Part, part, say } from "../parts";
 import { shortAddress } from "../stage";
 import type { TreasuryTab } from "../tabs";
@@ -66,6 +67,8 @@ export interface AwayProposal {
 	readonly signers: readonly Address[];
 	readonly status: ProposalStatus;
 	readonly expiresAt: number;
+	/** Set when it is one step of a move this browser verified (model/move.ts). */
+	readonly move?: MoveRef | null;
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
@@ -200,12 +203,11 @@ export function awayItems(i: {
 	const action = (p: AwayProposal | null, start: boolean): Part[] =>
 		!p
 			? [part(start ? "A proposal" : "a proposal")]
-			: p.title
-				? [
-						{ text: p.line, strong: true },
-						{ text: ` (“${p.title}”)`, quiet: true },
-					]
-				: [{ text: p.line, strong: true }];
+			: [
+					{ text: p.move ? p.move.line : p.line, strong: true },
+					...(p.move ? [stepMark(p.move.step)] : []),
+					...(p.title ? [{ text: ` (“${p.title}”)`, quiet: true }] : []),
+				];
 	/** What the reader had to do with a proposal; null when nothing (or when it cannot be told). */
 	const mine = (p: AwayProposal | null): "proposed" | "signed" | null =>
 		!p
@@ -448,7 +450,19 @@ export function awayItems(i: {
 	}
 
 	// what is only known as "now" first, then newest first
-	return out.sort(
+	// the two steps of a move: what is said of both alike is said once
+	const once = sayOncePerMove(
+		out,
+		{
+			digest: (item) => (item.go.kind === "proposal" ? item.go.digest : null),
+			parts: (item) => item.parts,
+			// news without a moment of its own stands for now
+			at: (item) => item.at ?? i.now,
+		},
+		(digest) => proposals.get(digest)?.move ?? null,
+		(first, parts) => ({ ...first, parts }),
+	);
+	return once.sort(
 		(a, b) =>
 			(b.at ?? Number.POSITIVE_INFINITY) - (a.at ?? Number.POSITIVE_INFINITY) ||
 			(a.key < b.key ? -1 : a.key > b.key ? 1 : 0),

@@ -887,3 +887,76 @@ describe("a co-signer's no", () => {
 		]);
 	});
 });
+
+describe("a move of two steps in the notice", () => {
+	const MOVE = "Stake 100 HYPE with 0x946b…5b21";
+	const step = (n: 1 | 2, over: Partial<AwayProposal> = {}): AwayProposal =>
+		theirs({
+			digest: n === 1 ? D1 : D2,
+			line: n === 1 ? "Move 50 HYPE…" : "Stake 100 HYPE…",
+			kind: n === 1 ? "cDeposit" : "tokenDelegate",
+			createdBy: A,
+			signers: [A, C],
+			move: { step: n, other: n === 1 ? D2 : D1, line: MOVE },
+			...over,
+		});
+
+	it("both steps carried out is one line", () => {
+		expect(
+			texts({
+				events: [accepted(11, C, D1), accepted(12, C, D2)],
+				proposals: [step(1), step(2)],
+			}),
+		).toEqual([
+			`${MOVE} (both steps), which you proposed, was carried out. Submitted by ${short(C)}.`,
+		]);
+	});
+	it("the line leads to the move", () => {
+		const [item] = items({
+			events: [accepted(11, C, D1), accepted(12, C, D2)],
+			proposals: [step(1), step(2)],
+		});
+		expect(item?.go).toEqual({ kind: "proposal", digest: D1 });
+		expect(item?.key).toBe(`end:${D1}`);
+	});
+	it("one step carried out and the other refused are two lines, each naming its step", () => {
+		expect(
+			texts({
+				events: [
+					accepted(11, C, D1),
+					ev("submission_recorded", 12, {
+						actor: C,
+						digest: D2,
+						data: { accepted: false, http_status: 200 },
+					}),
+				],
+				proposals: [step(1), step(2)],
+			}).sort(),
+		).toEqual(
+			[
+				`${MOVE} (step 1 of 2), which you proposed, was carried out. Submitted by ${short(C)}.`,
+				`Hyperliquid rejected ${MOVE} (step 2 of 2), which you proposed. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+			].sort(),
+		);
+	});
+	it("a co-signer's no to both steps of your move is said once", () => {
+		const open = { status: "open" as const };
+		expect(
+			texts({
+				events: [
+					ev("objection_added", 11, { actor: B, digest: D1 }),
+					ev("objection_added", 12, { actor: B, digest: D2 }),
+				],
+				proposals: [step(1, open), step(2, open)],
+			}),
+		).toEqual([
+			`${short(B)} said no to ${MOVE} (both steps), which you proposed.`,
+		]);
+	});
+	it("a move that expired is said once", () => {
+		const lapsed = { status: "open" as const, expiresAt: NOW + 1000 };
+		expect(texts({ proposals: [step(1, lapsed), step(2, lapsed)] })).toEqual([
+			`${MOVE} (both steps), which you proposed, expired before it was submitted.`,
+		]);
+	});
+});

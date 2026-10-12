@@ -16,6 +16,7 @@ import {
 	infoClient,
 	type LedgerRow,
 	type Network,
+	type Proposal,
 	parseLedger,
 } from "@hl-tools/core";
 import {
@@ -38,6 +39,7 @@ import {
 	type MatchCandidate,
 	rowProposal,
 } from "../model/chain/match";
+import { moveRefs } from "../model/move";
 import { assembleProposal } from "../model/relay/assemble";
 import {
 	AWAY_CHECK_EVERY_MS,
@@ -133,16 +135,26 @@ function newsQuery(client: RelayClient, wallet: Address, queries: QueryClient) {
 			const rows = new Map<string, ProposalRow>();
 			for (const row of [...ended.rows, ...lapsed.rows])
 				rows.set(`${row.network}:${row.treasury}:${row.digest}`, row);
-			const proposals: NewsProposal[] = [];
+			const read: { row: ProposalRow; proposal: Proposal }[] = [];
 			for (const row of rows.values()) {
 				const a = await assembleProposal(row, { now });
-				if (a.assembled)
-					proposals.push({
-						...awayProposal(row, a.assembled.proposal),
-						network: row.network,
-						treasury: row.treasury,
-					});
+				if (a.assembled) read.push({ row, proposal: a.assembled.proposal });
 			}
+			// the two steps of a move are spoken of as one where both say the same
+			const moves = moveRefs(
+				read.map((x) => ({
+					proposal: x.proposal,
+					proposedBy: x.row.createdBy,
+				})),
+			);
+			const proposals = read.map(
+				({ row, proposal }): NewsProposal => ({
+					...awayProposal(row, proposal),
+					move: moves.get(proposal.digest) ?? null,
+					network: row.network,
+					treasury: row.treasury,
+				}),
+			);
 			return { events, proposals };
 		},
 		staleTime: 15_000,

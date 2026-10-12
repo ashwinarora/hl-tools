@@ -11,6 +11,7 @@ import {
 	type Network,
 	type Proposal,
 } from "@hl-tools/core";
+import { type MoveRef, sayOncePerMove, stepMark } from "../move";
 import { joinParts, type Part, part, partsText, say } from "../parts";
 import { shortAddress } from "../stage";
 import { afterRejection } from "./copy";
@@ -32,6 +33,12 @@ export interface TimelineContext {
 	readonly line: (digest: Hex) => string | null;
 	/** The proposal's title, if it has one. It follows the action, never replaces it. */
 	readonly title?: (digest: Hex) => string | null;
+	/**
+	 * For a proposal that is one step of a move this browser verified: which
+	 * step, and the move in words. An entry then names the move and the step,
+	 * and what is said of both steps alike is said once (model/move.ts).
+	 */
+	readonly move?: (digest: Hex) => MoveRef | null;
 }
 
 /** Newest first. A proposer's own signature right after proposing is folded into "proposed … and signed". */
@@ -51,15 +58,15 @@ export function buildTimeline(
 	/** "your" for the reader, "their" for anybody else: the log knows addresses, not people. */
 	const own = (a: Address | null) => (a && a === ctx.me ? "your" : "their");
 	const action = (digest: Hex | null, start: boolean): Part[] => {
-		const line = digest ? ctx.line(digest) : null;
+		const move = digest ? (ctx.move?.(digest) ?? null) : null;
+		const line = move ? move.line : digest ? ctx.line(digest) : null;
 		if (!line) return [part(start ? "A proposal" : "a proposal")];
 		const title = digest ? ctx.title?.(digest) : null;
-		return title
-			? [
-					{ text: line, strong: true },
-					{ text: ` (“${title}”)`, quiet: true },
-				]
-			: [{ text: line, strong: true }];
+		return [
+			{ text: line, strong: true },
+			...(move ? [stepMark(move.step)] : []),
+			...(title ? [{ text: ` (“${title}”)`, quiet: true }] : []),
+		];
 	};
 
 	const asc = [...events].sort((a, b) => a.id - b.id);
@@ -257,7 +264,21 @@ export function buildTimeline(
 				break;
 		}
 	}
-	return out.sort((a, b) => b.id - a.id);
+	// the two steps of a move: what is said of both alike is one entry
+	const once = ctx.move
+		? sayOncePerMove(
+				out,
+				{ digest: (e) => e.digest, parts: (e) => e.parts, at: (e) => e.at },
+				ctx.move,
+				(first, parts, second) => ({
+					...first,
+					id: Math.max(first.id, second.id),
+					at: Math.max(first.at, second.at),
+					parts,
+				}),
+			)
+		: out;
+	return once.sort((a, b) => b.id - a.id);
 }
 
 export function entryText(e: TimelineEntry): string {

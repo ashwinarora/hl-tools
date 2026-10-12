@@ -10,12 +10,14 @@
  * 2 can no longer follow.
  */
 import {
+	type Hex,
 	judgeMove,
 	type Move,
 	otherStep,
 	type Proposal,
 	type Validator,
 } from "@hl-tools/core";
+import type { Part } from "./parts";
 import type { Phase, Stage } from "./stage";
 import { hype, validatorLabel } from "./staking";
 
@@ -296,6 +298,104 @@ export function pairMoves<T extends Listed>(
 		const firstIsItem = move.steps[0].digest === item.proposal.digest;
 		out.push(
 			merge(firstIsItem ? item : other, firstIsItem ? other : item, move),
+		);
+	}
+	return out;
+}
+
+// ------------------------------------------------------------------- sentences
+
+/** What a sentence has to know of a proposal that is one step of a move. */
+export interface MoveRef {
+	readonly step: 1 | 2;
+	/** The digest of the other step. */
+	readonly other: Hex;
+	/** The move in words. */
+	readonly line: string;
+}
+
+/** For every proposal in the list that is a step of a move found there: its place in it. */
+export function moveRefs(items: readonly Listed[]): Map<Hex, MoveRef> {
+	const refs = new Map<Hex, MoveRef>();
+	pairMoves(items, (first, second, move) => {
+		const line = moveSentence(move);
+		refs.set(first.proposal.digest, {
+			step: 1,
+			other: second.proposal.digest,
+			line,
+		});
+		refs.set(second.proposal.digest, {
+			step: 2,
+			other: first.proposal.digest,
+			line,
+		});
+		return first;
+	});
+	return refs;
+}
+
+/** After the move's line in a sentence about one of its steps. */
+export const stepMark = (step: 1 | 2): Part => ({
+	text: ` (step ${step} of 2)`,
+	quiet: true,
+});
+const BOTH: Part = { text: " (both steps)", quiet: true };
+const isStepMark = (p: Part): boolean =>
+	p.quiet === true && /^ \(step [12] of 2\)$/.test(p.text);
+
+/**
+ * What is said of both steps of a move in the same words is said once, of
+ * both: "proposed … (both steps)" for the two history entries a move's
+ * proposal leaves, one line when both were carried out. Sentences that differ
+ * (one step accepted, the other refused) stay two, each naming its step.
+ * Only sentences about moments close to each other are taken together.
+ */
+export function sayOncePerMove<T>(
+	items: readonly T[],
+	read: {
+		digest(item: T): Hex | null;
+		parts(item: T): readonly Part[];
+		at(item: T): number;
+	},
+	moveOf: (digest: Hex) => MoveRef | null,
+	/** The first step's item, with the parts that speak of both and the other item it stands for too. */
+	merge: (item: T, parts: Part[], other: T) => T,
+	withinMs = 120_000,
+): T[] {
+	const bare = (item: T) =>
+		read
+			.parts(item)
+			.filter((p) => !isStepMark(p))
+			.map((p) => p.text)
+			.join("");
+	const gone = new Set<T>();
+	const out: T[] = [];
+	for (const item of items) {
+		if (gone.has(item)) continue;
+		const digest = read.digest(item);
+		const ref = digest ? moveOf(digest) : null;
+		const twin = ref
+			? items.find(
+					(x) =>
+						x !== item &&
+						!gone.has(x) &&
+						read.digest(x) === ref.other &&
+						Math.abs(read.at(x) - read.at(item)) <= withinMs &&
+						bare(x) === bare(item),
+				)
+			: undefined;
+		if (!ref || !twin) {
+			out.push(item);
+			continue;
+		}
+		gone.add(twin);
+		const [first, second] = ref.step === 1 ? [item, twin] : [twin, item];
+		out.push(
+			merge(
+				first,
+				read.parts(first).map((p) => (isStepMark(p) ? BOTH : p)),
+				second,
+			),
 		);
 	}
 	return out;

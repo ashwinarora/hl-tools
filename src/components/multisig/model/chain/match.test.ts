@@ -587,3 +587,72 @@ describe("approvalOf", () => {
 		).toBe(digest(2));
 	});
 });
+
+describe("staking rows of the ledger", () => {
+	const moveIn = (hype: number, over: Record<string, unknown> = {}) => ({
+		type: "cDeposit",
+		signatureChainId: "0x66eee",
+		hyperliquidChain: "Testnet",
+		wei: hype * 100_000_000,
+		nonce: NONCE,
+		...over,
+	});
+	const staking = (isDeposit: boolean, over: Partial<LedgerRow> = {}) =>
+		row({
+			type: "cStakingTransfer",
+			direction: "within",
+			token: "HYPE",
+			amount: "0.03",
+			counterparty: null,
+			fromVenue: isDeposit ? "spot" : "staking",
+			toVenue: isDeposit ? "staking" : "spot",
+			fee: null,
+			feeToken: null,
+			delta: {
+				type: "cStakingTransfer",
+				token: "HYPE",
+				amount: "0.03",
+				isDeposit,
+			},
+			...over,
+		});
+
+	it("a move into staking is tied to the proposal that moved that amount in, and to no other kind", () => {
+		const proposals = [
+			proposal(1, moveIn(0.03)),
+			proposal(2, moveIn(0.5)),
+			// a send of the same day is no candidate for a staking row
+			proposal(3),
+			proposal(4, {
+				type: "tokenDelegate",
+				validator: DEST,
+				wei: 3_000_000,
+				isUndelegate: false,
+				nonce: NONCE,
+			}),
+		];
+		expect(candidatesFor(staking(true), proposals)).toEqual({
+			kind: "candidates",
+			digests: [digest(1)],
+		});
+		expect(
+			rowProposal(staking(true), T, proposals, {
+				state: "found",
+				tx: tx({ action: moveIn(0.03) as ExplorerTx["action"] }),
+			}),
+		).toEqual({ kind: "matched", digest: digest(1) });
+		expect(candidatesFor(staking(true), [proposal(3)])).toEqual({
+			kind: "none",
+		});
+	});
+
+	it("a return that landed is Hyperliquid's own step: no proposal is looked for, none is called missing", () => {
+		const landed = staking(false, { hash: `0x${"0".repeat(64)}` });
+		const proposals = [proposal(1, moveIn(0.03)), proposal(3)];
+		expect(candidatesFor(landed, proposals)).toEqual({ kind: "own-step" });
+		expect(rowProposal(landed, T, proposals, undefined)).toEqual({
+			kind: "own-step",
+		});
+		expect(hashesToLookUp([landed], proposals)).toEqual([]);
+	});
+});
