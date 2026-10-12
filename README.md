@@ -79,7 +79,7 @@ bun install
 bun --bun run dev        # http://localhost:3000
 ```
 
-The diagnostic tools need no configuration. The WalletConnect-based wallets in the faucet miner's and the Multisig Signer's wallet picker need a project ID in `.env` (from [cloud.walletconnect.com](https://cloud.walletconnect.com/)):
+The diagnostic tools and the Multisig Signer need no configuration (the signer's wallet picker offers only the wallets in the browser). The WalletConnect-based wallets in the faucet miner's wallet picker need a project ID in `.env` (from [cloud.walletconnect.com](https://cloud.walletconnect.com/)):
 
 ```
 VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id

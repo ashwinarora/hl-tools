@@ -80,9 +80,10 @@ function PrivacyPage() {
 						them.
 					</p>
 					<p>
-						Connecting a wallet uses the wallet's own software. If you pick a
-						WalletConnect-based wallet, the connection is relayed by
-						WalletConnect under its policy.
+						Connecting a wallet uses the wallet's own software. The Multisig
+						section offers only the wallets in your browser. In the faucet miner
+						you can also pick a WalletConnect-based wallet; that connection is
+						relayed by WalletConnect under its policy.
 					</p>
 				</Section>
 
