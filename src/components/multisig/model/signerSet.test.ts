@@ -394,6 +394,27 @@ describe("thresholdLines: what a number means", () => {
 	});
 });
 
+describe("a list that can never reach its number (raised by the audit, 2026-10-12)", () => {
+	it("says the account would be locked for good, where the number is chosen", () => {
+		// the zero address as the only signer: Hyperliquid takes it, nobody can sign
+		expect(thresholdLines(1, 1, 1)).toEqual({
+			summary: "Nobody in this list can ever sign.",
+			stolen: "Stolen keys: no number of keys can move anything.",
+			lost: "Lost keys: it is locked from the start.",
+			warning:
+				"With this list the account is locked for good the moment it takes effect: nobody holds the zero address's key, and Hyperliquid has no recovery.",
+		});
+		expect(thresholdLines(3, 3, 1)?.summary).toBe(
+			"Only 2 of these 3 can ever sign, and 3 must.",
+		);
+	});
+
+	it("leaves a list alone that still reaches its number without the zero address", () => {
+		expect(thresholdLines(3, 2, 1)).toEqual(thresholdLines(3, 2));
+		expect(thresholdLines(3, 2, 0)).toEqual(thresholdLines(3, 2));
+	});
+});
+
 describe("changeSummary", () => {
 	const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 	it("says who goes, who comes, and what the number does", () => {

@@ -156,6 +156,13 @@ describe("the wizard's sentences", () => {
 		expect(CREATE.before(TREASURY, 1, 1)).toContain(
 			"The one signer above can.",
 		);
+		// the zero address as the only signer: nobody is left, and it is said
+		expect(CREATE.before(TREASURY, 1, 1, 1)).toMatch(
+			/nobody can send anything from 0x.*Nobody can undo it\.$/,
+		);
+		expect(CREATE.before(TREASURY, 2, 3, 1)).toBe(
+			CREATE.before(TREASURY, 2, 3),
+		);
 		expect(CREATE.button(TREASURY, 2, 3)).toMatch(
 			/^Convert 0x.* into a 2-of-3 treasury$/,
 		);

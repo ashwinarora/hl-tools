@@ -1,4 +1,10 @@
-import type { Address, AgentInfo, Policy, SignerSet } from "@hl-tools/core";
+import {
+	type Address,
+	type AgentInfo,
+	isZeroAddress,
+	type Policy,
+	type SignerSet,
+} from "@hl-tools/core";
 import { Check, Loader2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "#/lib/utils";
@@ -175,7 +181,10 @@ export function ChangeSignersFields({
 	});
 	const next: SignerSet | null =
 		k === null ? null : { authorizedUsers: wanted.entries, threshold: k };
-	const meaning = k === null ? null : thresholdLines(n, k);
+	const meaning =
+		k === null
+			? null
+			: thresholdLines(n, k, wanted.entries.filter(isZeroAddress).length);
 
 	const write = (list: readonly string[], number: number | null) => {
 		const lower = [...new Set(list.map((a) => a.toLowerCase() as Address))];

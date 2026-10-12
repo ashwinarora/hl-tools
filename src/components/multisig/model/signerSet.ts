@@ -501,13 +501,31 @@ export interface ThresholdLines {
 /**
  * What a number of required signers means, in the two things it trades
  * against each other. Null until there is a list and a number that fits it.
+ * A list that can never reach its number says so instead.
  */
 export function thresholdLines(
 	n: number,
 	k: number | null,
+	/** How many of the listed signers can never sign (the zero address). */
+	unable = 0,
 ): ThresholdLines | null {
 	if (k === null || n < 1 || k < 1 || k > n) return null;
 	const spare = n - k;
+	const able = n - unable;
+	if (able < k) {
+		// Hyperliquid takes such a list. Nothing could ever be signed for the
+		// account afterwards, so this is said where the number is chosen.
+		return {
+			summary:
+				able === 0
+					? "Nobody in this list can ever sign."
+					: `Only ${able} of these ${n} can ever sign, and ${k} must.`,
+			stolen: "Stolen keys: no number of keys can move anything.",
+			lost: "Lost keys: it is locked from the start.",
+			warning:
+				"With this list the account is locked for good the moment it takes effect: nobody holds the zero address's key, and Hyperliquid has no recovery.",
+		};
+	}
 	if (n === 1) {
 		return {
 			summary: "The one signer acts alone.",
