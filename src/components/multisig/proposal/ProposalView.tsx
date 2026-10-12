@@ -370,7 +370,13 @@ export function ProposalView({
 	const repropose = (
 		<Link
 			to="/multisig/propose"
-			search={{ treasury: target.address, supersedes: proposal.digest }}
+			// the proposal's own network, never the header's: a testnet proposal
+			// re-proposed under a mainnet header must open a testnet form
+			search={{
+				treasury: target.address,
+				supersedes: proposal.digest,
+				network: target.network,
+			}}
 			className={linkButtonSm}
 		>
 			Re-propose

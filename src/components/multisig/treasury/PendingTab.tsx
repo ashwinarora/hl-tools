@@ -1,4 +1,4 @@
-import type { Address } from "@hl-tools/core";
+import type { Address, Network } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { ProposalRows } from "../inbox/ProposalRows";
 import { CREATE } from "../model/create";
@@ -13,6 +13,7 @@ export function PendingTab({
 	me,
 	frozen,
 	first,
+	network,
 	address,
 }: {
 	items: readonly OpenProposal[];
@@ -21,6 +22,7 @@ export function PendingTab({
 	frozen: boolean;
 	/** Nothing was ever proposed for this treasury, as far as the page can read. */
 	first: boolean;
+	network: Network;
 	address: Address;
 }) {
 	return (
@@ -50,7 +52,7 @@ export function PendingTab({
 							<span className="mt-3 block">
 								<Link
 									to="/multisig/propose"
-									search={{ treasury: address }}
+									search={{ treasury: address, network }}
 									className={linkButton}
 								>
 									{CREATE.firstProposal}

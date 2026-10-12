@@ -11,11 +11,6 @@ import {
 } from "#/components/tools/multisig/model";
 import { Button } from "#/components/ui/button";
 import { useMultisigPrefs } from "#/store/multisigPrefsStore";
-import {
-	useNetwork,
-	useNetworkHydrated,
-	useNetworkStore,
-} from "#/store/networkStore";
 import { AwayNotice } from "../inbox/AwayNotice";
 import { useChainMatch } from "../live/useChainMatch";
 import { useSelfTreasury } from "../live/useSelfTreasury";
@@ -40,6 +35,7 @@ import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
+import { usePageNetwork } from "../shell/usePageNetwork";
 import { useShellWallet } from "../shell/WalletBox";
 import { defaultTreasuryName, useTreasuryName } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
@@ -98,9 +94,6 @@ export function TreasuryScreen({
 	const relay = useRelay();
 	const navigate = useNavigate();
 	const queries = useQueryClient();
-	const header = useNetwork();
-	const hydrated = useNetworkHydrated();
-	const setNetwork = useNetworkStore((s) => s.setNetwork);
 	const markSeen = useMultisigPrefs((s) => s.markSeen);
 
 	const valid = isNetwork(rawNetwork) && ADDRESS_RE.test(rawAddress);
@@ -119,10 +112,12 @@ export function TreasuryScreen({
 	const self = useSelfTreasury(network, itself ? address : null);
 	const selfSigners = itself ? (self.policy?.authorizedUsers ?? null) : null;
 
-	// The address in the URL names its network: the header follows it.
-	useEffect(() => {
-		if (valid && hydrated && header !== network) setNetwork(network);
-	}, [valid, hydrated, header, network, setNetwork]);
+	// The address in the link names its network: the header follows it when the
+	// page opens. A treasury belongs to one network, so when the reader then
+	// uses the header's switch, the page is left for that network's own list.
+	usePageNetwork(isNetwork(rawNetwork) ? rawNetwork : undefined, () => {
+		if (valid) void navigate({ to: "/multisig" });
+	});
 
 	useEffect(() => {
 		if (treasury) markSeen(treasury.network, treasury.address);
@@ -438,7 +433,7 @@ export function TreasuryScreen({
 					frozen ? null : (
 						<Link
 							to="/multisig/propose"
-							search={{ treasury: address }}
+							search={{ treasury: address, network }}
 							className="inline-flex h-[34px] items-center justify-center whitespace-nowrap rounded-md bg-brand px-3.5 text-[13px] font-medium text-brand-foreground no-underline transition-colors hover:bg-brand/90"
 						>
 							Propose an action
@@ -515,6 +510,7 @@ export function TreasuryScreen({
 						me={me}
 						frozen={frozen}
 						first={known.state === "ready" && known.proposals.length === 0}
+						network={network}
 						address={address}
 					/>
 				)}

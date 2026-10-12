@@ -25,7 +25,6 @@ import type { AccountTarget } from "#/components/tools/multisig/model";
 import { modeQueryOptions } from "#/components/tools/multisig/policyQuery";
 import { useAccount } from "#/components/tools/multisig/useAccount";
 import { cn } from "#/lib/utils";
-import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 import { rememberSelfTreasury } from "../live/useSelfTreasury";
 import { useSignerChecks } from "../live/useSignerChecks";
 import {
@@ -61,6 +60,7 @@ import { Help } from "../shell/Help";
 import { Btn, Card, linkButton, NetTag, SignsTag } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
+import { usePageNetwork } from "../shell/usePageNetwork";
 import { useMounted, useShellWallet } from "../shell/WalletBox";
 import {
 	HowMany,
@@ -104,12 +104,24 @@ function Page({
  * asks for a second account, and nothing asks for a confirmation: what stops
  * the conversion is said next to the button, the rest is said in place.
  */
-export function CreateScreen() {
+export function CreateScreen({
+	network: linked,
+}: {
+	/** The network in the link; a link without one takes the header's and is rewritten. */
+	network?: string;
+}) {
 	const relay = useRelay();
 	const w = useShellWallet();
-	const network = useNetwork();
+	const navigate = useNavigate();
+	// named in the link, so a reload converts on the network the reader was looking at
+	const { network, hydrated } = usePageNetwork(linked, (n) => {
+		void navigate({
+			to: "/multisig/create",
+			search: { network: n },
+			replace: true,
+		});
+	});
 	const mounted = useMounted();
-	const hydrated = useNetworkHydrated();
 	const ready = mounted && hydrated;
 
 	if (!ready) {
@@ -442,7 +454,7 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 							) : (
 								<Link
 									to="/multisig/propose"
-									search={{ treasury: account }}
+									search={{ treasury: account, network }}
 									className={linkButton}
 								>
 									{CREATE.firstProposal}

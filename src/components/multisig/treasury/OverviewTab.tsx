@@ -450,7 +450,11 @@ export function OverviewTab({
 								{!frozen && me && signers.includes(me) && (
 									<Link
 										to="/multisig/propose"
-										search={{ treasury: address, kind: "changeSigners" }}
+										search={{
+											treasury: address,
+											kind: "changeSigners",
+											network,
+										}}
 										className={linkButtonSm}
 									>
 										{CHANGE.linkLabel}
@@ -491,7 +495,7 @@ export function OverviewTab({
 						<p className="mt-3 border-t border-border pt-2.5 text-xs">
 							<Link
 								to="/multisig/propose"
-								search={{ treasury: address, kind: "convertBack" }}
+								search={{ treasury: address, kind: "convertBack", network }}
 								className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
 							>
 								{CHANGE.backTitle}

@@ -100,7 +100,10 @@ export function StartProposal({ wallet }: { wallet?: string | null }) {
 							checked.address === address && (
 								<Link
 									to="/multisig/propose"
-									search={{ treasury: checked.address }}
+									search={{
+										treasury: checked.address,
+										network: checked.network,
+									}}
 									className="inline-flex h-8 items-center rounded-md border border-border-strong bg-surface px-3 text-sm font-medium hover:bg-surface-2"
 								>
 									Propose an action →

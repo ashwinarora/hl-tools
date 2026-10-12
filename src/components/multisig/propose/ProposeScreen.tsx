@@ -5,6 +5,7 @@ import {
 	fromPlain,
 	type Issue,
 	infoClient,
+	type Network,
 	ORDERED_ACTION_TYPES,
 	orderFloor,
 	type Proposal,
@@ -43,7 +44,7 @@ import {
 } from "#/components/tools/multisig/model";
 import { Button } from "#/components/ui/button";
 import { errorMessage } from "#/hooks/useHyperliquid";
-import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
+import { useNetworkHydrated } from "#/store/networkStore";
 import { useReceiver } from "../live/useReceiver";
 import { useSignerChecks } from "../live/useSignerChecks";
 import {
@@ -69,6 +70,7 @@ import {
 } from "../model/nonce";
 import { RELAY_COPY } from "../model/relay/copy";
 import { publishRow } from "../model/relay/push";
+import { reproposeSource } from "../model/repropose";
 import { isItself } from "../model/selfTreasury";
 import { costLine, spotAvailable } from "../model/send";
 import { toLookUp, wantedSet } from "../model/signerSet";
@@ -81,6 +83,7 @@ import { Help } from "../shell/Help";
 import { NetTag, SignsTag, backLink as shellBack } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
+import { usePageNetwork } from "../shell/usePageNetwork";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useKnownProposals } from "../treasury/useKnownProposals";
 import { useTreasuryNames } from "../treasuryName";
@@ -96,21 +99,55 @@ const backLink =
 	"inline-flex h-8 items-center rounded-md border border-border-strong bg-surface px-3 text-sm hover:bg-surface-2";
 
 /**
- * Build a proposal for one treasury on the header network: the action, who
- * finalises it, the chain signers sign under and how long they have. The
- * proposer can sign on the spot. Nothing is sent to Hyperliquid here.
+ * The propose page. Its link names its network, so a reload shows the same
+ * treasury whatever another tab did to the header in the meantime (see
+ * `model/pageNetwork`). The form below is keyed by network and treasury:
+ * another network is another proposal, and nothing typed or pre-filled is
+ * carried across.
  */
-export function ProposeScreen({
-	treasury,
-	supersedes,
-	kind,
-}: {
+export function ProposeScreen(props: {
 	treasury?: string;
 	supersedes?: string;
 	/** The kind of action the form opens on, when a link asks for one. */
 	kind?: string;
+	/** The network in the link; a link without one takes the header's and is rewritten. */
+	network?: string;
 }) {
-	const network = useNetwork();
+	const navigate = useNavigate();
+	const page = usePageNetwork(props.network, (network) => {
+		void navigate({
+			to: "/multisig/propose",
+			search: (s) => ({ ...s, network }),
+			replace: true,
+		});
+	});
+	return (
+		<ProposeForm
+			key={`${page.network}:${props.treasury ?? ""}`}
+			treasury={props.treasury}
+			supersedes={props.supersedes}
+			kind={props.kind}
+			network={page.network}
+		/>
+	);
+}
+
+/**
+ * Build a proposal for one treasury on one network: the action, who
+ * finalises it, the chain signers sign under and how long they have. The
+ * proposer can sign on the spot. Nothing is sent to Hyperliquid here.
+ */
+function ProposeForm({
+	treasury,
+	supersedes,
+	kind,
+	network,
+}: {
+	treasury?: string;
+	supersedes?: string;
+	kind?: string;
+	network: Network;
+}) {
 	const hydrated = useNetworkHydrated();
 	const navigate = useNavigate();
 	const client = useQueryClient();
@@ -130,6 +167,8 @@ export function ProposeScreen({
 	// The preview hashes with a nonce taken when the page opened; the real one is taken on create.
 	const [previewNow] = useState(() => Date.now());
 	const [superseded, setSuperseded] = useState<Proposal | null>(null);
+	// why a proposal named in the link was not used as the starting point
+	const [notCopied, setNotCopied] = useState<string | null>(null);
 
 	const set = <K extends keyof ActionForm>(key: K, value: ActionForm[K]) =>
 		setForm((f) => ({ ...f, [key]: value }));
@@ -146,12 +185,20 @@ export function ProposeScreen({
 
 	// Re-proposing: start from the action, finaliser and label of the proposal being replaced.
 	useEffect(() => {
-		if (!supersedes) return;
+		// not before the stored network is restored: until then a link without a
+		// network still shows the default one, and the source would be judged against that
+		if (!supersedes || !hydrated) return;
 		let cancelled = false;
 		void loadProposal(supersedes)
 			.then((r) => {
 				const old = r.proposal;
-				if (cancelled || !old) return;
+				if (cancelled || !old || !address) return;
+				// only ever from the same treasury on the same network
+				const source = reproposeSource(old, network, address);
+				if (!source.ok) {
+					setNotCopied(source.text);
+					return;
+				}
 				setSuperseded(old);
 				setForm((f) => ({
 					...f,
@@ -165,7 +212,7 @@ export function ProposeScreen({
 		return () => {
 			cancelled = true;
 		};
-	}, [supersedes]);
+	}, [supersedes, hydrated, network, address]);
 
 	const universe = useQuery({
 		queryKey: ["universe", network],
@@ -446,6 +493,11 @@ export function ProposeScreen({
 					input={
 						<>
 							<TreasuryStrip state={state} wallet={wallet.address} />
+							{notCopied && (
+								<Callout tone="warning" title="Not re-proposing">
+									{notCopied}
+								</Callout>
+							)}
 							{superseded && (
 								<Callout tone="info" title="Re-proposing">
 									Started from the proposal {short(superseded.digest)}. This is
