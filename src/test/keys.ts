@@ -60,7 +60,12 @@ export function usdSend(over: Record<string, unknown> = {}): PlainObject {
 
 /** An unsigned proposal: treasury → RECIPIENT, leader B unless overridden. */
 export function makeProposal(
-	over: { leader?: Address; action?: PlainObject; title?: string } = {},
+	over: {
+		leader?: Address;
+		action?: PlainObject;
+		title?: string;
+		nonce?: number;
+	} = {},
 ): Proposal {
 	const r = createProposal(
 		{
@@ -68,7 +73,7 @@ export function makeProposal(
 			multiSigUser: TREASURY,
 			outerSigner: over.leader ?? B,
 			action: over.action ?? usdSend(),
-			nonce: NONCE,
+			nonce: over.nonce ?? NONCE,
 			title: over.title ?? "test proposal",
 			policyAtCreation: POLICY,
 		},

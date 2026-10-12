@@ -1,0 +1,328 @@
+import {
+	classifySignatures,
+	type Move,
+	type Proposal,
+	readiness,
+	tieSteps,
+	type Validator,
+} from "@hl-tools/core";
+import { describe, expect, it } from "vitest";
+import { A, B, C, makeProposal, NONCE, NOW, POLICY, signAs } from "#/test/keys";
+import { HELP_JARGON } from "./help";
+import {
+	deriveMoveStage,
+	type MovePhase,
+	moveSentence,
+	type StepView,
+} from "./move";
+import { FORBIDDEN_CLAIMS } from "./relay/copy";
+import { deriveStage, type Phase, type Stage } from "./stage";
+
+const X = "0x946bf3135c7d15e4462b510f74b6e304aabb5b21";
+const Y = "0x0014b26bde5766c0c0f94130af5c4bf4551eeef6";
+
+/** A step as far as a move reads it. */
+const step = (
+	phase: Phase,
+	over: Partial<Stage> = {},
+	have = 1,
+	need: number | null = 2,
+): StepView => ({
+	stage: {
+		phase,
+		headline: `[${phase}]`,
+		detail: `<${phase}>`,
+		canSign: false,
+		hasSigned: false,
+		canExecute: false,
+		executeAddsSignature: false,
+		executeReason: `no: ${phase}`,
+		opensAt: null,
+		...over,
+	} as Stage,
+	have,
+	need,
+});
+const collecting = (over: Partial<Stage> = {}, have = 1) =>
+	step("collecting", { canSign: true, ...over }, have);
+const ready = (over: Partial<Stage> = {}) =>
+	step("ready", { canExecute: true, executeReason: null, ...over }, 2);
+const done = () => step("submitted", {}, 2);
+
+describe("a move in one line", () => {
+	const validators = [
+		{ address: X, name: "Hypurr" },
+		{ address: Y, name: "" },
+	] as Validator[];
+	const move = (
+		kind: Move["kind"],
+		to: string | null = null,
+	): Pick<Move, "kind" | "amount" | "validator" | "to"> => ({
+		kind,
+		amount: "100",
+		validator: X,
+		to,
+	});
+	it("names where the HYPE ends up, and the validators by their own names", () => {
+		expect(moveSentence(move("stake"), validators)).toBe(
+			"Stake 100 HYPE with Hypurr (0x946b…5b21)",
+		);
+		expect(moveSentence(move("return"), validators)).toBe(
+			"Return 100 HYPE to spot",
+		);
+		expect(moveSentence(move("switch", Y), validators)).toBe(
+			"Move 100 HYPE from Hypurr (0x946b…5b21) to 0x0014…eef6",
+		);
+		// before the list of validators is read: addresses
+		expect(moveSentence(move("stake"))).toBe("Stake 100 HYPE with 0x946b…5b21");
+	});
+});
+
+describe("what two steps mean together", () => {
+	it.each<[string, StepView, StepView, MovePhase]>([
+		["both still collect", collecting(), collecting(), "collecting"],
+		["one is ready, the other collects", ready(), collecting(), "collecting"],
+		["both are ready", ready(), ready(), "ready"],
+		["step 1 is done, step 2 collects", done(), collecting(), "half"],
+		["step 1 is done, step 2 is ready", done(), ready(), "half"],
+		["both are done", done(), done(), "done"],
+		[
+			"both were carried out some other way",
+			step("carried-out"),
+			step("carried-out"),
+			"done",
+		],
+		["step 1 was refused", step("refused"), ready(), "halted"],
+		["step 1 was withdrawn", step("withdrawn"), step("withdrawn"), "halted"],
+		["step 1 expired", step("expired"), step("expired"), "halted"],
+		["step 2 can no longer follow", ready(), step("withdrawn"), "halted"],
+		["step 1 is done, step 2 was refused", done(), step("refused"), "broken"],
+		["step 1 is done, step 2 expired", done(), step("expired"), "broken"],
+		["a step is still being judged", step("judging"), ready(), "judging"],
+		["the signer set is not read", ready(), step("unknown"), "judging"],
+		["too many said no to a step", step("cannot-pass"), collecting(), "held"],
+		["the finaliser said no to a step", ready(), step("finaliser-no"), "held"],
+	])("%s", (_name, one, two, phase) => {
+		expect(deriveMoveStage([one, two]).phase).toBe(phase);
+	});
+
+	it("nothing is to be sent or signed once a move is over", () => {
+		for (const pair of [
+			[done(), done()],
+			[step("refused"), ready()],
+			[ready(), step("withdrawn")],
+			[done(), step("refused")],
+		] as [StepView, StepView][]) {
+			const m = deriveMoveStage(pair);
+			expect(m.settled).toBe(true);
+			expect([m.toSend, m.toSign, m.canSign, m.canExecute, m.prompts]).toEqual([
+				[],
+				[],
+				false,
+				false,
+				0,
+			]);
+			expect(m.executeReason).not.toBeNull();
+		}
+	});
+
+	it("step 1 is never sent alone when step 2 can no longer follow", () => {
+		const m = deriveMoveStage([ready(), step("expired")]);
+		expect(m.canExecute).toBe(false);
+		expect(m.headline).toBe(
+			"Step 2 can no longer follow, so step 1 is not sent",
+		);
+		expect(m.detail).toContain("half done");
+	});
+
+	it("says where each step stands while signatures are collected", () => {
+		const m = deriveMoveStage([collecting({}, 1), collecting({}, 0)]);
+		expect(m.headline).toBe(
+			"Collecting signatures · step 1: 1 of 2 · step 2: 0 of 2",
+		);
+		expect(m.toSign).toEqual([0, 1]);
+		expect(m.canSign).toBe(true);
+		expect(m.canExecute).toBe(false);
+		expect(m.executeReason).toBe("Step 1: no: collecting");
+		// a signer who signed one of the two has the other left
+		const half = deriveMoveStage([
+			collecting({ canSign: false, hasSigned: true }),
+			collecting(),
+		]);
+		expect([half.toSign, half.signed]).toEqual([[1], 1]);
+	});
+
+	it("the finaliser sends both in one go: one prompt each, two where their own signature is still missing", () => {
+		const both = deriveMoveStage([ready(), ready()]);
+		expect(both.headline).toBe("Ready · both steps have their signatures");
+		expect([both.toSend, both.canExecute, both.prompts]).toEqual([
+			[0, 1],
+			true,
+			2,
+		]);
+		const completing = deriveMoveStage([
+			collecting({
+				canExecute: true,
+				executeReason: null,
+				executeAddsSignature: true,
+			}),
+			collecting({
+				canExecute: true,
+				executeReason: null,
+				executeAddsSignature: true,
+			}),
+		]);
+		expect([
+			completing.phase,
+			completing.canExecute,
+			completing.prompts,
+		]).toEqual(["collecting", true, 4]);
+		// one step lacks a signature the finaliser cannot give: nothing is sent yet
+		const waiting = deriveMoveStage([ready(), collecting()]);
+		expect(waiting.canExecute).toBe(false);
+		expect(waiting.executeReason).toBe("Step 2: no: collecting");
+	});
+
+	it("once step 1 is carried out, only step 2 is left to sign and send", () => {
+		const m = deriveMoveStage([done(), ready()]);
+		expect(m.headline).toBe(
+			"Step 1 is carried out · step 2 is ready to be sent",
+		);
+		expect([m.toSend, m.canExecute, m.prompts, m.settled]).toEqual([
+			[1],
+			true,
+			1,
+			false,
+		]);
+		const collects = deriveMoveStage([done(), collecting({}, 1)]);
+		expect(collects.headline).toBe(
+			"Step 1 is carried out · step 2 has 1 of 2 signatures",
+		);
+		expect(collects.toSign).toEqual([1]);
+		expect(collects.executeReason).toBe("no: collecting");
+	});
+
+	it("a step that waits for a lockup makes the move wait, and says until when", () => {
+		const held = (at: number) =>
+			step(
+				"ready",
+				{ canExecute: false, executeReason: "locked", opensAt: at },
+				2,
+			);
+		const m = deriveMoveStage([held(5_000), ready()]);
+		expect([m.phase, m.canExecute, m.opensAt]).toEqual(["ready", false, 5_000]);
+		expect(m.executeReason).toBe("Step 1: locked");
+		// something else is in the way as well: time is not the only thing
+		expect(deriveMoveStage([held(5_000), collecting()]).opensAt).toBeNull();
+		expect(deriveMoveStage([held(5_000), held(9_000)]).opensAt).toBe(9_000);
+	});
+
+	it("a no on one step holds the move, in that step's own words", () => {
+		const m = deriveMoveStage([
+			step("cannot-pass", { canSign: true }),
+			collecting(),
+		]);
+		expect(m.headline).toBe("[cannot-pass]");
+		expect(m.detail).toBe("Step 1 of this move: <cannot-pass>");
+		expect(m.settled).toBe(false);
+		expect(m.toSign).toEqual([0, 1]);
+	});
+
+	it("what stopped a move is said with the step it stopped at", () => {
+		expect(deriveMoveStage([step("refused"), ready()]).detail).toBe(
+			"Step 1: [refused]. The second step makes sense only after the first, so it stays where it is. Propose the move again if it is still wanted.",
+		);
+		expect(deriveMoveStage([done(), step("refused")]).detail).toBe(
+			"Step 2: [refused]. Proposing the move again makes only the step that is left.",
+		);
+	});
+
+	it("promises nothing and uses no developer's words", () => {
+		const texts = (
+			[
+				[collecting(), collecting()],
+				[ready(), ready()],
+				[done(), ready()],
+				[done(), done()],
+				[step("refused"), ready()],
+				[ready(), step("expired")],
+				[done(), step("refused")],
+				[step("judging"), ready()],
+			] as [StepView, StepView][]
+		).flatMap((pair) => {
+			const m = deriveMoveStage(pair);
+			return [m.headline, m.detail, m.executeReason ?? ""];
+		});
+		for (const t of texts) {
+			for (const claim of FORBIDDEN_CLAIMS)
+				expect(t, `${claim} in "${t}"`).not.toMatch(claim);
+			for (const word of HELP_JARGON)
+				expect(t, `${word} in "${t}"`).not.toMatch(word);
+		}
+	});
+});
+
+describe("two real steps, judged as their own pages judge them", () => {
+	const HEAD = { signatureChainId: "0x3e6", hyperliquidChain: "Testnet" };
+	const pair = (): readonly [Proposal, Proposal] =>
+		tieSteps(
+			makeProposal({
+				action: { type: "cDeposit", ...HEAD, wei: 5_000_000_000, nonce: NONCE },
+			}),
+			makeProposal({
+				action: {
+					type: "tokenDelegate",
+					...HEAD,
+					validator: X,
+					wei: 10_000_000_000,
+					isUndelegate: false,
+					nonce: NONCE + 1,
+				},
+				nonce: NONCE + 1,
+			}),
+		);
+	const view = async (p: Proposal, wallet: string): Promise<StepView> => {
+		const classified = await classifySignatures(p, POLICY);
+		const r = readiness(p, POLICY, classified, { now: NOW });
+		return {
+			stage: deriveStage({
+				proposal: p,
+				readiness: r,
+				policy: POLICY,
+				wallet,
+				walletChainId: 998,
+				now: NOW,
+			}),
+			have: r.have,
+			need: r.need,
+		};
+	};
+
+	it("A signed both, B finalises: B's click signs and sends both", async () => {
+		const [one, two] = pair();
+		const signed = [await signAs(one, 1), await signAs(two, 1)] as const;
+		const asB = deriveMoveStage([
+			await view(signed[0], B),
+			await view(signed[1], B),
+		]);
+		expect(asB.headline).toBe(
+			"Collecting signatures · step 1: 1 of 2 · step 2: 1 of 2",
+		);
+		expect([asB.canExecute, asB.prompts, asB.toSend]).toEqual([
+			true,
+			4,
+			[0, 1],
+		]);
+		// C can sign both; A has signed both and can only wait
+		const asC = deriveMoveStage([
+			await view(signed[0], C),
+			await view(signed[1], C),
+		]);
+		expect([asC.toSign, asC.canExecute]).toEqual([[0, 1], false]);
+		const asA = deriveMoveStage([
+			await view(signed[0], A),
+			await view(signed[1], A),
+		]);
+		expect([asA.toSign, asA.signed, asA.canExecute]).toEqual([[], 2, false]);
+	});
+});

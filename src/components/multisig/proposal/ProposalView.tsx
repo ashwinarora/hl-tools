@@ -153,10 +153,13 @@ export function ProposalView({
 	proposal,
 	issues,
 	doc,
+	aside,
 }: {
 	proposal: Proposal;
 	issues: readonly Issue[];
 	doc: ProposalDoc;
+	/** Something the page that opened this has to say about it: said once, above the action. */
+	aside?: { readonly title: string; readonly body: string };
 }) {
 	const header = useNetwork();
 	const relay = useRelay();
@@ -565,6 +568,11 @@ export function ProposalView({
 							}
 						>
 							{refusalNote(stage.failedAttempt)}
+						</Callout>
+					)}
+					{aside && (
+						<Callout tone="info" title={aside.title}>
+							{aside.body}
 						</Callout>
 					)}
 					{blocked && (

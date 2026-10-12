@@ -8,6 +8,7 @@ import {
 	classifySignatures,
 	type Issue,
 	infoClient,
+	type Network,
 	type Policy,
 	type Proposal,
 	readiness,
@@ -15,7 +16,11 @@ import {
 	signProposal,
 } from "@hl-tools/core";
 import { errorMessage } from "#/hooks/useHyperliquid";
-import { checkBeforeSubmit } from "../model/sendCheck";
+import {
+	checkBeforeSubmit,
+	checkMoveBeforeSubmit,
+	type SendReads,
+} from "../model/sendCheck";
 import { type Stage, shortAddress } from "../model/stage";
 import { submitEnvelope, withReceipt } from "../model/submit";
 import type { WalletSigner } from "../useWalletSigner";
@@ -65,54 +70,10 @@ export type FinaliseResult =
 			readonly issues: readonly Issue[];
 	  };
 
-/**
- * The finaliser's part, in one sitting: their own inner signature first if it
- * is what completes the threshold, then the envelope over the verified
- * signatures, signed under the same chain, then one POST to Hyperliquid from
- * this browser. Whatever the exchange answers goes back into the document
- * and, with the relay in use, onto the relay.
- *
- * Nothing is posted on the strength of what the page knew a moment ago: the
- * relay is asked again whether the proposal was withdrawn or declined, and
- * the signer set is read again from the chain.
- */
-export async function finalise(i: {
-	readonly proposal: Proposal;
-	readonly stage: Stage;
-	readonly wallet: WalletSigner;
-	readonly doc: Pick<ProposalDoc, "store" | "refresh" | "relay">;
-	readonly mark: (id: StepId, state: StepState) => void;
-}): Promise<FinaliseResult> {
-	const { proposal, stage, wallet, doc, mark } = i;
-	const { network, multiSigUser } = proposal.payload;
-	const stop = (step: StepId, issues: readonly Issue[]): FinaliseResult => {
-		mark(step, "failed");
-		return { ok: false, step, issues };
-	};
-	const chain = stage.requiredChain;
-	if (!chain) return stop("envelope", problem("execute", "No signing chain."));
-
-	if (doc.relay.known) {
-		const row = await doc.refresh();
-		if (row?.ending) {
-			const first = stage.executeAddsSignature ? "inner" : "envelope";
-			return stop(
-				first,
-				problem(
-					"relay.proposal_closed",
-					row.ending.kind === "withdrawn"
-						? `The proposer ${shortAddress(row.ending.endedBy)} withdrew this proposal a moment ago. Nothing was signed or submitted.`
-						: "This proposal was declined. Nothing was signed or submitted.",
-				),
-			);
-		}
-	}
-
-	// Would Hyperliquid refuse it as things stand? A refusal uses up the
-	// proposal's number for good, so the treasury's mode and balances and the
-	// receiver are read again now, before any wallet prompt.
+/** What the check before submit is handed: every figure read from Hyperliquid now, never from a cache. */
+export function submitReads(network: Network): SendReads {
 	const client = infoClient(network);
-	const refusals = await checkBeforeSubmit(proposal.payload, {
+	return {
 		mode: async (user) =>
 			(await client.userAbstraction(user, { fresh: true })).data,
 		withdrawable: async (user) =>
@@ -135,17 +96,75 @@ export async function finalise(i: {
 		},
 		validators: async () =>
 			(await client.validatorSummaries({ fresh: true })).data,
-	});
-	if (refusals.length > 0) {
-		return stop(
-			stage.executeAddsSignature ? "inner" : "envelope",
-			refusals.map((r) => ({
-				code: `preflight.${r.code}`,
-				severity: "error" as const,
-				message: `Nothing was signed or sent: Hyperliquid would refuse this as things stand. ${r.message}`,
-			})),
-		);
-	}
+	};
+}
+
+type Doc = Pick<ProposalDoc, "store" | "refresh" | "relay">;
+type Failure = {
+	readonly ok: false;
+	readonly step: StepId;
+	readonly issues: readonly Issue[];
+};
+
+/** What was signed for one proposal and is ready to be posted. */
+interface Signed {
+	readonly current: Proposal;
+	readonly request: ReturnType<typeof buildEnvelope>["request"];
+	readonly signature: NonNullable<
+		Awaited<ReturnType<typeof signEnvelope>>["signature"]
+	>;
+}
+
+/** The first thing the finaliser's wallet is asked for: their own signature if it completes the threshold, else the envelope. */
+const firstStep = (stage: Stage): StepId =>
+	stage.executeAddsSignature ? "inner" : "envelope";
+
+/**
+ * Asked of the relay once more before anything is signed: nothing is done on
+ * the strength of what the page knew a moment ago. The reason not to go on,
+ * or null.
+ */
+async function closedMeanwhile(doc: Doc): Promise<Issue[] | null> {
+	if (!doc.relay.known) return null;
+	const row = await doc.refresh();
+	if (!row?.ending) return null;
+	return problem(
+		"relay.proposal_closed",
+		row.ending.kind === "withdrawn"
+			? `The proposer ${shortAddress(row.ending.endedBy)} withdrew this proposal a moment ago. Nothing was signed or submitted.`
+			: "This proposal was declined. Nothing was signed or submitted.",
+	);
+}
+
+/** What the check before submit found, as the page says it. */
+const refused = (refusals: readonly { code: string; message: string }[]) =>
+	refusals.map((r) => ({
+		code: `preflight.${r.code}`,
+		severity: "error" as const,
+		message: `Nothing was signed or sent: Hyperliquid would refuse this as things stand. ${r.message}`,
+	}));
+
+/**
+ * The finaliser's signatures for one proposal: their own inner signature
+ * first if it is what completes the threshold, then the envelope over the
+ * verified signatures, counted against the signer set the chain reports now.
+ * Nothing is sent.
+ */
+async function signToSubmit(i: {
+	readonly proposal: Proposal;
+	readonly stage: Stage;
+	readonly wallet: WalletSigner;
+	readonly doc: Doc;
+	readonly mark: (id: StepId, state: StepState) => void;
+}): Promise<{ readonly ok: true; readonly signed: Signed } | Failure> {
+	const { proposal, stage, wallet, doc, mark } = i;
+	const { network, multiSigUser } = proposal.payload;
+	const stop = (step: StepId, issues: readonly Issue[]): Failure => {
+		mark(step, "failed");
+		return { ok: false, step, issues };
+	};
+	const chain = stage.requiredChain;
+	if (!chain) return stop("envelope", problem("execute", "No signing chain."));
 
 	let current = proposal;
 	if (stage.executeAddsSignature) {
@@ -199,24 +218,190 @@ export async function finalise(i: {
 	const outer = await signEnvelope(request, network, got.signer);
 	if (!outer.signature) return stop("envelope", outer.issues);
 	mark("envelope", "done");
+	return { ok: true, signed: { current, request, signature: outer.signature } };
+}
 
+/**
+ * One POST to Hyperliquid from this browser. Whatever the exchange answers
+ * goes back into the document and, with the relay in use, onto the relay
+ * (sharing the proposal first if it came from a link or a file).
+ */
+async function post(i: {
+	readonly signed: Signed;
+	readonly doc: Doc;
+	readonly mark: (id: StepId, state: StepState) => void;
+}): Promise<FinaliseResult> {
+	const { signed, doc, mark } = i;
 	mark("submit", "active");
 	try {
-		const sent = await submitEnvelope(network, request, outer.signature);
-		// the receipt is kept whether the chain accepted or not; the page explains it.
-		// With the relay in use the result is recorded there, sharing the proposal first
-		// if it came from a link or a file.
-		await doc.store(withReceipt(current, sent.receipt), { publish: true });
+		const sent = await submitEnvelope(
+			signed.current.payload.network,
+			signed.request,
+			signed.signature,
+		);
+		// the receipt is kept whether the chain accepted or not; the page explains it
+		await doc.store(withReceipt(signed.current, sent.receipt), {
+			publish: true,
+		});
 		const accepted = sent.explained.id === "ok";
 		mark("submit", accepted ? "done" : "failed");
 		return { ok: true, accepted };
 	} catch (e) {
-		return stop(
-			"submit",
-			problem(
+		mark("submit", "failed");
+		return {
+			ok: false,
+			step: "submit",
+			issues: problem(
 				"execute",
 				`The request did not reach Hyperliquid: ${errorMessage(e)} Nothing was submitted; it is safe to try again.`,
 			),
-		);
+		};
 	}
+}
+
+/**
+ * The finaliser's part, in one sitting: their own inner signature first if it
+ * is what completes the threshold, then the envelope over the verified
+ * signatures, signed under the same chain, then one POST to Hyperliquid from
+ * this browser. Whatever the exchange answers goes back into the document
+ * and, with the relay in use, onto the relay.
+ *
+ * Nothing is posted on the strength of what the page knew a moment ago: the
+ * relay is asked again whether the proposal was withdrawn or declined, and
+ * the signer set is read again from the chain.
+ */
+export async function finalise(i: {
+	readonly proposal: Proposal;
+	readonly stage: Stage;
+	readonly wallet: WalletSigner;
+	readonly doc: Doc;
+	readonly mark: (id: StepId, state: StepState) => void;
+}): Promise<FinaliseResult> {
+	const { proposal, stage, doc, mark } = i;
+	const stop = (issues: readonly Issue[]): FinaliseResult => {
+		mark(firstStep(stage), "failed");
+		return { ok: false, step: firstStep(stage), issues };
+	};
+	const closed = await closedMeanwhile(doc);
+	if (closed) return stop(closed);
+
+	// Would Hyperliquid refuse it as things stand? A refusal uses up the
+	// proposal's number for good, so the treasury's mode and balances and the
+	// receiver are read again now, before any wallet prompt.
+	const refusals = await checkBeforeSubmit(
+		proposal.payload,
+		submitReads(proposal.payload.network),
+	);
+	if (refusals.length > 0) return stop(refused(refusals));
+
+	const signed = await signToSubmit(i);
+	if (!signed.ok) return signed;
+	return post({ signed: signed.signed, doc, mark });
+}
+
+/** One step of a move, as the finaliser's click needs it. */
+export interface MoveStep {
+	readonly proposal: Proposal;
+	readonly stage: Stage;
+	readonly doc: Doc;
+}
+
+export type MoveResult =
+	/** `sent` steps were posted; `accepted` says whether the last of them went through. */
+	| { readonly ok: true; readonly accepted: boolean; readonly sent: number }
+	| {
+			readonly ok: false;
+			/** Which of the steps handed in. */
+			readonly index: number;
+			readonly step: StepId;
+			readonly issues: readonly Issue[];
+			/** How many were posted and accepted before this. */
+			readonly sent: number;
+	  };
+
+/**
+ * The finaliser's part for the steps of a move that are still to be sent, in
+ * their order. Everything is asked first and all at once, so a move is not
+ * left half done by a wallet prompt that was cancelled: the relay about each
+ * step, Hyperliquid about the whole sequence (each step judged against what
+ * the ones before leave behind), then every signature. Only then is the first
+ * step posted, and each further one only once Hyperliquid has accepted the
+ * one before.
+ */
+export async function finaliseMove(i: {
+	readonly steps: readonly MoveStep[];
+	readonly wallet: WalletSigner;
+	readonly mark: (index: number, id: StepId, state: StepState) => void;
+}): Promise<MoveResult> {
+	const { steps, wallet, mark } = i;
+	const [head] = steps;
+	if (!head) return { ok: true, accepted: true, sent: 0 };
+	const stop = (
+		index: number,
+		step: StepId,
+		issues: readonly Issue[],
+		sent = 0,
+	): MoveResult => {
+		mark(index, step, "failed");
+		return { ok: false, index, step, issues, sent };
+	};
+
+	for (const [index, s] of steps.entries()) {
+		const closed = await closedMeanwhile(s.doc);
+		if (closed) return stop(index, firstStep(s.stage), closed);
+	}
+	const refusals = await checkMoveBeforeSubmit(
+		steps.map((s) => s.proposal.payload),
+		submitReads(head.proposal.payload.network),
+	);
+	if (refusals.length > 0)
+		return stop(0, firstStep(head.stage), refused(refusals));
+
+	const signed: Signed[] = [];
+	for (const [index, s] of steps.entries()) {
+		const one = await signToSubmit({
+			...s,
+			wallet,
+			mark: (id, state) => mark(index, id, state),
+		});
+		if (!one.ok) return { ...one, index, sent: 0 };
+		signed.push(one.signed);
+	}
+
+	let sent = 0;
+	for (const [index, s] of steps.entries()) {
+		const answer = await post({
+			signed: signed[index] as Signed,
+			doc: s.doc,
+			mark: (id, state) => mark(index, id, state),
+		});
+		if (!answer.ok) return { ...answer, index, sent };
+		sent += 1;
+		// refused: the steps after it are not sent, and their numbers stay unused
+		if (!answer.accepted) return { ok: true, accepted: false, sent };
+	}
+	return { ok: true, accepted: true, sent };
+}
+
+/**
+ * One signer's signatures on the steps of a move they have not signed yet:
+ * one wallet prompt each, in order. Stops at the first that is not given;
+ * what was signed before it stays signed.
+ */
+export async function signMove(i: {
+	readonly steps: readonly {
+		readonly proposal: Proposal;
+		readonly stage: Stage;
+		readonly store: ProposalDoc["store"];
+	}[];
+	readonly wallet: WalletSigner;
+}): Promise<{ readonly outcome: Outcome; readonly signed: number }> {
+	let signed = 0;
+	for (const s of i.steps) {
+		if (!s.stage.canSign) continue;
+		const one = await signInner(s.proposal, s.stage, i.wallet, s.store);
+		if (!one.outcome.ok) return { outcome: one.outcome, signed };
+		signed += 1;
+	}
+	return { outcome: { ok: true }, signed };
 }

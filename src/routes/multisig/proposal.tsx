@@ -1,4 +1,4 @@
-import type { Issue } from "@hl-tools/core";
+import { type Issue, judgeMove, otherStep, stepNumber } from "@hl-tools/core";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { FileQuestion, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -9,6 +9,7 @@ import {
 	documentFromFragment,
 	openText,
 } from "#/components/multisig/model/transport";
+import { MoveView } from "#/components/multisig/proposal/MoveView";
 import { ProposalView } from "#/components/multisig/proposal/ProposalView";
 import { useProposalDoc } from "#/components/multisig/proposal/useProposalDoc";
 import { useRelay } from "#/components/multisig/relay/useRelay";
@@ -71,10 +72,66 @@ function ProposalScreen() {
 		};
 	}, []);
 
-	if (doc.proposal && link.state !== "failed")
+	// A proposal that says it is one step of a move: the other step is opened
+	// too, and the two are shown as one page when they bear the claim out.
+	const otherDigest = doc.proposal ? otherStep(doc.proposal) : null;
+	const other = useProposalDoc(otherDigest ?? undefined);
+	if (doc.proposal && link.state !== "failed") {
+		if (otherDigest && other.loading && !other.proposal)
+			return (
+				<ShellPage title="Proposal" meta={<SignsTag />}>
+					<div
+						className="flex items-center gap-2 text-sm text-muted-foreground"
+						aria-busy="true"
+					>
+						<Loader2 className="size-4 animate-spin" aria-hidden /> Opening both
+						steps…
+					</div>
+				</ShellPage>
+			);
+		// who proposed each is the relay's word where it has both, never the documents'
+		const rows = [doc.relay.row, other.relay.row] as const;
+		const judged = other.proposal
+			? judgeMove(
+					doc.proposal,
+					other.proposal,
+					rows[0] && rows[1]
+						? { a: rows[0].createdBy, b: rows[1].createdBy }
+						: undefined,
+				)
+			: null;
+		if (judged?.move) {
+			const firstIsThis = judged.move.steps[0].digest === doc.proposal.digest;
+			return (
+				<MoveView
+					move={judged.move}
+					docs={firstIsThis ? [doc, other] : [other, doc]}
+					issues={
+						firstIsThis
+							? [doc.issues, other.issues]
+							: [other.issues, doc.issues]
+					}
+				/>
+			);
+		}
 		return (
-			<ProposalView proposal={doc.proposal} issues={doc.issues} doc={doc} />
+			<ProposalView
+				proposal={doc.proposal}
+				issues={doc.issues}
+				doc={doc}
+				aside={
+					otherDigest
+						? {
+								title: `This says it is step ${stepNumber(doc.proposal)} of a move of two steps`,
+								body: other.proposal
+									? "The other step is here too, but the two do not bear that out (they differ in treasury, finaliser or proposer, or are not the two steps of one staking move), so each is shown by itself."
+									: "The other step is not in this browser, so this one is shown by itself. Open the other step's link or file to see the move as one.",
+							}
+						: undefined
+				}
+			/>
 		);
+	}
 
 	return (
 		<ShellPage title="Proposal" meta={<SignsTag />}>

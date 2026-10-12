@@ -120,6 +120,12 @@ export interface ProposalDoc {
 	takeBackNo(): Promise<void>;
 	/** Read the relay's copy again, now; the row, or null when it has none or cannot be reached. */
 	refresh(): Promise<ProposalRow | null>;
+	/**
+	 * Drop a signer's signature from this browser's copy: after the relay took
+	 * it back some other way than through `takeBack` or `sayNo` (the one write
+	 * that covers both steps of a move).
+	 */
+	forgetSignature(signer: Address): Promise<void>;
 }
 
 interface Remote {
@@ -474,6 +480,14 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 		[invalidateLocal],
 	);
 
+	const forgetSignature = useCallback(
+		async (signer: Address) => {
+			if (proposal?.signatures.some((x) => x.signer === signer))
+				await dropLocalSignature(proposal.digest, signer);
+		},
+		[proposal, dropLocalSignature],
+	);
+
 	const takeBack = useCallback(
 		() =>
 			act(async (c, as) => {
@@ -577,6 +591,7 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 		sayNo,
 		takeBackNo,
 		refresh,
+		forgetSignature,
 	};
 }
 
