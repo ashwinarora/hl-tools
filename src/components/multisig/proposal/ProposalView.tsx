@@ -82,6 +82,9 @@ const ACTIONABLE: ReadonlySet<Phase> = new Set([
 	// nothing to sign, but its proposer can still withdraw it and a signer take a signature back
 	"stuck",
 	"overtaken",
+	// held up by a no: still open, and the no can be taken back
+	"cannot-pass",
+	"finaliser-no",
 	"refused",
 ]);
 /** Phases in which what the send costs is still worth saying. */
@@ -104,6 +107,9 @@ const CLOSED: ReadonlySet<Phase> = new Set([
 const REPROPOSABLE: ReadonlySet<Phase> = new Set([
 	"stuck",
 	"overtaken",
+	// with a different finaliser, or once the signers agree
+	"cannot-pass",
+	"finaliser-no",
 	"refused",
 	"expired",
 	"withdrawn",
@@ -275,6 +281,8 @@ export function ProposalView({
 		closedUnknown: row?.status === "unknown",
 		overtaken,
 		headerNetwork: header,
+		// who said no: an objection, counted against the live signers like a signature
+		objections: doc.relay.objections,
 	});
 	const role = ROLE[stage.role];
 	const description = useMemo(
@@ -704,6 +712,7 @@ export function ProposalView({
 								me={me}
 								closed={CLOSED.has(stage.phase)}
 								seen={seen}
+								objected={stage.standing?.objected}
 							/>
 							<TellCoSigners proposal={proposal} doc={doc} />
 							<SharePanel

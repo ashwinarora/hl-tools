@@ -51,6 +51,7 @@ const theirs = (over: Partial<AwayProposal> = {}): AwayProposal => ({
 	kind: "usdSend",
 	agent: null,
 	createdBy: B,
+	finaliser: C,
 	signers: [B, C],
 	status: "accepted",
 	expiresAt: NOW + 2 * DAY,
@@ -763,5 +764,126 @@ describe("treasuriesToCheck", () => {
 	});
 	it("asks about none from the navigation", () => {
 		expect(treasuriesToCheck(keys, "none").size).toBe(0);
+	});
+});
+
+describe("a co-signer's no", () => {
+	const open = (over: Partial<AwayProposal> = {}) =>
+		theirs({ status: "open", signers: [], ...over });
+	const no = (id: number, actor: Address, digest: Hex = D1) =>
+		ev("objection_added", id, { actor, digest });
+	const lines = (list: ReturnType<typeof items>) =>
+		list.map((x) => partsText(x.parts));
+
+	it("is told when it stands on something you proposed, or have to submit", () => {
+		expect(
+			lines(
+				items({
+					events: [no(11, B)],
+					proposals: [open({ createdBy: A, finaliser: C })],
+				}),
+			),
+		).toEqual([
+			`${short(B)} said no to Send 120 USDC to 0x9a01…77c2, which you proposed.`,
+		]);
+		expect(
+			lines(
+				items({
+					events: [no(11, B)],
+					proposals: [open({ createdBy: C, finaliser: A })],
+				}),
+			),
+		).toEqual([
+			`${short(B)} said no to Send 120 USDC to 0x9a01…77c2, which you have to submit.`,
+		]);
+	});
+
+	it("leads to the proposal", () => {
+		const [item] = items({
+			events: [no(11, B)],
+			proposals: [open({ createdBy: A })],
+		});
+		expect(item?.go).toEqual({ kind: "proposal", digest: D1 });
+		expect(item?.key).toBe(`no:${D1}:${B}`);
+	});
+
+	it("is not told about somebody else's proposal: that is on the proposal and in the lists", () => {
+		expect(
+			items({
+				events: [no(11, B)],
+				proposals: [open({ createdBy: C, finaliser: B })],
+			}),
+		).toEqual([]);
+	});
+
+	it("is not told once it no longer stands: taken back, or replaced by a signature", () => {
+		const mine = [open({ createdBy: A })];
+		expect(
+			items({
+				events: [no(11, B), ev("objection_removed", 12, { actor: B })],
+				proposals: mine,
+			}),
+		).toEqual([]);
+		expect(
+			items({
+				events: [
+					no(11, B),
+					ev("objection_removed", 12, { actor: B }),
+					ev("signature_added", 13, { actor: B }),
+				],
+				proposals: mine,
+			}),
+		).toEqual([]);
+		// said, taken back, said again: it stands
+		expect(
+			items({
+				events: [
+					no(11, B),
+					ev("objection_removed", 12, { actor: B }),
+					no(13, B),
+				],
+				proposals: mine,
+			}),
+		).toHaveLength(1);
+	});
+
+	it("is not your own, and not about a proposal that is over", () => {
+		expect(
+			items({ events: [no(11, A)], proposals: [open({ createdBy: A })] }),
+		).toEqual([]);
+		// withdrawn since: the ending is the news (and your own withdrawal is not)
+		expect(
+			lines(
+				items({
+					events: [no(11, B), ev("proposal_withdrawn", 12, { actor: A })],
+					proposals: [open({ createdBy: A, status: "withdrawn" })],
+				}),
+			),
+		).toEqual([]);
+		// lapsed since
+		expect(
+			lines(
+				items({
+					events: [no(11, B)],
+					proposals: [open({ createdBy: A, expiresAt: NOW - 1 })],
+				}),
+			).filter((t) => t.includes("said no")),
+		).toEqual([]);
+		// its document is not at hand: nothing is guessed
+		expect(items({ events: [no(11, B)], proposals: [] })).toEqual([]);
+	});
+
+	it("names each co-signer who said no", () => {
+		expect(
+			lines(
+				items({
+					events: [no(11, B), no(12, C)],
+					proposals: [open({ createdBy: A })],
+				}),
+			),
+		).toEqual([
+			`${short(C)} said no to Send 120 USDC to 0x9a01…77c2, which you proposed.`,
+			`${short(B)} said no to Send 120 USDC to 0x9a01…77c2, which you proposed.`,
+		]);
 	});
 });

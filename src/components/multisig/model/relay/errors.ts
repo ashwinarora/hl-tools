@@ -79,6 +79,12 @@ const REFUSALS: Record<string, Known> = {
 		message: "That could not be marked as read.",
 		fix: "Reload the page and try again.",
 	},
+	// an older page offering the finaliser's "Decline", which the relay no longer takes
+	"relay.decline_retired": {
+		message:
+			"A proposal is no longer declined. Its finaliser says no like any other signer, and only its proposer can end it.",
+		fix: "Reload the page and use “Say no”.",
+	},
 	"relay.not_proposer": {
 		message: "Only the wallet that proposed it can withdraw a proposal.",
 	},

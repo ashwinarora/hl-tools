@@ -10,11 +10,14 @@ import { useState } from "react";
 import { Callout, IssueList } from "#/components/hub/status";
 import { useNetworkStore } from "#/store/networkStore";
 import { RELAY_COPY, signHint } from "../model/relay/copy";
+import { objectionNote, ownPosition } from "../model/relay/positions";
 import { relayActions } from "../model/relay/status";
 import { type Stage, shortAddress } from "../model/stage";
+import { Sentence } from "../names/Sentence";
 import { useOpenProposals } from "../relay/openProposals";
 import { Help } from "../shell/Help";
 import { Btn, Card, Tag } from "../shell/kit";
+import { useNow } from "../shell/live";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
 import type { WalletSigner } from "../useWalletSigner";
 import {
@@ -34,8 +37,9 @@ const FRESH: Record<StepId, StepState> = {
 
 /**
  * What the connected wallet can do to this proposal: one primary button
- * (sign, or for the finaliser sign and submit), and under it the ways out
- * that the relay offers (take a signature back, withdraw, decline).
+ * (sign, or for the finaliser sign and submit), and next to it what the relay
+ * offers besides: take a signature back, say no (an objection the others see,
+ * which ends nothing) or take the no back, and for the proposer, withdraw.
  */
 export function YourPart({
 	proposal,
@@ -60,7 +64,8 @@ export function YourPart({
 	const [outcome, setOutcome] = useState<Outcome | null>(null);
 	const [steps, setSteps] = useState<Record<StepId, StepState> | null>(null);
 	const [failure, setFailure] = useState<readonly Issue[] | null>(null);
-	const [confirm, setConfirm] = useState<"withdrawn" | "declined" | null>(null);
+	const [confirm, setConfirm] = useState(false);
+	const now = useNow(60_000);
 	const [finishing, setFinishing] = useState(false);
 	const open = useOpenProposals();
 
@@ -76,7 +81,23 @@ export function YourPart({
 		createdBy: row?.createdBy ?? outerSigner,
 		finaliser: outerSigner,
 		relaySigners: row?.signatures.map((s) => s.signer) ?? [],
+		isSigner: !!me && signers.includes(me),
+		objected: doc.relay.objections.map((o) => o.signer),
 	});
+	// What the reader is told about a no: their own, in their own words; the
+	// others', as one amber line above the buttons. A fact, with no click.
+	const mine = stage.standing
+		? ownPosition({
+				standing: stage.standing,
+				me,
+				finaliser: outerSigner,
+				now,
+			})
+		: null;
+	const theirs =
+		stage.standing && (stage.canSign || stage.canExecute)
+			? objectionNote(stage.standing, me, now)
+			: null;
 	const adds = stage.executeAddsSignature;
 	const chain = stage.requiredChain;
 
@@ -168,9 +189,7 @@ export function YourPart({
 			: stage.phase === "overtaken" || stage.phase === "refused"
 				? actions.withdraw
 					? "It cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again."
-					: actions.decline
-						? "It cannot be submitted, so nothing here needs your signature. Decline it to take it off everyone's pending list; it can then be proposed again."
-						: "It cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it and propose it again."
+					: "It cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it and propose it again."
 				: stage.canExecute
 					? adds
 						? "Your signature completes the threshold. Two wallet prompts, then it is sent."
@@ -211,16 +230,18 @@ export function YourPart({
 		stage.canSign ||
 		actions.takeBack ||
 		actions.withdraw ||
-		actions.decline;
+		actions.sayNo ||
+		actions.takeBackNo;
 
 	return (
 		<Card
 			title={
 				<span className="inline-flex items-center gap-1.5">
 					Your part
-					{(actions.takeBack || actions.withdraw || actions.decline) && (
-						<Help k="waysOut" />
-					)}
+					{(actions.takeBack ||
+						actions.withdraw ||
+						actions.sayNo ||
+						actions.takeBackNo) && <Help k="waysOut" />}
 				</span>
 			}
 			actions={isFinaliser ? <Tag tone="you">you are the finaliser</Tag> : null}
@@ -253,6 +274,17 @@ export function YourPart({
 					{olderSends.length === 1 ? "it" : "they"} will have to be proposed
 					again.
 				</Callout>
+			)}
+			{theirs && (
+				<p className="mb-2.5 flex items-start gap-1.5 text-[13px] text-warning">
+					<span
+						className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+						aria-hidden
+					/>
+					<span>
+						<Sentence parts={theirs} />
+					</span>
+				</p>
 			)}
 			{any && (
 				<div className="flex flex-wrap items-center gap-2">
@@ -287,30 +319,59 @@ export function YourPart({
 							Take back my signature
 						</Btn>
 					)}
+					{actions.takeBackNo && (
+						<Btn
+							variant={stage.canSign || stage.canExecute ? "outline" : "brand"}
+							disabled={doc.relay.busy || wallet.busy}
+							onClick={() => {
+								setOutcome(null);
+								void doc.takeBackNo();
+							}}
+						>
+							{RELAY_COPY.takeBackNo}
+						</Btn>
+					)}
+					{actions.sayNo && (
+						<Btn
+							variant="outline"
+							className="border-warning/50 text-warning hover:text-warning"
+							disabled={doc.relay.busy || wallet.busy}
+							title={
+								stage.hasSigned ? RELAY_COPY.saidNoAfterSigning : undefined
+							}
+							onClick={() => {
+								setOutcome(null);
+								void doc.sayNo();
+							}}
+						>
+							{RELAY_COPY.sayNo}
+						</Btn>
+					)}
 					{actions.withdraw && (
 						<Btn
 							variant="outline"
 							className="border-danger/40 text-danger hover:text-danger"
 							disabled={doc.relay.busy}
-							onClick={() => setConfirm("withdrawn")}
+							onClick={() => setConfirm(true)}
 						>
 							Withdraw
-						</Btn>
-					)}
-					{actions.decline && (
-						<Btn
-							variant="outline"
-							className="border-danger/40 text-danger hover:text-danger"
-							disabled={doc.relay.busy}
-							onClick={() => setConfirm("declined")}
-						>
-							Decline
 						</Btn>
 					)}
 				</div>
 			)}
 			{itself ? (
 				<SwitchToSigner signers={signers} className={any ? "mt-2.5" : ""} />
+			) : mine ? (
+				// the reader's own no, in place of the note about signing
+				<p
+					className={
+						any
+							? "mt-2.5 text-[13px] text-muted-foreground"
+							: "text-[13px] text-muted-foreground"
+					}
+				>
+					<Sentence parts={mine} /> <Help k="sayNo" />
+				</p>
 			) : note ? (
 				<p
 					className={
@@ -339,11 +400,7 @@ export function YourPart({
 				<Callout
 					tone="warning"
 					className="mt-3"
-					title={
-						confirm === "withdrawn"
-							? "Withdraw this proposal?"
-							: "Decline to submit this proposal?"
-					}
+					title="Withdraw this proposal?"
 					action={
 						<div className="flex flex-wrap items-center gap-2">
 							<Btn
@@ -352,14 +409,13 @@ export function YourPart({
 								className="border-danger/40 text-danger hover:text-danger"
 								disabled={doc.relay.busy}
 								onClick={() => {
-									const kind = confirm;
-									setConfirm(null);
-									void doc.end(kind);
+									setConfirm(false);
+									void doc.withdraw();
 								}}
 							>
-								{confirm === "withdrawn" ? "Yes, withdraw" : "Yes, decline"}
+								Yes, withdraw
 							</Btn>
-							<Btn size="sm" variant="ghost" onClick={() => setConfirm(null)}>
+							<Btn size="sm" variant="ghost" onClick={() => setConfirm(false)}>
 								Keep it
 							</Btn>
 						</div>

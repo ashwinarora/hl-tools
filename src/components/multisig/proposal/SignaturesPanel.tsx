@@ -1,11 +1,14 @@
 import type { Address, Policy, Proposal } from "@hl-tools/core";
 import { RELAY_COPY } from "../model/relay/copy";
+import type { Objection } from "../model/relay/positions";
 import { seenBy, seenLabel, type ViewRow } from "../model/relay/views";
-import { localDateTime, utcDateTime } from "../model/time";
+import { fromNow, localDateTime, utcDateTime } from "../model/time";
 import { Who } from "../names/Names";
 import { Help } from "../shell/Help";
 import { Card, PersonRow, Pips, Tag } from "../shell/kit";
 import { useNow } from "../shell/live";
+
+const NOBODY: readonly Objection[] = [];
 
 /** What the relay knows about who has opened the proposal. */
 export interface SeenInfo {
@@ -20,6 +23,7 @@ export interface SeenInfo {
  * does not verify is not listed here at all (the details below say why).
  * For a proposal on the relay, a signer who has not signed is shown as having
  * opened it or not: the proposer can tell "has not looked" from "looked".
+ * A signer who said no is shown as that: it is their position, like a signature.
  */
 export function SignaturesPanel({
 	proposal,
@@ -28,6 +32,7 @@ export function SignaturesPanel({
 	me,
 	closed = false,
 	seen = null,
+	objected = NOBODY,
 }: {
 	proposal: Proposal;
 	/** The live signer set; null while unknown. */
@@ -39,6 +44,8 @@ export function SignaturesPanel({
 	closed?: boolean;
 	/** Null when the relay does not have the proposal: nothing is said about who looked. */
 	seen?: SeenInfo | null;
+	/** The current signers who said no: an objection, shown on their row. */
+	objected?: readonly Objection[];
 }) {
 	const now = useNow();
 	const finaliser = proposal.payload.outerSigner;
@@ -72,6 +79,7 @@ export function SignaturesPanel({
 				</span>
 			) : (
 				signers.map((a) => {
+					const no = objected.find((o) => o.signer === a);
 					const label =
 						counted === null
 							? null
@@ -88,7 +96,15 @@ export function SignaturesPanel({
 						<PersonRow
 							key={a}
 							trailing={
-								label === null ? (
+								no ? (
+									// amber, not red: a no is a position, not a fault
+									<Tag
+										tone="warn"
+										title={`${localDateTime(no.at)} (${utcDateTime(no.at)})`}
+									>
+										said no · {fromNow(no.at, now)}
+									</Tag>
+								) : label === null ? (
 									<Tag>checking…</Tag>
 								) : (
 									<Tag

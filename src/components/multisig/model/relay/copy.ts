@@ -44,6 +44,11 @@ export const RELAY_COPY = {
 		"This proposal is only in this browser. Share it and your co-signers see it in their pending list.",
 	createdShared:
 		"Your co-signers see it in their pending list as soon as it is created.",
+	// A signer's no: an objection the others see, never an ending.
+	sayNo: "Say no",
+	takeBackNo: "Take back my no",
+	saidNoAfterSigning:
+		"Saying no takes your signature back here. On Hyperliquid a signature already given still counts until the signing window closes.",
 	endingNote:
 		"It leaves everyone's pending list and cannot be brought back. Signatures already given stay valid until the signing window closes.",
 	reportedReceipt:

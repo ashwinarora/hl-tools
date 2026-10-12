@@ -124,20 +124,24 @@ export const HELP = {
 		body: "Proposals from your co-signers that still need approvals. Open one, check the destination and the amount, and sign if you agree. Signing by itself sends nothing.",
 	},
 	inboxWaiting: {
-		title: "You signed, waiting on others",
-		body: "Nothing for you to do. Each of these needs more signatures, or is ready and waits for its finaliser to send it.",
+		title: "Waiting on others",
+		body: "Nothing for you to do. Each of these needs more signatures, is ready and waits for its finaliser to send it, or is one you said no to.",
 	},
 	inboxDead: {
 		title: "Cannot be finished",
-		body: "Hyperliquid would refuse these, so no signature can help. Usually a newer payment of the same treasury was sent first, or the finaliser is no longer a signer. Open one to propose it again.",
+		body: "These cannot go ahead as they stand. Either Hyperliquid would refuse them (a newer payment was sent first, or the finaliser is no longer a signer), or enough signers said no. Open one to see which, and to propose it again.",
 	},
 	sendOrder: {
 		title: "Payments go in order",
 		body: "Hyperliquid takes two kinds of payment only in the order they were proposed: a USDC send written as raw JSON, and a withdrawal to Arbitrum. If a newer one goes first, the older ones are refused and have to be proposed again. The Send forms here are not bound by this.",
 	},
 	waysOut: {
-		title: "Take back, withdraw, decline",
-		body: "Take back removes your own signature. Withdraw (by the proposer) and decline (by the finaliser) end the proposal for everyone here. A signature already given still counts on Hyperliquid until the signing window closes, so these are an agreement between signers, not a lock.",
+		title: "Take back, say no, withdraw",
+		body: "Take back removes your own signature. Saying no tells the others you are against it, and ends nothing. Only the proposer can withdraw a proposal for everyone. A signature already given still counts on Hyperliquid until the signing window closes: these are agreements, not locks.",
+	},
+	sayNo: {
+		title: "Saying no",
+		body: "A no tells your co-signers you are against this proposal. It ends nothing: the others can still sign and submit it if enough of them agree. While the proposal is open you can take your no back, or sign, which replaces it.",
 	},
 	seen: {
 		title: "Seen",

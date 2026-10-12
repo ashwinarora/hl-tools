@@ -15,6 +15,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { assembleProposal, countedSigners } from "../model/relay/assemble";
 import type { InboxEntry } from "../model/relay/inbox";
+import { standing } from "../model/relay/positions";
 import type { ProposalRow } from "../model/relay/rows";
 import { finaliserLeft, refusedForGood } from "../model/stage";
 import { listCarriedOutAfter, listOpenProposals } from "./api";
@@ -92,6 +93,16 @@ export function useOpenProposals() {
 				}
 				const p = a.assembled.proposal;
 				const described = describeAction(p.payload.action);
+				// who said no, counted against the stored signers like a signature is
+				const position = standing({
+					signers: stored.signers,
+					threshold: stored.threshold,
+					finaliser: row.finaliser,
+					objections: row.objections.map((o) => ({
+						signer: o.signer,
+						at: o.createdAt,
+					})),
+				});
 				items.push({
 					row,
 					proposal: p,
@@ -104,6 +115,8 @@ export function useOpenProposals() {
 					threshold: stored.threshold,
 					open: row.status === "open" && row.expiresAt > now,
 					frozen: stored.frozenAt !== null,
+					objected: position.objected.map((o) => o.signer),
+					blocked: position.blocked,
 					stuck:
 						// refused once: its number is used up, whoever signs now
 						refusedForGood(p) ||

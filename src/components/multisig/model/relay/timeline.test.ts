@@ -201,6 +201,76 @@ describe("buildTimeline", () => {
 		]);
 	});
 
+	it("says who said no, and who took a no back", () => {
+		expect(
+			texts([eventRow("objection_added", { digest: D1, actor: B })]),
+		).toEqual([`${short(B)} said no to Send 120 USDC to 0x9a01…77c2.`]);
+		expect(
+			texts([eventRow("objection_added", { digest: D1, actor: A })]),
+		).toEqual(["You said no to Send 120 USDC to 0x9a01…77c2."]);
+		expect(
+			texts([eventRow("objection_removed", { digest: D1, actor: B })]),
+		).toEqual([
+			`${short(B)} took back their no to Send 120 USDC to 0x9a01…77c2.`,
+		]);
+		expect(
+			texts([eventRow("objection_removed", { digest: D1, actor: A })]),
+		).toEqual(["You took back your no to Send 120 USDC to 0x9a01…77c2."]);
+	});
+
+	it("tells a change of position as one step: a no that took a signature back, a signature in place of a no", () => {
+		// the relay writes two entries for each; the log says each once
+		const said = buildTimeline(
+			[
+				eventRow("signature_added", { id: 1, digest: D1, actor: B }),
+				eventRow("signature_removed", { id: 2, digest: D1, actor: B }),
+				eventRow("objection_added", { id: 3, digest: D1, actor: B }),
+			],
+			ctx(),
+		);
+		expect(said.map(entryText)).toEqual([
+			`${short(B)} said no to Send 120 USDC to 0x9a01…77c2, taking back their signature.`,
+			`${short(B)} signed Send 120 USDC to 0x9a01…77c2.`,
+		]);
+		expect(said[0]?.id).toBe(3);
+		const signed = buildTimeline(
+			[
+				eventRow("objection_added", { id: 1, digest: D1, actor: A }),
+				eventRow("objection_removed", { id: 2, digest: D1, actor: A }),
+				eventRow("signature_added", { id: 3, digest: D1, actor: A }),
+			],
+			ctx(),
+		);
+		expect(signed.map(entryText)).toEqual([
+			"You signed Send 120 USDC to 0x9a01…77c2, in place of your no.",
+			"You said no to Send 120 USDC to 0x9a01…77c2.",
+		]);
+		expect(signed[0]?.id).toBe(3);
+	});
+
+	it("does not fold a co-signer's step into one's own, or a step on another proposal", () => {
+		// B took a signature back; then C said no: two people, two entries
+		expect(
+			texts([
+				eventRow("signature_removed", { id: 1, digest: D1, actor: B }),
+				eventRow("objection_added", { id: 2, digest: D1, actor: C }),
+			]),
+		).toEqual([
+			`${short(C)} said no to Send 120 USDC to 0x9a01…77c2.`,
+			`${short(B)} took back their signature on Send 120 USDC to 0x9a01…77c2.`,
+		]);
+		// B took back a no on one proposal and signed another
+		expect(
+			texts([
+				eventRow("objection_removed", { id: 1, digest: D1, actor: B }),
+				eventRow("signature_added", { id: 2, digest: D2, actor: B }),
+			]),
+		).toEqual([
+			`${short(B)} signed a proposal.`,
+			`${short(B)} took back their no to Send 120 USDC to 0x9a01…77c2.`,
+		]);
+	});
+
 	it("never calls a proposal Hyperliquid refused retryable", () => {
 		const rejected = (data: Record<string, unknown>) =>
 			texts([

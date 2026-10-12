@@ -47,9 +47,9 @@ import {
 	agentsBaseline,
 	awayItems,
 	awayProposal,
-	isEnding,
 	ledgerProgress,
 	markAfter,
+	needsDocument,
 	treasuriesToCheck,
 } from "../model/relay/away";
 import {
@@ -119,7 +119,9 @@ function newsQuery(client: RelayClient, wallet: Address, queries: QueryClient) {
 			).rows;
 			const digests = [
 				...new Set(
-					events.filter(isEnding).flatMap((e) => (e.digest ? [e.digest] : [])),
+					events
+						.filter(needsDocument)
+						.flatMap((e) => (e.digest ? [e.digest] : [])),
 				),
 			];
 			const [ended, lapsed] = await Promise.all([

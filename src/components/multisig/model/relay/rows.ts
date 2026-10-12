@@ -44,6 +44,8 @@ export const EVENT_KINDS = [
 	"proposal_declined",
 	"submission_recorded",
 	"proposal_carried_out",
+	"objection_added",
+	"objection_removed",
 ] as const;
 /** `unknown`: an entry of a kind this version of the page does not know. It is still an entry. */
 export type EventKind = (typeof EVENT_KINDS)[number] | "unknown";
@@ -67,6 +69,12 @@ export interface SignatureRow {
 	readonly r: Hex;
 	readonly s: Hex;
 	readonly v: 27 | 28;
+	readonly createdAt: number;
+}
+
+/** A signer's no: who and when, nothing else. */
+export interface ObjectionRow {
+	readonly signer: Address;
 	readonly createdAt: number;
 }
 
@@ -104,6 +112,8 @@ export interface ProposalRow {
 	readonly closedAt: number | null;
 	readonly createdAt: number;
 	readonly signatures: readonly SignatureRow[];
+	/** Who said no, as the relay holds it; counted against the signer set by the page. */
+	readonly objections: readonly ObjectionRow[];
 	readonly ending: EndingRow | null;
 	readonly receipts: readonly ReceiptRow[];
 }
@@ -258,6 +268,11 @@ function signatureRow(v: unknown): SignatureRow {
 	};
 }
 
+function objectionRow(v: unknown): ObjectionRow {
+	const r = isObj(v) ? v : bad();
+	return { signer: address(r.signer), createdAt: time(r.created_at) };
+}
+
 function endingRow(v: unknown): EndingRow {
 	const r = isObj(v) ? v : bad();
 	return {
@@ -304,6 +319,7 @@ export function proposalRows(data: unknown): Parsed<ProposalRow> {
 			closedAt: optional(r.closed_at, time),
 			createdAt: time(r.created_at),
 			signatures: list(r.signatures ?? []).map(signatureRow),
+			objections: list(r.objections ?? []).map(objectionRow),
 			ending: optional(ending, endingRow),
 			receipts: list(r.receipts ?? [])
 				.map(receiptRow)

@@ -20,7 +20,6 @@ import { isDuplicate, relayIssue } from "../model/relay/errors";
 import type { NicknameRow } from "../model/relay/nicknames";
 import type { PublishRow } from "../model/relay/push";
 import {
-	type EndingKind,
 	type EventRow,
 	eventRows,
 	type MarkRow,
@@ -58,6 +57,7 @@ const TREASURY =
 const PROPOSAL =
 	"network,treasury,digest,document,created_by,finaliser,nonce,expires_at,status,closed_at,created_at," +
 	"signatures(signer,r,s,v,created_at)," +
+	"objections(signer,created_at)," +
 	"endings(kind,ended_by,ended_at)," +
 	"receipts(submitted_at,submitted_by,signature_chain_id,outer_r,outer_s,outer_v,http_status,response,accepted,recorded_at)";
 const EVENT = "id,network,treasury,digest,kind,actor,data,at";
@@ -624,15 +624,50 @@ export function setNickname(
 	);
 }
 
-/** Withdraw (the proposer) or decline (the finaliser). Cannot be undone. */
-export function endProposal(
+/**
+ * Withdraw a proposal: its proposer ends it for everyone. Cannot be undone.
+ * It is the only way a proposal is ended by a signer; the finaliser's
+ * "decline" is gone (the relay refuses it), a finaliser says no instead.
+ */
+export function withdrawProposal(
 	client: RelayClient,
 	as: Address,
 	key: ProposalKey,
-	kind: EndingKind,
 ): Promise<Result<true>> {
 	return write(client, as, () =>
-		client.from("endings").insert({ ...key, kind }),
+		client.from("endings").insert({ ...key, kind: "withdrawn" }),
+	);
+}
+
+/**
+ * Say no as the session wallet: an objection the co-signers see, which ends
+ * nothing. The relay takes the wallet's own signature on the proposal back
+ * with it (one position at a time). Already said counts as done.
+ */
+export function addObjection(
+	client: RelayClient,
+	as: Address,
+	key: ProposalKey,
+): Promise<Result<true>> {
+	return write(client, as, () => client.from("objections").insert({ ...key }), {
+		duplicateIsFine: true,
+	});
+}
+
+/** Take the session wallet's own no back. */
+export function removeObjection(
+	client: RelayClient,
+	as: Address,
+	key: ProposalKey,
+): Promise<Result<true>> {
+	return write(client, as, () =>
+		client
+			.from("objections")
+			.delete()
+			.eq("network", key.network)
+			.eq("treasury", key.treasury)
+			.eq("digest", key.digest)
+			.eq("signer", as),
 	);
 }
 

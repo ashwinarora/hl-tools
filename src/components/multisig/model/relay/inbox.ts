@@ -10,6 +10,7 @@ import {
 	type Network,
 	orderMark,
 } from "@hl-tools/core";
+import type { Blocked } from "./positions";
 
 export interface InboxEntry {
 	readonly network: Network;
@@ -30,13 +31,22 @@ export interface InboxEntry {
 	 * or Hyperliquid refused it once, which used up its number.
 	 */
 	readonly stuck: boolean;
+	/** The current signers who said no (a no is an objection, not an ending). */
+	readonly objected: readonly Address[];
+	/**
+	 * It cannot go ahead as things stand: too many said no for its number to be
+	 * reached, or its finaliser said no. A change of mind makes it live again.
+	 */
+	readonly blocked: Blocked | null;
 }
 
 /**
  * finish   you are the finaliser and can submit now (your own signature may be the last one missing)
  * sign     your signature is still wanted
  * waiting  nothing for you to do: you signed, or it is already ready and someone else finalises
- * dead     it cannot be submitted any more: it waits to be withdrawn and proposed again
+ * dead     it cannot be submitted any more, or cannot go ahead as things stand (enough
+ *          signers, or its finaliser, said no): it waits to be withdrawn, for a change
+ *          of mind, or for its signing window to close
  */
 export type InboxGroup = "finish" | "sign" | "waiting" | "dead";
 
@@ -45,11 +55,15 @@ export function inboxGroup(e: InboxEntry, me: Address): InboxGroup | null {
 	if (!e.open || e.frozen) return null;
 	// nobody's signature can finish it: it waits for its proposer to withdraw it
 	if (e.stuck) return "dead";
+	// nor as things stand, while those who said no stand by it
+	if (e.blocked) return "dead";
 	const signed = e.counted.includes(me);
 	const ready = e.counted.length >= e.threshold;
 	const completes = !signed && e.counted.length === e.threshold - 1;
-	if (e.finaliser === me && (ready || completes)) return "finish";
-	if (!signed && !ready) return "sign";
+	// somebody who said no is not asked again: their position is known
+	const against = e.objected.includes(me);
+	if (e.finaliser === me && (ready || completes) && !against) return "finish";
+	if (!signed && !ready && !against) return "sign";
 	return "waiting";
 }
 

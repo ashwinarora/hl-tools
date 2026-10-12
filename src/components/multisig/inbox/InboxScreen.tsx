@@ -112,7 +112,7 @@ export function InboxScreen() {
 				{groups.waiting.length > 0 && (
 					<section>
 						<GroupTitle count={groups.waiting.length}>
-							You signed, waiting on others
+							Waiting on others
 							<Help k="inboxWaiting" />
 						</GroupTitle>
 						<Card flush>
@@ -134,8 +134,8 @@ export function InboxScreen() {
 							<ProposalRows items={groups.dead} me={me} treasuryName={name} />
 						</Card>
 						<p className="mx-0.5 mt-1.5 text-xs text-subtle-foreground">
-							Hyperliquid would refuse these now, so nothing here needs a
-							signature. Open one to see why and to propose it again.
+							These cannot go ahead as they stand, so nothing here needs a
+							signature. Open one to see why.
 						</p>
 					</section>
 				)}

@@ -26,6 +26,13 @@ import {
 	shortAddress,
 	whoPart,
 } from "./parts";
+import {
+	blockedText,
+	type Objection,
+	type Standing,
+	saidNo,
+	standing,
+} from "./relay/positions";
 import { switchSentence } from "./selfTreasury";
 
 export { shortAddress };
@@ -54,6 +61,8 @@ export type Phase =
 	| "stuck"
 	| "overtaken"
 	| "refused"
+	| "cannot-pass"
+	| "finaliser-no"
 	| "withdrawn"
 	| "declined"
 	| "expired"
@@ -100,6 +109,12 @@ export interface StageInput {
 	 * signed is decided by the proposal, and the reader must be looking at it.
 	 */
 	readonly headerNetwork?: Network;
+	/**
+	 * Who said no, as the relay holds it. A no is an objection the others see,
+	 * not an ending; it is counted here against the live signer set, like a
+	 * signature.
+	 */
+	readonly objections?: readonly Objection[];
 }
 
 export interface Stage {
@@ -127,6 +142,13 @@ export interface Stage {
 	/** The explanation of a recorded submission that the chain rejected. */
 	readonly failedAttempt: ErrorExplanation | null;
 	readonly window: WindowInfo;
+	/**
+	 * Who of the live signers said no, and whether the proposal can still go
+	 * ahead as things stand. Null until the signer set is known.
+	 */
+	readonly standing: Standing | null;
+	/** The connected wallet's own position is a no. */
+	readonly saidNo: boolean;
 	readonly headline: string;
 	readonly detail: string;
 	/** The two sentences with their addresses and moments marked (see model/parts). */
@@ -245,6 +267,26 @@ export function deriveStage(input: StageInput): Stage {
 		p.meta.kind === "user-signed" &&
 		(p.payload.vaultAddress !== null || p.payload.expiresAfter !== null);
 
+	const position =
+		policy && policy.authorizedUsers.length > 0
+			? standing({
+					signers: policy.authorizedUsers,
+					threshold: policy.threshold,
+					finaliser: leader,
+					objections: input.objections ?? [],
+				})
+			: null;
+	const iSaidNo = !!position && saidNo(position, wallet as Address | null);
+	const held = position?.blocked
+		? blockedText({
+				standing: position,
+				finaliser: leader,
+				me: wallet as Address | null,
+				lapsesAt: window.validUntil,
+				now,
+			})
+		: null;
+
 	const who = whoPart;
 	let phase: Phase;
 	let head: Part[];
@@ -327,6 +369,12 @@ export function deriveStage(input: StageInput): Stage {
 		phase = "stuck";
 		head = say`Cannot be finished`;
 		body = say`Only the finaliser can submit a proposal, and ${isLeader ? "your wallet" : who(leader)} is no longer one of this treasury's signers. Withdraw it and propose it again with another finaliser.`;
+	} else if (position?.blocked && held) {
+		// Before "ready" and "collecting": as things stand it goes nowhere. It
+		// stays open all the same: a no can be taken back.
+		phase = position.blocked;
+		head = held.headline;
+		body = held.detail;
 	} else if (r.status === "ready") {
 		phase = "ready";
 		head = say`Ready · ${String(r.have)} of ${String(r.need)} signatures`;
@@ -353,8 +401,14 @@ export function deriveStage(input: StageInput): Stage {
 		input.headerNetwork !== p.payload.network;
 	const wrongNetwork = `This proposal is for ${p.payload.network}; the header is on ${input.headerNetwork}. Switch the header to ${p.payload.network} to continue.`;
 
+	// A proposal held up by a no is still open: the others can sign in the
+	// meantime, and the one who said no can sign instead (it replaces the no).
 	const signable =
-		phase === "collecting" || phase === "ready" || phase === "not-yet-valid";
+		phase === "collecting" ||
+		phase === "ready" ||
+		phase === "not-yet-valid" ||
+		phase === "cannot-pass" ||
+		phase === "finaliser-no";
 	const signReason =
 		phase === "judging"
 			? "Checking signatures…"
@@ -370,7 +424,10 @@ export function deriveStage(input: StageInput): Stage {
 								? `${shortAddress(wallet ?? "")} is not in the signer set.`
 								: hasSigned
 									? "You signed this."
-									: null;
+									: // the finaliser takes the no back first; submitting is its own step
+										isLeader && iSaidNo
+										? "You said no to this."
+										: null;
 	const canSign = signReason === null;
 
 	const need = r?.need ?? null;
@@ -412,6 +469,8 @@ export function deriveStage(input: StageInput): Stage {
 		networkMismatch,
 		failedAttempt,
 		window,
+		standing: position,
+		saidNo: iSaidNo,
 		headline,
 		detail,
 		headlineParts: head,

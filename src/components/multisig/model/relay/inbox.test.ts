@@ -27,6 +27,8 @@ const entry = (over: Partial<InboxEntry> = {}): InboxEntry => ({
 	open: true,
 	frozen: false,
 	stuck: false,
+	objected: [],
+	blocked: null,
 	...over,
 });
 
@@ -211,5 +213,37 @@ describe("whether the order of the waiting actions matters (audit F-014)", () =>
 		expect(orderMatters([guided, guided, guided])).toBe(false);
 		expect(orderMatters([usdSend(1), guided])).toBe(false);
 		expect(orderMatters([])).toBe(false);
+	});
+});
+
+describe("a proposal somebody said no to", () => {
+	it("no longer asks the one who said no, and still asks the others", () => {
+		const e = entry({ finaliser: B, objected: [C] });
+		expect(inboxGroup(e, C)).toBe("waiting");
+		expect(needsMe(e, C)).toBe(false);
+		expect(inboxGroup(e, A)).toBe("sign");
+		// the finaliser can still finish it: a no is not a veto
+		const ready = entry({ finaliser: B, counted: [A, B], objected: [C] });
+		expect(inboxGroup(ready, B)).toBe("finish");
+		expect(finishLabel(ready, B)).toBe("Submit");
+	});
+
+	it("asks nobody while it cannot go ahead as things stand", () => {
+		for (const blocked of ["cannot-pass", "finaliser-no"] as const) {
+			const e = entry({ finaliser: B, objected: [B, C], blocked });
+			for (const me of [A, B, C]) {
+				expect(inboxGroup(e, me)).toBe("dead");
+				expect(needsMe(e, me)).toBe(false);
+			}
+			expect(countNeeds([e], A, "testnet")).toBe(0);
+			// it is still one of the treasury's open proposals
+			expect(countOpen([e], "testnet", TREASURY)).toBe(1);
+		}
+	});
+
+	it("is live again once the no is taken back", () => {
+		const e = entry({ finaliser: B, counted: [A] });
+		expect(inboxGroup(e, B)).toBe("finish");
+		expect(inboxGroup(e, C)).toBe("sign");
 	});
 });

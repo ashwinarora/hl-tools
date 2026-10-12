@@ -16,26 +16,38 @@ export interface RelayActionsInput {
 	readonly finaliser: Address;
 	/** Signers with a signature on the relay. */
 	readonly relaySigners: readonly Address[];
+	/** `me` is one of the treasury's signers now (a former multi-sig has none). */
+	readonly isSigner: boolean;
+	/** Signers with a no on the relay. */
+	readonly objected: readonly Address[];
 }
 
 export interface RelayActions {
 	/** Remove your own signature (before submission only). */
 	readonly takeBack: boolean;
-	/** The proposer ends it for everyone. */
+	/** The proposer ends it for everyone. Nobody else can end a proposal. */
 	readonly withdraw: boolean;
-	/** The finaliser says it will not be submitted. */
-	readonly decline: boolean;
+	/** Say no: an objection the others see. The finaliser's too (there is no "decline" any more). */
+	readonly sayNo: boolean;
+	/** Take your own no back. */
+	readonly takeBackNo: boolean;
 }
 
-const NONE: RelayActions = { takeBack: false, withdraw: false, decline: false };
+const NONE: RelayActions = {
+	takeBack: false,
+	withdraw: false,
+	sayNo: false,
+	takeBackNo: false,
+};
 
 export function relayActions(i: RelayActionsInput): RelayActions {
 	if (!i.known || !i.me || i.status !== "open" || i.expired) return NONE;
-	const proposer = i.me === i.createdBy;
+	const mine = i.objected.includes(i.me);
 	return {
 		takeBack: i.relaySigners.includes(i.me),
-		withdraw: proposer,
-		// a proposer who is also the finaliser withdraws; "decline" would say the same thing twice
-		decline: i.me === i.finaliser && !proposer,
+		withdraw: i.me === i.createdBy,
+		// one position at a time: a no that stands is taken back, not said again
+		sayNo: i.isSigner && !mine,
+		takeBackNo: mine,
 	};
 }

@@ -739,3 +739,113 @@ describe("deriveStage", () => {
 		expect(stuck.detailParts.some((p) => p.who)).toBe(false);
 	});
 });
+
+describe("a proposal somebody said no to", () => {
+	const HOUR = 3_600_000;
+	const no = (signer: string, hoursAgo = 2) => ({
+		signer: signer as never,
+		at: NOW - hoursAgo * HOUR,
+	});
+
+	it("stays what it was while it can still pass, and carries who said no", async () => {
+		// POLICY is 2 of 3 (A, B, C); B is the finaliser
+		const p = await signAs(makeProposal(), 1);
+		const s = await stage(p, { wallet: B, objections: [no(C)] });
+		expect(s.phase).toBe("collecting");
+		expect(s.standing?.objected.map((o) => o.signer)).toEqual([C]);
+		expect(s.standing?.blocked).toBeNull();
+		expect(s.saidNo).toBe(false);
+		// a no is not a veto: the finaliser can still sign and submit
+		expect(s.canExecute).toBe(true);
+		const ready = await stage(await signAs(p, 2), {
+			wallet: B,
+			objections: [no(C)],
+		});
+		expect(ready.phase).toBe("ready");
+		expect(ready.canExecute).toBe(true);
+	});
+
+	it("cannot pass as things stand once too many said no, and stays open to a change of mind", async () => {
+		const p = await signAs(makeProposal(), 1);
+		const s = await stage(p, { wallet: A, objections: [no(B), no(C, 1)] });
+		expect(s.phase).toBe("cannot-pass");
+		expect(s.headline).toBe("Cannot pass as things stand");
+		expect(s.detail).toContain("so only 1 signer is left and 2 must sign");
+		expect(s.detail).toContain("Otherwise it lapses on");
+		expect(s.canExecute).toBe(false);
+		expect(s.executeReason).toBe("Cannot pass as things stand");
+		// the moment it lapses is the end of its signing window, marked for the reader's zone
+		expect(s.detailParts.find((x) => x.when !== undefined)?.when).toBe(
+			s.window.validUntil,
+		);
+		// one who said no can sign instead: it replaces the no
+		const c = await stage(p, { wallet: C, objections: [no(B), no(C, 1)] });
+		expect(c.saidNo).toBe(true);
+		expect(c.canSign).toBe(true);
+		// taken back: live again
+		const back = await stage(p, { wallet: A, objections: [no(C, 1)] });
+		expect(back.phase).toBe("collecting");
+	});
+
+	it("cannot be submitted as things stand once its finaliser said no", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 3); // A and C signed: enough
+		const others = await stage(p, { wallet: A, objections: [no(B)] });
+		expect(others.phase).toBe("finaliser-no");
+		expect(others.headline).toBe("Cannot be submitted as things stand");
+		expect(others.detail).toContain(
+			"is the one who has to submit this proposal",
+		);
+		expect(others.detail).toContain(
+			"propose it again with a different finaliser",
+		);
+		expect(others.canExecute).toBe(false);
+		// the finaliser takes the no back first; submitting is its own step
+		const b = await stage(p, { wallet: B, objections: [no(B)] });
+		expect(b.saidNo).toBe(true);
+		expect(b.canExecute).toBe(false);
+		expect(b.canSign).toBe(false);
+		expect(b.signReason).toBe("You said no to this.");
+		expect(b.detail).toMatch(
+			/^You said no, and you are the one who has to submit this proposal\./,
+		);
+		// taken back: ready again, and theirs to submit
+		const again = await stage(p, { wallet: B, objections: [] });
+		expect(again.phase).toBe("ready");
+		expect(again.canExecute).toBe(true);
+	});
+
+	it("counts a no against the live signers only, and not at all before they are known", async () => {
+		const p = await signAs(makeProposal(), 1);
+		const gone = await stage(p, { objections: [no(OUTSIDER), no(C)] });
+		expect(gone.standing?.objected.map((o) => o.signer)).toEqual([C]);
+		expect(gone.phase).toBe("collecting");
+		const unread = await stage(p, {
+			policy: null,
+			objections: [no(B), no(C)],
+		});
+		expect(unread.standing).toBeNull();
+		expect(unread.phase).not.toBe("cannot-pass");
+	});
+
+	it("yields to what ended the proposal: a no says nothing over accepted, withdrawn, expired or refused", async () => {
+		const p = await signAs(makeProposal(), 1);
+		const all = [no(B), no(C)];
+		expect(
+			(await stage({ ...p, receipt: OK }, { objections: all })).phase,
+		).toBe("submitted");
+		expect(
+			(
+				await stage(p, {
+					objections: all,
+					ended: { kind: "withdrawn", by: A },
+				})
+			).phase,
+		).toBe("withdrawn");
+		expect(
+			(await stage(p, { objections: all, now: NONCE + 3 * DAY })).phase,
+		).toBe("expired");
+		expect(
+			(await stage({ ...p, receipt: ERR }, { objections: all })).phase,
+		).toBe("refused");
+	});
+});

@@ -48,6 +48,8 @@ export function buildTimeline(
 		!a
 			? part("someone")
 			: { text: a === ctx.me ? "you" : shortAddress(a), who: a };
+	/** "your" for the reader, "their" for anybody else: the log knows addresses, not people. */
+	const own = (a: Address | null) => (a && a === ctx.me ? "your" : "their");
 	const action = (digest: Hex | null, start: boolean): Part[] => {
 		const line = digest ? ctx.line(digest) : null;
 		if (!line) return [part(start ? "A proposal" : "a proposal")];
@@ -155,15 +157,62 @@ export function buildTimeline(
 					entry(say`${subject(e.actor)} signed ${action(e.digest, false)}.`),
 				);
 				break;
-			case "signature_removed":
+			case "signature_removed": {
+				// Saying no takes one's signature back in the same step: one entry.
+				// (The next event of the same proposal, as for "proposed and signed".)
+				const next = asc
+					.slice(i + 1)
+					.find((x) => x.digest !== null && x.digest === e.digest);
+				const saidNo =
+					!!next && next.kind === "objection_added" && next.actor === e.actor;
+				if (saidNo && next) {
+					folded.add(next.id);
+					out.push(
+						entry(
+							say`${subject(e.actor)} said no to ${action(e.digest, false)}, taking back ${own(e.actor)} signature.`,
+							next.id,
+						),
+					);
+					break;
+				}
 				out.push(
 					entry(
-						e.actor && e.actor === ctx.me
-							? say`${subject(e.actor)} took back your signature on ${action(e.digest, false)}.`
-							: say`${subject(e.actor)} took back their signature on ${action(e.digest, false)}.`,
+						say`${subject(e.actor)} took back ${own(e.actor)} signature on ${action(e.digest, false)}.`,
 					),
 				);
 				break;
+			}
+			case "objection_added":
+				out.push(
+					entry(
+						say`${subject(e.actor)} said no to ${action(e.digest, false)}.`,
+					),
+				);
+				break;
+			case "objection_removed": {
+				// Signing replaces one's no in the same step: one entry.
+				const next = asc
+					.slice(i + 1)
+					.find((x) => x.digest !== null && x.digest === e.digest);
+				const signed =
+					!!next && next.kind === "signature_added" && next.actor === e.actor;
+				if (signed && next) {
+					folded.add(next.id);
+					out.push(
+						entry(
+							say`${subject(e.actor)} signed ${action(e.digest, false)}, in place of ${own(e.actor)} no.`,
+							next.id,
+						),
+					);
+					break;
+				}
+				out.push(
+					entry(
+						say`${subject(e.actor)} took back ${own(e.actor)} no to ${action(e.digest, false)}.`,
+					),
+				);
+				break;
+			}
 			case "proposal_withdrawn":
 				out.push(
 					entry(

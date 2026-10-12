@@ -93,3 +93,24 @@ export function fromNow(ms: number, now: number): string {
 					: plural(Math.floor(s / 86400), "day");
 	return diff >= 0 ? `in ${size}` : `${size} ago`;
 }
+
+/**
+ * How long until a moment, finer than `fromNow` where a decision hangs on it:
+ * "in 1 day 6 hours", "in 5 hours", "in 12 minutes", "in less than a minute".
+ * A moment that has passed reads as `fromNow` reads it.
+ */
+export function untilWords(ms: number, now: number): string {
+	if (!valid(ms) || !valid(now)) return "—";
+	const diff = ms - now;
+	if (diff <= 0) return fromNow(ms, now);
+	const minutes = Math.floor(diff / 60_000);
+	if (minutes < 1) return "in less than a minute";
+	if (minutes < 60) return `in ${plural(minutes, "minute")}`;
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `in ${plural(hours, "hour")}`;
+	const days = Math.floor(hours / 24);
+	const rest = hours % 24;
+	return rest === 0
+		? `in ${plural(days, "day")}`
+		: `in ${plural(days, "day")} ${plural(rest, "hour")}`;
+}

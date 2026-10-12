@@ -40,6 +40,7 @@ export function rowFor(
 			v: s.v,
 			createdAt: s.at ?? NOW,
 		})),
+		objections: [],
 		ending: null,
 		receipts: p.receipt
 			? [
@@ -83,6 +84,10 @@ export function rawProposal(row: ProposalRow): Record<string, unknown> {
 			s: s.s,
 			v: s.v,
 			created_at: iso(s.createdAt),
+		})),
+		objections: row.objections.map((o) => ({
+			signer: o.signer,
+			created_at: iso(o.createdAt),
 		})),
 		endings: row.ending
 			? {

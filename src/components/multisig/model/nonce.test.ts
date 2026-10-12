@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+	closes,
 	DATED_AHEAD,
 	describeWindow,
 	EXTENDED_OFFSET_MS,
-	expiresSoon,
 	NUMBERED_AFTER,
 	nonceFor,
 	proposalNonce,
@@ -84,25 +84,35 @@ describe("nonce", () => {
 	});
 });
 
-describe("expiresSoon", () => {
-	it("marks a proposal in its last day, in words", () => {
-		expect(expiresSoon(NOW + 5 * HOUR + 60_000, NOW)).toEqual({
-			text: "expires in 5 hours",
-			at: NOW + 5 * HOUR + 60_000,
+describe("when a waiting proposal lapses", () => {
+	const HOUR = 3_600_000;
+	const AT = Date.UTC(2026, 9, 14, 16, 20);
+
+	it("is said from the start, in words that sharpen as it comes closer", () => {
+		expect(closes(AT, AT - 47 * HOUR)).toEqual({
+			at: AT,
+			inWords: "in 1 day 23 hours",
+			soon: false,
 		});
-		expect(expiresSoon(NOW + 12 * 60_000, NOW)?.text).toBe(
-			"expires in 12 minutes",
-		);
-		expect(expiresSoon(NOW + 20_000, NOW)?.text).toBe(
-			"expires in less than a minute",
-		);
-		expect(expiresSoon(NOW + 24 * HOUR, NOW)?.text).toBe("expires in 24 hours");
+		expect(closes(AT, AT - 30 * HOUR)?.inWords).toBe("in 1 day 6 hours");
+		expect(closes(AT, AT - 48 * HOUR)?.inWords).toBe("in 2 days");
+		expect(closes(AT, AT - 24 * HOUR)).toMatchObject({
+			inWords: "in 1 day",
+			soon: true,
+		});
+		expect(closes(AT, AT - 5 * HOUR)).toMatchObject({
+			inWords: "in 5 hours",
+			soon: true,
+		});
+		// the last hour in minutes
+		expect(closes(AT, AT - 12 * 60_000)?.inWords).toBe("in 12 minutes");
+		expect(closes(AT, AT - 60_000)?.inWords).toBe("in 1 minute");
+		expect(closes(AT, AT - 20_000)?.inWords).toBe("in less than a minute");
 	});
-	it("leaves alone one with more than a day left, and one that has closed", () => {
-		expect(expiresSoon(NOW + 24 * HOUR + 1, NOW)).toBeNull();
-		expect(expiresSoon(NOW + 47 * HOUR, NOW)).toBeNull();
-		expect(expiresSoon(NOW, NOW)).toBeNull();
-		expect(expiresSoon(NOW - HOUR, NOW)).toBeNull();
-		expect(expiresSoon(Number.NaN, NOW)).toBeNull();
+
+	it("is no longer said once the window has closed", () => {
+		expect(closes(AT, AT)).toBeNull();
+		expect(closes(AT, AT + 1)).toBeNull();
+		expect(closes(Number.NaN, AT)).toBeNull();
 	});
 });

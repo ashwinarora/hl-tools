@@ -6,7 +6,7 @@
  */
 import { nonceWindow } from "@hl-tools/core";
 import { type Part, partsText, say } from "./parts";
-import { fromNow } from "./time";
+import { untilWords } from "./time";
 
 export type NonceMode = "now" | "extended";
 
@@ -85,16 +85,26 @@ export function describeWindow(nonce: number, now: number): WindowInfo {
 /** From here on a pending proposal is marked: half of the usual two days are gone. */
 export const EXPIRES_SOON_MS = 24 * 60 * 60 * 1000;
 
+export interface Closing {
+	/** When the signing window closes, unix ms. */
+	readonly at: number;
+	/** "in 1 day 6 hours", "in 5 hours", "in 12 minutes": how long there is. */
+	readonly inWords: string;
+	/** Less than a day is left: worth a second look. */
+	readonly soon: boolean;
+}
+
 /**
- * The mark a pending proposal carries in a list once its signing window is
- * about to close: "expires in 5 hours". Null while there is plenty of time,
- * and once it has closed (it is then no longer pending).
+ * When a waiting proposal lapses, for every place it is listed: the moment
+ * (a screen shows it in the reader's own zone) and how long there is until
+ * then. Null once it has closed: it is then no longer waiting.
  */
-export function expiresSoon(
-	expiresAt: number,
-	now: number,
-): { readonly text: string; readonly at: number } | null {
+export function closes(expiresAt: number, now: number): Closing | null {
 	const left = expiresAt - now;
-	if (!(left > 0) || left > EXPIRES_SOON_MS) return null;
-	return { text: `expires ${fromNow(expiresAt, now)}`, at: expiresAt };
+	if (!(left > 0)) return null;
+	return {
+		at: expiresAt,
+		inWords: untilWords(expiresAt, now),
+		soon: left <= EXPIRES_SOON_MS,
+	};
 }

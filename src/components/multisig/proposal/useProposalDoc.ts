@@ -33,20 +33,23 @@ import {
 	removedSigners,
 } from "../model/relay/assemble";
 import { relayIssue } from "../model/relay/errors";
+import type { Objection } from "../model/relay/positions";
 import { planPush, publishBlocker, type RelayKnown } from "../model/relay/push";
 import { type CarriedOut, carriedOutOf } from "../model/relay/report";
-import type { EndingKind, ProposalRow } from "../model/relay/rows";
+import type { ProposalRow } from "../model/relay/rows";
 import type { ViewRow } from "../model/relay/views";
 import {
+	addObjection,
 	addSignature,
-	endProposal,
 	getProposal,
 	listProposalEvents,
 	listViews,
 	type ProposalKey,
 	publishProposal,
 	recordReceipt,
+	removeObjection,
 	removeSignature,
+	withdrawProposal,
 } from "../relay/api";
 import type { RelayClient } from "../relay/client";
 import { treasuriesQuery, unwrap } from "../relay/queries";
@@ -73,6 +76,8 @@ export interface RelayView {
 	readonly expired: boolean;
 	/** Signers whose signature is on the relay and verifies. */
 	readonly signers: readonly Address[];
+	/** Who said no, as the relay holds it (the page counts it against the live signers). */
+	readonly objections: readonly Objection[];
 	/** This wallet may share the proposal: a stored signer of its unfrozen treasury, and the document qualifies. */
 	readonly canPublish: boolean;
 	/** Why the document cannot be shared at all; null when it can. */
@@ -104,8 +109,15 @@ export interface ProposalDoc {
 	publish(): Promise<void>;
 	/** Remove this wallet's signature from the relay and from this browser. */
 	takeBack(): Promise<void>;
-	/** Withdraw (the proposer) or decline (the finaliser). */
-	end(kind: EndingKind): Promise<void>;
+	/** Withdraw: the proposer ends it for everyone. */
+	withdraw(): Promise<void>;
+	/**
+	 * Say no: an objection the co-signers see, which ends nothing. This
+	 * wallet's signature is taken back with it, on the relay and in this browser.
+	 */
+	sayNo(): Promise<void>;
+	/** Take this wallet's no back. */
+	takeBackNo(): Promise<void>;
 	/** Read the relay's copy again, now; the row, or null when it has none or cannot be reached. */
 	refresh(): Promise<ProposalRow | null>;
 }
@@ -118,6 +130,8 @@ interface Remote {
 	/** Null when they could not be read: nothing is then said about who has seen it. */
 	readonly views: readonly ViewRow[] | null;
 }
+
+const NO_OBJECTIONS: readonly Objection[] = [];
 
 const keyOf = (p: Proposal): ProposalKey => ({
 	network: p.payload.network,
@@ -440,33 +454,66 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 		if (proposal) await store(proposal, { publish: true });
 	}, [proposal, store]);
 
+	/** A signature its signer took back leaves this browser too, or the next sync would hold it. */
+	const dropLocalSignature = useCallback(
+		async (digest: Hex, signer: Address) => {
+			const without = (p: Proposal | null) =>
+				p
+					? {
+							...p,
+							signatures: p.signatures.filter((s) => s.signer !== signer),
+						}
+					: null;
+			try {
+				await rewriteProposal(digest, async (p) => without(p));
+				await invalidateLocal(digest);
+			} catch {
+				setMemory((m) => without(m));
+			}
+		},
+		[invalidateLocal],
+	);
+
 	const takeBack = useCallback(
 		() =>
 			act(async (c, as) => {
 				if (!proposal) return null;
 				const r = await removeSignature(c, as, keyOf(proposal));
 				if (r.issue) return r.issue;
-				// and from this browser, or the next sync would hold a signature its signer withdrew
-				const without = (p: Proposal | null) =>
-					p
-						? { ...p, signatures: p.signatures.filter((s) => s.signer !== as) }
-						: null;
-				try {
-					await rewriteProposal(proposal.digest, async (p) => without(p));
-					await invalidateLocal(proposal.digest);
-				} catch {
-					setMemory((m) => without(m));
-				}
+				await dropLocalSignature(proposal.digest, as);
 				return null;
 			}),
-		[act, proposal, invalidateLocal],
+		[act, proposal, dropLocalSignature],
 	);
 
-	const end = useCallback(
-		(kind: EndingKind) =>
+	const withdraw = useCallback(
+		() =>
 			act(async (c, as) => {
 				if (!proposal) return null;
-				return (await endProposal(c, as, keyOf(proposal), kind)).issue;
+				return (await withdrawProposal(c, as, keyOf(proposal))).issue;
+			}),
+		[act, proposal],
+	);
+
+	const sayNo = useCallback(
+		() =>
+			act(async (c, as) => {
+				if (!proposal) return null;
+				const r = await addObjection(c, as, keyOf(proposal));
+				if (r.issue) return r.issue;
+				// one position at a time: the relay took this wallet's signature back with it
+				if (proposal.signatures.some((s) => s.signer === as))
+					await dropLocalSignature(proposal.digest, as);
+				return null;
+			}),
+		[act, proposal, dropLocalSignature],
+	);
+
+	const takeBackNo = useCallback(
+		() =>
+			act(async (c, as) => {
+				if (!proposal) return null;
+				return (await removeObjection(c, as, keyOf(proposal))).issue;
 			}),
 		[act, proposal],
 	);
@@ -497,6 +544,11 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 		views: found ? (remoteData?.views ?? null) : null,
 		expired: !!found && found.row.expiresAt <= Date.now(),
 		signers: found?.proposal.signatures.map((s) => s.signer) ?? [],
+		objections:
+			found?.row.objections.map((o) => ({
+				signer: o.signer,
+				at: o.createdAt,
+			})) ?? NO_OBJECTIONS,
 		canPublish: !!client && !found && blocker === null && storedSignerNow,
 		blocker,
 		issue: problem ?? queryIssue(remote.error),
@@ -521,7 +573,9 @@ export function useProposalDoc(digest: string | undefined): ProposalDoc {
 		store,
 		publish,
 		takeBack,
-		end,
+		withdraw,
+		sayNo,
+		takeBackNo,
 		refresh,
 	};
 }

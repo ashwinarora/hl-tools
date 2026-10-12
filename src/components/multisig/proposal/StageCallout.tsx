@@ -16,6 +16,9 @@ const TONE: Record<Phase, Tone> = {
 	stuck: "warning",
 	overtaken: "warning",
 	refused: "danger",
+	// held up by a no: open still, and a change of mind makes it live again
+	"cannot-pass": "warning",
+	"finaliser-no": "warning",
 	withdrawn: "neutral",
 	declined: "neutral",
 	"not-yet-valid": "info",
@@ -34,6 +37,8 @@ const TERM: Partial<Record<Phase, HelpKey>> = {
 	"carried-out": "outside",
 	overtaken: "sendOrder",
 	stuck: "finaliser",
+	"cannot-pass": "sayNo",
+	"finaliser-no": "sayNo",
 };
 
 /** Where the proposal stands, in one sentence, at the top of the page. */

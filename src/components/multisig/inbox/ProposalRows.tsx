@@ -1,9 +1,10 @@
 import type { Address } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { FLAG_TEXT } from "#/components/tools/multisig/EnvelopeView";
-import { expiresSoon } from "../model/nonce";
+import { closes } from "../model/nonce";
 import { finishLabel, inboxGroup } from "../model/relay/inbox";
-import { localDateTime } from "../model/time";
+import { blockedTag, saidNoTag } from "../model/relay/positions";
+import { localDateTime, utcDateTime } from "../model/time";
 import { NamesFor, Who } from "../names/Names";
 import type { OpenProposal } from "../relay/openProposals";
 import { Pips, Tag } from "../shell/kit";
@@ -29,11 +30,11 @@ export function ProposalRows({
 		<div className="flex flex-col">
 			{items.map((p) => {
 				const group = inboxGroup(p, me);
-				// only where time still matters: something can still be signed or submitted
-				const soon =
-					p.open && !p.stuck && !p.frozen
-						? expiresSoon(p.row.expiresAt, now)
-						: null;
+				// When its signing window closes, on every row that is still waiting:
+				// it is what decides how long a held-up proposal stays in the list.
+				const closing =
+					p.open && !p.stuck && !p.frozen ? closes(p.row.expiresAt, now) : null;
+				const against = p.objected.includes(me);
 				return (
 					<Link
 						key={`${p.network}:${p.treasury}:${p.digest}`}
@@ -72,13 +73,17 @@ export function ProposalRows({
 										{FLAG_TEXT[f]?.label ?? f}
 									</Tag>
 								))}
-								{soon && (
-									<Tag
-										tone="warn"
-										title={`Its signing window closes ${localDateTime(soon.at)}. After that it has to be proposed again.`}
+								{p.objected.length > 0 && !p.blocked && (
+									// amber: a no is a position the others should know of, not a fault
+									<Tag tone="warn">{saidNoTag(p.objected.length, against)}</Tag>
+								)}
+								{closing && (
+									<span
+										className={closing.soon ? "text-warning" : undefined}
+										title={`Its signing window closes ${utcDateTime(closing.at)}. After that it has to be proposed again.`}
 									>
-										{soon.text}
-									</Tag>
+										closes {localDateTime(closing.at)} · {closing.inWords}
+									</span>
 								)}
 							</span>
 						</span>
@@ -96,6 +101,10 @@ export function ProposalRows({
 								<Tag tone="warn">no longer a multi-sig</Tag>
 							) : p.stuck ? (
 								<Tag tone="warn">cannot be finished</Tag>
+							) : p.blocked ? (
+								<Tag tone="warn">{blockedTag(p.blocked)}</Tag>
+							) : against ? (
+								<Tag tone="warn">you said no</Tag>
 							) : (
 								<Tag>waiting on others</Tag>
 							)}

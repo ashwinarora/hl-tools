@@ -5,13 +5,16 @@
  * about the treasury.
  *
  *   in   an action carried out that you did not submit yourself
+ *        a co-signer's no that still stands on something you proposed or
+ *        have to submit
  *        the end of something you proposed or signed (rejected, withdrawn,
  *        declined, expired)
  *        signers or threshold changed; the account stopped being a multi-sig
  *        an API wallet approved or gone that no proposal in the notice explains
  *        money that left with no proposal on record
  *   out  a new proposal waiting (the inbox), a co-signer signing or taking a
- *        signature back (the proposal's page), money arriving and trades
+ *        signature back, or saying no to somebody else's proposal (the
+ *        proposal's page and the lists), money arriving and trades
  *        (the tables), and whatever you did yourself
  *
  * Pure. The relay's history says who did what; what a proposal does comes
@@ -57,6 +60,8 @@ export interface AwayProposal {
 	/** The API wallet an `approveAgent` names. */
 	readonly agent: Address | null;
 	readonly createdBy: Address | null;
+	/** The one signer who can submit it. */
+	readonly finaliser: Address | null;
 	/** Whose signatures verified. */
 	readonly signers: readonly Address[];
 	readonly status: ProposalStatus;
@@ -83,15 +88,25 @@ export function awayProposal(row: ProposalRow, p: Proposal): AwayProposal {
 				? (agent.toLowerCase() as Address)
 				: null,
 		createdBy: row.createdBy,
+		finaliser: row.finaliser,
 		signers: p.signatures.map((s) => s.signer),
 		status: row.status,
 		expiresAt: row.expiresAt,
 	};
 }
 
-/** The history entries that end a proposal: the ones whose documents the notice needs. */
+/** The history entries that end a proposal. */
 export function isEnding(e: EventRow): boolean {
 	return endingOf(e) !== null;
+}
+
+/**
+ * The history entries whose proposals the notice has to read: the ones that
+ * ended, and the ones somebody said no to (the notice says so only for the
+ * reader's own, and whose it is stands in the document).
+ */
+export function needsDocument(e: EventRow): boolean {
+	return isEnding(e) || e.kind === "objection_added";
 }
 
 /** How many treasuries one visit of the home screen asks Hyperliquid about. */
@@ -272,6 +287,44 @@ export function awayItems(i: {
 					);
 				break;
 		}
+	}
+
+	// ---- a co-signer's no that still stands on something that is yours to move
+	// (what they said to other people's proposals is on those proposals)
+	const noes = new Map<string, EventRow>();
+	for (const e of events) {
+		if (!e.digest || !e.actor) continue;
+		const key = `${e.digest}:${e.actor}`;
+		if (e.kind === "objection_added") noes.set(key, e);
+		// taken back, or replaced by a signature
+		else if (e.kind === "objection_removed" || e.kind === "signature_added")
+			noes.delete(key);
+	}
+	for (const e of noes.values()) {
+		const digest = e.digest as Hex;
+		const p = proposals.get(digest) ?? null;
+		if (
+			!p ||
+			e.actor === me ||
+			// its end is the news then, and is said above or below
+			finals.has(digest) ||
+			p.status !== "open" ||
+			p.expiresAt <= i.now
+		)
+			continue;
+		const rel =
+			p.createdBy === me
+				? "proposed"
+				: p.finaliser === me
+					? "have to submit"
+					: null;
+		if (!rel) continue;
+		out.push({
+			key: `no:${digest}:${e.actor}`,
+			at: e.at,
+			parts: say`${who(e.actor)} said no to ${action(p, false)}, which you ${rel}.`,
+			go: { kind: "proposal", digest },
+		});
 	}
 
 	// ---- yours, and its signing window closed with nothing sent
