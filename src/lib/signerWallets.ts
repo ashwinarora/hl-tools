@@ -1,4 +1,50 @@
+import type { Wallet } from "@rainbow-me/rainbowkit";
 import { injectedWallet, safeWallet } from "@rainbow-me/rainbowkit/wallets";
+
+/**
+ * How many wallets in this browser announce themselves (EIP-6963), asked at
+ * the moment of the call: a wallet answers the request event synchronously.
+ */
+function announcedWallets(): number {
+	if (typeof window === "undefined") return 0;
+	let n = 0;
+	const count = () => {
+		n++;
+	};
+	window.addEventListener("eip6963:announceProvider", count);
+	window.dispatchEvent(new Event("eip6963:requestProvider"));
+	window.removeEventListener("eip6963:announceProvider", count);
+	return n;
+}
+
+const injected = (): boolean =>
+	typeof window !== "undefined" &&
+	typeof (window as { ethereum?: unknown }).ethereum !== "undefined";
+
+/**
+ * True when there is something to connect to here: a wallet that announces
+ * itself, one that only injects, or a Safe app's frame around the page.
+ */
+export function walletInBrowser(): boolean {
+	if (typeof window === "undefined") return false;
+	return injected() || announcedWallets() > 0 || window.parent !== window;
+}
+
+/** Said in place of an empty picker: it offers no QR code to a phone wallet. */
+export const NO_WALLET =
+	"No wallet was found in this browser. Install a wallet extension, or open this page in your wallet's own browser.";
+
+/**
+ * RainbowKit's "Browser Wallet", offered only where it is the one way in: a
+ * wallet that injects without announcing itself (some in-wallet browsers).
+ * Next to a wallet that announced itself it is a second door to the same
+ * wallet and reads like one the signer does not have; with no wallet at all
+ * it opens a prompt nobody can answer (both seen by the audit, 2026-10-12).
+ */
+export const browserWallet = (): Wallet => ({
+	...injectedWallet(),
+	installed: injected() && announcedWallets() === 0,
+});
 
 /**
  * The wallets the multisig signer's picker offers besides the installed ones
@@ -27,6 +73,6 @@ import { injectedWallet, safeWallet } from "@rainbow-me/rainbowkit/wallets";
 export const SIGNER_WALLET_GROUPS = [
 	{
 		groupName: "In this browser",
-		wallets: [injectedWallet, safeWallet],
+		wallets: [browserWallet, safeWallet],
 	},
 ];

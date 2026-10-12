@@ -2,9 +2,11 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Link } from "@tanstack/react-router";
 import { LogOut, Wallet } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useAccount, useConnectors, useDisconnect } from "wagmi";
 import { short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
+import { NO_WALLET, walletInBrowser } from "#/lib/signerWallets";
 import { cn } from "#/lib/utils";
 import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 import { useWalletBusy } from "#/store/walletBusyStore";
@@ -39,18 +41,11 @@ export function Avatar({ className = "size-7" }: { className?: string }) {
  * relay, see `signerWallets.ts`), so such a visitor is told what to do.
  */
 export function useWalletFound(): boolean {
-	const connectors = useConnectors();
+	// a wallet that announces itself late adds a connector, which renders this again
+	useConnectors();
 	const mounted = useMounted();
-	if (!mounted) return true;
-	return (
-		typeof (window as { ethereum?: unknown }).ethereum !== "undefined" ||
-		window.parent !== window ||
-		connectors.some((c) => c.type === "injected" && c.id !== "injected")
-	);
+	return mounted ? walletInBrowser() : true;
 }
-
-export const NO_WALLET =
-	"No wallet was found in this browser. Install a wallet extension, or open this page in your wallet's own browser.";
 
 /** Under a "Connect" button, when there is nothing to connect to. */
 export function NoWalletNote({ className }: { className?: string }) {
@@ -70,13 +65,20 @@ export function useShellWallet() {
 	const { openConnectModal } = useConnectModal();
 	const mounted = useMounted();
 	const connected = mounted && isConnected && !!address;
+	// with nothing to connect to, the picker would open empty: say why instead
+	const connect = openConnectModal
+		? () => {
+				if (walletInBrowser()) openConnectModal();
+				else toast.warning(NO_WALLET);
+			}
+		: undefined;
 	return {
 		mounted,
 		connected,
 		address: connected ? (address.toLowerCase() as `0x${string}`) : null,
 		chainId: connected ? (chainId ?? null) : null,
 		connectorName: connector?.name ?? null,
-		connect: openConnectModal,
+		connect,
 		disconnect,
 	};
 }

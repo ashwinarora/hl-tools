@@ -5,10 +5,14 @@ import {
 	rainbowWallet,
 	walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createConfig, http } from "wagmi";
 import { hyperEvm } from "wagmi/chains";
-import { SIGNER_WALLET_GROUPS } from "./signerWallets";
+import {
+	browserWallet,
+	SIGNER_WALLET_GROUPS,
+	walletInBrowser,
+} from "./signerWallets";
 
 /** Any of RainbowKit's wallet entries, with or without options. */
 type Entry = (options: { projectId: string; appName: string }) => Wallet;
@@ -74,5 +78,51 @@ describe("the multisig signer's wallet list", () => {
 		expect(types([{ groupName: "x", wallets: [rainbowWallet] }])).toContain(
 			"walletConnect",
 		);
+	});
+});
+
+describe("what there is to connect to in this browser", () => {
+	afterEach(() => vi.unstubAllGlobals());
+
+	/** A stand-in for `window`: with or without an injected provider, and wallets that announce themselves. */
+	function browser(o: {
+		injected?: boolean;
+		announced?: number;
+		framed?: boolean;
+	}) {
+		const w = new EventTarget() as EventTarget & Record<string, unknown>;
+		if (o.injected) w.ethereum = {};
+		w.parent = o.framed ? {} : w;
+		w.addEventListener("eip6963:requestProvider", () => {
+			for (let i = 0; i < (o.announced ?? 0); i++)
+				w.dispatchEvent(new Event("eip6963:announceProvider"));
+		});
+		vi.stubGlobal("window", w);
+	}
+
+	it("finds nothing on the server and in a browser with no wallet", () => {
+		expect(walletInBrowser()).toBe(false);
+		browser({});
+		expect(walletInBrowser()).toBe(false);
+		// the picker then has no row to offer: a prompt nobody could answer
+		expect(browserWallet().installed).toBe(false);
+	});
+
+	it("finds a wallet that announces itself, one that only injects, and a Safe app's frame", () => {
+		browser({ injected: true, announced: 1 });
+		expect(walletInBrowser()).toBe(true);
+		browser({ injected: true });
+		expect(walletInBrowser()).toBe(true);
+		browser({ framed: true });
+		expect(walletInBrowser()).toBe(true);
+	});
+
+	it('offers "Browser Wallet" only for a wallet that injects without announcing itself', () => {
+		browser({ injected: true });
+		expect(browserWallet().installed).toBe(true);
+		// next to an announced wallet it would be a second door to the same one
+		browser({ injected: true, announced: 2 });
+		expect(browserWallet().installed).toBe(false);
+		expect(browserWallet().id).toBe("injected");
 	});
 });

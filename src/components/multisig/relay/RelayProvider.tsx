@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { generateSiweNonce } from "viem/siwe";
 import { useAccount, useSignMessage } from "wagmi";
+import { NO_WALLET, walletInBrowser } from "#/lib/signerWallets";
 import { useWalletBusy } from "#/store/walletBusyStore";
 import { reconnectDelay } from "../model/relay/reconnect";
 import { getRelayClient, hasStoredSession, type RelayClient } from "./client";
@@ -238,7 +239,10 @@ function RelaySession({
 			channel,
 			signIn: () => {
 				if (address) void doSignIn();
-				else {
+				else if (!walletInBrowser()) {
+					// the picker would open empty
+					toast.warning(NO_WALLET);
+				} else {
 					wantsSignIn.current = true;
 					openConnectModal?.();
 				}
