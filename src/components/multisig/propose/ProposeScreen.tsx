@@ -907,7 +907,10 @@ function ProposeForm({
 													value: `${chain.label} · ${chain.hex}`,
 													mono: true,
 												},
-												{ label: "Signing window", value: window.text },
+												{
+													label: "Signing window",
+													value: <Sentence parts={window.parts} />,
+												},
 											]}
 										/>
 									</div>
