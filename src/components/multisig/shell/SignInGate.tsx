@@ -4,7 +4,7 @@ import { useWalletBusy } from "#/store/walletBusyStore";
 import { gateOthers, RELAY_COPY } from "../model/relay/copy";
 import { useRelay } from "../relay/useRelay";
 import { Btn, Card, linkButton } from "./kit";
-import { SmallPrint } from "./WalletBox";
+import { SmallPrint, useShellWallet } from "./WalletBox";
 
 /**
  * For screens that only exist with the relay in use (a treasury, the add
@@ -21,6 +21,7 @@ export function SignInGate({
 }) {
 	const relay = useRelay();
 	const busy = useWalletBusy((b) => b.busy);
+	const { connected } = useShellWallet();
 	if (relay.mode === "on") return null;
 	if (relay.mode === "off") {
 		return (
@@ -55,7 +56,7 @@ export function SignInGate({
 				{/* the wallet was switched to one that is not signed in: say where the other went */}
 				{relay.mode === "signed-out" && relay.others.length > 0 && (
 					<p className="text-xs text-muted-foreground">
-						{gateOthers(relay.others.length)}
+						{gateOthers(relay.others.length, connected)}
 					</p>
 				)}
 				<div className="flex flex-wrap items-center gap-2">

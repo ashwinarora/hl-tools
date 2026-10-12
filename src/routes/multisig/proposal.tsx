@@ -14,6 +14,7 @@ import { useProposalDoc } from "#/components/multisig/proposal/useProposalDoc";
 import { useRelay } from "#/components/multisig/relay/useRelay";
 import { Btn, SignsTag } from "#/components/multisig/shell/kit";
 import { ShellPage } from "#/components/multisig/shell/ShellPage";
+import { useShellWallet } from "#/components/multisig/shell/WalletBox";
 import { clearShared } from "#/lib/share";
 import { useWalletBusy } from "#/store/walletBusyStore";
 
@@ -125,6 +126,7 @@ function Missing({
 }) {
 	const relay = useRelay();
 	const busy = useWalletBusy((b) => b.busy);
+	const { connected } = useShellWallet();
 	const open = (
 		<Link to="/multisig/open" className={backLink}>
 			Open a proposal
@@ -197,7 +199,7 @@ function Missing({
 					: relay.mode === "unreachable"
 						? RELAY_COPY.unreachable
 						: relay.others.length > 0
-							? `${gateOthers(relay.others.length)} Or paste the document you were sent.`
+							? `${gateOthers(relay.others.length, connected)} Or paste the document you were sent.`
 							: "Sign in to open it, or paste the document you were sent."
 			}
 			sample={digest}

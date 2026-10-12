@@ -138,18 +138,25 @@ export function identityView(i: {
 	readonly identity: Identity;
 	/** Some wallet has a slot in this browser. */
 	readonly anyStored: boolean;
+	/**
+	 * The wallet stack has started looking for the connection it remembered.
+	 * It does so a moment after the page has mounted; until then "no wallet
+	 * connected" is not known, only not yet looked at.
+	 */
+	readonly walletLooked: boolean;
 }): IdentityView {
 	const wait: IdentityView = { mode: "restoring", wallet: null };
 	const out: IdentityView = { mode: "signed-out", wallet: null };
 	if (!i.mounted) return wait;
 	if (i.connected === null) {
-		// The wallet stack reconnects a moment after load. Only then is there
-		// something to wait for: a wallet that is being picked for the first
-		// time has nobody signed in behind it.
-		return i.anyStored &&
-			(i.walletStatus === "reconnecting" || i.walletStatus === "connecting")
-			? wait
-			: out;
+		// The wallet stack brings its connection back a moment after load. Only
+		// when somebody is signed in here is that worth waiting for: a wallet
+		// that is being picked for the first time has nobody behind it.
+		const returning =
+			!i.walletLooked ||
+			i.walletStatus === "reconnecting" ||
+			i.walletStatus === "connecting";
+		return i.anyStored && returning ? wait : out;
 	}
 	// the state has not caught up with the wallet yet: nothing is in use
 	if (i.identity.wallet !== i.connected) return wait;

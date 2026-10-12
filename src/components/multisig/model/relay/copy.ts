@@ -27,6 +27,11 @@ export const RELAY_COPY = {
 	// Several wallets can stay signed in in one browser; only the connected one is in use.
 	othersHow:
 		"Choose one of them in your wallet to use it, with no new signature. While another wallet is connected, nothing is read or sent for these.",
+	// a proposal made while the relay is not in use stays where it was made
+	notSignedInLocal:
+		"You are not signed in, so it stays in this browser until you pass it on: your co-signers do not see it in their lists.",
+	unreachableLocal:
+		"The relay cannot be reached, so it stays in this browser until you pass it on.",
 	connectOneOf:
 		"Connect a wallet that is signed in here to continue, or sign in with another one.",
 	signOutAll: "Sign out all wallets",
@@ -166,7 +171,12 @@ export function othersSummary(count: number, connected: boolean): string {
  * Under a sign-in gate, when the connected wallet is not signed in but
  * others are: why what was on screen a moment ago is gone.
  */
-export function gateOthers(count: number): string {
+export function gateOthers(count: number, connected = true): string {
+	// with no wallet connected there is no "this one", and nothing the others are other than
+	if (!connected)
+		return count === 1
+			? "A wallet is signed in here. Connect it to go on as that one, or sign in with another."
+			: `${count} wallets are signed in here. Connect one of them to go on as that one, or sign in with another.`;
 	return count === 1
 		? "Another wallet is signed in here. Choose it in your wallet to go on as that one, or sign in with this one."
 		: `${count} other wallets are signed in here. Choose one of them in your wallet to go on as that one, or sign in with this one.`;

@@ -819,7 +819,11 @@ function ProposeForm({
 												? RELAY_COPY.createdShared
 												: relay.mode === "on"
 													? "The relay does not list your wallet as a signer of this treasury, so it stays in this browser until you share it."
-													: ""}
+													: relay.mode === "signed-out"
+														? RELAY_COPY.notSignedInLocal
+														: relay.mode === "unreachable"
+															? RELAY_COPY.unreachableLocal
+															: ""}
 										</p>
 									)}
 									<div className="flex flex-wrap items-center gap-2">

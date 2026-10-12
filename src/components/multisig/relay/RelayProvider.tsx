@@ -189,12 +189,25 @@ function RelaySession({
 		};
 	}, [down, downTurn, unanswered, probe]);
 
+	// The wallet stack starts looking for its remembered connection a moment
+	// after mount, and says so by leaving "disconnected". Until then nothing is
+	// said about there being no wallet. (The timer is for a stack that never looks.)
+	const [walletLooked, setWalletLooked] = useState(false);
+	useEffect(() => {
+		if (walletStatus !== "disconnected") setWalletLooked(true);
+	}, [walletStatus]);
+	useEffect(() => {
+		const timer = setTimeout(() => setWalletLooked(true), 1500);
+		return () => clearTimeout(timer);
+	}, []);
+
 	const view = identityView({
 		mounted,
 		walletStatus,
 		connected,
 		identity,
 		anyStored: stored.length > 0,
+		walletLooked,
 	});
 	// "on" always comes with the client of that very wallet, or it is not "on"
 	const active = view.wallet

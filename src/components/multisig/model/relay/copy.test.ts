@@ -25,6 +25,8 @@ describe("relay copy", () => {
 		["others (2, none connected)", othersSummary(2, false)],
 		["gate (1 other)", gateOthers(1)],
 		["gate (4 others)", gateOthers(4)],
+		["gate (1, none connected)", gateOthers(1, false)],
+		["gate (2, none connected)", gateOthers(2, false)],
 		...SIGN_HINT_TEXTS.map((t, i): [string, string] => [`sign hint ${i}`, t]),
 		...REFUSAL_TEXTS.map((t, i): [string, string] => [`refusal ${i}`, t]),
 		// what the page says when it refuses a nickname before asking the relay
@@ -114,6 +116,10 @@ describe("relay copy", () => {
 		expect(othersSummary(3, false)).toBe("3 wallets are signed in here");
 		expect(gateOthers(1)).toMatch(/^Another wallet is signed in here\./);
 		expect(gateOthers(2)).toMatch(/^2 other wallets are signed in here\./);
+		// with no wallet connected there is no "this one" and no "other"
+		for (const n of [1, 2])
+			expect(gateOthers(n, false)).not.toMatch(/this one|other wallet/);
+		expect(gateOthers(2, false)).toMatch(/^2 wallets are signed in here\./);
 		// a parked wallet is never said to be doing anything
 		expect(RELAY_COPY.othersHow).toMatch(/nothing is read or sent for these/);
 	});

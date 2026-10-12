@@ -38,6 +38,7 @@ const view = (
 		connected,
 		identity,
 		anyStored: true,
+		walletLooked: true,
 		...over,
 	});
 
@@ -195,6 +196,29 @@ describe("what the screens are told", () => {
 		);
 		expect(view(NO_IDENTITY, null, { walletStatus: "connecting" }).mode).toBe(
 			"restoring",
+		);
+	});
+
+	it('does not say "no wallet connected" before the wallet stack has looked for its connection', () => {
+		// found in the browser: for a moment after a reload the rail said
+		// "No wallet connected · 2 wallets are signed in here", then the wallet came back
+		expect(
+			view(NO_IDENTITY, null, {
+				walletStatus: "disconnected",
+				walletLooked: false,
+			}).mode,
+		).toBe("restoring");
+		// with nobody signed in here there is nothing to wait for
+		expect(
+			view(NO_IDENTITY, null, {
+				walletStatus: "disconnected",
+				walletLooked: false,
+				anyStored: false,
+			}).mode,
+		).toBe("signed-out");
+		// once it has looked and found none, that is the answer
+		expect(view(NO_IDENTITY, null, { walletStatus: "disconnected" }).mode).toBe(
+			"signed-out",
 		);
 	});
 
