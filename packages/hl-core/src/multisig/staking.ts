@@ -281,6 +281,19 @@ function windowOf(
 		: null;
 }
 
+/**
+ * A validator's total stake. Hyperliquid sends it as a JSON number of wei,
+ * and from 2^53 wei on (about 90 million HYPE; the largest validator held 54
+ * million when this was written) a number no longer holds every integer. The
+ * figure is shown and never signed, so the nearest wei the number holds is
+ * taken: dropping the row would make the form call the largest validator
+ * "not a validator".
+ */
+const totalStake = (raw: unknown): string | null =>
+	typeof raw === "number" && Number.isInteger(raw) && raw >= 0
+		? weiToHype(BigInt(raw))
+		: weiToHype(raw);
+
 /** `validatorSummaries`: every validator, the most staked first. */
 export function parseValidators(raw: unknown): Validator[] | null {
 	if (!Array.isArray(raw)) return null;
@@ -288,7 +301,7 @@ export function parseValidators(raw: unknown): Validator[] | null {
 	for (const row of raw) {
 		const r = record(row);
 		const address = addressOf(r?.validator);
-		const stake = weiToHype(r?.stake);
+		const stake = totalStake(r?.stake);
 		if (!r || address === null || stake === null) continue;
 		out.push({
 			address,

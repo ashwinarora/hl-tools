@@ -547,6 +547,19 @@ describe("validators", () => {
 			expectedRate: null,
 		});
 	});
+	it("keeps a validator whose stake is more than a number holds exactly", () => {
+		// 2^53 wei is about 90 million HYPE: beyond it Hyperliquid's JSON number
+		// is the nearest one a number can hold, and the validator is still one
+		const huge = 2 ** 53 + 2;
+		expect(Number.isSafeInteger(huge)).toBe(false);
+		expect(read({ stake: huge }).stake).toBe("90071992.54740994");
+		expect(read({ stake: 1e17 }).stake).toBe("1000000000");
+		// an action's own amount is never read that loosely
+		expect(weiToHype(huge)).toBeNull();
+		// what is no amount of wei at all is still left out
+		for (const stake of [1.5, -1, Number.NaN, Number.POSITIVE_INFINITY, null])
+			expect(parseValidators([row({ stake })])).toEqual([]);
+	});
 	it("another shape is not read", () => {
 		expect(parseValidators({ validators: [] })).toBeNull();
 	});
