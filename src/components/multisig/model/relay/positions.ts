@@ -62,7 +62,7 @@ export function standing(i: {
 		left,
 		threshold: i.threshold,
 		blocked:
-			i.threshold >= 1 && left < i.threshold
+			objected.length > 0 && left < i.threshold
 				? // the stronger fact when both hold: no change of finaliser would help
 					"cannot-pass"
 				: objected.some((o) => o.signer === i.finaliser)

@@ -110,6 +110,35 @@ describe("where a proposal stands once somebody has said no", () => {
 		).toBeNull();
 	});
 
+	it("is never held up by numbers alone: with nobody against it, nothing is said", () => {
+		// a signer list that does not add up (not read yet, or a stored copy that
+		// is out of step) is somebody else's message, never "cannot pass"
+		for (const [signers, threshold] of [
+			[[], 2],
+			[[ALICE], 2],
+			[[ALICE, BOB], 3],
+			[[ALICE, BOB], 0],
+		] as const) {
+			const s = standing({
+				signers,
+				threshold,
+				finaliser: BOB,
+				objections: [],
+			});
+			expect(s.blocked).toBeNull();
+			expect(s.objected).toEqual([]);
+		}
+		// and a no from somebody who is not a signer changes nothing about that
+		expect(
+			standing({
+				signers: [ALICE],
+				threshold: 2,
+				finaliser: BOB,
+				objections: [{ signer: CAROL, at: 1 }],
+			}).blocked,
+		).toBeNull();
+	});
+
 	it("holds for every treasury size: blocked exactly when the signers left cannot reach the number", () => {
 		let checked = 0;
 		for (let n = 1; n <= 10; n++) {
