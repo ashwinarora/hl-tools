@@ -1060,6 +1060,108 @@ Run by the same auditing session. A copy of an access token was kept in a page v
 - One wallet extension (Rabby), one profile. No hardware wallet, no phone.
 - §10 and §13 describe the single session of their day ("Signed in as S1, but that is not the connected wallet"): that state no longer exists.
 
+## 16. Multisig — any signer can say no (2026-10-12)
+
+The first part of Phase 6. A signer's no is an objection the others see, never a veto; the finaliser's decline is retired; a proposal that cannot go ahead as things stand stays open and says when it lapses (DECISIONS.md, "A signer's no is an objection, never a veto"). Tested as the sessions were in §15: the rule by itself, the relay's rules in the database, the two together against the local relay, and the page in a browser.
+
+The browser rows were run by the auditing session of §14, with three accounts of one wallet (**A** the proposer, **B** the finaliser, **C** a plain signer) on a 2-of-3 test treasury, testnet, against this working tree and the local relay.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 95 files, 2,335 tests, all passing |
+| Relay database | `bun run db:test` | 16 files, 909 pgTAP tests, all passing (58 new in `160_objections.sql`); `supabase db advisors --local`: no issues. The migration `relay_objections` was applied with `supabase migration up` |
+| Relay integration | `bun run test:relay` | 72 tests, all passing (7 new, 2 rewritten for the retired decline) |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
+
+New test files: `multisig/model/relay/positions.test.ts`, `supabase/tests/160_objections.sql`. Extended: `relay/inbox`, `relay/status`, `stage`, `nonce`, `relay/timeline`, `relay/away` tests, `relay.itest.ts`; the database cases that declined a proposal (`080`, `120`) and the grants matrix (`100`).
+
+### The rule by itself (`positions.test.ts`, `stage.test.ts`, `inbox.test.ts`, `status.test.ts`)
+
+| Case | Result |
+|---|---|
+| For every treasury of 1 to 10 signers, every number that must sign and every number of signers against it, with and without the finaliser among them (880 combinations): held up exactly when the signers left are fewer than must sign ("cannot pass"), or else when the finaliser said no; never with nobody against it | ✅ |
+| A no counts only from somebody who is a signer now, and once per signer | ✅ |
+| The approved sentences, word for word: one signer said no and it can still pass (naming who still has to sign); too many said no; the finaliser said no, as the others and as the finaliser read it; "You said no, 2 hours ago."; the amber line above Sign and Submit | ✅ |
+| No sentence says declined, rejected, vetoed, cancelled or blocked, none uses "he" or "she", and none makes a forbidden claim | ✅ |
+| The page's states: still "Collecting" or "Ready" while it can pass, and the finaliser can still submit; "Cannot pass" and "Cannot be submitted" stay signable; the finaliser who said no can neither sign nor submit until the no is taken back; what ended a proposal (accepted, withdrawn, expired, refused) is said over any no | ✅ |
+| The inbox: a proposal you said no to no longer needs you; a held-up one needs nobody and sits under "Cannot be finished"; it is still one of the treasury's open proposals | ✅ |
+| The buttons: the finaliser has exactly a plain signer's choices; a no that stands is taken back, not said again; nothing once the proposal is over | ✅ |
+| The Signing log: a no that took a signature back, and a signature in place of a no, read as one step each; a co-signer's step is never folded into one's own | ✅ |
+| "While you were away": a no that still stands on something the reader proposed or has to submit, and no other | ✅ |
+| When a waiting proposal lapses: "in 1 day 23 hours", "in 5 hours", "in 12 minutes"; nothing once it has closed | ✅ |
+
+### The relay's rules (pgTAP, `160_objections.sql`)
+
+| Case | Result |
+|---|---|
+| A plain signer, the proposer and the finaliser can each say no; the proposal stays open even with every signer against it | ✅ |
+| A stranger, another treasury's signer, an ended session and a request with no wallet can neither say nor read one | ✅ |
+| It cannot be filed under another name, dated by its author, or edited; one per signer per proposal | ✅ |
+| Taken back by its own signer only | ✅ |
+| One position at a time, in both directions, with the history in order; a co-signer's position is never touched | ✅ |
+| A withdrawn and a lapsed proposal take no new no and keep the ones they had; a former multi-sig takes none | ✅ |
+| Thirty an hour per wallet, and a signature is not held back by it | ✅ |
+| An operator removing a proposal removes its positions without an entry that pretends the signer did | ✅ |
+| Grants: read and delete only, insert of the proposal's key only, nothing for anon; the table has no column that could hold a reason | ✅ |
+| A decline is refused (`relay.decline_retired`), from the finaliser too; a proposal declined before stays declined, with its history entry | ✅ `080`, `120` |
+
+### Against the local relay (`relay.itest.ts`, "saying no")
+
+| Case | Result |
+|---|---|
+| A no is read by every co-signer and ends nothing; said twice is said once; an outsider reads and writes none; one signer cannot say it in another's name | ✅ |
+| Taken back by its own signer only | ✅ |
+| A no takes the signature back and a signature takes the no back, each leaving one row; the Signing log tells the five entries as three steps | ✅ |
+| Held up by its finaliser, then by too many; still open and still listed; goes on once they change their mind | ✅ |
+| Positions freeze when the proposal is withdrawn or has lapsed | ✅ |
+| A co-signer's page is pinged within two seconds | ✅ |
+| The hourly limit | ✅ |
+| A decline as an older page would send it is refused; the finaliser says no instead and the proposal stays open | ✅ |
+
+### In the browser (testnet, a 2-of-3 test treasury)
+
+No wallet prompt opened on any "Say no" or "Take back my no". The halves that need a 3-of-4 treasury were skipped; the truth table covers them.
+
+| # | Step | Seen |
+|---|---|---|
+| N1 | C, a plain signer, opens A's proposal (finaliser B) and says no | buttons "Sign as C" and "Say no", no "Decline" anywhere. Afterwards C reads "You said no, … ago." with "Sign" and "Take back my no"; C's row reads "said no · …" in amber; A reads "C said no to this, … ago." above Sign; the stage stays "Collecting signatures" |
+| N2 | the lists | for C it leaves "Waiting for your signature" (4 → 3, the rail's count too) and sits under "Waiting on others" with "you said no"; for A and B it keeps its place with "1 said no" |
+| N3 | it can still pass | A signs, B signs and submits: "Submitted · accepted by Hyperliquid", C's row still "said no" |
+| N4 | B and C both say no | "Cannot pass as things stand" with the names, "so only 1 signer is left and 2 must sign", and "Otherwise it lapses on 14 Oct 2026, 19:25, in 1 day 23 hours."; Re-propose offered; under "Cannot be finished" with the tag "cannot pass" in every inbox |
+| N5 | a change of mind | "Take back my no": the state before that no; no again, then "Sign as C" (one prompt): the signature in place of the no |
+| N6 | a signer who signed says no | the hover text about Hyperliquid still counting the signature; 1 of 2 → 0 of 2; after a reload the browser's own copy holds no signature of C |
+| N7 | the finaliser says no, at 0 signatures and at "Ready" | B: "Cannot be submitted as things stand", "You said no. You are the one who has to submit this, so it cannot go ahead unless you change your mind.", only "Take back my no", no Submit. A and C: "B said no, and B is the one who has to submit this proposal. It goes ahead only if B changes their mind. …". Lists: "Cannot be finished", "finaliser said no". Taken back: "Ready · 2 of 2", submitted, accepted |
+| N8 | the proposer says no, takes it back, withdraws | all three work; Withdraw (with its inline confirmation) closes it for everyone |
+| N9 | a submitted and a withdrawn proposal | no "Say no"; the rows stay as they were |
+| N10 | the Signing log | one line per step: "said no to …", "took back their no to …", "signed …, in place of their no.", "said no to …, taking back their signature.", and "You …" for the reader |
+| N11 | live | between two tabs of one wallet: a no said in one showed in the other 0.3 s later, no reload. A co-signer's page could not be watched (one wallet); the ping to co-signers is an integration case |
+| N12 | "While you were away" | A: "C said no to …, which you proposed." and nothing about B's proposal. B, its finaliser: "…, which you have to submit." Once the proposal was carried out, only that is said |
+| N13 | the closing time | on every waiting row in the inbox and the Pending tab: "closes 14 Oct 2026, 19:24 · in 1 day 23 hours"; held-up rows keep it (it is when they lapse) |
+| N14 | a proposal declined before the change | still "Declined by the finaliser, …"; no "Say no" |
+| N15 | signed out, a proposal from a link | no "Say no", no "said no" rows, everything else as before |
+| N16 | 375 px, both themes, console | no sideways scroll, no error |
+
+Two wording bugs and four reading points came out of those rows. Each was fixed (`619b0d5`, `bd70626`) and looked at again:
+
+| Found | Fix | Seen again |
+|---|---|---|
+| A no said a moment ago read "You said no, in less than a minute." for up to a minute: the relay's stamp was ahead of a page clock that is read once a minute | an age never reads as the future (`agoWords`), and the proposal page has one clock | three first nos on three new proposals, the page read every 100 ms for 8 s after each click: "You said no, less than a minute ago." from the first sample on, never "in …" |
+| One no shown with two ages on one page ("2 minutes ago" above Sign, "1 minute ago" on the signer's row) | the same clock for the stage, Your part and the Signatures panel | the two read alike and turned together ("1 minute ago" both, then "2", then "3") over 75 s |
+| "It goes ahead only if one of them changes their mind", read by somebody who is one of them | the reader among those who said no is spoken to | B and C, who both said no: "… only if one of you changes your mind."; A, who did not: "… one of them changes their mind." |
+| The stage named a signer who said no among those who "can still sign" | they are left out | with C's no standing, A reads "Collecting signatures · 0 of 2 · you, B can still sign" |
+| "you said no" twice on the reader's own row in a list | once, on the right | once. The row with two nos that can still pass needs a larger treasury: in a 2-of-3 the second no makes it "cannot pass", which is what was seen |
+| The amber "said no" tag measured 3.9:1 on the light theme | the light theme's warning colour was darkened (it applies to every amber text) | the tag 4.79:1, the "Say no" button 5.43:1, an amber tag on another page 4.79:1 |
+
+### Limits
+
+- A no exists for signed-in teams only: with links and files there is no shared place for it.
+- A no is not on Hyperliquid. A signature given before a no still counts there until the signing window closes; the page says so where it applies, and the tool treats the no as the signer's word.
+- The hourly limit and the refusal of a decline are covered by database and integration tests, not in a browser.
+- The browser had one 2-of-3 treasury and one wallet. What needs four signers (two nos that still leave enough to sign, "2 of them change their minds") is covered by the truth table and the sentence tests; a no arriving on a co-signer's open page was seen between two tabs of one wallet, and the ping to the other signers by an integration test.
+- One guard was added after the browser rows (`standing` needs at least one no before it says "cannot pass"): a unit test covers it, and it changes nothing for a signer list Hyperliquid can hold.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).

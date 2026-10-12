@@ -112,6 +112,10 @@ function PrivacyPage() {
 							back.
 						</li>
 						<li>
+							<b>A no</b> you said to a proposal, and when you said it or took
+							it back. No reason is stored with it.
+						</li>
+						<li>
 							<b>Outcomes</b>: that a proposal was withdrawn or declined, what
 							Hyperliquid answered when it was submitted, and, when a proposal
 							was carried out some other way, the transaction your browser
