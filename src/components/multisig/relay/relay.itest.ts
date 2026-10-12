@@ -685,6 +685,46 @@ describe("several wallets signed in in one browser", () => {
 		expect(await sessionWallet(here.clientFor(two.address))).toBe(two.address);
 	});
 
+	it("stated limit: a channel joined before the session ended still gets the empty signal", async () => {
+		// Realtime decides who may hear a channel when it is joined, and does
+		// not ask again while the socket stays open. So a socket that was joined
+		// before the session ended goes on receiving the "something changed"
+		// signal until its token runs out. The signal carries nothing ({}), and
+		// nothing can be read with the session any more (the cases above); a
+		// new join is refused. The page's own socket is closed when it signs out.
+		const here = newBrowser();
+		const one = newAccount();
+		const client = here.clientFor(one.address);
+		await signInWith(client, one.account);
+		let pings = 0;
+		let state: ChannelState | null = null;
+		const leave = subscribeWallet(
+			client,
+			one.address,
+			() => {
+				pings++;
+			},
+			(s) => {
+				state = s;
+			},
+		);
+		await until(() => state === "joined" && pings >= 1, 8000);
+		const token = (await client.auth.getSession()).data.session
+			?.access_token as string;
+		const { session_id } = JSON.parse(
+			Buffer.from(token.split(".")[1] ?? "", "base64url").toString(),
+		) as { session_id: string };
+		await sql`delete from auth.sessions where id = ${session_id}`;
+		const before = pings;
+		await sql`select private.ping_wallets(array[${one.address}]::public.address[])`;
+		await until(() => pings > before, 5000);
+		// what the signal is worth to whoever holds that socket: no read goes through
+		expect(codes((await listTreasuries(client)).issue)).toBe(
+			"relay.session_ended",
+		);
+		leave();
+	});
+
 	it("tells a page whose session was ended behind its back, instead of showing it nothing", async () => {
 		// The page still holds the session (its slot is full), but the relay has
 		// ended it: another device signed everything out, or an operator did.
