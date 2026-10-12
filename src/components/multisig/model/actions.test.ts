@@ -36,6 +36,7 @@ import {
 	formFromAction,
 	formFromMove,
 	formFromProposal,
+	modeTargetFor,
 	REMOVE_AGENT,
 	sourcePocket,
 } from "./actions";
@@ -267,7 +268,7 @@ const VALID: Record<string, { form: ActionForm; action: object }> = {
 };
 
 describe("buildAction / buildProposalInput", () => {
-	it("lists the eleven kinds once each, the three staking forms as one group", () => {
+	it("lists the twelve kinds once each, the three staking forms as one group", () => {
 		expect(ACTION_KINDS.map((k) => k.kind)).toEqual([
 			"sendUsdc",
 			"sendToken",
@@ -275,6 +276,7 @@ describe("buildAction / buildProposalInput", () => {
 			"withdraw3",
 			"approveAgent",
 			"removeAgent",
+			"accountMode",
 			"changeSigners",
 			"stake",
 			"returnToSpot",
@@ -1146,22 +1148,131 @@ describe("what the audit found the form letting through", () => {
 		).toContain("already an API wallet");
 	});
 
-	it("refuses an account-mode switch as raw JSON, before anyone signs", () => {
+	it("sends an account-mode switch written as raw JSON to its own form", () => {
 		const r = buildAction(
 			form({
 				kind: "raw",
 				raw: JSON.stringify({
 					type: "userSetAbstraction",
 					user: TREASURY,
-					abstraction: "unifiedAccount",
+					abstraction: "portfolioMargin",
 				}),
 			}),
 			ctx(),
 		);
 		expect(codes(r.issues)).toEqual(["raw.mode_switch_out_of_scope"]);
-		expect(r.issues[0]?.message).toContain("Invalid multi-sig outer signer");
+		expect(r.issues[0]?.message).toContain("choose “Switch account mode”");
 		expect(r.action).toBeNull();
 		expect(fieldOf(r.issues[0] as Issue)).toBe("raw");
+	});
+});
+
+describe("accountMode: switching between a manual and a unified account", () => {
+	const UNIFIED_NOW = accountMode("unifiedAccount");
+	const sw = (toMode: ActionForm["toMode"], over: Partial<BuildContext> = {}) =>
+		buildAction(form({ kind: "accountMode", toMode }), ctx(over));
+
+	it("is a userSetAbstraction naming the treasury and the mode by Hyperliquid's word", () => {
+		expect(actionTypeOf(form({ kind: "accountMode" }))).toBe(
+			"userSetAbstraction",
+		);
+		expect(sw("unified", { mode: MANUAL }).action).toEqual({
+			type: "userSetAbstraction",
+			...HEAD,
+			user: TREASURY,
+			abstraction: "unifiedAccount",
+			nonce: NONCE,
+		});
+		expect(sw("manual", { mode: UNIFIED_NOW }).action).toMatchObject({
+			abstraction: "disabled",
+		});
+	});
+
+	it("offers the other of the two when none is chosen, once the mode is read", () => {
+		expect(sw("", { mode: MANUAL }).action).toMatchObject({
+			abstraction: "unifiedAccount",
+		});
+		expect(sw("", { mode: UNIFIED_NOW }).action).toMatchObject({
+			abstraction: "disabled",
+		});
+		expect(modeTargetFor(form({ toMode: "" }), MANUAL)).toBe("unified");
+		expect(modeTargetFor(form({ toMode: "manual" }), MANUAL)).toBe("manual");
+		// on its way: nothing to build, nothing to say
+		const reading = sw("", { mode: undefined });
+		expect(reading.action).toBeNull();
+		expect(reading.issues).toEqual([]);
+		// could not be read: the reader chooses
+		const unread = sw("", { mode: null });
+		expect(unread.action).toBeNull();
+		expect(codes(unread.issues)).toEqual(["field.required"]);
+		expect(fieldOf(unread.issues[0] as Issue)).toBe("toMode");
+		// chosen all the same: built, with the one line that it may change nothing
+		const chosen = sw("unified", { mode: null });
+		expect(chosen.action).not.toBeNull();
+		expect(chosen.issues.map((i) => [i.severity, i.code])).toEqual([
+			["warning", "mode.note"],
+		]);
+	});
+
+	it("is blocked only where Hyperliquid would refuse: back to manual with something open", () => {
+		const busy = sw("manual", {
+			mode: UNIFIED_NOW,
+			open: { positions: 1, orders: 2 },
+		});
+		expect(busy.issues.map((i) => [i.severity, i.code])).toEqual([
+			["error", "mode.busy"],
+		]);
+		expect(busy.issues[0]?.message).toContain(
+			"1 open position and 2 open orders",
+		);
+		expect(busy.action).toBeNull();
+		expect(fieldOf(busy.issues[0] as Issue)).toBe("toMode");
+		// the other way is taken with the same things open
+		const toUnified = sw("unified", {
+			mode: MANUAL,
+			open: { positions: 1, orders: 2 },
+		});
+		expect(toUnified.issues).toEqual([]);
+		expect(toUnified.action).not.toBeNull();
+		// not read: nothing is assumed
+		expect(sw("manual", { mode: UNIFIED_NOW, open: null }).issues).toEqual([]);
+	});
+
+	it("says in one amber line what the switch does to waiting proposals, and when it changes nothing", () => {
+		const waiting = [
+			{
+				action: {
+					type: "usdSend",
+					destination: RECIPIENT,
+					amount: "5",
+					time: 1,
+				},
+				title: "Pay the auditor",
+			},
+		];
+		const r = sw("unified", { mode: MANUAL, waiting });
+		expect(r.issues.map((i) => [i.severity, i.code, i.path])).toEqual([
+			["warning", "mode.note", "mode"],
+		]);
+		expect(r.issues[0]?.message).toContain("“Pay the auditor”");
+		expect(r.action).not.toBeNull();
+		const same = sw("manual", { mode: MANUAL });
+		expect(same.issues[0]?.message).toContain("already a manual account");
+		expect(same.action).not.toBeNull();
+	});
+
+	it("comes back as its form, and any other mode as it was written", () => {
+		const built = sw("manual", { mode: UNIFIED_NOW }).action as PlainObject;
+		expect(formFromAction(built as never, "testnet")).toMatchObject({
+			kind: "accountMode",
+			toMode: "manual",
+		});
+		expect(
+			formFromAction(
+				{ ...built, abstraction: "portfolioMargin" } as never,
+				"testnet",
+			),
+		).toMatchObject({ kind: "raw" });
 	});
 });
 

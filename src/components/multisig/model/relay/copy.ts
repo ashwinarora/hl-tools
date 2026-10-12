@@ -138,6 +138,8 @@ const SIGN_HINTS: Readonly<Record<string, string>> = {
 		"Your wallet will show the treasury, the finaliser and the address of the API wallet. Check them there.",
 	usdClassTransfer:
 		"Your wallet will show the treasury, the finaliser, the amount and the direction. Check them there.",
+	userSetAbstraction:
+		"Your wallet will show the treasury, the finaliser and the mode by Hyperliquid's own word for it: “unifiedAccount” is a unified account, “disabled” a manual one. Check them there.",
 	// signed as a code: the wallet shows no field of the action
 	vaultTransfer:
 		"Your wallet will show a code, not the action: the field “connectionId”. Compare it with the code on this page before you sign.",

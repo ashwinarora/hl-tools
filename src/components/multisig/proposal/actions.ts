@@ -117,6 +117,16 @@ export function submitReads(network: Network): SendReads {
 		clock: async () => (await client.exchangeTime()).data,
 		agents: async (user) =>
 			(await client.apiWallets(user, { fresh: true })).data,
+		open: async (user) => {
+			const [perp, orders] = await Promise.all([
+				client.clearinghouseState(user, { fresh: true }),
+				client.openOrders(user, { fresh: true }),
+			]);
+			return {
+				positions: perp.data.assetPositions.length,
+				orders: orders.data.length,
+			};
+		},
 	};
 }
 

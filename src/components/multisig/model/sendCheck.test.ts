@@ -89,6 +89,7 @@ function reads(over: Partial<Record<keyof SendReads, unknown>> = {}) {
 		] as Validator[]),
 		clock: answer("clock", null),
 		agents: answer("agents", [{ name: "lab" }, { name: "" }]),
+		open: answer("open", { positions: 0, orders: 0 }),
 	};
 	return { r, asked };
 }
@@ -191,6 +192,48 @@ describe("checkBeforeSubmit", () => {
 		).toEqual([]);
 		// an answer that is not a mode at all
 		expect(await codes(asset("", "5"), { mode: 7 })).toEqual([]);
+	});
+
+	it("stops a switch back to a manual account while anything is open, and reads nothing for the other way", async () => {
+		const to = (abstraction: string): PlainObject => ({
+			type: "userSetAbstraction",
+			user: TREASURY,
+			abstraction,
+			nonce: 1,
+		});
+		// to a unified account nothing stands in the way: Hyperliquid took it with a position open
+		const unified = reads({ open: { positions: 1, orders: 2 } });
+		expect(
+			await checkBeforeSubmit(payload(to("unifiedAccount")), unified.r),
+		).toEqual([]);
+		expect(unified.asked).toEqual([]);
+		// back to manual: only with nothing open
+		const quiet = reads();
+		expect(await checkBeforeSubmit(payload(to("disabled")), quiet.r)).toEqual(
+			[],
+		);
+		expect(quiet.asked).toEqual(["open treasury"]);
+		expect(
+			await checkBeforeSubmit(
+				payload(to("disabled")),
+				reads({ open: { positions: 1, orders: 2 } }).r,
+			),
+		).toEqual([
+			{
+				code: "unified-busy",
+				message:
+					"Hyperliquid switches back to a manual account only when nothing is open, and this treasury has 1 open position and 2 open orders. Close them with an API wallet first.",
+			},
+		]);
+		expect(
+			await codes(to("disabled"), { open: { positions: 0, orders: 1 } }),
+		).toEqual(["unified-busy"]);
+		// a read that fails stops nothing
+		expect(await codes(to("disabled"), { open: new Error("timeout") })).toEqual(
+			[],
+		);
+		// a mode with no form of its own is not judged here
+		expect(await codes(to("portfolioMargin"))).toEqual([]);
 	});
 
 	it("stops the removal of an API wallet that is gone, and reads nothing else for it", async () => {

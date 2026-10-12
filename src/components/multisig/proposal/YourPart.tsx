@@ -10,8 +10,13 @@ import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { Callout, IssueList } from "#/components/hub/status";
+import {
+	agentsQueryOptions,
+	modeQueryOptions,
+} from "#/components/tools/multisig/policyQuery";
 import { useNetworkStore } from "#/store/networkStore";
 import { refreshStaking } from "../live/useStaking";
+import { modeTargetOf } from "../model/modeSwitch";
 import { finishHint, RELAY_COPY, signHint } from "../model/relay/copy";
 import { objectionNote, ownPosition } from "../model/relay/positions";
 import { relayActions } from "../model/relay/status";
@@ -155,6 +160,21 @@ export function YourPart({
 				proposal.payload.network,
 				proposal.payload.multiSigUser,
 			);
+		// the same for the mode and the API wallets, which are read once a minute otherwise
+		else if (result.accepted && modeTargetOf(proposal.payload.action))
+			void queries.invalidateQueries({
+				queryKey: modeQueryOptions(
+					proposal.payload.network,
+					proposal.payload.multiSigUser,
+				).queryKey,
+			});
+		else if (result.accepted && proposal.payload.action.type === "approveAgent")
+			void queries.invalidateQueries({
+				queryKey: agentsQueryOptions(
+					proposal.payload.network,
+					proposal.payload.multiSigUser,
+				).queryKey,
+			});
 	};
 	const submit = () => void wallet.run("Waiting for the wallet…", doSubmit);
 

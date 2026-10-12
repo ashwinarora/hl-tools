@@ -22,6 +22,7 @@ import {
 	type Validator,
 } from "@hl-tools/core";
 import { REMOVE_AGENT } from "./actions";
+import { judgeSwitch, type ModeTarget, modeTargetOf } from "./modeSwitch";
 import { shortAddress } from "./parts";
 import { preflight, type Refusal, receiverOf, spotAvailable } from "./send";
 import { STAKING_REFUSALS, stakingFacts } from "./staking";
@@ -54,6 +55,11 @@ export interface SendReads {
 	clock(): Promise<number | null>;
 	/** Every API wallet of the account, the one without a name included. */
 	agents(user: string): Promise<readonly { readonly name: string }[]>;
+	/** How many positions and resting orders the account has open. */
+	open(user: string): Promise<{
+		readonly positions: number;
+		readonly orders: number;
+	}>;
 }
 
 interface Checked {
@@ -75,6 +81,8 @@ export async function checkBeforeSubmit(
 		return checkNewSigners(action, multiSigUser, reads);
 	if (stakingActionOf(action)) return checkStaking([payload], reads, now);
 	if (isAgentRemoval(action)) return checkRemoval(action, multiSigUser, reads);
+	const toMode = modeTargetOf(action);
+	if (toMode) return checkSwitch(toMode, multiSigUser, reads);
 	const shape = sendShape(action);
 	// nothing here bears on an action that moves no money
 	if (!shape && action.type !== "withdraw3") return [];
@@ -93,6 +101,28 @@ export async function checkBeforeSubmit(
 		receiver: role === null ? null : receiverOf(role, receiverMode),
 		self: multiSigUser,
 	});
+}
+
+/**
+ * A switch back to a manual account: Hyperliquid refuses it while the
+ * account has a position or an order open. To a unified account nothing
+ * stands in the way, so nothing is read.
+ */
+async function checkSwitch(
+	target: ModeTarget,
+	multiSigUser: string,
+	reads: SendReads,
+): Promise<Refusal[]> {
+	if (target !== "manual") return [];
+	const open = await orNull(reads.open(multiSigUser));
+	const blocked = judgeSwitch(target, {
+		// its own mode bears on warnings only, which are the form's to give
+		mode: undefined,
+		positions: open?.positions ?? null,
+		orders: open?.orders ?? null,
+		waiting: [],
+	}).blocked;
+	return blocked ? [{ code: "unified-busy", message: blocked }] : [];
 }
 
 /**

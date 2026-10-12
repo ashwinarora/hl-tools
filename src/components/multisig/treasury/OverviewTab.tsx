@@ -294,6 +294,16 @@ export function OverviewTab({
 								{mode.tag}
 							</Tag>
 							<Help k="accountMode" />
+							{canPropose && (
+								<Link
+									to="/multisig/propose"
+									search={{ treasury: address, kind: "accountMode", network }}
+									className={linkButtonSm}
+									aria-label="Change the account mode"
+								>
+									Change
+								</Link>
+							)}
 						</span>
 					) : null
 				}

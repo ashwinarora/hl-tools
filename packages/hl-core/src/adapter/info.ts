@@ -403,11 +403,14 @@ export class InfoClient<N extends Network> {
 		);
 	}
 
-	openOrders(user: string): Promise<Observed<readonly OpenOrder[], N>> {
-		return this.info<readonly OpenOrder[]>({
-			type: "openOrders",
-			user: user.toLowerCase(),
-		});
+	openOrders(
+		user: string,
+		options: { fresh?: boolean; signal?: AbortSignal } = {},
+	): Promise<Observed<readonly OpenOrder[], N>> {
+		return this.info<readonly OpenOrder[]>(
+			{ type: "openOrders", user: user.toLowerCase() },
+			options,
+		);
 	}
 
 	/**

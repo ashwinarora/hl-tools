@@ -16,11 +16,14 @@ import { Callout } from "#/components/hub/status";
 import { cn } from "#/lib/utils";
 import {
 	type ActionForm,
+	modeTargetFor,
 	type PocketChoice,
 	REMOVE_AGENT,
 	type Receiver,
 } from "../model/actions";
 import { API_WALLET_PROPOSE } from "../model/apiWallet";
+import { modeLabel } from "../model/mode";
+import { MODE_SWITCH, type ModeTarget } from "../model/modeSwitch";
 import { RELAY_COPY } from "../model/relay/copy";
 import type { CostLine } from "../model/send";
 import { shortAddress } from "../model/stage";
@@ -398,6 +401,34 @@ export function ActionFields({
 					</Field>
 				</>
 			);
+		case "accountMode": {
+			const target = modeTargetFor(form, mode);
+			return (
+				<>
+					<p className="text-[13px] text-muted-foreground">
+						{mode ? MODE_SWITCH.now(modeLabel(mode).tag) : MODE_SWITCH.reading}{" "}
+						<Help k="accountMode" />
+					</p>
+					<Field label={MODE_SWITCH.label} error={error("toMode")}>
+						<Segmented<ModeTarget>
+							label={MODE_SWITCH.label}
+							// nothing is lit while the treasury's own mode is not known
+							value={(target ?? "") as ModeTarget}
+							onChange={(v) => set("toMode", v)}
+							options={[
+								{ value: "unified", label: MODE_SWITCH.choice.unified },
+								{ value: "manual", label: MODE_SWITCH.choice.manual },
+							]}
+						/>
+					</Field>
+					{target && (
+						<p className="text-[13px] text-muted-foreground">
+							{MODE_SWITCH.changes[target]}
+						</p>
+					)}
+				</>
+			);
+		}
 		case "removeAgent":
 			return (
 				<Field

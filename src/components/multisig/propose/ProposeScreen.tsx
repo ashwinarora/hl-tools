@@ -75,7 +75,7 @@ import { RELAY_COPY } from "../model/relay/copy";
 import { reproposeSource } from "../model/repropose";
 import { isItself } from "../model/selfTreasury";
 import { costLine, spotAvailable } from "../model/send";
-import { toLookUp, wantedSet } from "../model/signerSet";
+import { toLookUp, waitingProposals, wantedSet } from "../model/signerSet";
 import { isStakingKind, planStaking, STAKING } from "../model/staking";
 import { linkTransport } from "../model/transport";
 import { TreasuryNames, useNames } from "../names/Names";
@@ -272,8 +272,10 @@ function ProposeForm({
 	const known = useKnownProposals(
 		network,
 		(address ?? ZERO_ADDRESS) as Address,
-		// a change of signers says which waiting proposals it touches
-		hydrated && !!address && (ordered || form.kind === "changeSigners"),
+		// a change of signers, and a switch of mode, say which waiting proposals they touch
+		hydrated &&
+			!!address &&
+			(ordered || form.kind === "changeSigners" || form.kind === "accountMode"),
 	);
 	const floor =
 		ordered && actionType ? orderFloor(actionType, known.proposals) : null;
@@ -356,6 +358,18 @@ function ProposeForm({
 		agent: agentLookup.receiver,
 		// absent while they are on their way; null once the read has failed
 		agents: state.agents ?? (state.agentsError ? null : undefined),
+		// what a switch back to a manual account is refused for
+		open: {
+			positions: state.live.perp?.positions.length ?? null,
+			orders: state.live.openOrders?.length ?? null,
+		},
+		waiting:
+			form.kind === "accountMode"
+				? waitingProposals(known.proposals, now).map((k) => ({
+						action: k.action,
+						title: k.title,
+					}))
+				: undefined,
 		signerChecks: signerLookups.checks,
 		createdBy: wallet.address,
 		supersedes: superseded?.digest ?? null,

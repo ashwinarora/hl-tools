@@ -43,6 +43,15 @@ import {
 import { ADDRESS_RE } from "#/components/tools/multisig/model";
 import { chainChoiceFor, type InnerChain } from "./chains";
 import { addressField, amountField } from "./fields";
+import {
+	judgeSwitch,
+	MODE_NAME,
+	MODE_SWITCH,
+	type ModeTarget,
+	modeTargetOf,
+	otherMode,
+	type SwitchFacts,
+} from "./modeSwitch";
 import type { NonceMode } from "./nonce";
 import { selfRefusal } from "./selfSend";
 import { TO_HYPEREVM } from "./send";
@@ -73,6 +82,7 @@ export type ActionKind =
 	| "withdraw3"
 	| "approveAgent"
 	| "removeAgent"
+	| "accountMode"
 	| "changeSigners"
 	| StakingKind
 	| "raw";
@@ -117,6 +127,12 @@ export const ACTION_KINDS: readonly {
 			"Take an API wallet's permission to act for this account away again.",
 	},
 	{
+		kind: "accountMode",
+		label: "Switch account mode",
+		description:
+			"Change between a manual account, with separate perps and spot balances, and a unified one, with one balance.",
+	},
+	{
 		kind: "changeSigners",
 		label: "Change signers",
 		description:
@@ -131,6 +147,17 @@ export const ACTION_KINDS: readonly {
 		description: "Any other user-signed action, written as JSON.",
 	},
 ];
+
+/**
+ * The mode a Switch account mode form switches to: the one chosen, or the
+ * other of the two once the treasury's own is read.
+ */
+export function modeTargetFor(
+	form: Pick<ActionForm, "toMode">,
+	mode: AccountMode | null | undefined,
+): ModeTarget | null {
+	return form.toMode || otherMode(mode);
+}
 
 /** Every sentence of Remove API wallet. */
 export const REMOVE_AGENT = {
@@ -191,6 +218,11 @@ export interface ActionForm {
 	 */
 	readonly removeAgent: string | null;
 	/**
+	 * Switch account mode: the mode to switch to. "" follows the treasury's
+	 * own mode: the other of the two, once it is read.
+	 */
+	readonly toMode: ModeTarget | "";
+	/**
 	 * A change of signers, as the action itself carries it (see `wantedSet`):
 	 * "" while untouched, the signer set as a JSON string, or "null" for the
 	 * conversion back to a normal account.
@@ -222,6 +254,7 @@ export const DEFAULT_FORM: ActionForm = {
 	agentAddress: "",
 	agentName: "",
 	removeAgent: null,
+	toMode: "",
 	signers: "",
 	validator: "",
 	toValidator: "",
@@ -265,6 +298,13 @@ export interface BuildContext {
 	readonly agents?:
 		| readonly { readonly name: string; readonly address: string }[]
 		| null;
+	/** Open positions and resting orders of the treasury; null or absent while not read. */
+	readonly open?: {
+		readonly positions: number | null;
+		readonly orders: number | null;
+	} | null;
+	/** The proposals of the treasury still waiting, for what a mode switch does to them. */
+	readonly waiting?: SwitchFacts["waiting"];
 	/** What Hyperliquid said about the addresses that would be new signers. */
 	readonly signerChecks?: ReadonlyMap<string, SignerCheck>;
 	/** What Hyperliquid said about the treasury's staking and the validators; null or absent while unread. */
@@ -771,6 +811,35 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				nonce: ctx.nonce,
 			});
 		}
+		case "accountMode": {
+			const path = "action.abstraction";
+			const target = modeTargetFor(form, ctx.mode);
+			if (!target) {
+				// the mode is on its way, or could not be read and none was chosen
+				if (ctx.mode !== undefined)
+					issues.push(
+						issue("field.required", "error", MODE_SWITCH.choose, { path }),
+					);
+				return done(null);
+			}
+			const judged = judgeSwitch(target, {
+				mode: ctx.mode,
+				positions: ctx.open?.positions ?? null,
+				orders: ctx.open?.orders ?? null,
+				waiting: ctx.waiting ?? [],
+			});
+			if (judged.blocked)
+				issues.push(issue("mode.busy", "error", judged.blocked, { path }));
+			for (const text of judged.warnings)
+				issues.push(issue("mode.note", "warning", text, { path: "mode" }));
+			return done({
+				type: "userSetAbstraction",
+				...head,
+				user: treasury,
+				abstraction: MODE_NAME[target],
+				nonce: ctx.nonce,
+			});
+		}
 		case "changeSigners": {
 			const path = "action.signers";
 			const current = ctx.policyAtCreation ?? null;
@@ -929,7 +998,7 @@ function rawAction(
 			issue(
 				"raw.mode_switch_out_of_scope",
 				"error",
-				"Switching the account mode cannot be proposed here yet. Hyperliquid refuses it from a multi-sig in the form its documentation gives (“Invalid multi-sig outer signer”), and a refused submission uses up the proposal's number.",
+				"Switching the account mode has its own form: choose “Switch account mode” above. It offers the two switches measured through a multi-sig, to a unified account and back to a manual one; Hyperliquid refuses any other mode as this page would sign it.",
 				{ path },
 			),
 		);
@@ -975,6 +1044,8 @@ export function actionTypeOf(
 		// a removal is an approval of the zero address
 		case "removeAgent":
 			return "approveAgent";
+		case "accountMode":
+			return "userSetAbstraction";
 		// one or two actions, known only once the staking balance is read; none
 		// of them is numbered after the ones on record
 		case "stake":
@@ -1207,6 +1278,13 @@ export function formFromAction(
 				agentAddress: str(action.agentAddress),
 				agentName: str(action.agentName),
 			};
+		case "userSetAbstraction": {
+			const toMode = modeTargetOf(action);
+			// any other mode has no form: it stays as it was written
+			return toMode
+				? { ...base, kind: "accountMode", toMode }
+				: rawForm(action, base);
+		}
 		// the form's field is the action's own value: nothing to translate
 		case "convertToMultiSigUser":
 			return { ...base, kind: "changeSigners", signers: str(action.signers) };
@@ -1307,6 +1385,8 @@ export function fieldOf(i: Issue): keyof ActionForm | null {
 			return "agentName";
 		case "action.removeAgent":
 			return "removeAgent";
+		case "action.abstraction":
+			return "toMode";
 		case "action.signers":
 			return "signers";
 		case "action.validator":
