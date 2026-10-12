@@ -42,7 +42,8 @@
   --brand-soft: oklch(0.95 0.035 178);
   --success: oklch(0.52 0.13 150);
   --success-soft: oklch(0.955 0.04 150);
-  --warning: oklch(0.58 0.13 70);
+  /* at least 4.5:1 as text on its own tint (4.77) and on white (5.4) */
+  --warning: oklch(0.53 0.13 70);
   --warning-soft: oklch(0.96 0.05 80);
   --danger: oklch(0.55 0.2 25);
   --danger-soft: oklch(0.96 0.03 25);
