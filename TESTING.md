@@ -946,12 +946,12 @@ The browser rows were run by the auditing session of §14, not by the one that w
 
 | Suite | Command | Result |
 |---|---|---|
-| Core and app unit tests | `bun --bun run test` | 93 files, 2,281 tests, all passing |
-| Relay integration | `bun run test:relay` | 62 tests, all passing (9 of them new) |
-| Relay database | `bun run db:test` | unchanged: 807 pgTAP tests; no migration was touched |
+| Core and app unit tests | `bun --bun run test` | 94 files, 2,288 tests, all passing |
+| Relay integration | `bun run test:relay` | 65 tests, all passing (12 of them new) |
+| Relay database | `bun run db:test` | 15 files, 850 pgTAP tests, all passing (43 new, `150_live_sessions.sql`); `supabase db advisors --local`: no issues. The one migration (`relay_live_sessions`) was applied with `supabase migration up`, not from a reset: the auditing session's data lives in that database |
 | Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
 
-New test files: `multisig/model/relay/wallets.test.ts` (the slot per wallet), `multisig/model/relay/identity.test.ts` (which wallet is in use). Extended: `multisig/relay/session.test.ts`, `model/relay/copy.test.ts`, `relay.itest.ts`.
+New test files: `multisig/model/relay/wallets.test.ts` (the slot per wallet), `multisig/model/relay/identity.test.ts` (which wallet is in use), `multisig/relay/client.test.ts` (hearing the relay's "session ended"), `supabase/tests/150_live_sessions.sql`. Extended: `multisig/relay/session.test.ts`, `model/relay/copy.test.ts`, `model/relay/errors.test.ts`, `relay.itest.ts`; `supabase/tests/_helpers.inc` gives every test wallet a session.
 
 ### The rule by itself (`identity.test.ts`, `wallets.test.ts`, `session.test.ts`)
 
@@ -983,7 +983,23 @@ One storage, a client per wallet, set up exactly as the page sets them up.
 | The relay unreachable: "unreachable" is reported and the browser still holds nothing | ✅ |
 | A session copied into another wallet's slot is never used, and is ended | ✅ |
 | The single session of before is carried over and works with no new signature | ✅ |
-| Stated limit: an ended session's access token is not looked up again and works until it runs out (at most an hour) | ✅ as written; see the limits below |
+| An ended session's access token is refused at once (HTTP 401, `relay.session_ended`) on a function, a read, a write and its channel, while it worked a moment before and the other wallet in the browser is as it was. Before `relay_live_sessions` this case stated the opposite: the token worked until it ran out | ✅ |
+| A session ended behind the page's back is reported as such instead of coming back empty, and the next check empties the slot | ✅ |
+| A request with no session (the publishable key by itself) is left alone by the gate | ✅ |
+| Stated limit: a channel joined before the session ended still gets the empty "something changed" signal; nothing can be read with that session | ✅ as written; see the limits below |
+
+### The relay's rule for an ended session (pgTAP, `150_live_sessions.sql`)
+
+| Case | Result |
+|---|---|
+| A session that exists speaks for its wallet, reads what the wallet may read and passes the gate; a time-boxed one does until its time is up | ✅ |
+| Its row removed (what Auth does on sign-out): no wallet, `whoami()` names nobody, no treasury and no signer list is read, nothing may be asked or shared, and the gate refuses it. The other signer of the same treasury is untouched | ✅ |
+| The gate's answer, exactly: message and code `relay.session_ended`, HTTP 401 | ✅ |
+| A session past its time box; another user's session; one that never existed; a token that names none, an empty one, one that is not a UUID (no error raised), a number | ✅ no wallet in every case |
+| Requests tied to no session (no token, the anonymous role, the service role) pass the gate | ✅ |
+| Wiring: PostgREST is told to run the gate; the `gate` schema holds that one function and no table; every request role can run it; nobody can ask which session a request is; anon still has no access to `private` | ✅ |
+| Invariants: no policy (public, private, realtime) reads the user from the token by itself; only the two identity functions and the gate read the token | ✅ |
+| The 807 tests that were there before, each wallet now with a session | ✅ unchanged |
 
 ### In the browser (testnet, real account switches in Rabby)
 
@@ -1019,9 +1035,25 @@ Four points from that run were changed and looked at again in the browser:
 | A signer who is not signed in can create a proposal, which then stays in the browser, with no word about it near the buttons | "You are not signed in, so it stays in this browser until you pass it on: your co-signers do not see it in their lists." | ✅ |
 | After the change to what counts as connected: A → B → A, sign out as one, sign in again, reconnect after a disconnect | as before | ✅ |
 
+### In the browser: an ended session (testnet, after `relay_live_sessions`)
+
+Run by the same auditing session. A copy of an access token was kept in a page variable and never printed; the publishable key was taken from the page's own requests.
+
+| # | Step | Seen |
+|---|---|---|
+| L1 | reload after the migration, with wallets that were signed in before it | still signed in, no prompt, lists load, no 4xx |
+| L2 | as B: `whoami` and a read with a kept copy of the token, "Sign out", the same two requests again | before: 200 and B's address, 200 and its treasury. 152 ms after "Sign out": HTTP 401 `relay.session_ended` on both, and the same at 0.8 s, 2.3 s and 5.3 s |
+| L3 | B's session ended on the relay behind the page's back (the relay's own logout call with B's token) | at the page's next read (27 ms after its 401): "B · not signed in", under the button "This wallet's sign-in here has ended. Sign in again.", B's slot gone, A still listed. Until that read the page showed what it had read last, never empty lists. One prompt to sign in again |
+| L4 | A's slot copied into a slot named after C; wallet to C, then straight to A | C: "not signed in", forged slot removed, nothing of A's at any 30 ms sample. A: "not signed in" at once with the same line (its session was ended when the forged slot was checked; before this change A stayed signed in for up to an hour) |
+| L5 | A → B → A; two tabs, sign out in one and sign in again; reload with A in use and B parked | as in S3, S12 and S11; a deliberate sign-out does not show the "has ended" line in the other tab |
+| L6 | console and hosts | no error or warning from the app; the only 401s are the ones L2 to L4 are meant to produce; the relay and Hyperliquid only |
+
 ### Limits
 
-- **An ended session's access token works until it runs out.** Measured (the last integration case): after "Sign out" the relay refuses to renew the session, but an access token issued earlier is accepted for the rest of its hour, because the relay reads the wallet from the token and does not ask whether the session behind it still exists. The browser holds nothing after "Sign out", so this concerns only a copy taken before. Not changed here; it is a change to the relay's identity function and was left as its own decision.
+- **A channel joined before its session ended still gets the empty signal.** Measured (the last integration case): Realtime decides who may hear a channel at the join and does not ask again while the socket is open, so such a socket receives "something changed" (an empty message) until its token runs out, at most an hour. Nothing can be read with that session, and a new join is refused. The page's own socket is closed when it signs out.
+- A page whose session was ended behind its back says so at its next request to the relay, not before (21 s in L3, while it sat on a tab that re-reads nothing). Nothing can be read or written with the session in that time; what is on screen is what was read last. It cannot arise from this browser's own sign-outs, which the page hears of at once.
+- The gate in front of the API is a setting on the database role PostgREST connects as (`pgrst.db_pre_request`). A database test fails if it is missing; were it lost all the same, an ended session would still read and write nothing (the identity function), it would only be answered with empty lists instead of a refusal.
+- `relay_live_sessions` was applied to the local database with `supabase migration up`; it has not been run from an empty database.
 - The cap of eight wallets is unit-tested only (the test wallet has six accounts).
 - A browser that refuses `localStorage` falls back to the page's memory (signed in until the page is closed); not tried in a browser.
 - Whose session a channel joins with was shown against the relay, not read from the socket in the browser.
