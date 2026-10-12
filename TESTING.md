@@ -1162,6 +1162,216 @@ Two wording bugs and four reading points came out of those rows. Each was fixed 
 - The browser had one 2-of-3 treasury and one wallet. What needs four signers (two nos that still leave enough to sign, "2 of them change their minds") is covered by the truth table and the sentence tests; a no arriving on a co-signer's open page was seen between two tabs of one wallet, and the ping to the other signers by an integration test.
 - One guard was added after the browser rows (`standing` needs at least one no before it says "cannot pass"): a unit test covers it, and it changes nothing for a signer list Hyperliquid can hold.
 
+## 17. Multisig — staking, and two proposals that are one move (2026-10-12)
+
+The second part of Phase 6. Three forms named by where the HYPE ends up, one proposal or two, two shown, signed and submitted as one move, and a Staking section on the treasury page (DECISIONS.md, "Staking is three forms named by where the HYPE ends up"). Tested where each piece of logic lives: Hyperliquid's own answers recorded on testnet and replayed by the core, the forms and the move's states as pure tables, the pair writes in the database and against the local relay, the finaliser's click against a stand-in for Hyperliquid, and the pages in a browser on testnet.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 101 files, 2,722 tests, all passing |
+| Core coverage | `bunx vitest run --coverage` in `packages/hl-core` | 100 % of lines, branches, functions and statements for its scope (`src/multisig/**` with the new `staking.ts` and `move.ts`) |
+| Relay database | `bun run db:test` | 17 files, 938 pgTAP tests, all passing (29 new in `170_moves.sql`); `supabase db advisors --local`: no issues. No migration |
+| Relay integration | `bun run test:relay` | 75 tests, all passing (3 new, "a move of two steps") |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
+
+New test files: core `test/multisig/staking.test.ts`, `test/multisig/move.test.ts`; app `multisig/model/staking.test.ts`, `model/move.test.ts`, `model/chain/stakingRecord.test.ts`, `proposal/moveFlow.test.ts`; `supabase/tests/170_moves.sql`. Extended: core `adapter`, `describe`, `explorer`; app `model/actions`, `sendCheck`, `stage`, `transport`, `chain/match`, `chain/pace`, `relay/inbox`, `relay/timeline`, `relay/away` tests, `relay.itest.ts`. One fixture entry was added to `fixtures/explorer/testnet-txdetails.json` (the explorer's answer once the day's allowance is used up).
+
+### What was measured first (testnet, lab keys, a 2-of-3 lab treasury)
+
+Every action below went through the multi-sig envelope. The record is `fixtures/multisig/staking.json` (18 actions in the order they were sent, with what Hyperliquid reported before and after each).
+
+| Question | Answer |
+|---|---|
+| Do `cDeposit`, `tokenDelegate` and `cWithdraw` go through a multi-sig? | yes, all three |
+| Can the second step follow the first at once? | yes: move in then stake, unstake then return, unstake from one validator then stake with another, each within seconds |
+| Does a return need a second signature when it lands? | no: it lands by itself, and the staking history then holds a row with no transaction |
+| Is a stake with a jailed or an inactive validator refused? | no, it is accepted |
+| Does adding to a stake change its lockup? | yes: everything staked with that validator is locked again |
+| How sharp is the end of a lockup? | refused 2 seconds before, accepted 1.5 seconds after |
+| What happens to a stake removed completely? | it leaves the list of stakes |
+| How long are testnet's waits? | lockup 2 minutes, return queue 5 minutes |
+| What does Hyperliquid answer when it refuses? | seven texts, recorded word for word (rule set "errors" 1.8.0): `Insufficient funds available to deposit.`, `Insufficient balance to delegate`, `Unknown validator`, `Cannot undelegate during lockup period after delegating or voting.`, `Insufficient balance to undelegate`, `Insufficient balance to withdraw from CStaking`, `Too many concurrent CStaking withdrawals` |
+| Is anything about staking on Hyperliquid's socket? | no, on none of the channels the page uses; the ledger carries only the spot ↔ staking transfer |
+
+From Hyperliquid's docs and not measured: the mainnet waits (1 day, 7 days) and the limit of 5 returns at once (the sixth was refused on testnet, as the docs say). Not in the docs: the request that lists validators.
+
+### The core (`staking.test.ts`, `move.test.ts`)
+
+| Case | Result |
+|---|---|
+| Every action in the record: the answer Hyperliquid gave is the answer predicted from the state before it, and the state predicted after it is the state Hyperliquid then reported | ✅ 18 of 18 |
+| Every refusal in the record has an entry in the catalogue, and nothing was refused that is not listed | ✅ |
+| HYPE to the integer an action carries and back (8 decimals, integers only); an amount with more decimals, zero or a negative one is not carried | ✅ |
+| The four reads (`delegatorSummary`, `delegations`, `delegatorHistory`, `validatorSummaries`): canonical figures, a stable order however rows arrive, a row that cannot be read is left out and the rest kept, another shape is not read at all | ✅ |
+| When a return lands: its start plus the network's queue, the first to land first; no time is made up when the history does not account for the summary; fits the lab's five | ✅ |
+| Whether a validator pays: jailed, outside the paid set, keeps everything, an expected rate of zero; what is not known is not held against it | ✅ |
+| The planner: stake moves in only what the staking balance is missing, or nothing; return unstakes only what is missing; no plan when something must be unstaked and no validator is named; move is unstake then stake | ✅ |
+| The judge: the second step is judged against what the first leaves behind; the step that would be refused is named with its reason; nothing is refused on a fact that was not read; a locked stake refuses an unstake of any amount; a first stake is locked for the network's lockup and a top-up locks all of it again | ✅ |
+| Tying two proposals: the same list in both, neither digest changes; a proposal that stands alone is written byte for byte as before; a malformed list is dropped with a warning; a merge never ties a proposal that stands alone and never unties one | ✅ |
+| Whether two proposals are one move: the three shapes, named by what they come to; not when untied, tied to another list, on another network or treasury, with another finaliser or proposer, out of order, signed under different chains, with a vault or an expiry, or when the actions are any other pair (a send dressed up as a stake among them); who proposed is taken from the relay when it says so | ✅ |
+
+### The forms and the move, as rules (`model/staking.test.ts`, `actions.test.ts`, `sendCheck.test.ts`, `stage.test.ts`, `move.test.ts`, `chain/stakingRecord.test.ts`)
+
+| Case | Result |
+|---|---|
+| Each form to its steps and its sentences, exact: one proposal or two, the amber line for a validator that pays nothing (four reasons), the amber line for a top-up, an address that is no validator blocked, two equal validators blocked, more than there is said in one amber line and never a stop | ✅ |
+| Nothing is worked out before the staking balance was read; an unread validator list is a warning, not a block | ✅ |
+| A form makes one or two proposal inputs, numbered one after the other; a staking proposal read back gives its form; a move read back gives the form that made it | ✅ |
+| Proposed again from its first step a move is the whole move; from its second, only that step. What is left of a move to another validator, once the unstake has landed, is one stake and never a second unstake | ✅ |
+| The check before submitting: a staking step against what was just read, a move's two steps in order; a read that fails stops nothing | ✅ |
+| A lockup is judged by Hyperliquid's own clock where it says the time, whatever the device's says (10 s fast, 9 s slow); by the device's where it does not; the clock is asked for only when a step is an unstake | ✅ |
+| The lockup gate: an unstake inside the lockup can be signed, Submit is off with the time it opens, and once that moment has passed nothing is held | ✅ |
+| A "duplicate nonce" answer says to look at the record before proposing again | ✅ |
+| A move's state from its two steps: collecting, ready, held by a lockup, step 1 done, done, halted by step 1, halted by step 2, broken; what each offers | ✅ |
+| A step is never said to be "not carried out" when Hyperliquid answered "duplicate nonce", or when the staking history holds a step like it and the explorer did not say; a step refused for a reason of Hyperliquid's own is. Two steps over together say so. Names and moments stay parts, so the page shows a nickname and local time | ✅ |
+| One row per move in the inbox, the Pending tab, the counts and the local history; a lone step is tagged with its number only when it is a staking step whose other step is not listed, and the tag asserts no reason | ✅ |
+| The Signing log and "While you were away" say a move once | ✅ |
+| Whether a staking step was carried out, read from the staking history: nothing is said before it was read; none like it means not carried out; one like it is looked up first; its transaction being this proposal's action means carried out; the same step under another number is somebody else's; with no answer from the explorer one like it is likely this one, never certainly, and several are not told apart; a step made before the proposal existed is never its own, however alike | ✅ |
+| "On Hyperliquid": a move into staking is tied to its proposal, a landed return reads as Hyperliquid's own step | ✅ |
+| One link and one file carry both steps; a move is opened whole or not at all, each step through the strict decoder by itself; a build from before moves opens step 1 of a link | ✅ |
+| A list gives a staking step the same line as its own page, with the validator's own name where the validators are at hand; a validator's total stake is cut to whole HYPE and its rate is the 7-day one | ✅ |
+| The explorer's refusal for the day is an error of its own, never "not found" (the recorded answer); after one, nothing is asked for ten minutes, then one look-up may try | ✅ |
+| Help texts and sentences against the forbidden claims and the jargon list | ✅ |
+
+### The finaliser's click (`moveFlow.test.ts`, against a stand-in for Hyperliquid)
+
+| Case | Result |
+|---|---|
+| Asks Hyperliquid first, collects every signature, then sends step 1 and, once that is accepted, step 2 | ✅ |
+| Step 1 refused: step 2 is not sent | ✅ |
+| Step 2 refused after step 1 went through: said as it is | ✅ |
+| Hyperliquid would refuse a step as things stand: stopped before any wallet prompt | ✅ |
+| A wallet prompt not answered, whichever it is: nothing is posted | ✅ |
+| The relay says a step was withdrawn a moment ago: stopped | ✅ |
+| Step 1 already done: only step 2 is sent | ✅ |
+| The request for step 2 does not reach Hyperliquid after step 1 was accepted: not called "nothing was submitted" | ✅ |
+| A signer signing both steps: one prompt for each step not signed yet; a prompt not answered leaves what was signed | ✅ |
+
+### The relay (pgTAP `170_moves.sql`; `relay.itest.ts`, "a move of two steps")
+
+| Case | Result |
+|---|---|
+| A document carrying the tie is accepted as it is; the relay keeps two ordinary proposals | ✅ |
+| Both steps are filed in one statement: when one would be refused (the hourly limit, the pending limit per treasury or per wallet, a guard) neither is kept | ✅ |
+| A withdrawal, a no, taking a no back and taking signatures back cover both steps in one statement, both or neither (one that names somebody else's proposal, or reaches into a closed one, changes neither); a no to both takes back the signature that signer had given on one | ✅ |
+| A move counts as two proposals against the limits | ✅ |
+| Against the local relay: a move is shared whole and read back as one move, by who the relay says proposed it; a no, its taking back, signatures taken back and a withdrawal each cover both steps; shared from its page it carries the proposer's signatures, and the step that is missing is added when one is there already | ✅ |
+
+### In the browser (testnet, a 2-of-3 test treasury)
+
+Run by the auditing session of §14 with accounts of one wallet on a 2-of-3 test treasury (**A** the proposer, **B** the finaliser, **C** a plain signer), against the committed tree and the local relay. The treasury was given 0.12 test HYPE by a lab account. Testnet's waits are 2 minutes (lockup) and 5 minutes (return), so the whole loop fits in a sitting.
+
+One condition of that day shaped what could be seen: Hyperliquid's testnet explorer answered every transaction look-up from the test machine with "More than 100 archived blocks queried in one day" (see Limits). Everything that depends on a look-up therefore showed its "could not check" side, and the side where a look-up confirms a staking step was not seen.
+
+| # | Step | Seen |
+|---|---|---|
+| S1 | The Staking tab of a treasury with nothing staked | four figures (in spot 0.12, the other three 0), "Nothing is staked.", "Nothing is on its way back.", "No staking steps yet.", "Checked just now · again every minute while this page is open", the three buttons; no "In staking" line on Overview while everything is zero |
+| S3 | The Stake form | every validator with state, commission, expected rate and total stake; "Every validator is listed as Hyperliquid reports it. Which one to stake with is the signers' choice."; the two-proposal preview; one amber line each for a jailed validator, one that "keeps all rewards as its commission" and one "not among the validators that produce blocks and are paid", the button still on |
+| S4 | Stake 0.02 with part to come from spot: A proposes and signs, C signs, B finalises | cancelling the second prompt of "Create both and sign" creates nothing; one page headed by the move with both steps; one row tagged "2 steps" in the inbox, the Pending tab and the count; "Sign and submit both steps" asks four times (action and envelope of step 1, then of step 2) and ends "Done · both steps were carried out"; the tab then shows 0.02 staked, the unlock time, two history rows with explorer links, and Overview "In staking: 0.02 HYPE staked" |
+| S5 | A stake the staking balance already covers | "This makes one proposal:"; with part missing only the shortfall is moved in |
+| S6 | Return 0.01 to spot with nothing unstaked | the form asks which validator to unstake from; inside the lockup both steps can be signed, "Submit both steps" is off with "Submit opens on … (in 1 minute): the stake this takes from is locked until then. You can sign now."; it turned on by itself after the lockup; afterwards "1 of 5 places used" and "in 4 minutes"; five minutes later the HYPE was in spot with no signature, the history said "0.01 HYPE landed in spot" with no transaction, and "On Hyperliquid" called the row "Hyperliquid's own step" |
+| S7 | Move 0.01 to another validator | two steps, both accepted, both validators' rows right |
+| S8 | Adding to a stake | "The treasury already has 0.02 HYPE staked with …. Adding to it locks all of it again: none of it can be unstaked for 2 minutes." |
+| S9 | A no on a move, taken back; a withdrawal by the proposer | each covers both steps; the Pending tab and the Signing log say it once ("… (both steps) was withdrawn by the proposer, you.") |
+| S10 | In-between states | the second prompt cancelled while signing both: "step 1: 1 of 2 · step 2: 0 of 2" and "Sign step 2 as …"; a reload forced while step 2 was being sent: see the findings |
+| S11 | More than there is | in the form, one amber line: "This moves more HYPE into the staking balance than the spot balance can release now. As things stand Hyperliquid would refuse it (step 1). Spot holds 0.1 HYPE that is not on hold, and this moves 5 HYPE."; at submit time, "Nothing was signed or sent: Hyperliquid would refuse this as things stand." before any prompt |
+| S12 | Lists and records | a lone step listed as "step 2 of 2"; the log one line per event with "(both steps)"; "On Hyperliquid" never says "none on record" for a staking row (with the explorer refusing: "could not check") |
+| S13 | One link, one file, signed out | "A link to this move" opened in a clean context with no wallet shows one move page with both steps; the downloaded `…-move.json` holds both documents and opens the same way on the start page; no Copy JSON or Inspect on a move |
+| S15 | Width, themes, console, requests | no sideways scroll at 390 px on the Staking tab, the form and the move page (the tables scroll inside their own boxes); both themes readable; the console clean; no host other than Hyperliquid and the local relay; the four staking reads go out when the Staking tab opens and again 61 s later, none of them on the Pending tab in 130 s, and Overview asks for the summary alone |
+
+Not reachable in the browser, and covered by the tables above: an address that is no validator (the picker offers only validators) and the same validator twice (the "To" list leaves out the "From" validator). A mainnet treasury's Stake form was not opened: no mainnet treasury existed and making one takes a wallet action.
+
+### The cross-check against Hyperliquid's own staking page
+
+Asked for when the feature was designed: what this section shows has to match what Hyperliquid itself shows.
+
+Two halves, both on testnet, both on `app.hyperliquid-testnet.xyz/staking`: the treasury's own figures, with the treasury's own account connected there (nothing was signed and nothing was done on that page), and the validator table, which is public.
+
+The treasury's own figures, read within a minute of each other:
+
+| Hyperliquid's page | This section | |
+|---|---|---|
+| "Available to Transfer to Staking Balance 0.09600000 HYPE" | "In spot 0.096 HYPE" | equal |
+| "Available to Stake 0.00000000 HYPE" | "Staking balance, not staked 0 HYPE" | equal |
+| "Total Staked 0.01400004 HYPE" | "Staked 0.01400004 HYPE" | equal |
+| the staked-with row: "Your Stake 0" | "Hyperbeat x P2P x Hypio 0.01400004 HYPE" | their column shows whole HYPE; this one shows the amount |
+| "Pending Transfers to Spot Balance 0.01000000 HYPE (1)" | "0.01 HYPE · 1 of 5 places used" | equal |
+| the return's time: "Transfer Countdown 6d 23h 58m 6s" | "12 Oct 2026, 23:51 · in 2 minutes" | **differs**: their page counts 7 days on testnet too. The return landed after 5 minutes, as this section said (and as measured) |
+| the history: stake 0.014, unstake 0.01, transfer started | the same three rows at the same times | equal |
+
+Earlier in the round the same figures were compared with Hyperliquid's API after a stake and after a return: staked, the staked-with rows, the unlock time, the pending return and its landing all agreed.
+
+The validator table:
+
+| | First comparison | After the fix |
+|---|---|---|
+| How many | 249 here, 250 there: the largest was missing | 250 and 250 (`714810d`) |
+| Total stake | one HYPE apart on several rows: their page cuts to whole HYPE, this one rounded (6,470,703.96 read 6,470,703 there and 6,470,704 here) | 7 of 7 compared rows equal (`9ad63ae`) |
+| Share of all stake | computed without the missing validator (11.13 % where 4.10 % is right) | 4.10 % |
+| Expected rate | a hundredth apart on one of five (3.66 % here, 3.67 % there): their table shows the 7-day estimate by default, behind a "24h / 7D / 30D" switch, and this one showed the month's | equal on 5 of 5 (3.67, 3.70, 3.66, 3.30 and 3.28 %) (`0830b06`) |
+| Commission | equal | equal |
+| State | a validator that keeps 100 % commission reads "Active" there and "keeps all rewards" here | left as it is: the word says why a stake with it earns nothing |
+
+### What the review and the browser found, and what changed
+
+A read-only review of the code by a second reader, and the browser rows, each found defects. Every one was fixed in a commit of its own and has a test where its logic is pure.
+
+| Found | By | Fix |
+|---|---|---|
+| "Propose it again" on a move whose first step was carried out filled in the whole move; for a move to another validator that unstakes a second time | review | the link names the step that is left, and a proposal proposed again from a move's second step fills in that step alone (`00ad30c`) |
+| "Share with your co-signers" and "Export as a file" on a move's page acted on step 1 only, so co-signers could be handed half a move | review | both cover both steps; the share is one write, and a move shared in part says so (`1dfca29`) |
+| A stopped move (step 1 refused) had no "Your part": its proposer could not withdraw it | review | Withdraw is offered for what the relay still holds open (`1dfca29`) |
+| A step answered "duplicate nonce" read "Step 1 was not carried out", though its number may have been used by a submission that went through | review | the move says the step may be carried out already and offers "the whole move again" and "only step 2" (`1dfca29`, `63edf0c`) |
+| When the request for step 2 did not reach Hyperliquid the page said "Nothing was submitted" although step 1 had been accepted | review | it says the step before it was accepted and stands (`4e2c382`) |
+| With browser storage blocked, a move's link opened as its first step alone | review | the page keeps the steps a link carried (`ca693f1`; read in the code, not run in a browser) |
+| A row said "step N of 2 · the other step is no longer waiting" on the word of the unsigned part alone | review | the tag is given only to a staking step whose other step is not listed, and asserts no reason (`3ea2653`) |
+| The check before submitting judged a lockup by the device's clock | review | where a step is an unstake it asks Hyperliquid for its own time (`62b308c`) |
+| The largest testnet validator was missing from the table, and every share was computed without it: its stake is above 2^53 wei, more than a JSON number holds exactly | review and browser (249 of 250 listed) | the total is a shown figure and is read to the nearest wei the number holds (`714810d`) |
+| A reload forced while step 2 was being sent left the move "ready to be sent" for everyone, although Hyperliquid's staking history already held the step and the explorer could not confirm it | browser | the move says the step may be carried out already, that it is marked so once the explorer answers, and that sending it again cannot carry it out twice (`63edf0c`) |
+| A withdrawn move read "Step 1 was not carried out, so step 2 is not sent … it stays where it is" | browser | two steps that are over together say so: "… · neither step was carried out" (`63edf0c`) |
+| The move's sentences showed addresses and UTC where the section shows nicknames, "you" and local time; "Your wallet is asked 1 times." | browser | the sentences are parts, rendered like a single proposal's (`63edf0c`) |
+| Two verbs for one thing ("cannot be removed for 1 day … (2 minutes on testnet)" on the page, "cannot be unstaked for 2 minutes" in the form) | browser | one verb and the action's own network, written from the rule set (`ca9bea9`) |
+| A staking proposal named its validator by full address in the lists, by short address in the log, by name on its page | browser | one line for all of them (`b66deec`) |
+| With the explorer refusing, a treasury page sent 48 look-ups in two minutes, each transaction three times | browser | the refusal is an error of its own; after the first one nothing is asked of that explorer for ten minutes (`8383557`) |
+| A validator's total stake was one HYPE off Hyperliquid's page on several rows | browser | cut to whole HYPE, as their page cuts it (`9ad63ae`) |
+| A validator's rate was a hundredth off Hyperliquid's page: theirs is the 7-day estimate, this was the month's | browser | the 7-day one (`0830b06`) |
+| A new move was told it "may be carried out already" because of an older, identical step | browser, second look | a step from before the proposal was made is no candidate (`cd73fa1`) |
+| The propose form gave its signing window in UTC | browser, second look | local, with UTC on hover (`df7ccc1`, `61f04e6`) |
+
+Looked at again in the browser, against the commits above:
+
+| # | Row | Seen |
+|---|---|---|
+| R1 | The Stake form's table | 250 validators; the largest listed as "jailed" with its 63.17 % share; totals equal to Hyperliquid's page on 7 of 7 |
+| R2 | A two-step move withdrawn by its proposer | "Withdrawn by the proposer, … · neither step was carried out" / "Propose the move again if it is still wanted." |
+| R3 | A signer who signed step 1 only | "Collecting signatures · step 1: 1 of 2 · step 2: 0 of 2 · you, …, … can still sign · submittable until 14 Oct 2026, 23:36 (47 h left)" in local time; "Sign step 2 as …"; the finaliser's "Your wallet is asked 4 times." and "… asked twice." |
+| R4 | The move whose second step was sent from a page that was reloaded | "Step 1 is carried out · step 2 may be too" with its explanation; the amber line on step 2's card; "step 2 of 2" in Pending with the hover text; after its proposer withdrew it, "Step 1 was carried out · step 2 may be too" and what the staking history holds |
+| R5 | The explorer left alone | five look-ups in the first second of a page load (they go out together), every one refused; none in the following 136 s, none on later loads of Pending, the Signing log and the inbox |
+| R6 | A move made signed out, then shared | "Only in this browser" with "Share with your co-signers"; one click, and another signer's Pending shows one row "2 steps"; "Export as a file" holds both steps |
+| R8 | An unstake at the end of its lockup | Submit off with the time; on 15 s after the lock ended; one `exchangeStatus` request before the first prompt; both steps accepted |
+| R9 | Names in lists | the Pending tab, the inbox and the Signing log name the validator with its short address; no validator request on a list without a staking row, exactly one on the Signing log |
+| R10 | The wait in one verb | "A stake cannot be unstaked for 2 minutes after it is made or added to." in the form and on the step |
+| R11 | A move's file uploaded in a clean context, three times | the move page with both steps each time, console empty |
+| R12 | The move page at 390 px, both themes | no sideways scroll, nothing under 4.5:1, console empty |
+| R13 | The treasury's own figures on Hyperliquid's page | the table above |
+
+The second look found one new defect, from the fix for the reloaded page: a new move was told "Step 1 may be carried out already" whenever the staking history held an older step of the same kind, amount and validator (a stake of 0.02 proposed 36 minutes after an identical one). A step from before the proposal was made is no candidate now (`cd73fa1`). Seen again: a two-step stake of an amount and with a validator that are in the history, never signed, reads the ordinary "Collecting signatures · step 1: 0 of 2 · step 2: 0 of 2 · … can still sign · submittable until …" with nothing about the history on either step; so does an unstake of an amount unstaked before; withdrawn, both read "… · neither step was carried out". The propose form's signing window, the last moment in the section still written in UTC, is local now (`df7ccc1`). Seen: "If created now: submittable until 14 Oct 2026, 23:53 (48 h left)", UTC on hover; the same row of the form's preview followed in `61f04e6` and was not looked at again.
+
+Not produced in a browser: a first step refused by Hyperliquid at submit time (the page's own check stops the submit first whenever the balance is short), so "Withdraw" on a stopped move was not seen there; it is a table row and reads the relay's state.
+
+### Limits
+
+- **The explorer.** Whether a staking step's transaction, looked up by its hash from Hyperliquid's staking history, comes back as that step's action was not measured: the test machine's allowance on the testnet explorer was used up on the day, before and during the browser rows, and stayed so. The rule for that answer is a unit test against the explorer's recorded shape for other actions. Until it is seen, the page's confirmed "carried out" for a step submitted elsewhere rests on that test; its unconfirmed side ("may be carried out already") was seen.
+- **The explorer's allowance is small.** "More than 100 archived blocks queried in one day" per network address on testnet. A treasury page looks up each outgoing ledger row once per page load, so a team behind one address can use it up; the page then says "could not check" and asks nothing for ten minutes. Whether mainnet has the same allowance was not measured.
+- **Mainnet waits** (1 day, 7 days) are from Hyperliquid's docs. The request that lists validators is not in its API documentation.
+- A list row cannot know about a lockup: it says "Submit" and the page then says when.
+- An older copy of the app, or another tool, could send a move's second step before its first; the page then says which step was carried out and offers the other again.
+- A move made with no wallet connected names no proposer in its documents, so in link and file mode it is shown as two proposals.
+- The move's page with browser storage blocked, the sixth return, and a first step refused by Hyperliquid at submit time were not produced in a browser: the first was read in the code, the other two are covered by the flow and judge tests.
+- A mainnet treasury's Stake form was not opened in a browser.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
