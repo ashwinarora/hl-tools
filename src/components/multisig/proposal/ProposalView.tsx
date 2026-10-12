@@ -682,6 +682,9 @@ export function ProposalView({
 							</Card>
 							{ACTIONABLE.has(stage.phase) && (
 								<YourPart
+									// what one wallet did ("Signature added", a refusal) is not
+									// said to the next one that connects
+									key={wallet.address ?? "nobody"}
 									proposal={proposal}
 									stage={stage}
 									wallet={wallet}
