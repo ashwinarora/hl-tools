@@ -1083,7 +1083,7 @@ New test files: `multisig/model/relay/positions.test.ts`, `supabase/tests/160_ob
 |---|---|
 | For every treasury of 1 to 10 signers, every number that must sign and every number of signers against it, with and without the finaliser among them (880 combinations): held up exactly when the signers left are fewer than must sign ("cannot pass"), or else when the finaliser said no; never with nobody against it | ✅ |
 | A no counts only from somebody who is a signer now, and once per signer | ✅ |
-| The approved sentences, word for word: one signer said no and it can still pass (naming who still has to sign); too many said no; the finaliser said no, as the others and as the finaliser read it; "You said no, 2 hours ago."; the amber line above Sign and Submit | ✅ |
+| Every sentence, exact: one signer said no and it can still pass (naming who still has to sign); too many said no; the finaliser said no, as the others and as the finaliser read it; "You said no, 2 hours ago."; the amber line above Sign and Submit | ✅ |
 | No sentence says declined, rejected, vetoed, cancelled or blocked, none uses "he" or "she", and none makes a forbidden claim | ✅ |
 | The page's states: still "Collecting" or "Ready" while it can pass, and the finaliser can still submit; "Cannot pass" and "Cannot be submitted" stay signable; the finaliser who said no can neither sign nor submit until the no is taken back; what ended a proposal (accepted, withdrawn, expired, refused) is said over any no | ✅ |
 | The inbox: a proposal you said no to no longer needs you; a held-up one needs nobody and sits under "Cannot be finished"; it is still one of the treasury's open proposals | ✅ |
