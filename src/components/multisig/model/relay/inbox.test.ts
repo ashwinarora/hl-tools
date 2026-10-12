@@ -8,6 +8,7 @@ import {
 	groupInbox,
 	type InboxEntry,
 	inboxGroup,
+	moveEntry,
 	needsMe,
 	orderMatters,
 	SECTION_TITLE,
@@ -245,5 +246,47 @@ describe("a proposal somebody said no to", () => {
 		const e = entry({ finaliser: B, counted: [A] });
 		expect(inboxGroup(e, B)).toBe("finish");
 		expect(inboxGroup(e, C)).toBe("sign");
+	});
+});
+
+describe("the two steps of a move as one entry", () => {
+	const move = (first: Partial<InboxEntry>, second: Partial<InboxEntry>) => {
+		const a = entry({ finaliser: B, ...first });
+		return { ...a, ...moveEntry(a, entry({ finaliser: B, ...second })) };
+	};
+
+	it("counts as signed by those who signed both steps", () => {
+		const m = move({ counted: [A, C] }, { counted: [A] });
+		expect(m.counted).toEqual([A]);
+		// C signed one of the two: the move still wants C's signature
+		expect(inboxGroup(m, C)).toBe("sign");
+		expect(inboxGroup(m, A)).toBe("waiting");
+		// the finaliser's signature on both would complete both: one click finishes
+		expect(inboxGroup(m, B)).toBe("finish");
+		expect(finishLabel(m, B)).toBe("Sign and submit");
+	});
+	it("is ready when both steps are", () => {
+		const m = move({ counted: [A, C] }, { counted: [C, A] });
+		expect(inboxGroup(m, B)).toBe("finish");
+		expect(finishLabel(m, B)).toBe("Submit");
+		expect(inboxGroup(m, A)).toBe("waiting");
+	});
+	it("is one thing to do, not two", () => {
+		const m = move({}, {});
+		expect(countNeeds([m], A, "testnet")).toBe(1);
+		expect(countOpen([m], "testnet", TREASURY)).toBe(1);
+	});
+	it("what holds up either step holds up the move", () => {
+		expect(inboxGroup(move({}, { stuck: true }), A)).toBe("dead");
+		expect(inboxGroup(move({ blocked: "cannot-pass" }, {}), A)).toBe("dead");
+		expect(move({}, { blocked: "finaliser-no" }).blocked).toBe("finaliser-no");
+		expect(inboxGroup(move({}, { frozen: true }), A)).toBeNull();
+		// one step closed: the move as a whole is no longer in the list
+		expect(inboxGroup(move({}, { open: false }), A)).toBeNull();
+	});
+	it("a no to either step is a no to the move, said once", () => {
+		const m = move({ objected: [C] }, { objected: [C, A] });
+		expect(m.objected).toEqual([C, A]);
+		expect(inboxGroup(m, C)).toBe("waiting");
 	});
 });

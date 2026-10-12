@@ -13,6 +13,7 @@ import {
 	deriveMoveStage,
 	type MovePhase,
 	moveSentence,
+	pairMoves,
 	type StepView,
 } from "./move";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
@@ -324,5 +325,86 @@ describe("two real steps, judged as their own pages judge them", () => {
 			await view(signed[1], A),
 		]);
 		expect([asA.toSign, asA.signed, asA.canExecute]).toEqual([[], 2, false]);
+	});
+});
+
+describe("a list with the two steps of a move made one item", () => {
+	const HEAD = { signatureChainId: "0x3e6", hyperliquidChain: "Testnet" };
+	const moveIn = (nonce: number) =>
+		makeProposal({
+			action: { type: "cDeposit", ...HEAD, wei: 5_000_000_000, nonce },
+			nonce,
+		});
+	const stake = (nonce: number) =>
+		makeProposal({
+			action: {
+				type: "tokenDelegate",
+				...HEAD,
+				validator: X,
+				wei: 10_000_000_000,
+				isUndelegate: false,
+				nonce,
+			},
+			nonce,
+		});
+	const send = makeProposal({ title: "a send" });
+	interface Item {
+		proposal: Proposal;
+		proposedBy: string | null;
+		label: string;
+	}
+	const item = (
+		proposal: Proposal,
+		label: string,
+		proposedBy: string | null = A,
+	): Item => ({ proposal, proposedBy, label });
+	const merge = (first: Item, second: Item, move: Move): Item => ({
+		...first,
+		label: `${move.kind}(${first.label}+${second.label})`,
+	});
+	const labels = (items: Item[]) => pairMoves(items, merge).map((i) => i.label);
+
+	it("puts the move where its first-listed step was, whichever step that is", () => {
+		const [one, two] = tieSteps(moveIn(NONCE), stake(NONCE + 1));
+		expect(
+			labels([item(send, "send"), item(one, "1"), item(two, "2")]),
+		).toEqual(["send", "stake(1+2)"]);
+		// listed newest first, as the relay gives them
+		expect(
+			labels([item(two, "2"), item(send, "send"), item(one, "1")]),
+		).toEqual(["stake(1+2)", "send"]);
+	});
+	it("leaves a step alone whose other step is not in the list", () => {
+		const [one, two] = tieSteps(moveIn(NONCE), stake(NONCE + 1));
+		expect(labels([item(two, "2"), item(send, "send")])).toEqual(["2", "send"]);
+		expect(labels([item(one, "1")])).toEqual(["1"]);
+	});
+	it("takes the relay's word for who proposed each, and ties nothing it contradicts", () => {
+		const [one, two] = tieSteps(moveIn(NONCE), stake(NONCE + 1));
+		expect(labels([item(one, "1", A), item(two, "2", B)])).toEqual(["1", "2"]);
+		// without the relay the documents have to name the same proposer, and these name none
+		expect(labels([item(one, "1", null), item(two, "2", null)])).toEqual([
+			"1",
+			"2",
+		]);
+	});
+	it("ties nothing that is not one of the staking moves", () => {
+		const [fake, stakeStep] = tieSteps(send, stake(NONCE + 1));
+		expect(labels([item(fake, "send"), item(stakeStep, "2")])).toEqual([
+			"send",
+			"2",
+		]);
+	});
+	it("two moves in one list stay two", () => {
+		const a = tieSteps(moveIn(NONCE), stake(NONCE + 1));
+		const b = tieSteps(moveIn(NONCE + 10), stake(NONCE + 11));
+		expect(
+			labels([
+				item(a[0], "a1"),
+				item(b[0], "b1"),
+				item(a[1], "a2"),
+				item(b[1], "b2"),
+			]),
+		).toEqual(["stake(a1+a2)", "stake(b1+b2)"]);
 	});
 });

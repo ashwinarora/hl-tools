@@ -1,4 +1,4 @@
-import type { Address } from "@hl-tools/core";
+import { type Address, stepNumber } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { FLAG_TEXT } from "#/components/tools/multisig/EnvelopeView";
 import { closes } from "../model/nonce";
@@ -35,6 +35,7 @@ export function ProposalRows({
 				const closing =
 					p.open && !p.stuck && !p.frozen ? closes(p.row.expiresAt, now) : null;
 				const against = p.objected.includes(me);
+				const step = p.steps ? null : stepNumber(p.proposal);
 				return (
 					<Link
 						key={`${p.network}:${p.treasury}:${p.digest}`}
@@ -49,6 +50,18 @@ export function ProposalRows({
 							<span className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
 								{treasuryName && <span>{treasuryName(p)}</span>}
 								{p.title && <span>{p.title}</span>}
+								{p.steps ? (
+									<Tag title="Two proposals that are one move: signed together, sent one after the other.">
+										2 steps
+									</Tag>
+								) : (
+									step !== null && (
+										// the other step is done or closed: this one is what is left
+										<Tag title="One step of a move of two. The other step is no longer waiting.">
+											step {step} of 2
+										</Tag>
+									)
+								)}
 								<span>
 									by{" "}
 									{p.createdBy === me ? (

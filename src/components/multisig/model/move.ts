@@ -9,7 +9,13 @@
  * sent unless step 1 was carried out, and step 1 is not sent alone when step
  * 2 can no longer follow.
  */
-import type { Move, Validator } from "@hl-tools/core";
+import {
+	judgeMove,
+	type Move,
+	otherStep,
+	type Proposal,
+	type Validator,
+} from "@hl-tools/core";
 import type { Phase, Stage } from "./stage";
 import { hype, validatorLabel } from "./staking";
 
@@ -240,4 +246,57 @@ export function deriveMoveStage(
 		detail: (pending.find((s) => s.stage.phase !== "ready") ?? one).stage
 			.detail,
 	};
+}
+
+// ------------------------------------------------------------------- lists
+
+/** What a list has to hold of an item for a move to be told: the document, and who proposed it. */
+export interface Listed {
+	readonly proposal: Proposal;
+	/**
+	 * Who proposed it, by the relay's word where the list comes from the relay
+	 * (it stamps that itself); null where there is only the document, whose
+	 * own `createdBy` is then compared.
+	 */
+	readonly proposedBy: string | null;
+}
+
+/**
+ * A list with the two steps of every move made one item, at the place of
+ * whichever step came first in the list. A step whose other step is not in
+ * the list, or with which it does not bear the claim out (`judgeMove`), stays
+ * as it is: it is then shown as one proposal, which it also is.
+ */
+export function pairMoves<T extends Listed>(
+	items: readonly T[],
+	merge: (first: T, second: T, move: Move) => T,
+): T[] {
+	const byDigest = new Map(items.map((item) => [item.proposal.digest, item]));
+	const taken = new Set<T>();
+	const out: T[] = [];
+	for (const item of items) {
+		if (taken.has(item)) continue;
+		const digest = otherStep(item.proposal);
+		const other = digest ? byDigest.get(digest) : undefined;
+		const move =
+			other && !taken.has(other)
+				? judgeMove(
+						item.proposal,
+						other.proposal,
+						item.proposedBy !== null && other.proposedBy !== null
+							? { a: item.proposedBy, b: other.proposedBy }
+							: undefined,
+					).move
+				: null;
+		if (!move || !other) {
+			out.push(item);
+			continue;
+		}
+		taken.add(other);
+		const firstIsItem = move.steps[0].digest === item.proposal.digest;
+		out.push(
+			merge(firstIsItem ? item : other, firstIsItem ? other : item, move),
+		);
+	}
+	return out;
 }

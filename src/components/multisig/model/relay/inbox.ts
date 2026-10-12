@@ -41,6 +41,30 @@ export interface InboxEntry {
 }
 
 /**
+ * The two steps of a move as one entry (model/move.ts). It asks of a signer
+ * what both steps ask: it counts as signed by those who signed both, it is
+ * open while both are, and what holds up either step holds up the move. The
+ * rest (who proposed, who finalises, the treasury) is the same for both, or
+ * they would not be a move.
+ */
+export function moveEntry(
+	first: InboxEntry,
+	second: InboxEntry,
+): Pick<
+	InboxEntry,
+	"counted" | "open" | "frozen" | "stuck" | "objected" | "blocked"
+> {
+	return {
+		counted: first.counted.filter((a) => second.counted.includes(a)),
+		open: first.open && second.open,
+		frozen: first.frozen || second.frozen,
+		stuck: first.stuck || second.stuck,
+		objected: [...new Set([...first.objected, ...second.objected])],
+		blocked: first.blocked ?? second.blocked,
+	};
+}
+
+/**
  * finish   you are the finaliser and can submit now (your own signature may be the last one missing)
  * sign     your signature is still wanted
  * waiting  nothing for you to do: you signed, or it is already ready and someone else finalises

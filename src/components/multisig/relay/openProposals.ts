@@ -13,8 +13,9 @@ import {
 	type RiskFlag,
 } from "@hl-tools/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { moveSentence, pairMoves } from "../model/move";
 import { assembleProposal, countedSigners } from "../model/relay/assemble";
-import type { InboxEntry } from "../model/relay/inbox";
+import { type InboxEntry, moveEntry } from "../model/relay/inbox";
 import { standing } from "../model/relay/positions";
 import type { ProposalRow } from "../model/relay/rows";
 import { finaliserLeft, refusedForGood } from "../model/stage";
@@ -29,6 +30,12 @@ export interface OpenProposal extends InboxEntry {
 	readonly line: string;
 	readonly title: string | null;
 	readonly flags: readonly RiskFlag[];
+	/**
+	 * Set on the one item that stands for a move: its two steps as they were
+	 * judged by themselves. The item's own fields are then the first step's,
+	 * except what `moveEntry` says of the two together.
+	 */
+	readonly steps?: readonly [OpenProposal, OpenProposal];
 }
 
 type Assembly = Awaited<ReturnType<typeof assembleProposal>>;
@@ -139,7 +146,24 @@ export function useOpenProposals() {
 					flags: described.flags,
 				});
 			}
-			return { items, unverified, issues };
+			// the two steps of a move are one item: one row, one thing to count
+			const listed = pairMoves(
+				items.map((item) => ({
+					item,
+					proposal: item.proposal,
+					proposedBy: item.createdBy,
+				})),
+				(first, second, move) => ({
+					...first,
+					item: {
+						...first.item,
+						...moveEntry(first.item, second.item),
+						line: moveSentence(move),
+						steps: [first.item, second.item] as const,
+					},
+				}),
+			).map((x) => x.item);
+			return { items: listed, unverified, issues };
 		},
 		staleTime: 5_000,
 		// a ping can be missed (a dropped connection): look again once a minute anyway
