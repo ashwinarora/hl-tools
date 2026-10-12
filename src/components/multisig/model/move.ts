@@ -19,7 +19,7 @@ import {
 	stepNumber,
 	type Validator,
 } from "@hl-tools/core";
-import type { Part } from "./parts";
+import { type Part, part, partsText, say } from "./parts";
 import type { Phase, Stage } from "./stage";
 import { hype, validatorLabel } from "./staking";
 
@@ -93,12 +93,22 @@ export interface StepView {
 	/** Signatures that count, and how many are needed (null while unknown). */
 	readonly have: number;
 	readonly need: number | null;
+	/**
+	 * Hyperliquid's staking history holds a step like this one, and the
+	 * explorer did not say whether it is this one (`stepRecord`): one such
+	 * step ("likely") or several ("unchecked"). Null or absent otherwise.
+	 */
+	readonly onRecord?: "likely" | "unchecked" | null;
 }
 
 export interface MoveStage {
 	readonly phase: MovePhase;
+	/** The two sentences as plain text (addresses shortened, moments in UTC). */
 	readonly headline: string;
 	readonly detail: string;
+	/** The same as parts, so a screen names an address and gives a moment in the reader's own time. */
+	readonly headlineParts: readonly Part[];
+	readonly detailParts: readonly Part[];
 	/** The steps still to be sent, by index, in order. Empty when nothing is to be sent. */
 	readonly toSend: readonly number[];
 	/** The steps the connected wallet can sign now. */
@@ -116,21 +126,32 @@ export interface MoveStage {
 	/** The move is over, one way or the other: nothing more to sign or send. */
 	readonly settled: boolean;
 	/**
-	 * The step (0 or 1) Hyperliquid answered "duplicate nonce" to: its number
-	 * had been used before, so it may be carried out already, by a submission
-	 * whose answer never got here. Nothing is then said to be "not carried
-	 * out". Null otherwise.
+	 * The step (0 or 1) that may be carried out already although nothing here
+	 * says so for certain: Hyperliquid answered "duplicate nonce" to it (its
+	 * number had been used before, possibly by a submission whose answer never
+	 * got here), or its staking history holds a step like it that the explorer
+	 * did not confirm. Such a step is never said to be "not carried out".
+	 * Null otherwise.
 	 */
 	readonly unsure: 0 | 1 | null;
 }
 
-/**
- * Refused with "duplicate nonce": whether the step was carried out is not
- * known from the answer, in either direction.
- */
-const mayBeDone = (s: StepView): boolean =>
-	s.stage.phase === "refused" &&
+const duplicate = (s: StepView): boolean =>
 	s.stage.failedAttempt?.id === "nonce-duplicate";
+/** Hyperliquid refused it for a reason of its own: that submission carried nothing out, and its number is spent. */
+const refusedForGood = (s: StepView): boolean =>
+	!!s.stage.failedAttempt && !duplicate(s);
+const likeOnRecord = (s: StepView): boolean =>
+	s.onRecord === "likely" || s.onRecord === "unchecked";
+/** Whether the step was carried out is not known, in either direction. */
+const mayBeDone = (s: StepView): boolean =>
+	duplicate(s) || (!refusedForGood(s) && likeOnRecord(s));
+
+/** Why a step that is over may have been carried out all the same. */
+const maybe = (s: StepView, n: 1 | 2): Part[] =>
+	duplicate(s)
+		? say`Step ${String(n)}: Hyperliquid answered "duplicate nonce" to it, so its number had been used by an earlier submission. If that one went through, the step is carried out already. Look at the treasury's staking history before proposing it again.`
+		: say`Step ${String(n)}: ${s.stage.headlineParts}. Hyperliquid's staking history shows a step like it, so it may have been carried out all the same: the explorer did not say. Look at the treasury's staking history before proposing it again.`;
 
 /**
  * Under "Your part" of a move that is over while the relay still holds a step
@@ -142,6 +163,21 @@ export const leftOpenNote = (canWithdraw: boolean): string =>
 		: "What is left of this move cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it and propose it again.";
 
 const count = (s: StepView) => `${s.have} of ${s.need ?? "?"}`;
+
+/** Two sentences, as parts and as plain text. */
+const told = (
+	head: readonly Part[] | string,
+	body: readonly Part[] | string,
+) => {
+	const headlineParts = typeof head === "string" ? [part(head)] : head;
+	const detailParts = typeof body === "string" ? [part(body)] : body;
+	return {
+		headline: partsText(headlineParts),
+		detail: partsText(detailParts),
+		headlineParts,
+		detailParts,
+	};
+};
 
 export function deriveMoveStage(
 	steps: readonly [StepView, StepView],
@@ -170,16 +206,17 @@ export function deriveMoveStage(
 			...base,
 			settled: false,
 			phase: "judging",
-			headline: "Checking signatures…",
-			detail: "Recovering every signer and fetching the live signer set.",
+			...told(
+				"Checking signatures…",
+				"Recovering every signer and fetching the live signer set.",
+			),
 			executeReason: "Checking signatures…",
 		};
 	if (first === "done" && second === "done")
 		return {
 			...base,
 			phase: "done",
-			headline: "Done · both steps were carried out",
-			detail: "Nothing more to sign.",
+			...told("Done · both steps were carried out", "Nothing more to sign."),
 			executeReason: "Both steps were carried out.",
 		};
 	if (first === "over" && mayBeDone(one))
@@ -187,17 +224,58 @@ export function deriveMoveStage(
 			...base,
 			phase: "halted",
 			unsure: 0,
-			headline:
+			...told(
 				"Step 1 may be carried out already · look before proposing again",
-			detail: `Step 1: ${one.stage.detail} Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.`,
+				say`${maybe(one, 1)} Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.`,
+			),
 			executeReason: "Step 1 may be carried out already.",
+		};
+	if (first === "over" && second === "done")
+		// another page or tool sent the second step by itself
+		return {
+			...base,
+			phase: "halted",
+			...told(
+				"Step 2 was carried out, step 1 was not",
+				say`Step 1: ${one.stage.headlineParts}. The second step was sent by itself, from another page or tool. Propose the first again if it is still wanted.`,
+			),
+			executeReason: "Step 1 was not carried out.",
+		};
+	if (first === "over" && second === "over" && mayBeDone(two))
+		return {
+			...base,
+			phase: "halted",
+			unsure: 1,
+			...told(
+				"Step 1 was not carried out · step 2 may have been",
+				say`Step 1: ${one.stage.headlineParts}. ${maybe(two, 2)}`,
+			),
+			executeReason: "Step 1 was not carried out.",
+		};
+	if (first === "over" && second === "over")
+		// e.g. withdrawn or lapsed together: neither is "left where it is"
+		return {
+			...base,
+			phase: "halted",
+			...(one.stage.phase === two.stage.phase
+				? told(
+						say`${one.stage.headlineParts} · neither step was carried out`,
+						"Propose the move again if it is still wanted.",
+					)
+				: told(
+						"Neither step was carried out",
+						say`Step 1: ${one.stage.headlineParts}. Step 2: ${two.stage.headlineParts}. Propose the move again if it is still wanted.`,
+					)),
+			executeReason: "Neither step was carried out.",
 		};
 	if (first === "over")
 		return {
 			...base,
 			phase: "halted",
-			headline: "Step 1 was not carried out, so step 2 is not sent",
-			detail: `Step 1: ${one.stage.headline}. The second step makes sense only after the first, so it stays where it is. Propose the move again if it is still wanted.`,
+			...told(
+				"Step 1 was not carried out, so step 2 is not sent",
+				say`Step 1: ${one.stage.headlineParts}. The second step makes sense only after the first, so it is not sent. Propose the move again if it is still wanted.`,
+			),
 			executeReason: "Step 1 was not carried out.",
 		};
 	if (first === "done" && second === "over" && mayBeDone(two))
@@ -205,24 +283,27 @@ export function deriveMoveStage(
 			...base,
 			phase: "broken",
 			unsure: 1,
-			headline: "Step 1 was carried out · step 2 may be too",
-			detail: `Step 2: ${two.stage.detail}`,
+			...told("Step 1 was carried out · step 2 may be too", maybe(two, 2)),
 			executeReason: "Step 2 may be carried out already.",
 		};
 	if (first === "done" && second === "over")
 		return {
 			...base,
 			phase: "broken",
-			headline: "Step 1 was carried out, step 2 was not",
-			detail: `Step 2: ${two.stage.headline}. Proposing the move again makes only the step that is left.`,
+			...told(
+				"Step 1 was carried out, step 2 was not",
+				say`Step 2: ${two.stage.headlineParts}. Proposing it again makes only the step that is left.`,
+			),
 			executeReason: "Step 2 will not be carried out.",
 		};
 	if (first === "open" && second === "over")
 		return {
 			...base,
 			phase: "halted",
-			headline: "Step 2 can no longer follow, so step 1 is not sent",
-			detail: `Step 2: ${two.stage.headline}. Sending the first step alone would leave the move half done. Propose the move again if it is still wanted.`,
+			...told(
+				"Step 2 can no longer follow, so step 1 is not sent",
+				say`Step 2: ${two.stage.headlineParts}. Sending the first step alone would leave the move half done. Propose the move again if it is still wanted.`,
+			),
 			executeReason: "Step 2 can no longer follow.",
 		};
 
@@ -238,6 +319,8 @@ export function deriveMoveStage(
 		timed.length > 0 && timed.every((s) => s.stage.opensAt !== null)
 			? Math.max(...timed.map((s) => s.stage.opensAt as number))
 			: null;
+	// a step still open that the staking history may already hold
+	const seen = pending.find(likeOnRecord);
 	const shared = {
 		toSend: open,
 		toSign,
@@ -253,47 +336,74 @@ export function deriveMoveStage(
 		),
 		signed,
 		settled: false,
-		unsure: null,
+		unsure: (seen ? steps.indexOf(seen) : null) as 0 | 1 | null,
 	};
+	const phase: MovePhase = pending.some((s) => HELD_BY_A_NO.has(s.stage.phase))
+		? "held"
+		: first === "done"
+			? "half"
+			: pending.every((s) => s.stage.phase === "ready")
+				? "ready"
+				: "collecting";
+	if (seen) {
+		// sent from a page that never got the answer (closed, reloaded, offline):
+		// the step is listed as waiting although it may be done
+		const n = String(steps.indexOf(seen) + 1);
+		return {
+			...shared,
+			phase,
+			...told(
+				first === "done"
+					? "Step 1 is carried out · step 2 may be too"
+					: `Step ${n} may be carried out already`,
+				`Hyperliquid's staking history shows a step like step ${n}, made after this move was proposed. It may be this step, sent from a page that never got the answer: the explorer did not say. Once it does, the step is marked carried out here. Sending it again cannot carry it out twice, because Hyperliquid takes a proposal's number once.`,
+			),
+		};
+	}
 	const held = pending.find((s) => HELD_BY_A_NO.has(s.stage.phase));
 	if (held)
 		return {
 			...shared,
-			phase: "held",
-			headline: held.stage.headline,
-			detail: `${pending.length > 1 ? `Step ${steps.indexOf(held) + 1} of this move: ` : ""}${held.stage.detail}`,
+			phase,
+			...told(
+				held.stage.headlineParts,
+				say`${pending.length > 1 ? `Step ${steps.indexOf(held) + 1} of this move: ` : ""}${held.stage.detailParts}`,
+			),
 		};
 	const ready = pending.every((s) => s.stage.phase === "ready");
 	if (first === "done") {
 		// step 1 has landed: only step 2 is left
 		return {
 			...shared,
-			phase: "half",
-			headline: ready
-				? "Step 1 is carried out · step 2 is ready to be sent"
-				: `Step 1 is carried out · step 2 has ${count(two)} signatures`,
-			detail: two.stage.detail,
+			phase,
+			...told(
+				ready
+					? "Step 1 is carried out · step 2 is ready to be sent"
+					: `Step 1 is carried out · step 2 has ${count(two)} signatures`,
+				two.stage.detailParts,
+			),
 		};
 	}
 	if (ready)
 		return {
 			...shared,
-			phase: "ready",
-			headline:
+			phase,
+			...told(
 				pending.length === 2
 					? "Ready · both steps have their signatures"
 					: "Ready · the step that is left has its signatures",
-			detail: one.stage.detail,
+				one.stage.detailParts,
+			),
 		};
 	return {
 		...shared,
-		phase: "collecting",
-		headline:
+		phase,
+		...told(
 			pending.length === 2
 				? `Collecting signatures · step 1: ${count(one)} · step 2: ${count(two)}`
 				: `Collecting signatures · ${count(pending[0] as StepView)}`,
-		detail: (pending.find((s) => s.stage.phase !== "ready") ?? one).stage
-			.detail,
+			(pending.find((s) => s.stage.phase !== "ready") ?? one).stage.detailParts,
+		),
 	};
 }
 

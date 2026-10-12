@@ -27,6 +27,7 @@ import { type Phase, shortAddress } from "../model/stage";
 import { stepSentence } from "../model/staking";
 import { untilWords } from "../model/time";
 import { TreasuryNames, Who } from "../names/Names";
+import { Sentence } from "../names/Sentence";
 import {
 	addObjections,
 	type ProposalKey,
@@ -93,6 +94,10 @@ const keyOf = (p: Proposal): ProposalKey => ({
 	treasury: p.payload.multiSigUser,
 	digest: p.digest,
 });
+
+/** "once", "twice", "4 times". */
+const times = (n: number): string =>
+	n === 1 ? "once" : n === 2 ? "twice" : `${n} times`;
 
 /** An amber line under an action: something to know before agreeing. */
 function Amber({ children }: { children: React.ReactNode }) {
@@ -255,7 +260,9 @@ export function MoveView({
 						tone={TONE[stage.phase]}
 						title={
 							<span className="inline-flex flex-wrap items-center gap-1.5">
-								{stage.headline}
+								<span>
+									<Sentence parts={stage.headlineParts} />
+								</span>
 								<Help k="moveSteps" />
 							</span>
 						}
@@ -265,7 +272,7 @@ export function MoveView({
 								: undefined
 						}
 					>
-						{stage.detail}
+						<Sentence parts={stage.detailParts} />
 					</Callout>
 					{docs.map(
 						(d, i) =>
@@ -438,7 +445,10 @@ function StepCard({
 	// "duplicate nonce": the step's number was used before, so it may be
 	// carried out already; what the staking history shows is said here too
 	const duplicate = stage.failedAttempt?.id === "nonce-duplicate";
-	const before = duplicate ? "proposing it again" : "submitting";
+	// what the staking history holds is said unless the step is done, or was
+	// refused for a reason of Hyperliquid's own (that submission did nothing)
+	const ask = !done && (!stage.failedAttempt || duplicate);
+	const before = open ? "submitting" : "proposing it again";
 	return (
 		<Card
 			title={`Step ${number} of 2`}
@@ -454,7 +464,7 @@ function StepCard({
 									: "gray"
 					}
 				>
-					{done ? "carried out" : stage.headline}
+					{done ? "carried out" : <Sentence parts={stage.headlineParts} />}
 				</Tag>
 			}
 		>
@@ -482,7 +492,7 @@ function StepCard({
 				</p>
 			))}
 			{open && staking.noPay && <Amber>{staking.noPay}</Amber>}
-			{(open || duplicate) && onRecord?.kind === "likely" && (
+			{ask && onRecord?.kind === "likely" && (
 				<Amber>
 					Hyperliquid's staking history shows a step like this one on{" "}
 					<When at={onRecord.time} />. It may be this step, already carried out:
@@ -498,7 +508,7 @@ function StepCard({
 					before {before}.
 				</Amber>
 			)}
-			{(open || duplicate) && onRecord?.kind === "unchecked" && (
+			{ask && onRecord?.kind === "unchecked" && (
 				<Amber>
 					Hyperliquid's staking history shows several steps like this one, and
 					the explorer did not say whether one of them is this step. Look at the
@@ -511,12 +521,16 @@ function StepCard({
 					className="mt-3"
 					title={`Hyperliquid refused this step: ${stage.failedAttempt.message}`}
 				>
-					{duplicate ? stage.detail : refusalNote(stage.failedAttempt)}
+					{duplicate ? (
+						<Sentence parts={stage.detailParts} />
+					) : (
+						refusalNote(stage.failedAttempt)
+					)}
 				</Callout>
 			)}
 			{!done && !open && !stage.failedAttempt && (
 				<p className="mt-2.5 text-[13px] text-muted-foreground">
-					{stage.detail}
+					<Sentence parts={stage.detailParts} />
 				</p>
 			)}
 			{step.tx && (
@@ -757,7 +771,7 @@ function MovePart({
 	const note = over
 		? leftOpenNote(can.withdraw.length > 0)
 		: stage.canExecute
-			? `Your wallet is asked ${stage.prompts} times. Then step ${(stage.toSend[0] ?? 0) + 1} is sent${toSend.length > 1 ? ", and step 2 once Hyperliquid has accepted it" : ""}.`
+			? `Your wallet is asked ${times(stage.prompts)}. Then step ${(stage.toSend[0] ?? 0) + 1} is sent${toSend.length > 1 ? ", and step 2 once Hyperliquid has accepted it" : ""}.`
 			: stage.canSign
 				? `${toSign.length > 1 ? "One wallet prompt for each step. " : ""}${signHint(toSign[0]?.proposal.payload.action ?? {})}`
 				: stage.signed > 0 && stage.toSign.length === 0

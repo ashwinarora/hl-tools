@@ -157,6 +157,10 @@ export function useMoveStep(
 		ready,
 		have: ready?.have ?? 0,
 		need: ready?.need ?? null,
+		onRecord:
+			onRecord?.kind === "likely" || onRecord?.kind === "unchecked"
+				? onRecord.kind
+				: null,
 		state,
 		parsed,
 		description,

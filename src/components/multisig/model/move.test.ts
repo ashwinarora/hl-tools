@@ -22,7 +22,7 @@ import {
 	sayOncePerMove,
 	stepMark,
 } from "./move";
-import type { Part } from "./parts";
+import { type Part, part } from "./parts";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
 import { deriveStage, type Phase, type Stage } from "./stage";
 
@@ -35,22 +35,29 @@ const step = (
 	over: Partial<Stage> = {},
 	have = 1,
 	need: number | null = 2,
-): StepView => ({
-	stage: {
-		phase,
-		headline: `[${phase}]`,
-		detail: `<${phase}>`,
-		canSign: false,
-		hasSigned: false,
-		canExecute: false,
-		executeAddsSignature: false,
-		executeReason: `no: ${phase}`,
-		opensAt: null,
-		...over,
-	} as Stage,
-	have,
-	need,
-});
+): StepView => {
+	const headline = over.headline ?? `[${phase}]`;
+	const detail = over.detail ?? `<${phase}>`;
+	return {
+		stage: {
+			phase,
+			headline,
+			detail,
+			headlineParts: [part(headline)],
+			detailParts: [part(detail)],
+			canSign: false,
+			hasSigned: false,
+			canExecute: false,
+			executeAddsSignature: false,
+			executeReason: `no: ${phase}`,
+			opensAt: null,
+			failedAttempt: null,
+			...over,
+		} as Stage,
+		have,
+		need,
+	};
+};
 const collecting = (over: Partial<Stage> = {}, have = 1) =>
 	step("collecting", { canSign: true, ...over }, have);
 const ready = (over: Partial<Stage> = {}) =>
@@ -134,26 +141,26 @@ describe("what two steps mean together", () => {
 		}
 	});
 
+	const refusedWith = (id: string) =>
+		step("refused", { failedAttempt: { id } as Stage["failedAttempt"] });
+
 	it('a step answered "duplicate nonce" is never said to be not carried out', () => {
-		const duplicate = (detail: string) =>
-			step("refused", {
-				detail,
-				failedAttempt: { id: "nonce-duplicate" } as Stage["failedAttempt"],
-			});
 		// its number was used before: by a refusal, or by a submission that
 		// went through and whose answer never got here
-		const one = deriveMoveStage([duplicate("Look first."), ready()]);
+		const one = deriveMoveStage([refusedWith("nonce-duplicate"), ready()]);
 		expect([one.phase, one.unsure, one.settled]).toEqual(["halted", 0, true]);
 		expect(one.headline).toBe(
 			"Step 1 may be carried out already · look before proposing again",
 		);
 		expect(one.detail).toBe(
-			"Step 1: Look first. Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.",
+			`Step 1: Hyperliquid answered "duplicate nonce" to it, so its number had been used by an earlier submission. If that one went through, the step is carried out already. Look at the treasury's staking history before proposing it again. Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.`,
 		);
-		const two = deriveMoveStage([done(), duplicate("Look first.")]);
+		const two = deriveMoveStage([done(), refusedWith("nonce-duplicate")]);
 		expect([two.phase, two.unsure]).toEqual(["broken", 1]);
 		expect(two.headline).toBe("Step 1 was carried out · step 2 may be too");
-		expect(two.detail).toBe("Step 2: Look first.");
+		expect(two.detail).toMatch(
+			/^Step 2: Hyperliquid answered "duplicate nonce"/,
+		);
 		for (const m of [one, two])
 			expect(`${m.headline} ${m.detail} ${m.executeReason}`).not.toContain(
 				"not carried out",
@@ -166,6 +173,96 @@ describe("what two steps mean together", () => {
 		]);
 		expect(deriveMoveStage([done(), step("refused")]).unsure).toBeNull();
 		expect(deriveMoveStage([ready(), ready()]).unsure).toBeNull();
+	});
+
+	it("a step the staking history may already hold is not called waiting, nor not carried out", () => {
+		const like = (
+			s: StepView,
+			onRecord: StepView["onRecord"] = "likely",
+		): StepView => ({ ...s, onRecord });
+		// sent from a page that never got the answer: still open here
+		const open = deriveMoveStage([done(), like(ready())]);
+		expect([open.phase, open.unsure, open.settled, open.canExecute]).toEqual([
+			"half",
+			1,
+			false,
+			true,
+		]);
+		expect(open.headline).toBe("Step 1 is carried out · step 2 may be too");
+		expect(open.detail).toBe(
+			"Hyperliquid's staking history shows a step like step 2, made after this move was proposed. It may be this step, sent from a page that never got the answer: the explorer did not say. Once it does, the step is marked carried out here. Sending it again cannot carry it out twice, because Hyperliquid takes a proposal's number once.",
+		);
+		const early = deriveMoveStage([like(ready(), "unchecked"), ready()]);
+		expect([early.phase, early.unsure, early.headline]).toEqual([
+			"ready",
+			0,
+			"Step 1 may be carried out already",
+		]);
+		// withdrawn or lapsed after it was sent: it may have been carried out all the same
+		const gone = deriveMoveStage([done(), like(step("withdrawn"))]);
+		expect([gone.phase, gone.unsure, gone.headline]).toEqual([
+			"broken",
+			1,
+			"Step 1 was carried out · step 2 may be too",
+		]);
+		expect(gone.detail).toBe(
+			"Step 2: [withdrawn]. Hyperliquid's staking history shows a step like it, so it may have been carried out all the same: the explorer did not say. Look at the treasury's staking history before proposing it again.",
+		);
+		const first = deriveMoveStage([like(step("expired")), step("expired")]);
+		expect([first.phase, first.unsure]).toEqual(["halted", 0]);
+		const second = deriveMoveStage([step("refused"), like(step("expired"))]);
+		expect([second.unsure, second.headline]).toEqual([
+			1,
+			"Step 1 was not carried out · step 2 may have been",
+		]);
+		// refused for a reason of Hyperliquid's own: that submission carried
+		// nothing out and the number is spent, whatever else the history holds
+		const refused = deriveMoveStage([
+			done(),
+			like(refusedWith("stake-balance")),
+		]);
+		expect([refused.unsure, refused.headline]).toEqual([
+			null,
+			"Step 1 was carried out, step 2 was not",
+		]);
+		// nothing like it on record: nothing is said
+		expect(deriveMoveStage([done(), like(ready(), null)]).unsure).toBeNull();
+	});
+
+	it("both steps over together are not told as one waiting for the other", () => {
+		const both = deriveMoveStage([step("withdrawn"), step("withdrawn")]);
+		expect(both.headline).toBe("[withdrawn] · neither step was carried out");
+		expect(both.detail).toBe("Propose the move again if it is still wanted.");
+		expect(`${both.headline} ${both.detail}`).not.toMatch(/stays|is not sent/);
+		const mixed = deriveMoveStage([step("refused"), step("expired")]);
+		expect(mixed.headline).toBe("Neither step was carried out");
+		expect(mixed.detail).toBe(
+			"Step 1: [refused]. Step 2: [expired]. Propose the move again if it is still wanted.",
+		);
+		// the second step sent by itself, from another page or tool
+		const backwards = deriveMoveStage([step("expired"), done()]);
+		expect([backwards.phase, backwards.headline]).toEqual([
+			"halted",
+			"Step 2 was carried out, step 1 was not",
+		]);
+	});
+
+	it("names and moments stay parts, so the page shows a nickname and the reader's own time", () => {
+		const who = { text: "0xaaaa…aaaa", who: "0xaaaa" };
+		const when = { text: "2026-10-14 17:24 UTC", when: 1_792_000_000_000 };
+		const withdrawn = step("withdrawn", {
+			headlineParts: [part("Withdrawn by the proposer, "), who],
+		} as Partial<Stage>);
+		const m = deriveMoveStage([withdrawn, withdrawn]);
+		expect(m.headlineParts).toContainEqual(who);
+		const waiting = collecting({
+			detailParts: [part("you can still sign · submittable until "), when],
+		} as Partial<Stage>);
+		const c = deriveMoveStage([waiting, collecting()]);
+		expect(c.detailParts).toContainEqual(when);
+		expect(c.detail).toBe(
+			"you can still sign · submittable until 2026-10-14 17:24 UTC",
+		);
 	});
 
 	it("a move that is over but still open on the relay says who can clear it", () => {
@@ -281,10 +378,10 @@ describe("what two steps mean together", () => {
 
 	it("what stopped a move is said with the step it stopped at", () => {
 		expect(deriveMoveStage([step("refused"), ready()]).detail).toBe(
-			"Step 1: [refused]. The second step makes sense only after the first, so it stays where it is. Propose the move again if it is still wanted.",
+			"Step 1: [refused]. The second step makes sense only after the first, so it is not sent. Propose the move again if it is still wanted.",
 		);
 		expect(deriveMoveStage([done(), step("refused")]).detail).toBe(
-			"Step 2: [refused]. Proposing the move again makes only the step that is left.",
+			"Step 2: [refused]. Proposing it again makes only the step that is left.",
 		);
 	});
 
