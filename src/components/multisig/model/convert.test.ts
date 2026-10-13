@@ -145,6 +145,33 @@ describe("runConvert", () => {
 		});
 		expect(d.posted).toEqual([]);
 	});
+	it("sends nothing either when the signer hands back another key's signature without a word", async () => {
+		// a signer that was told to expect the wrong account raises no issue;
+		// the check where the request is sent is the one that counts
+		const asStranger = (action: Parameters<typeof signUserAction>[0]) =>
+			signUserAction(action, viemSigner(strangerKey), {
+				expectedSigner: strangerKey.address.toLowerCase() as typeof TREASURY,
+			});
+		const d = deps({ sign: asStranger });
+		const out = await runConvert(input, d);
+		expect(out).toEqual({
+			kind: "wrong-key",
+			signedBy: strangerKey.address.toLowerCase(),
+		});
+		expect(d.posted).toEqual([]);
+		// and one that says nothing about who signed is not believed
+		const mute = deps({
+			sign: async (action) => ({
+				...(await asStranger(action)),
+				recovered: null,
+			}),
+		});
+		expect(await runConvert(input, mute)).toEqual({
+			kind: "wrong-key",
+			signedBy: null,
+		});
+		expect(mute.posted).toEqual([]);
+	});
 	it("reports Hyperliquid's refusal by its id, and reads nothing", async () => {
 		const read = vi.fn(async () => POLICY);
 		const d = deps({

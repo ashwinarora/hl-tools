@@ -29,9 +29,11 @@ export interface WantedTx {
 /**
  * How the read of one account's list stands.
  *   unread   not asked for
- *   reading  on its way, for the first time or again
+ *   reading  the first read is on its way: there is no list yet
  *   failed   no list was ever read; the last try was at `at`
- *   read     a list is at hand; `at` is the last try, also one that failed
+ *   read     a list is at hand; `at` is the last try, also one that failed.
+ *            `again` while it is being read once more: what it already
+ *            holds stays answered, only what it lacks waits
  */
 export type ListState =
 	| { readonly kind: "unread" }
@@ -41,6 +43,7 @@ export type ListState =
 			readonly kind: "read";
 			readonly at: number;
 			readonly txs: ReadonlyMap<string, ExplorerTx>;
+			readonly again?: boolean;
 	  };
 
 /**
@@ -54,9 +57,14 @@ export function listState(i: {
 	readonly readAt: number;
 	readonly failedAt: number;
 }): ListState {
-	if (i.reading) return { kind: "reading" };
 	const at = Math.max(i.readAt, i.failedAt);
-	if (i.txs) return { kind: "read", at, txs: i.txs };
+	// a list at hand stays at hand while it is read again: an answer already
+	// given is never taken back for the length of a request
+	if (i.txs)
+		return i.reading
+			? { kind: "read", at, txs: i.txs, again: true }
+			: { kind: "read", at, txs: i.txs };
+	if (i.reading) return { kind: "reading" };
 	return i.failedAt > 0 ? { kind: "failed", at } : { kind: "unread" };
 }
 
@@ -91,6 +99,8 @@ export function listedTx(list: ListState, hash: string): ExplorerTx | null {
 export function routeTx(hash: string, since: number, list: ListState): TxRoute {
 	if (listedTx(list, hash)) return "listed";
 	if (list.kind === "unread" || list.kind === "reading") return "wait";
+	// being read once more: what it lacks waits for that answer
+	if (list.kind === "read" && list.again) return "wait";
 	// tried since it was wanted, and it is not there (or there is no list)
 	return list.at >= since ? "single" : "wait";
 }
@@ -106,6 +116,8 @@ export function rereadDue(
 	wanted: readonly { readonly hash: string; readonly since: number }[],
 ): boolean {
 	if (list.kind !== "read" && list.kind !== "failed") return false;
+	// one read at a time
+	if (list.kind === "read" && list.again) return false;
 	return wanted.some((w) => !listedTx(list, w.hash) && w.since > list.at);
 }
 

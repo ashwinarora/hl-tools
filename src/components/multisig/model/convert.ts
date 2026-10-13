@@ -119,6 +119,12 @@ export async function runConvert(
 				};
 	}
 
+	// Checked here too, where the request is sent, and not only by whoever
+	// signed: Hyperliquid converts the account that signed, so a signature
+	// that is not this account's must never be posted.
+	if (signed.recovered?.toLowerCase() !== input.account.toLowerCase())
+		return { kind: "wrong-key", signedBy: signed.recovered };
+
 	deps.onStep?.("sending");
 	let answer: UserActionResult;
 	try {

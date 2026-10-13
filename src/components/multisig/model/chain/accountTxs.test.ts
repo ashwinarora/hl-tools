@@ -148,10 +148,18 @@ describe("listState: a read, in the rule's terms", () => {
 		expect(
 			listState({ txs: undefined, reading: true, readAt: 0, failedAt: 0 }),
 		).toEqual({ kind: "reading" });
-		// a second read of a list that is at hand: wait for it
-		expect(listState({ txs, reading: true, readAt: 5, failedAt: 0 })).toEqual({
-			kind: "reading",
-		});
+	});
+	it("keeps a list at hand while it is read again: what it answered is not taken back", () => {
+		const again = listState({ txs, reading: true, readAt: 5, failedAt: 0 });
+		expect(again).toEqual({ kind: "read", at: 5, txs, again: true });
+		// the transaction it holds stays answered for the length of the request
+		expect(routeTx(hash(1), 1, again)).toBe("listed");
+		expect(listedTx(again, hash(1))?.block).toBe(730_000_001);
+		// the one that made it read again waits for the answer, with no request of its own
+		expect(routeTx(hash(9), 6, again)).toBe("wait");
+		expect(routeTx(hash(9), 1, again)).toBe("wait");
+		// and no second read is started on top of the first
+		expect(rereadDue(again, [{ hash: hash(9), since: 6 }])).toBe(false);
 	});
 	it("is read with the moment of the last try, also when that try failed and the older list is kept", () => {
 		expect(listState({ txs, reading: false, readAt: 5, failedAt: 0 })).toEqual({
