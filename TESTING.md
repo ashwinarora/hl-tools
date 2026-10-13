@@ -1610,14 +1610,14 @@ A second session read the code of both pull requests at `99cf0aa` without runnin
 
 | Suite | Command | Result |
 |---|---|---|
-| Core and app unit tests | `bun --bun run test` | 115 files, 3,059 tests, all passing |
+| Core and app unit tests | `bun --bun run test` | 116 files, 3,095 tests, all passing |
 | Core coverage | `bunx vitest run --coverage` in `packages/hl-core` | 100 % of lines, branches, functions and statements for its scope (three new modules included) |
 | Database | `bun run db:test` | 1,008 assertions, all passing (no relay change) |
 | Advisors | `supabase db advisors --local` | no issues |
 | Relay integration | `bun run test:relay` | 78 tests, all passing on the final run; see Limits for one that failed once |
 | Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
 
-New: core `multisig/when.ts`, `multisig/shown.ts`, `multisig/receipt.ts` with their tests; app `model/chain/knownState.ts` with its test.
+New: core `multisig/when.ts`, `multisig/shown.ts`, `multisig/receipt.ts` with their tests; app `model/chain/knownState.ts` with its test, and `model/chain/recorded.test.ts`, which runs actions exactly as Hyperliquid's explorer recorded them against the actions the forms build.
 
 ### What was fixed
 
@@ -1663,6 +1663,26 @@ New: core `multisig/when.ts`, `multisig/shown.ts`, `multisig/receipt.ts` with th
 | R6 | The propose form, every kind; the wizard; the inbox; Add a treasury; the privacy policy; the paste box with an address beginning `0x01`; the inspector with both samples | all render; the token form has its list; the address goes to the inspector; no draft was left behind |
 | R7 | Console | nothing of the app's |
 
+### After the reviewer's reply (same day)
+
+The fixed and left list went back to the reviewing session, which answered from the description alone (it had not been given the new code to read). Its points were judged the same way. What they changed:
+
+| Point | What was true | What it does now | Test |
+|---|---|---|---|
+| A receipt's answer is outside its signature | the check of D-1 proves who sent a proposal, not what Hyperliquid answered: whoever holds a true receipt could write "refused" beside the same signature, and a team would pay twice | the page of a proposal goes by Hyperliquid's own record: a row of the account's ledger tied to the proposal by its number counts over a reported refusal ("Carried out · the refusal reported here is not Hyperliquid's record"); a row like it that could not be compared takes "propose it again" away; and a proposal the relay does not hold is now followed in the ledger too, which is where such a copy arrives | `stage.test.ts`, `chain/match.test.ts` (`ledgerEvidence`), core `receipt.test.ts` |
+| Letters written right to left reorder what is next to them with no hidden character | dropping hidden characters did not stop a name from moving the address after it | a name inside a sentence is closed off in an isolate when it holds such letters (`isolated`), and inline names sit in `<bdi>` | `shown.test.ts`, `staking.test.ts`, `vault.test.ts` |
+| Invisible characters outside the four classes | Hangul fillers, the braille blank, variation selectors, the combining grapheme joiner, private-use characters and halves of surrogate pairs survived | all dropped; a pile of combining marks is cut to three per letter | `shown.test.ts` |
+| Cleaning twice gave another text | composing before dropping left a letter and its accent apart until the second pass, and a title is cleaned when made and again when read | dropped first, composed after; the same text however often | `shown.test.ts` |
+| Half a surrogate pair in the feed | `encodeURIComponent`, put into the explorer links by this round, throws on one | dropped before encoding; a name is cut by whole characters | `chain/columns.test.ts`, `vault.test.ts` |
+| A vault can name itself "HLP" | in the Vaults table it read like Hyperliquid's own | the real one is told by its address and tagged "Hyperliquid's own vault"; any other name is shown as a quotation | `vault.test.ts`, browser |
+| Orders of six to ten signatures | only the copy's own order was tried | also with the finaliser's signature last (where it is at the moment of sending) and in the signers' sorted order; the budget is 3,200, enough for ten signers | core `receipt.test.ts` |
+| The mode switch | not shown that a receipt for one is recognised | the accepted switches recorded from testnet pass, and the one Hyperliquid refused for its outer signature does not | core `receipt.test.ts` |
+| Two more dates in a document | a receipt's "submitted at" and a stored signer set's "observed at" took any integer, and three sentences printed them unguarded | both bounded by the validator, the sentences total | `proposal.test.ts` |
+| A switch to an unmeasured mode | stopped at the moment of sending, after everyone had signed | said on the proposal's page before anyone signs | `stage.test.ts` |
+| Is an action tied by the explorer's list as it is by a single look-up? | asserted, not tested | `recorded.test.ts`: the form's action equals the recorded one field for field for a move between perps and spot and for a staking step. It also records that a mode switch is listed with its one-letter code, so it would not be tied by the list as it stands (it is on no path: a mode switch leaves no ledger row) | `chain/recorded.test.ts` |
+
+In the browser: a link was made of a transfer Hyperliquid had accepted, with the answer in its receipt changed to a refusal and the finaliser's real signature left in place, and opened on a copy of the app without a relay, in storage that had never seen the proposal. The page read "Carried out · the refusal reported here is not Hyperliquid's record", with one request to the explorer and no other host than Hyperliquid's. Before this change it read "Refused by Hyperliquid · cannot be sent again" and told the reader to propose it again.
+
 ### Left as they are
 
 | Finding | Why |
@@ -1679,7 +1699,9 @@ New: core `multisig/when.ts`, `multisig/shown.ts`, `multisig/receipt.ts` with th
 
 - A unified treasury's withdrawal was not sent: no withdrawal is made in testing. Which of the two figures Hyperliquid holds it to is still not measured; the page stops one only above both.
 - One relay integration test ("what a signer has read … takes two at once") failed once in three runs of the round, before any of its code was touched: two "Got it" at the same moment left the marker one entry behind. The guard takes its lock after the row has its number, so the later number can belong to the earlier writer. Not fixed here; it shows one read entry again.
-- The check of receipts tries the orders of at most five signatures; a copy with six or more whose order differs from the one that was sent would not be recognised. None of the 53 real ones needed more than the first try.
+- The check of receipts tries every order of at most five signatures. With six to ten it tries the copy's order and the sorted order, each with and without the finaliser's signature last; a copy in yet another order would not be recognised. None of the 53 real ones needed more than the first try.
+- A copy that says "accepted" is not compared with Hyperliquid's record: a page shows "As reported by the finaliser's browser. The ledger is the proof." under it and no more. Only a reported refusal is checked, because that is the answer that makes a team pay twice.
+- A reported refusal can be compared only for actions that leave a row in the ledger and are still among the account's newest 300 transactions (or for which a single look-up answers). For the others the page says what the finaliser's page recorded and to look before proposing again.
 
 ## Feedback round 1 (2026-10-04)
 

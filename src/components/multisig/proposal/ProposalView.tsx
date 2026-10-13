@@ -588,14 +588,24 @@ export function ProposalView({
 							) : undefined
 						}
 					/>
-					{stage.phase === "submitted" &&
-						doc.relay.known &&
-						!stage.role.includes("finaliser") && (
-							<p className="-mt-2 px-0.5 text-xs text-subtle-foreground">
-								{RELAY_COPY.reportedReceipt}
-							</p>
-						)}
-					{stage.failedAttempt && (
+					{/* also for a copy that came by link or file: what it says of the
+					    answer is its finaliser's report, whoever carried it here */}
+					{stage.phase === "submitted" && !stage.role.includes("finaliser") && (
+						<p className="-mt-2 px-0.5 text-xs text-subtle-foreground">
+							{RELAY_COPY.reportedReceipt}
+						</p>
+					)}
+					{stage.failedAttempt && stage.phase === "carried-out" && (
+						// the copy's answer against Hyperliquid's record: the record is above
+						<Callout
+							tone="warning"
+							title={`This copy reports a refusal: ${stage.failedAttempt.message}`}
+						>
+							The answer in a copy is what was written into it. Hyperliquid's
+							own record of the account, above, is what counts.
+						</Callout>
+					)}
+					{stage.failedAttempt && stage.phase !== "carried-out" && (
 						<Callout
 							tone="danger"
 							title={`The last submission was rejected: ${stage.failedAttempt.message}`}

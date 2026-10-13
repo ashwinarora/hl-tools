@@ -161,9 +161,10 @@ describe("whose word a receipt is", () => {
 		// (A's) last, not the sorted one
 		const sentOrder = (
 			[
-				[a, c, b],
-				[b, a, c],
+				// late among the orders tried, so that some budgets end between them
 				[c, a, b],
+				[b, a, c],
+				[a, c, b],
 			] as ProposalSignature[][]
 		).find((o) => o.map((s) => s.signer).join() !== sortedKey);
 		const sent = proposalOf(userPayload(), sentOrder as ProposalSignature[]);
@@ -176,12 +177,12 @@ describe("whose word a receipt is", () => {
 		)
 			least += 1;
 		expect(least).toBeGreaterThan(8);
-		expect(await checkReceipt(copy, receipt, { budget: least - 1 })).toBe(
-			"unverified",
-		);
-		// and far too little: it stops among the selections
-		expect(await checkReceipt(copy, receipt, { budget: 3 })).toBe("unverified");
-		expect(await checkReceipt(copy, receipt, { budget: 0 })).toBe("unverified");
+		// every budget below it stops somewhere, in the selections or among the orders
+		for (let budget = 0; budget < least; budget++)
+			expect(
+				await checkReceipt(copy, receipt, { budget }),
+				String(budget),
+			).toBe("unverified");
 	});
 
 	it("finds the finaliser's own signature last, and a sorted copy, in a long list too", async () => {
