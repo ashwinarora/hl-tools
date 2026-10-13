@@ -479,6 +479,34 @@ describe("validateProposal", () => {
 			m({ title: "t", note: "n", createdBy: A, createdAt: 7 }).proposal?.meta,
 		).toMatchObject({ title: "t", note: "n", createdBy: A, createdAt: 7 });
 	});
+	it("a title and a note lose what does not show, written here or come from elsewhere", () => {
+		// a "right-to-left override" turns around whatever is printed after it
+		const rlo = String.fromCodePoint(0x202e);
+		const zero = String.fromCodePoint(0x200b);
+		const d = docOf(good());
+		d.meta = {
+			...(d.meta as object),
+			title: `Pay${zero} rent ${rlo}`,
+			note: `to Ada${rlo}\n  as agreed `,
+		};
+		const read = validateProposal(d, { now: NOW });
+		expect(codes(read.issues)).toEqual([]);
+		expect(read.proposal?.meta).toMatchObject({
+			title: "Pay rent",
+			note: "to Ada\nas agreed",
+		});
+		// nothing of it is signed: the digest is the same document's
+		expect(read.proposal?.digest).toBe(good().digest);
+		const made = base({
+			action: usdSend(),
+			title: ` Pay ${rlo}rent\n now `,
+			note: `${zero}`,
+		});
+		expect(made.proposal?.meta).toMatchObject({
+			title: "Pay rent now",
+			note: null,
+		});
+	});
 	it("validate.signatures: not array, not object, bad signer, not document form, duplicate signer, bad at", async () => {
 		const p = good();
 		const sig = await signatureBy(p.payload, 1);

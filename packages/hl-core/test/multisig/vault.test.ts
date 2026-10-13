@@ -509,6 +509,15 @@ describe("what Hyperliquid reports", () => {
 			},
 		});
 	});
+	it("a vault's name is its leader's own word: what does not show is dropped", () => {
+		const rlo = String.fromCodePoint(0x202e);
+		const named = (name: string) => {
+			const read = parseVaultDetails({ ...raw, name });
+			return read.kind === "vault" ? read.vault.name : null;
+		};
+		expect(named(`HLP${rlo}`)).toBe("HLP");
+		expect(named("x".repeat(200))).toBe(`${"x".repeat(80)}…`);
+	});
 	it("says so when there is no vault at the address, and when the answer is not one", () => {
 		expect(parseVaultDetails(null)).toEqual({ kind: "none" });
 		for (const not of [

@@ -12,6 +12,7 @@ import {
 } from "@hl-tools/core";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { type KnownState, knownStateOf } from "../model/chain/knownState";
 import type { DoneProposal, MatchCandidate } from "../model/chain/match";
 import { listProposals as listLocal, receiptOk } from "../model/history";
 import { assembleProposal } from "../model/relay/assemble";
@@ -49,13 +50,7 @@ function known(
 	};
 }
 
-/**
- * loading      not read yet: nothing may be called "none on record"
- * ready        everything on record is in `proposals`
- * unavailable  the relay's record could not be read; `proposals` holds this
- *              browser's own copies only
- */
-export type KnownState = "loading" | "ready" | "unavailable";
+export type { KnownState };
 
 const NONE: readonly KnownProposal[] = [];
 
@@ -157,17 +152,17 @@ export function useKnownProposals(
 		() => mergeKnown(local.data ?? NONE, shared.data ?? NONE),
 		[local.data, shared.data],
 	);
-	const state: KnownState = !enabled
-		? "loading"
-		: client
-			? shared.data !== undefined
-				? "ready"
+	const state = knownStateOf({
+		enabled,
+		relay: !!client,
+		shared:
+			shared.data !== undefined
+				? "read"
 				: shared.isError
-					? "unavailable"
-					: "loading"
-			: // no relay to ask: this browser's copies are all there is to go by
-				local.isPending
-				? "loading"
-				: "unavailable";
+					? "failed"
+					: "pending",
+		local:
+			local.data !== undefined ? "read" : local.isError ? "failed" : "pending",
+	});
 	return { proposals, state };
 }

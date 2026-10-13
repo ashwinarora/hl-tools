@@ -10,6 +10,7 @@ import { RETURN_QUEUE, STAKE_LOCKUP } from "../rules/staking.ts";
 import { WITHDRAWAL_FEE_USDC } from "../rules/transfers.ts";
 import { VAULT_LOCKUP } from "../rules/vaults.ts";
 import { isAgentRemoval, riskFlags } from "./action.ts";
+import { visibleText } from "./shown.ts";
 import { parseSignersString } from "./signerSet.ts";
 import { waitWords, weiToHype } from "./staking.ts";
 import { withdrawalOutcome } from "./transfer.ts";
@@ -164,10 +165,14 @@ function partiesOf(type: string, action: PlainObject): readonly ActionParty[] {
 	return out;
 }
 
-/** A value in a sentence. An integer too large for a number arrives as a bigint, also nested: never throws. */
+/**
+ * A value in a sentence. An integer too large for a number arrives as a
+ * bigint, also nested: never throws. A text of the action is what gets
+ * signed, so a character in it that does not show is written out, not dropped.
+ */
 const s = (v: unknown): string =>
 	typeof v === "string"
-		? v
+		? visibleText(v)
 		: typeof v === "bigint"
 			? v.toString()
 			: v === undefined

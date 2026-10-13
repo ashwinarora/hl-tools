@@ -526,6 +526,14 @@ describe("describeAction details", () => {
 		expect(describeAction(SAMPLES.approveAgent as PlainObject).flags).toEqual([
 			"agent_bypass",
 		]);
+		// a name is part of what is signed: a character in it that does not
+		// show is written out, never dropped
+		expect(
+			describeAction({
+				...SAMPLES.approveAgent,
+				agentName: `lab${String.fromCodePoint(0x202e)}`,
+			} as PlainObject).headline,
+		).toBe(`Approve API wallet ${B} named "lab\\u{202e}"`);
 		// the zero address approves nobody: it removes the wallet of that name
 		const removal = describeAction({
 			...SAMPLES.approveAgent,

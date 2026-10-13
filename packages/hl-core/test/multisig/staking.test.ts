@@ -529,6 +529,13 @@ describe("validators", () => {
 		expect(order([a, b])).toEqual([JAILED, INACTIVE]);
 		expect(order([b, a])).toEqual([JAILED, INACTIVE]);
 	});
+	it("a validator's own name loses what does not show, and is cut", () => {
+		// a name that would turn around the address printed after it
+		const rlo = String.fromCodePoint(0x202e);
+		expect(read({ name: `Hypurr${rlo}` }).name).toBe("Hypurr");
+		expect(read({ name: "  two\twords  " }).name).toBe("two words");
+		expect(read({ name: "x".repeat(200) }).name).toBe(`${"x".repeat(60)}…`);
+	});
 	it("takes nothing for granted about a row", () => {
 		const bare = read({
 			name: 7,

@@ -5,6 +5,7 @@ import type {
 	PositionRow,
 	SpotBalanceRow,
 } from "@hl-tools/core";
+import { visibleText } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
@@ -592,7 +593,7 @@ export function OverviewTab({
 															network,
 														}}
 														className={linkButtonSm}
-														aria-label={`Remove the API wallet ${g.name || "without a name"}`}
+														aria-label={`Remove the API wallet ${g.name ? visibleText(g.name) : "without a name"}`}
 													>
 														Remove
 													</Link>
@@ -601,7 +602,7 @@ export function OverviewTab({
 										}
 									>
 										<b className="text-sm font-semibold">
-											{g.name || "(unnamed)"}
+											{g.name ? visibleText(g.name) : "(unnamed)"}
 										</b>{" "}
 										<Who
 											address={g.address}

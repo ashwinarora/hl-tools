@@ -12,6 +12,7 @@ import { NONCE_WINDOW } from "../rules/signing.ts";
 import { prepareInnerAction, riskFlags } from "./action.ts";
 import { normaliseAddress } from "./address.ts";
 import { innerDigest } from "./digest.ts";
+import { shownLine, shownNote } from "./shown.ts";
 import { normaliseSig, padSig } from "./signature.ts";
 import type {
 	Hex,
@@ -259,8 +260,8 @@ export function createProposal(
 	if (!d.digest) return fail();
 	const meta: ProposalMeta = {
 		kind: prepared.kind as Kind,
-		title: cleanText(input.title),
-		note: cleanText(input.note),
+		title: cleanText(input.title, shownLine),
+		note: cleanText(input.note, shownNote),
 		createdBy,
 		createdAt: now,
 		supersedes: input.supersedes ?? null,
@@ -282,9 +283,13 @@ export function createProposal(
 	};
 }
 
-function cleanText(value: string | null | undefined): string | null {
+/** A title or a note as it is kept: nothing in it that does not show (see shown.ts), and null when nothing is left. */
+function cleanText(
+	value: string | null | undefined,
+	shown: (raw: string) => string,
+): string | null {
 	if (typeof value !== "string") return null;
-	const t = value.trim();
+	const t = shown(value);
 	return t === "" ? null : t;
 }
 
@@ -402,6 +407,11 @@ function nullableText(
 	);
 	return null;
 }
+
+const shownOrNull = (
+	text: string | null,
+	shown: (raw: string) => string,
+): string | null => (text === null ? null : shown(text));
 
 function nullableInt(
 	value: unknown,
@@ -630,8 +640,13 @@ export function validateProposal(
 	const meta: ProposalMeta | null = m
 		? {
 				kind: kind ?? "l1",
-				title: nullableText(m.title, "meta.title", issues),
-				note: nullableText(m.note, "meta.note", issues),
+				// nobody signed these two, and the document may come from anyone:
+				// what does not show is dropped before any screen has them
+				title: shownOrNull(
+					nullableText(m.title, "meta.title", issues),
+					shownLine,
+				),
+				note: shownOrNull(nullableText(m.note, "meta.note", issues), shownNote),
 				createdBy:
 					m.createdBy === null || m.createdBy === undefined
 						? null

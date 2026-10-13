@@ -1,3 +1,4 @@
+import { visibleText } from "@hl-tools/core";
 import { Loader2 } from "lucide-react";
 import { KeyValueGrid, Panel } from "#/components/hub/layout";
 import {
@@ -117,7 +118,9 @@ export function TreasuryStrip({
 													key={a.address}
 													className="flex flex-wrap items-center gap-2"
 												>
-													<span>{a.name || "(unnamed)"}</span>
+													<span>
+														{a.name ? visibleText(a.name) : "(unnamed)"}
+													</span>
 													<span
 														className="font-mono text-xs text-muted-foreground"
 														title={a.address}

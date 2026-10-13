@@ -5,6 +5,7 @@
  * three levels: blocked only where Hyperliquid would refuse, a warning as one
  * line with no click, and plain facts.
  */
+import { visibleText } from "@hl-tools/core";
 import { API_WALLET_CAN } from "./apiWallet";
 import type { Line } from "./signerSet";
 
@@ -91,7 +92,9 @@ export function convertBackLines(f: BackFacts): Line[] {
 	} else {
 		const live = f.agents.filter((a) => a.validUntil > f.now);
 		if (live.length > 0) {
-			const names = live.map((a) => `"${a.name || "unnamed"}"`).join(", ");
+			const names = live
+				.map((a) => `"${a.name ? visibleText(a.name) : "unnamed"}"`)
+				.join(", ");
 			lines.push({
 				level: "warning",
 				code: "back.agents",

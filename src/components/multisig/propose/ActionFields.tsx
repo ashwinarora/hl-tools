@@ -3,6 +3,7 @@ import {
 	type AgentInfo,
 	MULTISIG_FACTS,
 	type Network,
+	visibleText,
 } from "@hl-tools/core";
 import type { ReactNode } from "react";
 import {
@@ -473,7 +474,7 @@ export function ActionFields({
 										)}
 									>
 										<span className="font-semibold">
-											{a.name || "(unnamed)"}
+											{a.name ? visibleText(a.name) : "(unnamed)"}
 										</span>
 										<span
 											className="font-mono text-xs text-muted-foreground"

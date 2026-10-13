@@ -17,6 +17,10 @@ import {
 	VAULT_MIN_DEPOSIT_USDC,
 	VAULT_USD_DECIMALS,
 } from "../rules/vaults.ts";
+import { shownLine } from "./shown.ts";
+
+/** The longest vault name shown. */
+const VAULT_NAME_MAX = 80;
 
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 const UNIT = 10 ** VAULT_USD_DECIMALS;
@@ -249,7 +253,8 @@ export function parseVaultDetails(raw: unknown): VaultLookup {
 		kind: "vault",
 		vault: {
 			address,
-			name: r.name,
+			// its leader's own word: nothing in it that does not show
+			name: shownLine(r.name, VAULT_NAME_MAX),
 			leader,
 			commission: fraction(r.leaderCommission),
 			apr: fraction(r.apr),

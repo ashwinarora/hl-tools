@@ -29,6 +29,7 @@ import {
 	isAgentRemoval,
 	type LedgerRow,
 	type Proposal,
+	visibleText,
 } from "@hl-tools/core";
 import type { RowProposal } from "../chain/match";
 import { type MoveRef, sayOncePerMove, stepMark } from "../move";
@@ -503,7 +504,7 @@ export function ledgerProgress(chain: AwayChain): "open" | "failed" | "done" {
 
 /** An API wallet's name is whatever its approver typed on chain: quoted, and cut. */
 function agentName(name: string): string {
-	const tidy = name.replace(/\s+/g, " ").trim();
+	const tidy = visibleText(name.replace(/\s+/g, " ").trim());
 	if (!tidy) return "";
 	return `“${tidy.length > 40 ? `${tidy.slice(0, 40)}…` : tidy}” `;
 }

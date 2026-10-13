@@ -509,6 +509,16 @@ describe("buildAction / buildProposalInput", () => {
 		expect(blind.action).toBeNull();
 	});
 
+	it("an API wallet's name is shown as it is, with what does not show written out", () => {
+		// the name is what a removal has to carry, to the character: nothing is
+		// dropped, and a name that only looks like another reads differently
+		const hidden = `bot${String.fromCodePoint(0x202e)}1`;
+		expect(REMOVE_AGENT.called(hidden)).toBe('named "bot\\u{202e}1"');
+		expect(REMOVE_AGENT.missing(hidden)).toContain('named "bot\\u{202e}1"');
+		expect(REMOVE_AGENT.called("bot 1")).toBe('named "bot 1"');
+		expect(REMOVE_AGENT.called("")).toBe("without a name");
+	});
+
 	it("a move is never proposed with a step missing", () => {
 		const one = { type: "cDeposit" };
 		const whole: Issue[] = [];

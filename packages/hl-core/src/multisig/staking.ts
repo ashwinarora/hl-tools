@@ -16,6 +16,10 @@ import {
 	RETURN_QUEUE,
 	STAKE_LOCKUP,
 } from "../rules/staking.ts";
+import { shownLine } from "./shown.ts";
+
+/** The longest validator name shown: Hyperliquid's own are far shorter. */
+const NAME_MAX = 60;
 
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 
@@ -317,7 +321,8 @@ export function parseValidators(raw: unknown): Validator[] | null {
 		if (!r || address === null || stake === null) continue;
 		out.push({
 			address,
-			name: typeof r.name === "string" ? r.name : "",
+			// the validator's own word: nothing in it that does not show
+			name: typeof r.name === "string" ? shownLine(r.name, NAME_MAX) : "",
 			description: typeof r.description === "string" ? r.description : "",
 			stake,
 			isActive: r.isActive === true,
