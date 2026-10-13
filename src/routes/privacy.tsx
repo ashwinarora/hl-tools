@@ -6,7 +6,7 @@ export const Route = createFileRoute("/privacy")({
 	component: PrivacyPage,
 });
 
-const UPDATED = "2026-10-11";
+const UPDATED = "2026-10-13";
 const REPO = "https://github.com/ashwinarora/hl-tools";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -74,16 +74,29 @@ function PrivacyPage() {
 					<p>
 						Your browser keeps a few things locally: the selected network and
 						theme, recorded WebSocket sessions, the multi-sig proposals you made
-						or opened, names you gave treasuries in this browser, and, in the
-						faucet miner, the wallets it generated. They never leave the browser
-						unless you export or share them. Clearing the site's data removes
-						them.
+						or opened, names you gave treasuries in this browser, what you typed
+						into a Multisig form and have not created yet (for a week), and, in
+						the faucet miner, the wallets it generated. They never leave the
+						browser unless you export or share them. Clearing the site's data
+						removes them.
 					</p>
 					<p>
 						Connecting a wallet uses the wallet's own software. The Multisig
 						section offers only the wallets in your browser. In the faucet miner
 						you can also pick a WalletConnect-based wallet; that connection is
 						relayed by WalletConnect under its policy.
+					</p>
+					<p>
+						A vault deposit or withdrawal in the Multisig section is signed
+						while your wallet is on a network added for that one purpose (the
+						page asks before it is added). While the wallet is on it, the wallet
+						itself asks that network's link what it asks of any network: which
+						chain it is, the latest block, and the balance of your address
+						there. Whoever serves the link therefore sees your IP address and
+						the wallet address asked about, as any network's endpoint does. The
+						link answers with fixed values and refuses every transaction;
+						nothing is ever sent on that network, and the wallet goes back to
+						its own once it has signed.
 					</p>
 				</Section>
 

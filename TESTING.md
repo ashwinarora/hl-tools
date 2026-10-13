@@ -1372,6 +1372,166 @@ Not produced in a browser: a first step refused by Hyperliquid at submit time (t
 - The move's page with browser storage blocked, the sixth return, and a first step refused by Hyperliquid at submit time were not produced in a browser: the first was read in the code, the other two are covered by the flow and judge tests.
 - A mainnet treasury's Stake form was not opened in a browser.
 
+## 18. Multisig — vaults, the signing network, and three smaller parts (2026-10-13)
+
+The third part of Phase 6: vault deposits and withdrawals (signed as a code under chain 1337, which the wallet has to hold as a network), removing an API wallet, switching the account mode, a send to HyperEVM stopped in the form, and a half-filled form kept in the browser (DECISIONS.md, from "A vault action is signed as a code, under a network the wallet has to hold" to "A half-filled form is kept in this browser for a week"). Tested where each piece of logic lives: Hyperliquid's own answers recorded on testnet and replayed by the core, the forms and the wallet sequence as pure tables, the relay's new rule in the database and against the local stack, and the pages in a browser on testnet with a real wallet. This time the browser rows were run by the building session itself, through its own connection to the browser.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 110 files, 2,975 tests, all passing |
+| Core coverage | `bunx vitest run --coverage` in `packages/hl-core` | 100 % of lines, branches, functions and statements for its scope (`src/multisig/**` with the new `vault.ts`) |
+| Relay database | `bun run db:test` | 18 files, 1,008 pgTAP tests, all passing (70 new in `180_vault_proposals.sql`); `supabase db advisors --local`: no issues. One migration, `relay_vault_proposals` |
+| Relay integration | `bun run test:relay` | 78 tests, all passing (3 new, vault proposals) |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
+
+New test files: core `test/multisig/vault.test.ts`, `test/multisig/modeSwitch.test.ts`; app `multisig/model/signingNetwork.test.ts`, `model/vault.test.ts`, `model/modeSwitch.test.ts`, `model/drafts.test.ts`, `model/chain/vaultRecord.test.ts`, `src/lib/signingRpc.test.ts`, `src/store/multisigDraftsStore.test.ts`; `supabase/tests/180_vault_proposals.sql`. Extended: core `adapter`, `corewriter`, `account`, `action`, `agentReach`, `describe`, `move`, `oracle`, `staking`, `transfer`; app `model/actions`, `chains`, `parts`, `send`, `sendCheck`, `stage`, `staking`, `chain/match`, `relay/away`, `relay/copy`, `relay/push` tests, `proposal/moveFlow.test.ts`, `relay.itest.ts`. New fixtures: `fixtures/multisig/vaults.json`, `evm-transfer.json`, `agent-unnamed.json`, `mode-switch.json`.
+
+### What was measured first (testnet, lab keys, 2-of-3 lab treasuries)
+
+Every request below went through the multi-sig envelope, the vault actions with their inner signatures made as codes.
+
+| Question | Answer |
+|---|---|
+| Does a `vaultTransfer` go through a multi-sig? | yes, deposit and withdrawal (`vaults.json`, 17 requests in the order they were sent) |
+| Which balance does a deposit take from? | what the perps balance can release, or the one balance of a unified account. A manual account with its USDC in spot is refused although the account value and spot would cover it, and accepted after a move to perps |
+| What does Hyperliquid answer when it refuses? | seven texts, recorded word for word (rule set "errors" 1.12.0): `Vault deposits must be at least $5.`, `Vault is closed.`, `This vault does not accept deposits.`, `Vault not registered: <address>`, `Insufficient funds available to deposit.` (the text a staking deposit gets too), `Cannot withdraw during lockup period after depositing.`, `Insufficient vault equity for withdrawal` |
+| How long is a deposit locked? | HLP exactly 96 hours; a user vault 20 seconds on testnet |
+| Does adding to a deposit change its lockup? | yes: all of it is locked again |
+| What comes back? | the amount less the leader's share of the profit; withdrawing everything left a fraction of a cent behind; a row's `requestedUsd` can be a millionth short of the amount asked |
+| What does the ledger hold? | `vaultDeposit {vault, usdc}` and `vaultWithdraw {vault, user, requestedUsd, commission, closingCost, basis, netWithdrawnUsd}` |
+| Can a multi-sig send a token to HyperEVM? | no (`evm-transfer.json`, 7 sends): `Multi-sig user cannot transfer token to EVM` to the token's own system address, `EVM transfer not configured` to another token's |
+| Does an API wallet approved without a name show in `extraAgents`? | no. It is in `webData3`, under `userState` (`agent-unnamed.json`) |
+| Can an API wallet be removed through a multi-sig? | yes: `approveAgent` with the zero address and the wallet's name, also the empty name. A name the account does not have: `Extra agent does not exist.`. A second removal within about a minute: `User has pending agent removal` |
+| How is a mode switch signed through a multi-sig? | the finaliser's signature has to be made over the mode as one letter ("u" for `unifiedAccount`, "i" for `disabled`); over the long word the answer is `Invalid multi-sig outer signer` (`mode-switch.json`: 2 requests as posted, 7 switches) |
+| When is a switch refused? | to unified: never seen refused, also with a position and orders open. Back to manual with anything open: `Cannot disable unified account with open positions, open orders, or active TWAP orders`; with nothing open it is accepted and the USDC stays in spot. Asking for the present mode is accepted and changes nothing |
+
+From Hyperliquid's docs and not measured: the mainnet lockups (HLP 4 days, a user vault 1 day). Not measured: which refusal Hyperliquid names when two apply at once.
+
+### The gate: does a wallet sign the code at all (Rabby, testnet)
+
+The plan put this before any vault form was built.
+
+| Step | Seen |
+|---|---|
+| Ask the wallet to switch to chain 1337 before it holds such a network | `-32603 Unrecognized chain ID "0x539"`; the page reads that as "missing" and offers "Add the signing network" |
+| "Add the signing network" | Rabby's "Add Custom Network to Rabby" with its standing caution and nothing about the name ("Geth Testnet"); on Add the site is on chain 1337 at once. Cancel first: "You declined in the wallet.", nothing signed |
+| The signing prompt | "Unknown Signature Type", primary type `Agent`, `{ source: "b", connectionId }`, the `connectionId` equal to the code on the page |
+| The finaliser's prompt | `HyperliquidTransaction:SendMultiSig` under chain 998, with `multiSigActionHash` and the proposal's number |
+| A deposit of 5 USDC into a testnet user vault, then its withdrawal: two signers, one finaliser | both "Submitted · accepted by Hyperliquid"; the wallet back on its own chain after every click, also when it had been left on 1337 beforehand |
+
+### The core (`vault.test.ts`, `modeSwitch.test.ts`, `move.test.ts`, `transfer.test.ts`, `account.test.ts`)
+
+| Case | Result |
+|---|---|
+| Every request in the vault record: the answer Hyperliquid gave is the answer predicted from the state before it, and the state predicted after it is the state Hyperliquid then reported (one step allows for the vault's worth moving between the read and the request, and says so) | ✅ 17 of 17 |
+| USDC to the integer a vault action carries and back (6 decimals, integers only) | ✅ |
+| The two reads (`userVaultEquities`, `vaultDetails`): canonical figures, a row that cannot be read left out, an address that is no vault told apart from an answer that could not be read | ✅ |
+| The planner: one step when perps can release the amount or the account is unified; else the shortfall is moved from spot first; nothing is planned on a balance that was not read | ✅ |
+| The judge: each of the seven refusals from what was read, in order, the second step against what the first leaves behind; nothing is refused on a fact that was not read | ✅ |
+| A two-step deposit is a move: a readable first step and a vault deposit, same network, treasury, finaliser and proposer, numbered in order, the first never moving more than the deposit; a withdrawal, another first step, or a code step in any other move is not | ✅ |
+| The envelope's hash for a mode switch uses the one-letter code. For each of the 9 recorded requests: the posted action and every signer's signature carry the long word, the finaliser's signature recovers to the finaliser exactly when it was made over the letter, and Hyperliquid refused exactly the others. The table holds the two measured letters and no more; the SDK agrees over the letter and differs over the envelope as posted | ✅ 9 of 9 |
+| A send to a system address from a multi-sig: every recorded send gets its recorded refusal; an ordinary address gets none; the same test serves the cross-layer trace (token indexes of 256 and above included) | ✅ 7 of 7 |
+| API wallets: named ones from `extraAgents` and the unnamed one from `webData3` are one list; an unreadable half fails the read instead of shortening the list | ✅ |
+| A removal is described as a removal, carries no "approves an API wallet" tag, and is recognised by the zero address alone; a vault deposit carries "moves funds out" | ✅ |
+
+### The forms and the wallet sequence, as rules (`model/signingNetwork.test.ts`, `vault.test.ts`, `modeSwitch.test.ts`, `drafts.test.ts`, `actions.test.ts`, `sendCheck.test.ts`, `stage.test.ts`, `chain/match.test.ts`, `chain/vaultRecord.test.ts`, `relay/away.test.ts`, `signingRpc.test.ts`)
+
+| Case | Result |
+|---|---|
+| Which chain a proposal's action is signed under, and which its envelope: 1337 for a plain vault action alone, the form's chain for everything readable and for every envelope | ✅ |
+| "Switch, else offer Add, then switch" against a fake wallet: already there, switches at once, switches late, an unknown chain under Rabby's error code and under the standard's, the user's refusal, a wallet that says yes and stays where it was, one that adds without switching, one that will not add (it gets the chain id and the link to type in) | ✅ |
+| Where the wallet goes when a click is over: back to the chain it was on, or to the network's own when it was found on 1337 | ✅ |
+| The stand-in endpoint: chain 1337, a block that moves, zero balances; every transaction refused with its sentence; a batch answered in order; anything that is not a request refused | ✅ |
+| A vault action is signable where the build has the signing network; without it the page says it can be read and checked, not signed; every other action of the family stays "inspect only" | ✅ |
+| Each vault form to its steps and sentences, exact: one proposal or two, the refusal beside the right field with its figures, the amber line for adding to a deposit, the amber line for "nearly all" of a deposit | ✅ |
+| A withdrawal inside the lockup is planned with the moment it opens; one whose lockup ends only after the proposal would have closed is refused with both lengths; a caller that names no closing moment holds no lockup against it | ✅ |
+| A copy of the app without the signing network offers no vault form | ✅ |
+| The stage: Submit off with the moment while a lockup holds it, "the deposit" and "the stake" each said where it is one; a lockup that outlasts the proposal is one sentence for every reader with both moments as parts, and nothing then promises an opening | ✅ |
+| The check before submitting: a removal against the wallets just read, a switch against what is open, a vault step against the balances and the vault, a two-step deposit in order; a read that fails stops nothing | ✅ |
+| A vault row in the ledger is tied to a proposal as "likely" and never certain, with no look-up; two alike are not told apart; a withdrawal a millionth short still matches | ✅ |
+| Whether a vault step may be carried out already, from the ledger: nothing before it was read, a row from before the proposal was made is no candidate | ✅ |
+| The mode switch: what each direction does in words, the refusal for a busy account, the amber line for the present mode, the amber line naming waiting proposals the new mode would refuse | ✅ |
+| Remove API wallet: the form holds the wallet's name, "" being the one without; the Approve form refuses the zero address and points to Remove; "While you were away" explains a gone wallet by a removal only when there are at least as many removals as wallets gone | ✅ |
+| A send to a system address is an error under Destination in both guided sends and in Raw JSON | ✅ |
+| Drafts: what is kept and for how long, the newest twenty, validation field by field on reading back, a link that asks for another kind, wallet, vault or "propose again" wins and leaves the draft alone; the store writes under its own key, replaces and drops a draft, and drops every draft of one account without touching another's | ✅ |
+| A sentence about an action is never cut at its colon; only a field and its value are a pair | ✅ |
+| A result the relay refuses because it already holds the proposal as accepted is done, not a problem | ✅ |
+| Help texts and every new sentence against the forbidden claims and the jargon list | ✅ |
+
+### The finaliser's click on a vault step (`moveFlow.test.ts`, against a stand-in for Hyperliquid)
+
+| Case | Result |
+|---|---|
+| The finaliser's own signature on the action is given on the signing network, the envelope on the usual one | ✅ |
+| A deposit in two steps: each signature under its own network, and the deposit sent only after the move to perps was accepted | ✅ |
+| A deposit in two steps when the wallet lacks the signing network: nothing is posted, the move is left whole | ✅ |
+| A wallet without the signing network is not a failure: nothing is posted and the page is told to offer "Add" | ✅ |
+
+### The relay (pgTAP `180_vault_proposals.sql`; `relay.itest.ts`)
+
+| Case | Result |
+|---|---|
+| A document of the code kind is accepted for a `vaultTransfer` of exactly its four fields | ✅ |
+| Refused: the code kind with any other action (an order, a sub-account transfer, a user-signed action), with a vault address or an expiry beside it, with an extra or a missing field, with an amount that is zero, negative, a fraction or written as text, with an address in capitals or cut short; a `vaultTransfer` that claims to be user-signed; a kind that is neither | ✅ |
+| Signatures, a no, the proposer's withdrawal and the finaliser's result on such a row work as for any proposal; a wallet that signs for nothing cannot share one | ✅ |
+| A report that it was carried out is refused (`relay.report_unnumbered`); ten refused reports do not use up the reporter's limit; the worker, handed such a report past the guard, rejects it without comparing a transaction | ✅ |
+| A two-step deposit lands both rows or neither | ✅ |
+| Against the local stack: a vault proposal is shared, and a co-signer reads it and verifies the code signature in their own client; it is never closed on a report; it is refused in any other shape, and so is every other action signed as a code | ✅ |
+
+### In the browser (testnet, a 2-of-3 test treasury, Rabby)
+
+Run by the building session through its own connection to the browser, with two accounts of one wallet on a 2-of-3 test treasury (**A** the proposer and finaliser, **B** a plain signer), against the local relay and the stand-in endpoint on `localhost:3337`. Every wallet prompt was read before it was approved: its primary type, its chain, and the fields or the code against the page.
+
+| # | Step | Seen |
+|---|---|---|
+| V1 | Deposit 25 USDC into a user vault from a manual treasury with most of its USDC in spot | "This makes two proposals"; "Create both and sign" asks twice (a readable move under chain 998, a code under 1337); one row and one page for both signers; "Submit both steps" ends "Done · both steps were carried out"; Hyperliquid then held the move, the deposit and 25.000202 USDC in the vault |
+| V2 | Withdraw 24.9 of it | the amber "nearly all" line; accepted; the ledger row a millionth short (24.899999) and still tied to its proposal as "likely" |
+| V3 | A vault by address that is closed, that takes no deposits, that is no vault; a deposit of 4 USDC; a deposit of more than there is | each blocked under its field: "This vault is closed: it takes no more deposits.", "This vault's leader has switched deposits off.", "There is no vault at this address on this network, and Hyperliquid refuses the request.", "A vault deposit has to be at least 5 USDC.", and the over-balance sentence with both balances |
+| V4 | Approve an API wallet without a name (A proposes, B signs, A submits) | accepted; the Overview lists "(unnamed)" with its address, its expiry and "Remove" (before this part it would have read "None approved") |
+| V5 | "Remove" from that row | the form opens on that wallet; the prompt shows the zero address and an empty name; accepted; Hyperliquid reports no API wallet; the Overview reads "0 active"; B's "While you were away": "An API wallet is no longer approved: …. A proposal that removes an API wallet was carried out." |
+| V6 | Switch to a unified account | the first switch with a real wallet over the one-letter code: accepted; Hyperliquid reports `unifiedAccount`; the Overview shows one balance, the mode form now offers "Manual account", and "Perps ↔ spot" is gone from the chooser |
+| V7 | Deposit 6 USDC into the user vault from the unified treasury; B signs after "Switch to the signing network and sign" | one proposal; the code on B's page equal to the wallet's; the wallet back on chain 998 by itself; accepted |
+| V8 | Withdraw 6, then deposit 5 into HLP | both accepted; the Vaults tab: HLP "from 17 Oct 2026, 12:52 · in 3 days 23 hours" under "Can be withdrawn", the user vault "now"; the Overview "In vaults: 5.08 USDC in 2 vaults"; "On Hyperliquid" ties each vault row as "likely …" |
+| V9 | Withdraw from HLP inside its lockup | see the findings: the first build let it be made though it could never be submitted. After the fix the form refuses it with both lengths, and the proposal made before the fix says in amber, to both signers, that it closes before the lockup ends; once both had signed, Submit was off with its reason and the line under the title said the same |
+| V10 | A prompt cancelled by B on the code step | "Not signed · You declined in the wallet.", still 1 of 2, the wallet back on its own chain |
+| V11 | Switch back to a manual account (proposed while manual: the amber "already a manual account" line; submitted once unified, with nothing open) | accepted; Hyperliquid reports `disabled`; perps 0 and 27.9 USDC in spot, as the page had said ("The USDC stays in the spot balance afterwards") |
+| V12 | A send to `0x2222…2222` | blocked under Destination with Hyperliquid's reason |
+| V13 | Drafts | a reload brings the form back with "What you had filled in here … is back. This browser keeps it for a week." and "Clear"; "Clear" and a created proposal each leave `hl-tools:multisig-drafts` empty |
+| V14 | A copy of the app started without the signing network's link (and without a relay) | a vault proposal opened from a link: "A vault action: this copy of the app cannot sign it", no Sign or Submit; no "Vault" in the chooser; after the fix a link with `kind=vaultDeposit` opens the plain form |
+| V15 | Lists and records | the Pending tab, the Signing log and "While you were away" name a vault step, a removal and a mode switch in words ("Deposit 5 USDC into HLP (0xa150…b0a0)", "Remove the API wallet without a name", "Switch to a unified account: one balance"); a vault other than HLP is named by its short address in a list and by its own name on its page; a proposer's withdrawal of a vault proposal reads as any other |
+| V16 | Width, themes, console | no sideways scroll at 390 px on the Vaults tab, both vault forms and a vault proposal's page with the code panel (the table scrolls in its own box, the code wraps); both themes readable; the console holds nothing of the app's after the fix below (what remains is two wallet extensions arguing over `window.ethereum`) |
+
+### What the browser found, and what changed
+
+| Found | Fix |
+|---|---|
+| The code panel was shown to a finaliser who only submits, and the line under "Finishing" described the action's prompt while the wallet showed the finaliser's | the panel is for those who sign the action; the hint names the prompt that is open (`720eb76`) |
+| A wallet found on chain 1337 when a click was over stayed there | it goes back, to the network's own chain when the earlier one is not known (`720eb76`) |
+| An API wallet approved without a name was invisible on every screen | both of Hyperliquid's lists are read (`3f7b103`) |
+| A balance rounded up ("23.00" for 22.999935), dust shown as "0.00", one figure rounded two ways | cut, never rounded up; up to six decimals below a cent (`62a5ea2`) |
+| A withdrawal from HLP proposed inside its four days can never be submitted, and the form made it | refused in the form; said in amber on a proposal already in that state (`e62a2ac`) |
+| "the stake it takes from is locked" on a vault withdrawal that was ready | the sentence names what is locked (`e62a2ac`) |
+| Sentences about an action were cut at their colon into a grey label and a rest ("A vault deposit can lose value" / "the vault's leader trades with it."); older sentences had the same fault | only a field and its value are a pair (`e62a2ac`) |
+| The vault form said every signer's wallet switches to the chosen chain | it says what the choice is for: the signature the finaliser submits with (`e62a2ac`) |
+| "Withdraw" on a row of the Vaults tab opened the form with no vault chosen | the link names the vault (`e62a2ac`) |
+| In a copy without the signing network a link still opened the vault form | no vault form from a link, a draft or "propose again" there (`e62a2ac`) |
+| The wallet hint of a removal promised "the address of the API wallet" | it says an address of all zeros and the name (`e62a2ac`) |
+| "This proposal was already accepted." appeared under two of seven accepted submissions: the click's push of the result and the background catch-up had crossed | the relay's answer to the second is taken as done (`e62a2ac`) |
+| A hydration error on every full load of the propose form: the signing window's moment was rendered on the server with its clock and its way of writing a date (from the change that made it local, `df7ccc1`) | the moment is shown once the page runs in the browser (`e62a2ac`) |
+
+### Limits
+
+- **One wallet.** Rabby is the only wallet the code signature was tried with. What another wallet shows when asked to add or switch to chain 1337, and whether a hardware wallet behind it shows the code or the two hashes, was not seen. A Safe cannot add a network and gets its own sentence, which was not seen in a browser either.
+- **The stand-in endpoint ran on the test machine.** Where the signing network's link is served for real is a later phase; until then a build needs `bun run rpc:1337` and the env line.
+- **Mainnet.** Nothing here was run on mainnet. Its lockups are from Hyperliquid's docs.
+- **A vault step's "carried out" has one witness.** The finaliser's own result closes a vault proposal. If that answer is lost, the page says the step may be carried out already and points to "On Hyperliquid"; nobody else can settle it, because the action carries no number of its own.
+- **A lockup inside the signing window** (a user vault's 20 seconds on testnet) could not be caught by hand in a browser: Submit held and then opening by itself is covered by the stage tests and was seen for an unstake in §17. What was seen here is the other case, a lockup longer than the proposal.
+- **The explorer.** What it shows for a vault action sent through a multi-sig was not measured; the pages do not depend on it.
+- **Not built:** a notice when a vault deposit appears with no proposal on record (an API wallet can make one), sub-accounts, and every other action of the code family.
+- The test treasury was left as a manual account with its USDC in spot, 5 USDC in HLP (locked until 17 Oct 2026) and a few cents of dust in a user vault. The wallet used holds a custom network "Geth Testnet" (chain 1337) that can be removed in its settings.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
