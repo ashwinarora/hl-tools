@@ -919,6 +919,35 @@ describe("an action Hyperliquid would refuse before a certain moment", () => {
 	});
 });
 
+describe("a switch to an account mode nobody measured", () => {
+	const switchTo = (abstraction: unknown) =>
+		makeProposal({
+			action: {
+				type: "userSetAbstraction",
+				signatureChainId: "0x3e6",
+				hyperliquidChain: "Testnet",
+				user: TREASURY,
+				abstraction,
+				nonce: NONCE,
+			} as never,
+		});
+	it("is said on its page before anyone signs, not at the moment of sending", async () => {
+		const s = await stage(switchTo("portfolioMargin"), { wallet: A });
+		expect(s.phase).toBe("unsupported");
+		expect(s.headline).toBe(
+			"A switch to an account mode this page was not tested with",
+		);
+		expect(s.detail).toContain("“portfolioMargin”");
+		expect([s.canSign, s.canExecute]).toEqual([false, false]);
+	});
+	it("the two measured modes are signed as before", async () => {
+		for (const mode of ["unifiedAccount", "disabled"]) {
+			const s = await stage(switchTo(mode), { wallet: A });
+			expect(s.phase, mode).not.toBe("unsupported");
+		}
+	});
+});
+
 describe("what a receipt reports, against Hyperliquid's own record", () => {
 	// A receipt's signature covers the submission, not the answer written
 	// beside it: whoever holds a true receipt can write "refused" into a copy

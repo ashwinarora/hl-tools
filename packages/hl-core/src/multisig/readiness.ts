@@ -14,6 +14,7 @@ import type {
 	Readiness,
 	ReadinessStatus,
 } from "./types.ts";
+import { isoTime } from "./when.ts";
 
 /**
  * Whether the leader may submit. "needs-lookup" means the address is not a
@@ -74,7 +75,7 @@ export function readiness(
 			issue(
 				"policy.not_multisig",
 				"error",
-				`${p.payload.multiSigUser} is not a multi-sig user (as of ${new Date(policy.observedAt).toISOString()}); the chain answers "Invalid multi-sig user".`,
+				`${p.payload.multiSigUser} is not a multi-sig user (as of ${isoTime(policy.observedAt)}); the chain answers "Invalid multi-sig user".`,
 			),
 		);
 		return {

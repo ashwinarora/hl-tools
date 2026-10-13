@@ -19,6 +19,7 @@ import type {
 	Sig,
 	SignatureStatus,
 } from "./types.ts";
+import { isoTime } from "./when.ts";
 
 /** secp256k1 group order and its half; s above the half is "high-s" (malleable form). */
 export const SECP256K1_N =
@@ -171,8 +172,8 @@ export async function classifySignatures(
 							"signature.unauthorized",
 							"warning",
 							unclaimed
-								? `${recovered} is not in the signer set (as of ${new Date(policy.observedAt).toISOString()}): either an outsider signed, or an authorized user signed different bytes (diagnoseSignature can tell).`
-								: `${recovered} is not in the signer set (as of ${new Date(policy.observedAt).toISOString()}). API wallets of signers cannot sign inner actions either.`,
+								? `${recovered} is not in the signer set (as of ${isoTime(policy.observedAt)}): either an outsider signed, or an authorized user signed different bytes (diagnoseSignature can tell).`
+								: `${recovered} is not in the signer set (as of ${isoTime(policy.observedAt)}). API wallets of signers cannot sign inner actions either.`,
 							{
 								path,
 								fix: "Collect a signature from an authorized user's own key.",

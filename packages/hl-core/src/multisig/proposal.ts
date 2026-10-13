@@ -317,7 +317,9 @@ function normalisePolicy(
 		!Array.isArray(users) ||
 		!isSafeInt(p.threshold) ||
 		p.threshold < 0 ||
-		!isSafeInt(p.observedAt)
+		// a moment a calendar holds: it is printed, and a date that is none throws
+		!isSafeInt(p.observedAt) ||
+		!isMoment(p.observedAt)
 	) {
 		shapeError();
 		return null;
@@ -812,6 +814,15 @@ function receiptOf(value: unknown, issues: Issue[]): Receipt | null {
 			issue("receipt.shape", "error", "receipt.submittedAt is required.", {
 				path: "receipt.submittedAt",
 			}),
+		);
+	else if (!isMoment(submittedAt))
+		issues.push(
+			issue(
+				"receipt.shape",
+				"error",
+				"receipt.submittedAt is not a moment any calendar holds.",
+				{ path: "receipt.submittedAt" },
+			),
 		);
 	if (
 		typeof r.signatureChainId !== "string" ||

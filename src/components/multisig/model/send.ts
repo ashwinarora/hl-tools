@@ -191,6 +191,11 @@ export function preflight(action: PlainObject, facts: SendFacts): Refusal[] {
 	const refusal = blocked?.code ?? null;
 	if (blocked) out.push({ code: blocked.code, message: blocked.message });
 
+	// `checkBeforeSubmit` passes no `done`: by then the page has already
+	// judged the order from the record (`overtaken` in the stage), and where
+	// that could not be told the submission is let through, since a send that
+	// was overtaken can never go through anyway and only its own number is
+	// lost. This branch serves callers that do hold the record.
 	if (overtakenBy(action, facts.done ?? []))
 		out.push({
 			code: "nonce-used",

@@ -9,6 +9,7 @@ import {
 	type ErrorExplanation,
 	explainExchangeError,
 	type Hex,
+	isoTime,
 	type Network,
 	numberSpent,
 	type PlainObject,
@@ -18,6 +19,7 @@ import {
 	type Readiness,
 	vaultActionOf,
 } from "@hl-tools/core";
+import { unmeasuredSwitch } from "./modeSwitch";
 import { describeWindow, type WindowInfo } from "./nonce";
 import {
 	joinParts,
@@ -271,7 +273,8 @@ export function changeInEffect(p: Proposal, live: Policy | null): boolean {
 
 /** A moment as a part: shown in the reader's own zone. */
 const heldWhen = (at: number): Part => ({
-	text: new Date(at).toISOString().slice(0, 16).replace("T", " "),
+	// a lockup's end comes from Hyperliquid's feed as it is: never a throw
+	text: isoTime(at).slice(0, 16).replace("T", " "),
 	when: at,
 });
 
@@ -355,7 +358,7 @@ export function deriveStage(input: StageInput): Stage {
 		const at = p.receipt?.submittedAt ?? 0;
 		phase = "submitted";
 		head = say`Submitted · accepted by Hyperliquid`;
-		body = say`Submitted ${{ text: new Date(at).toISOString(), when: at }}. Nothing more to sign.`;
+		body = say`Submitted ${{ text: isoTime(at), when: at }}. Nothing more to sign.`;
 	} else if (input.carriedOut) {
 		phase = "carried-out";
 		// said this way because the submitter may well have used this page, signed out
@@ -404,6 +407,11 @@ export function deriveStage(input: StageInput): Stage {
 		phase = "unsupported";
 		head = say`This document sets a vault address or an expiry`;
 		body = say`Signers of a user-signed action do not sign those two fields, so anyone could have added them. This page will not sign or submit it.`;
+	} else if (unmeasuredSwitch(p.payload.action) !== null && !failedAttempt) {
+		// before anyone signs: signatures cannot make it go through
+		phase = "unsupported";
+		head = say`A switch to an account mode this page was not tested with`;
+		body = say`${unmeasuredSwitch(p.payload.action) as string}`;
 	} else if (
 		failedAttempt &&
 		failedAttempt.id !== "nonce-used" &&

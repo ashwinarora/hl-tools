@@ -467,6 +467,17 @@ describe("validateProposal", () => {
 		).toBe(`0x${"ab".repeat(32)}`);
 		expect(codes(m({ policyAtCreation: 5 }).issues)).toEqual(["policy.shape"]);
 		expect(
+			codes(
+				m({
+					policyAtCreation: {
+						authorizedUsers: [B, A],
+						threshold: 1,
+						observedAt: 9_000_000_000_000_000,
+					},
+				}).issues,
+			),
+		).toEqual(["policy.shape"]);
+		expect(
 			m({
 				policyAtCreation: {
 					authorizedUsers: [B, A],
@@ -555,6 +566,10 @@ describe("validateProposal", () => {
 			);
 		expect(r(5)).toEqual(["receipt.shape"]);
 		expect(r({ ...receipt, submittedAt: null })).toEqual(["receipt.shape"]);
+		// a number that is no date on any calendar: printing it would throw
+		expect(r({ ...receipt, submittedAt: 9_000_000_000_000_000 })).toEqual([
+			"receipt.shape",
+		]);
 		expect(r({ ...receipt, signatureChainId: "0x66EEE" })).toEqual([
 			"receipt.shape",
 		]);

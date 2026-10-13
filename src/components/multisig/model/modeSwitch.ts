@@ -10,11 +10,14 @@
  * account already has is accepted and changes nothing.
  */
 import {
+	ABSTRACTION_ENVELOPE_CODES,
 	type AccountMode,
 	accountMode,
+	cutTo,
 	isolated,
 	type PlainObject,
 	sendRefusal,
+	visibleText,
 } from "@hl-tools/core";
 
 const plural = (n: number, one: string, many: string) =>
@@ -35,6 +38,25 @@ export function modeTargetOf(action: PlainObject): ModeTarget | null {
 	if (action.abstraction === MODE_NAME.manual) return "manual";
 	return null;
 }
+
+/**
+ * A mode switch this page cannot finish: one to a mode nobody measured. The
+ * finaliser's signature is made over a one-letter code for the mode (the
+ * core's `hashedEnvelopeAction`) and only the measured modes have one: over
+ * the long name Hyperliquid answered "Invalid multi-sig outer signer", which
+ * uses the proposal's number up. Null for any other action.
+ */
+export function unmeasuredSwitch(action: PlainObject): string | null {
+	if (action.type !== "userSetAbstraction") return null;
+	const mode = action.abstraction;
+	if (typeof mode === "string" && mode in ABSTRACTION_ENVELOPE_CODES)
+		return null;
+	return MODE_UNMEASURED(mode);
+}
+
+/** Said before any wallet prompt, and on the proposal's page before anyone signs. */
+export const MODE_UNMEASURED = (mode: unknown): string =>
+	`This switches the account to a mode this tool was not tested with (${typeof mode === "string" ? `“${isolated(cutTo(visibleText(mode), 40))}”` : "not named"}). The finaliser's signature for a mode switch has to be made in a way that was measured for the unified and the manual account only, so Hyperliquid would refuse this one and the proposal's number would be used up.`;
 
 /**
  * The switch a treasury in this mode would make: the other of the two. Null
