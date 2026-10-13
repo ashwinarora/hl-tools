@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
 import {
 	buildEnvelope,
@@ -6,9 +7,12 @@ import {
 	classifySignatures,
 	createProposal,
 	envelopeDigest,
+	innerDigest,
+	normaliseSig,
 	type Proposal,
 	type ProposalSignature,
 	padSig,
+	RECEIPT_BUDGET,
 	type Receipt,
 	recoverInnerSigner,
 } from "../../src/multisig/index.ts";
@@ -227,6 +231,52 @@ describe("whose word a receipt is", () => {
 			),
 		).toBe("finaliser");
 	});
+
+	it("covers the most signatures an account can have, within its budget", async () => {
+		// ten signers: the finaliser (A) and nine more, each with a key of its own
+		const more = [6, 7, 8, 9, 10, 11, 12, 13, 14].map((n) =>
+			privateKeyToAccount(`0x${n.toString(16).padStart(64, "0")}`),
+		);
+		const payload = userPayload();
+		const digest = innerDigest(payload).digest as `0x${string}`;
+		const others: ProposalSignature[] = [];
+		for (const account of more) {
+			const sig = normaliseSig(await account.sign({ hash: digest })).sig;
+			others.push({
+				...padSig(sig as never),
+				signer: account.address.toLowerCase() as never,
+				at: NOW,
+			});
+		}
+		const [own] = await signed(1);
+		const all = [own as ProposalSignature, ...others];
+		const sorted = [...all].sort((x, y) => (x.signer < y.signer ? -1 : 1));
+		// Sent with three of them, in sorted order. The copy holds all ten the
+		// other way round, so nothing in its own order gives the request: it is
+		// found late in the second round, among the small selections.
+		const sentWith = sorted.slice(0, 3);
+		const request = buildEnvelope(proposalOf(payload, sentWith), {
+			signatureChainId: CHAIN,
+		}).request;
+		const receipt: Receipt = {
+			submittedAt: SENT,
+			signatureChainId: CHAIN,
+			outerSignature: await signDigest(
+				envelopeDigest(request, "testnet").digest as `0x${string}`,
+				1,
+			),
+			httpStatus: 200,
+			response: { status: "ok" },
+		};
+		const copy = proposalOf(payload, [...sorted].reverse());
+		expect(await checkReceipt(copy, receipt)).toBe("finaliser");
+		// the budget is what lets it get there, and it is enough: the first
+		// round alone is 1,536 selections of ten
+		expect(RECEIPT_BUDGET).toBeGreaterThanOrEqual(3_072);
+		expect(await checkReceipt(copy, receipt, { budget: 1_536 })).toBe(
+			"unverified",
+		);
+	}, 60_000);
 
 	it("says who sent it, not what was answered: the answer is outside the signature", async () => {
 		const p = proposalOf(userPayload(), await signed(1, 2));

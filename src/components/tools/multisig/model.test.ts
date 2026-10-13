@@ -74,4 +74,16 @@ describe("a pasted request is judged over Hyperliquid's own writing of its inner
 		);
 		expect(Object.keys(turned.asSent ?? {})[0]).toBe("grouping");
 	});
+	it("a pasted number too large for a number does not stop the page (found when the fix was read)", () => {
+		const text = body({
+			type: "vaultTransfer",
+			vaultAddress: `0x${"a1".repeat(20)}`,
+			isDeposit: true,
+			usd: 1,
+		} as PlainObject).replace('"usd":1', '"usd":12345678901234567890');
+		expect(text).toContain("12345678901234567890");
+		expect(() => parseEnvelopeText(text, "testnet", NONCE)).not.toThrow();
+		const p = parseEnvelopeText(text, "testnet", NONCE);
+		expect(["proposal", "not-multisig"]).toContain(p.kind);
+	});
 });

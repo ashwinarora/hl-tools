@@ -22,3 +22,16 @@ export function isMoment(ms: unknown): ms is number {
 export function isoTime(ms: unknown): string {
 	return isMoment(ms) ? new Date(ms).toISOString() : `${String(ms)} (no date)`;
 }
+
+/**
+ * A value written out for a message, as JSON would write it. `JSON.stringify`
+ * throws on an integer too large for a number, which a pasted document can
+ * hold (it arrives as a bigint): this never throws, and writes such an
+ * integer as its digits.
+ */
+export function written(value: unknown): string {
+	if (value === undefined) return "undefined";
+	return JSON.stringify(value, (_key, x) =>
+		typeof x === "bigint" ? x.toString() : x,
+	);
+}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isMoment, isoTime, MAX_TIME_MS } from "../../src/multisig/index.ts";
+import {
+	isMoment,
+	isoTime,
+	MAX_TIME_MS,
+	written,
+} from "../../src/multisig/index.ts";
 
 describe("isoTime: a moment in a message, from a number somebody else wrote", () => {
 	it("writes a moment as ISO text", () => {
@@ -23,5 +28,23 @@ describe("isoTime: a moment in a message, from a number somebody else wrote", ()
 		expect(isMoment(MAX_TIME_MS + 1)).toBe(false);
 		expect(isMoment(-1)).toBe(true);
 		expect(isMoment("1")).toBe(false);
+	});
+});
+
+describe("written: a pasted value in a message", () => {
+	it("is what JSON would write", () => {
+		expect(written("l1")).toBe('"l1"');
+		expect(written(2)).toBe("2");
+		expect(written(null)).toBe("null");
+		expect(written({ a: [1, "x"] })).toBe('{"a":[1,"x"]}');
+	});
+	it("never throws on an integer too large for a number, which arrives as a bigint", () => {
+		const big = 12345678901234567890n;
+		expect(() => JSON.stringify(big)).toThrow();
+		expect(written(big)).toBe('"12345678901234567890"');
+		expect(written({ usd: big, nested: [big] })).toBe(
+			'{"usd":"12345678901234567890","nested":["12345678901234567890"]}',
+		);
+		expect(written(undefined)).toBe("undefined");
 	});
 });

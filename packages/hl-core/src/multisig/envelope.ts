@@ -12,6 +12,7 @@ import type { TypedDataPayload } from "../signing.ts";
 import { prepareInnerAction } from "./action.ts";
 import { normaliseAddress } from "./address.ts";
 import { envelopeDigest, innerDigest } from "./digest.ts";
+import { deepEqual } from "./proposal.ts";
 import {
 	normaliseSig,
 	padSig,
@@ -513,10 +514,9 @@ export function requestAsJudged(
 ): JudgedRequest {
 	const sent = req.action.payload.action;
 	const prepared = prepareInnerAction(sent, network, req.nonce);
-	if (
-		!prepared.action ||
-		JSON.stringify(prepared.action) === JSON.stringify(sent)
-	)
+	// compared field by field and in order: an integer too large for a number
+	// is a bigint here, and `JSON.stringify` would throw on it
+	if (!prepared.action || deepEqual(prepared.action, sent))
 		return { request: req, asSent: null, issues: [] };
 	return {
 		request: {

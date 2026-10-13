@@ -28,7 +28,7 @@ import type {
 	RiskFlag,
 	Sig,
 } from "./types.ts";
-import { isMoment, isoTime, MAX_TIME_MS } from "./when.ts";
+import { isMoment, isoTime, MAX_TIME_MS, written } from "./when.ts";
 
 export interface NonceWindow {
 	/** Earliest chain time at which the nonce is accepted (nonce − 1 day). */
@@ -479,7 +479,7 @@ export function validateProposal(
 			issue(
 				"proposal.version",
 				"error",
-				`Unsupported proposal version ${JSON.stringify(d.v)}; this build understands v1.`,
+				`Unsupported proposal version ${written(d.v)}; this build understands v1.`,
 				{ path: "v" },
 			),
 		);
@@ -633,7 +633,7 @@ export function validateProposal(
 				issue(
 					"meta.kind",
 					"error",
-					`meta.kind is ${JSON.stringify(m.kind)} but the action is ${kind}.`,
+					`meta.kind is ${written(m.kind)} but the action is ${kind}.`,
 					{ path: "meta.kind" },
 				),
 			);

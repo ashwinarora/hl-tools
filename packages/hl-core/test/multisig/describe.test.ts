@@ -508,6 +508,14 @@ describe("describeAction details", () => {
 			'taken from the balance on perp dex "xyz"',
 			"arrives in the receiver's spot balance",
 		]);
+		// a field that is an integer too large for a number is written out, never thrown on
+		expect(
+			describeAction({
+				type: "sendAsset",
+				sourceDex: 12345678901234567890n,
+				destinationDex: "spot",
+			} as never).lines[0],
+		).toBe('taken from the balance on perp dex "12345678901234567890"');
 		// fields left out are shown as unknown, never guessed
 		const bare = describeAction({ type: "sendAsset" } as PlainObject);
 		expect(bare.headline).toBe("Send ? ? to ?");

@@ -127,6 +127,37 @@ describe("the form of the inner action Hyperliquid hashes (fixtures/multisig/inn
 		]);
 	});
 
+	it("an action holding an integer too large for a number is compared, never thrown on", () => {
+		// such an integer arrives from a pasted body as a bigint, and
+		// JSON.stringify throws on one (found when the fix was read)
+		const control = parseEnvelope(fx.requests[0]?.request)
+			.request as EnvelopeRequest;
+		const huge: EnvelopeRequest = {
+			...control,
+			action: {
+				...control.action,
+				payload: {
+					...control.action.payload,
+					action: {
+						...control.action.payload.action,
+						usd: 12345678901234567890n,
+					} as never,
+				},
+			},
+		};
+		expect(() => requestAsJudged(huge, "testnet")).not.toThrow();
+		// and with its fields in another order as well
+		const { type, ...rest } = huge.action.payload.action;
+		const turned: EnvelopeRequest = {
+			...huge,
+			action: {
+				...huge.action,
+				payload: { ...huge.action.payload, action: { ...rest, type } },
+			},
+		};
+		expect(() => requestAsJudged(turned, "testnet")).not.toThrow();
+	});
+
 	it("an action it cannot bring into that form is judged as it was sent", () => {
 		const control = parseEnvelope(fx.requests[0]?.request)
 			.request as EnvelopeRequest;

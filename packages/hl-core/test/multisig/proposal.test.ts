@@ -337,6 +337,12 @@ describe("validateProposal", () => {
 			expect(codes(validateProposal(bad).issues)).toEqual(["proposal.shape"]);
 	});
 	it("validate.version-unknown", () => {
+		// a version or a kind that is an integer too large for a number is said, not thrown
+		expect(
+			codes(
+				validateProposal({ ...docOf(good()), v: 12345678901234567890n }).issues,
+			),
+		).toEqual(["proposal.version"]);
 		expect(codes(validateProposal({ ...docOf(good()), v: 2 }).issues)).toEqual([
 			"proposal.version",
 		]);

@@ -16,7 +16,7 @@ import { waitWords, weiToHype } from "./staking.ts";
 import { withdrawalOutcome } from "./transfer.ts";
 import type { PlainObject, RiskFlag } from "./types.ts";
 import { hlpNetwork, vaultHeadline } from "./vault.ts";
-import { isoTime } from "./when.ts";
+import { isoTime, written } from "./when.ts";
 
 export interface DescribeContext {
 	/** Perp asset index → coin name (from the resolver universe). */
@@ -186,7 +186,7 @@ const balanceName = (dex: unknown): string =>
 		? "the perps balance"
 		: dex === "spot"
 			? "the spot balance"
-			: `the balance on perp dex ${JSON.stringify(dex ?? "?")}`;
+			: `the balance on perp dex ${written(dex ?? "?")}`;
 const usd = (v: unknown): string => {
 	if (typeof v === "number" || typeof v === "bigint") {
 		const n = BigInt(v);

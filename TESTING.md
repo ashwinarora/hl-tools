@@ -1610,7 +1610,7 @@ A second session read the code of both pull requests at `99cf0aa` without runnin
 
 | Suite | Command | Result |
 |---|---|---|
-| Core and app unit tests | `bun --bun run test` | 118 files, 3,109 tests, all passing |
+| Core and app unit tests | `bun --bun run test` | 118 files, 3,114 tests, all passing |
 | Core coverage | `bunx vitest run --coverage` in `packages/hl-core` | 100 % of lines, branches, functions and statements for its scope (three new modules included) |
 | Database | `bun run db:test` | 1,015 assertions, all passing (7 new for the read markers' turn) |
 | Advisors | `supabase db advisors --local` | no issues |
@@ -1705,6 +1705,16 @@ So Hyperliquid reads a request, writes the inner action out in its own form and 
 **The read markers (relay; one migration, `relay_read_mark_turn`).** "Got it" in "While you were away" writes a marker; the newest row per signer and treasury is the marker, newest meaning the highest id. Two "Got it" from one signer at the same moment (two tabs, two devices) were written one after the other under a lock, but a row has its id before that lock is taken, so the one written second could carry the lower id and the marker read back was one entry behind: a notice already read showed once more. It never concerned two different signers, or two treasuries. The relay's integration test "takes two at once" had caught it once in four runs. The turn is now taken per statement and per wallet, before any row has an id. pgTAP (`140_attention.sql`, 7 new): the marker is written under its wallet's own turn, the turn is taken before the row has its id (a test trigger notes the next id when the statement starts), another wallet's turn is its own, the turn is a trigger no client can skip. The integration suite then passed eight times in a row. `supabase db advisors --local`: no issues.
 
 **Two old reports.** `TEST_REPORT.md` and `TEST_REPORT_v2.md`, from the faucet miner's first tests, named a wallet. They are no longer tracked and are ignored from here on; they stay in the history of the commits that had them.
+
+**The reviewer then read the fixes** (`99cf0aa..ea43fbc`, with the owner's word) and confirmed them finding by finding, the migration included. Three small things came out of that reading:
+
+| Point | Answer |
+|---|---|
+| The fix for F-1 compared the two forms of an action with `JSON.stringify`, which throws on an integer too large for a number; a pasted body can hold one, and the comparison ran while the inspector was drawn (the fault of F-2 again, brought back by a fix) | Compared with the core's own `deepEqual`. Three other places wrote a pasted value out the same way (a document's version, its `meta.kind`, a dex name in a description) and now go through `written`, which cannot throw. Tests in `when.test.ts`, `proposal.test.ts`, `describe.test.ts`, `innerForm.test.ts` and `tools/multisig/model.test.ts`, the last with the reviewer's own example |
+| Does the budget of the receipt check cover ten signers? | Yes: 3,072 different selections at most, against a budget of 3,200. A test with ten signers finds a receipt that sits late in the second round, and misses it with half the budget (`receipt.test.ts`). About three seconds of work for the worst document, when a copy is opened, never while a page is drawn |
+| Receipts already kept by a browser from before the check existed are not checked again | Left: nobody but the test browsers has such receipts (all 53 of theirs passed), and from the first release on every receipt came in through the check |
+
+118 files, 3,114 unit tests after it; core coverage 100 %.
 
 ### Left as they are
 

@@ -39,9 +39,14 @@ import type {
 } from "./types.ts";
 
 /**
- * How many selections of signatures are tried at most (each is one hash and
- * one recovery). Ten signatures, the most an account can have, need 3,072
- * for both orders with and without the finaliser's last.
+ * How many different selections of signatures are tried at most (each is one
+ * hash and one recovery; a selection already tried costs nothing). Ten
+ * signatures, the most an account can have, need at most 3,072: 1,024
+ * selections in the copy's order and the 512 of them that hold the
+ * finaliser's signature once more with it last, and the same over the sorted
+ * order. About three seconds of work for the worst document; the check steps
+ * aside every few selections, and runs when a copy is opened, never while a
+ * page is drawn.
  */
 export const RECEIPT_BUDGET = 3_200;
 /** Up to this many signatures every order of every selection is tried too. */
