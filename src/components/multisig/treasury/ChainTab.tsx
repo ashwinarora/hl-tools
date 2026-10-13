@@ -377,7 +377,7 @@ export function ChainTab({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<SourceLine status={live.status} onRetry={live.retry}>
+			<SourceLine status={live.status} asOf={live.asOf} onRetry={live.retry}>
 				Hyperliquid's own record of this account. This is not the Signing log.{" "}
 				<Help k="recordAndLog" />
 			</SourceLine>

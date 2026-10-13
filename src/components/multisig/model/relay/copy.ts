@@ -38,6 +38,9 @@ export const RELAY_COPY = {
 	firstUseTitle: "This section signs and sends real transactions",
 	firstUseBody:
 		"You approve every signature in your own wallet, and a submitted action cannot be undone. Read the destination and amount in the wallet prompt each time, and rehearse on testnet first.",
+	// the same notice in a build without a relay: how a proposal travels there
+	firstUseBodySolo:
+		"Proposals are signed with your wallet and submitted to Hyperliquid from this browser. A proposal travels as a link or a file, and every signature is verified here before anything is sent. Rehearse on testnet first.",
 	underSign:
 		"Your wallet will show the treasury, the finaliser, the destination and the amount. Check them there.",
 	shareOnlyHere:

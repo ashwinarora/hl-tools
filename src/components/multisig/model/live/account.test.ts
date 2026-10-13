@@ -288,6 +288,29 @@ describe("LiveAccountStore: history", () => {
 		// history alone is not "live": that word is about the holdings
 		expect(now().status).toBe("connecting");
 	});
+	it("says how old the figures may be once they are no longer live", () => {
+		const { store, last, now, clock } = setup();
+		store.acquire("holdings");
+		expect(now().asOf).toBeNull();
+		last().open();
+		last().ackAll();
+		expect(now().status).toBe("live");
+		// current: no "as of"
+		expect(now().asOf).toBeNull();
+		const heard = clock.now();
+		clock.advance(60_000);
+		last().drop();
+		expect(now().status).toBe("reconnecting");
+		// the last moment Hyperliquid was heard from while live, not the moment it was lost
+		expect(now().asOf).toBe(heard);
+		clock.advance(5_000);
+		last().open();
+		// connected again, the holdings not yet: still the old figures, still their time
+		expect(now().asOf).toBe(heard);
+		last().ackAll();
+		expect(now().status).toBe("live");
+		expect(now().asOf).toBeNull();
+	});
 	it("after a reconnect the snapshot adds what was missed and repeats nothing", () => {
 		const { store, last, now, clock } = setup();
 		store.acquire("holdings");

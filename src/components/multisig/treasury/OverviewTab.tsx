@@ -246,7 +246,12 @@ export function OverviewTab({
 
 	// who signs: the chain's list once it is read; the relay's copy until then,
 	// and for an account that is no longer a multi-sig
-	const frozen = treasury ? treasury.frozenAt !== null : false;
+	// no longer a multi-sig: by the relay's copy, or by Hyperliquid's own answer
+	// a moment before the copy catches up (the signers shown are then the last
+	// known ones, and nothing can be proposed for the account)
+	const frozen =
+		(treasury ? treasury.frozenAt !== null : false) ||
+		state.isMultiSig === false;
 	const signers = state.policy?.authorizedUsers ?? treasury?.signers ?? [];
 	// from the relay's history: only where the relay lists the treasury for this wallet
 	const signed = useLastSigned(network, address, signers, !!treasury);
@@ -262,7 +267,7 @@ export function OverviewTab({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<SourceLine status={live.status} onRetry={live.retry}>
+			<SourceLine status={live.status} asOf={live.asOf} onRetry={live.retry}>
 				Balances, positions and orders arrive live from Hyperliquid. Nothing
 				here is stored by this tool. <Help k="live" />
 			</SourceLine>

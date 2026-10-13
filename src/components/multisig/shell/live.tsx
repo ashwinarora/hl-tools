@@ -73,17 +73,28 @@ const LIVE: Record<LiveStatus, { text: string; dot: string; title: string }> = {
 	},
 };
 
-/** Says, in one small label, whether the figures next to it are current. */
+/**
+ * Says, in one small label, whether the figures next to it are current, and
+ * when they are not, the moment they were last known to be.
+ */
 export function LiveBadge({
 	status,
+	asOf = null,
 	onRetry,
 }: {
 	status: LiveStatus;
+	/** See `LiveAccount.asOf`: null while the figures are current. */
+	asOf?: number | null;
 	onRetry?: () => void;
 }) {
 	const s = LIVE[status];
 	return (
-		<span className="inline-flex items-center gap-2">
+		<span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+			{status !== "live" && asOf !== null && (
+				<span className="whitespace-nowrap text-xs text-muted-foreground">
+					figures as of <When at={asOf} seconds />
+				</span>
+			)}
 			<output
 				title={s.title}
 				className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface px-2 py-px text-[11px] font-medium text-muted-foreground"
@@ -115,16 +126,18 @@ export function LiveBadge({
 export function SourceLine({
 	children,
 	status,
+	asOf = null,
 	onRetry,
 }: {
 	children: ReactNode;
 	status: LiveStatus;
+	asOf?: number | null;
 	onRetry?: () => void;
 }) {
 	return (
 		<div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
 			<span>{children}</span>
-			<LiveBadge status={status} onRetry={onRetry} />
+			<LiveBadge status={status} asOf={asOf} onRetry={onRetry} />
 		</div>
 	);
 }

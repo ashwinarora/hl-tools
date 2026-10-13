@@ -11,6 +11,12 @@ import {
 } from "./copy";
 import { REFUSAL_TEXTS } from "./errors";
 import { nicknameProblem } from "./nicknames";
+import {
+	COUNTED_MEANWHILE,
+	REQUEST_REASONS,
+	recheckLine,
+	requestRefusal,
+} from "./signers";
 import { SIGN_IN_STATEMENT } from "./siwe";
 
 describe("relay copy", () => {
@@ -28,6 +34,29 @@ describe("relay copy", () => {
 		["gate (4 others)", gateOthers(4)],
 		["gate (1, none connected)", gateOthers(1, false)],
 		["gate (2, none connected)", gateOthers(2, false)],
+		...Object.entries(REQUEST_REASONS).map(([k, t]): [string, string] => [
+			`request reason ${k}`,
+			t,
+		]),
+		[
+			"request reason unknown",
+			requestRefusal({ status: "rejected", reason: "somethingNew" }) ?? "",
+		],
+		// the notice of a signer list that differs from the copy
+		["signers differ: counted meanwhile", COUNTED_MEANWHILE],
+		...[
+			{ checking: true, refused: null, gaveUp: false },
+			{
+				checking: false,
+				refused: "The relay could not be reached.",
+				gaveUp: false,
+			},
+			{ checking: false, refused: null, gaveUp: true },
+			{ checking: false, refused: null, gaveUp: false },
+		].map((state, i): [string, string] => [
+			`signers differ: re-check ${i}`,
+			recheckLine(state),
+		]),
 		...SIGN_HINT_TEXTS.map((t, i): [string, string] => [`sign hint ${i}`, t]),
 		...REFUSAL_TEXTS.map((t, i): [string, string] => [`refusal ${i}`, t]),
 		// what the page says when it refuses a nickname before asking the relay

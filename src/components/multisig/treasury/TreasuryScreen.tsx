@@ -16,9 +16,13 @@ import { useChainMatch } from "../live/useChainMatch";
 import { useSelfTreasury } from "../live/useSelfTreasury";
 import { RELAY_COPY } from "../model/relay/copy";
 import {
+	COUNTED_MEANWHILE,
 	compareSigners,
 	livePolicy,
+	mayAskAgain,
 	nextRecheck,
+	recheckLine,
+	requestRefusal,
 } from "../model/relay/signers";
 import { isItself } from "../model/selfTreasury";
 import { shortAddress } from "../model/stage";
@@ -199,9 +203,14 @@ export function TreasuryScreen({
 	const client = relay.client;
 	const network0 = treasury?.network;
 	const address0 = treasury?.address;
+	// why the last ask did not get through (another wallet, a refusal, the
+	// relay out of reach): said in the notice, never passed over
+	const [refused, setRefused] = useState<string | null>(null);
+	const [gaveUp, setGaveUp] = useState(false);
 	const check = useCallback(async () => {
 		if (!client || !me || !network0 || !address0) return;
 		const r = await requestTreasury(client, me, network0, address0, "check");
+		setRefused(r.issue?.message ?? null);
 		if (r.data) {
 			queries.setQueryData(["relay", me, "request", r.data.id], r.data);
 			setRequestId(r.data.id);
@@ -215,13 +224,19 @@ export function TreasuryScreen({
 	useEffect(() => {
 		if (!differs) {
 			asked.current = { at: asked.current.at, n: 0 };
+			setGaveUp(false);
+			setRefused(null);
 			return;
 		}
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		let stopped = false;
 		const schedule = () => {
 			const wait = nextRecheck(asked.current.at, asked.current.n, Date.now());
-			if (wait === null) return;
+			if (wait === null) {
+				// asked as often as it will by itself: the notice says so
+				setGaveUp(true);
+				return;
+			}
 			timer = setTimeout(async () => {
 				asked.current = { at: Date.now(), n: asked.current.n + 1 };
 				await check();
@@ -239,7 +254,12 @@ export function TreasuryScreen({
 			void queries.invalidateQueries({ queryKey: ["relay", me, "treasuries"] });
 		}
 	}, [request, queries, me]);
-	const checking = request?.status === "pending";
+	const recheck = {
+		checking: request?.status === "pending",
+		// the ask did not get through, or it did and the relay could not do it
+		refused: refused ?? requestRefusal(request ?? null),
+		gaveUp,
+	};
 
 	if (!valid) {
 		return (
@@ -478,10 +498,19 @@ export function TreasuryScreen({
 											? `Threshold on chain: ${live.policy.threshold}. `
 											: "",
 									].join("")}
-						{checking
-							? "The relay is looking it up now."
-							: "The relay has been asked to look again; this page updates by itself."}{" "}
-						Signatures are always counted against the live list.
+						{recheckLine(recheck)} {COUNTED_MEANWHILE}
+						{mayAskAgain(recheck) && (
+							<>
+								{" "}
+								<button
+									type="button"
+									onClick={() => void check()}
+									className="font-medium underline underline-offset-2 hover:text-foreground"
+								>
+									Ask again
+								</button>
+							</>
+						)}
 					</Callout>
 				)}
 				<div className="mb-4 empty:hidden">

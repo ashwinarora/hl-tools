@@ -93,7 +93,7 @@ export function EnvelopeView({
 						<Field
 							label="JSON"
 							htmlFor="ms-envelope"
-							hint="Signatures are verified locally; nothing is sent anywhere except the signer-set lookup for the multi-sig user."
+							hint="Signatures are verified locally. What is pasted is sent nowhere: the page asks Hyperliquid only for the multi-sig user's signer set (on both networks, to say which one it belongs to) and for the list of markets, to name coins."
 						>
 							<TextArea
 								id="ms-envelope"

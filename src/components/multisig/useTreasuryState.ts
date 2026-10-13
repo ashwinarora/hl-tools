@@ -8,12 +8,14 @@
  *                            the WebSocket, signers and API wallets asked for
  *                            once a minute.
  */
+
 import type { AccountMode, AgentInfo, Policy } from "@hl-tools/core";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useAccount } from "#/components/tools/multisig/useAccount";
 import { CONTROL_REFRESH_MS, useControl } from "./live/useControl";
 import { type LiveWants, useLiveAccount } from "./live/useLiveAccount";
 import type { LiveAccount, LiveStatus } from "./model/live/account";
+import { localDateTime } from "./model/time";
 
 export interface TreasuryState {
 	readonly target: AccountTarget | null;
@@ -99,9 +101,20 @@ const MONEY: Record<LiveStatus, string> = {
 	refused: "balances not updating: Hyperliquid refused live updates",
 };
 
-/** One line saying how a live treasury state is kept current. */
-export function liveSource(money: LiveStatus): string {
-	return `signers and API wallets checked every ${CONTROL_REFRESH_MS / 60_000 === 1 ? "minute" : `${CONTROL_REFRESH_MS / 60_000} minutes`} while open · ${MONEY[money]}`;
+/**
+ * One line saying how a live treasury state is kept current. The time beside
+ * it is the signers' and API wallets'; balances that are not live get their
+ * own (`LiveAccount.asOf`), in the reader's zone like every time of the section.
+ */
+export function liveSource(
+	money: LiveStatus,
+	asOf: number | null = null,
+): string {
+	const balances =
+		money !== "live" && asOf !== null
+			? `${MONEY[money]} (as they were at ${localDateTime(asOf, {}, { seconds: true })})`
+			: MONEY[money];
+	return `signers and API wallets checked every ${CONTROL_REFRESH_MS / 60_000 === 1 ? "minute" : `${CONTROL_REFRESH_MS / 60_000} minutes`} while open · ${balances}`;
 }
 
 export interface LiveTreasuryState extends TreasuryState {
@@ -130,7 +143,7 @@ export function useLiveTreasuryState(
 		mode: control.mode,
 		modePending: control.modePending,
 		observedAt: control.checkedAt,
-		source: liveSource(live.status),
+		source: liveSource(live.status, live.asOf),
 		money: live.status,
 		checking: control.checking,
 		failed: control.failed,

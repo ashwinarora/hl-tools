@@ -104,6 +104,12 @@ export const DOWN_AFTER = 3;
 
 export interface LiveAccount {
 	readonly status: LiveStatus;
+	/**
+	 * While the status is not "live": the last moment Hyperliquid was heard
+	 * from while it was, which is how old the figures shown may be. Null while
+	 * live (they are current), and while they have never been live.
+	 */
+	readonly asOf: number | null;
 	/** Parts Hyperliquid refused, with its words; the others carry on. */
 	readonly refused: readonly {
 		readonly part: LivePart;
@@ -126,6 +132,7 @@ export interface LiveAccount {
 
 export const LIVE_INITIAL: LiveAccount = {
 	status: "connecting",
+	asOf: null,
 	refused: [],
 	perp: null,
 	spot: null,
@@ -191,6 +198,8 @@ export class LiveAccountStore {
 	private readonly subs = new Map<LivePart, HubSubscriptionState>();
 	private readonly listeners = new Set<() => void>();
 	private everLive = false;
+	/** The last message heard while the holdings were live. */
+	private liveAt: number | null = null;
 	private snapshot: LiveAccount = LIVE_INITIAL;
 
 	constructor(options: LiveAccountStoreOptions) {
@@ -311,6 +320,7 @@ export class LiveAccountStore {
 			this.unwatch = null;
 			this.hub = null;
 			this.everLive = false;
+			this.liveAt = null;
 			// nothing is listening any more: what was shown must not come back as if it were current
 			this.set(LIVE_INITIAL);
 			return;
@@ -422,7 +432,11 @@ export class LiveAccountStore {
 			.map((p) => this.subs.get(p))
 			.filter((s): s is HubSubscriptionState => s !== undefined);
 		const status = liveStatus({ hub, holdings, everLive: this.everLive });
-		if (status === "live") this.everLive = true;
+		if (status === "live") {
+			this.everLive = true;
+			// kept here, not in what a screen reads: it moves with every message
+			this.liveAt = hub.lastMessageAt ?? this.liveAt;
+		}
 		const refused = [...this.subs.entries()]
 			.filter(([, s]) => s.status === "refused")
 			.map(([part, s]) => ({
@@ -431,6 +445,7 @@ export class LiveAccountStore {
 			}));
 		this.patch({
 			status,
+			asOf: status === "live" ? null : this.liveAt,
 			refused: shareStructure(this.snapshot.refused, refused),
 		});
 	}

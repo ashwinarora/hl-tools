@@ -102,3 +102,61 @@ export function nextRecheck(
 	if (lastAskedAt === null) return 0;
 	return Math.max(0, lastAskedAt + RECHECK_EVERY_MS - now);
 }
+
+/** What a page that sees a difference knows about its asks for a re-check. */
+export interface RecheckState {
+	/** The relay is looking the account up now. */
+	readonly checking: boolean;
+	/** Why the last ask did not get through, in the relay's words; null when it did. */
+	readonly refused: string | null;
+	/** Asked `RECHECK_MAX` times, and the difference is still there. */
+	readonly gaveUp: boolean;
+}
+
+/**
+ * What is being done about the difference. An ask that was refused, or a
+ * difference that outlasts every ask, is said: "has been asked to look again"
+ * is true only of an ask that got through and is still being answered.
+ */
+export function recheckLine(s: RecheckState): string {
+	if (s.checking) return "The relay is looking it up now.";
+	if (s.refused !== null)
+		return `The copy could not be brought up to date. ${s.refused}`;
+	if (s.gaveUp)
+		return `The relay was asked ${RECHECK_MAX} times and its copy still differs. It may not be reaching Hyperliquid right now.`;
+	return "The relay has been asked to look again; this page updates by itself.";
+}
+
+/** A page may ask by hand once the asking by itself has stopped or was refused. */
+export const mayAskAgain = (s: RecheckState): boolean =>
+	!s.checking && (s.refused !== null || s.gaveUp);
+
+/**
+ * What the difference means for the counts on a treasury's page: its lists
+ * are made from the copy, a proposal's own page judges against the live list.
+ */
+export const COUNTED_MEANWHILE =
+	"Until the two match, the lists on this page count signatures against the copy. A proposal's own page counts them against Hyperliquid's list, as Hyperliquid does.";
+
+/** Why the relay finished a request without doing what was asked, by its `reason`. */
+export const REQUEST_REASONS: Readonly<Record<string, string>> = {
+	not_a_signer:
+		"The relay looked the account up and your wallet is not one of its signers.",
+	not_multisig: "The relay looked the account up and it is not a multi-sig.",
+	lookup_failed:
+		"The relay could not reach Hyperliquid for this lookup. Try again in a minute.",
+};
+
+/**
+ * What the relay said of a request it finished without success; null for one
+ * still pending, one that was done, or none at all.
+ */
+export function requestRefusal(
+	request: { readonly status: string; readonly reason: string | null } | null,
+): string | null {
+	if (!request) return null;
+	if (request.status !== "rejected" && request.status !== "failed") return null;
+	return (
+		REQUEST_REASONS[request.reason ?? ""] ?? "The relay refused the request."
+	);
+}

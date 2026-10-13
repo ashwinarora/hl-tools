@@ -344,9 +344,7 @@ function FirstUse() {
 				</Btn>
 			}
 		>
-			{relayConfig()
-				? RELAY_COPY.firstUseBody
-				: "Proposals are signed with your wallet and submitted to Hyperliquid from this browser. No server holds anything: a proposal travels as a link or a file, and every signature is verified locally before anything is sent. Rehearse on testnet first."}
+			{relayConfig() ? RELAY_COPY.firstUseBody : RELAY_COPY.firstUseBodySolo}
 		</Callout>
 	);
 }

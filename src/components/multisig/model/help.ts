@@ -33,7 +33,7 @@ export const HELP = {
 	},
 	signingWindow: {
 		title: "Signing window",
-		body: "How long a proposal can still be sent: two days from when it was made. After that Hyperliquid refuses it and its signatures are worth nothing. It can then be proposed again.",
+		body: "How long a proposal can still be sent: two days from when it was made, or almost three for a send made with the longer window. After that Hyperliquid refuses it and its signatures are worth nothing. It can then be proposed again.",
 	},
 	signingChain: {
 		title: "Signed under a chain",
@@ -85,7 +85,7 @@ export const HELP = {
 	},
 	activationFee: {
 		title: "First send to a new address",
-		body: "Hyperliquid charges 1 USDC the first time anything is sent to an address it has never seen. The receiver still gets the full amount. The 1 USDC is taken from the treasury on top, once. Sending to an address already in use costs nothing.",
+		body: "Hyperliquid charges 1 USDC the first time anything is sent to an address it has never seen. With the Send forms here the receiver still gets the full amount, and the 1 USDC is taken from the treasury on top, once. Sending to an address already in use costs nothing.",
 	},
 	perpsSpot: {
 		title: "Perps and spot",
@@ -113,7 +113,7 @@ export const HELP = {
 	},
 	checked: {
 		title: "Checked a moment ago",
-		body: "Signers and API wallets are read from Hyperliquid once a minute while this page is open. The round arrow reads them again at once.",
+		body: "Signers, API wallets and how the account keeps its money are read from Hyperliquid once a minute while this page is open. The round arrow reads them again at once.",
 	},
 	staking: {
 		title: "Staking",
@@ -181,11 +181,11 @@ export const HELP = {
 	},
 	inboxDead: {
 		title: "Cannot be finished",
-		body: "These cannot go ahead as they stand. Either Hyperliquid would refuse them (a newer payment was sent first, or the finaliser is no longer a signer), or enough signers said no. Open one to see which, and to propose it again.",
+		body: "These cannot go ahead as they stand. Hyperliquid refused them once, or would refuse them (a newer payment was sent first, or the finaliser is no longer a signer), or enough signers said no. Open one to see which, and to propose it again.",
 	},
 	sendOrder: {
 		title: "Payments go in order",
-		body: "Hyperliquid takes two kinds of payment only in the order they were proposed: a USDC send written as raw JSON, and a withdrawal to Arbitrum. If a newer one goes first, the older ones are refused and have to be proposed again. The Send forms here are not bound by this.",
+		body: "Hyperliquid takes two kinds of payment only in order of their dates: a USDC send written as raw JSON, and a withdrawal to Arbitrum. Once such a send goes through, older ones of both kinds are refused and have to be proposed again. The Send forms here are not bound by this.",
 	},
 	waysOut: {
 		title: "Take back, say no, withdraw",

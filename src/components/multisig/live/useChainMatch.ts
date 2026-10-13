@@ -57,7 +57,7 @@ function pacer(network: Network): Pacer {
  * Once the explorer says a network address has used up its allowance for the
  * day, it says so to every look-up. Nothing more is asked for ten minutes.
  * Nothing asks again by itself after that either: what could not be checked
- * says so, and is asked once more when the reader presses "retry" beside it
+ * says so, and is asked once more when the reader presses "Check again" beside it
  * or opens the page again. That one look-up finds out whether it is still so.
  */
 const EXPLORER_REST_MS = 10 * 60_000;

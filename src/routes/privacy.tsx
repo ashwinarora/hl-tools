@@ -58,7 +58,10 @@ function PrivacyPage() {
 							it. <b>The operator of the relay can read it as well.</b>
 						</li>
 						<li>
-							No analytics, no advertising, no trackers, no session recording.
+							No analytics, no advertising, no trackers and no session recording
+							of our own. One page, the faucet miner, loads a wallet picker made
+							by someone else, and that picker reports to its maker when the
+							page opens: see "Without signing in".
 						</li>
 					</ul>
 				</Section>
@@ -82,9 +85,16 @@ function PrivacyPage() {
 					</p>
 					<p>
 						Connecting a wallet uses the wallet's own software. The Multisig
-						section offers only the wallets in your browser. In the faucet miner
-						you can also pick a WalletConnect-based wallet; that connection is
-						relayed by WalletConnect under its policy.
+						section offers only the wallets in your browser, and its pages
+						contact nobody for it. The faucet miner is different: its wallet
+						picker can also connect a wallet through WalletConnect, and that
+						picker contacts WalletConnect as soon as the faucet miner page
+						opens, before you pick anything. It tells WalletConnect that it was
+						started and on which page, and WalletConnect sees your IP address.
+						If you pick a WalletConnect-based wallet there, the connection is
+						relayed by WalletConnect, and its window loads a font from Google.
+						All of that is under their policies, and none of it happens on any
+						other page.
 					</p>
 					<p>
 						A vault deposit or withdrawal in the Multisig section is signed
@@ -149,6 +159,12 @@ function PrivacyPage() {
 							<b>What you have marked as read</b>: for each treasury, up to
 							where you last pressed "Got it" in "While you were away", when,
 							and which API wallet addresses the page had shown you by then.
+						</li>
+						<li>
+							<b>Requests to add or re-check a treasury</b>: which wallet asked
+							about which account, when, and what came of it (for example that
+							the wallet is not one of its signers). A request is removed a week
+							after it was answered.
 						</li>
 						<li>
 							<b>A history</b> of the above: which address did what, and when.
@@ -219,11 +235,18 @@ function PrivacyPage() {
 						limited time.
 					</p>
 					<p>
-						Proposals and history are kept until they are deleted. You can
-						export a proposal or a treasury's history as a file at any time. To
-						have your data removed, open an issue at the address below from an
-						account you can link to your wallet address, or ask a co-signer to;
-						we will ask you to prove control of the address with a signature.
+						Proposals, signatures and the history of a treasury are kept until
+						they are deleted. A few records are removed by themselves: a request
+						to add or re-check a treasury a week after it was answered, a
+						transaction your browser pointed the relay to 30 days after the
+						relay checked it (that the proposal was carried out stays on
+						record), an older "marked as read" point 30 days after a newer one
+						replaced it, and the record of who changed a nickname after a year.
+						You can export a proposal or a treasury's history as a file at any
+						time. To have your data removed, open an issue at the address below
+						from an account you can link to your wallet address, or ask a
+						co-signer to; we will ask you to prove control of the address with a
+						signature.
 					</p>
 				</Section>
 

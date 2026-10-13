@@ -10,6 +10,7 @@ import {
 } from "#/components/tools/multisig/model";
 import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 import { RELAY_COPY } from "../model/relay/copy";
+import { requestRefusal } from "../model/relay/signers";
 import { shortAddress } from "../model/stage";
 import { requestTreasury } from "../relay/api";
 import { useRequest, useTreasuries } from "../relay/queries";
@@ -20,14 +21,6 @@ import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
 import { useMounted } from "../shell/WalletBox";
 import { useTreasuryState } from "../useTreasuryState";
-
-const REASONS: Record<string, string> = {
-	not_a_signer:
-		"The relay looked the account up and your wallet is not one of its signers.",
-	not_multisig: "The relay looked the account up and it is not a multi-sig.",
-	lookup_failed:
-		"The relay could not reach Hyperliquid for this lookup. Try again in a minute.",
-};
 
 /**
  * Add a treasury: paste its address once. The browser reads the signer list
@@ -293,8 +286,7 @@ export function AddTreasuryScreen() {
 									tone={request.status === "failed" ? "warning" : "danger"}
 									title="The treasury was not added"
 								>
-									{REASONS[request.reason ?? ""] ??
-										"The relay refused the request."}
+									{requestRefusal(request)}
 								</Callout>
 							)}
 						{issue && (
