@@ -12,6 +12,7 @@ export * from "./order.ts";
 export * from "./plain.ts";
 export * from "./proposal.ts";
 export * from "./readiness.ts";
+export * from "./receipt.ts";
 export * from "./shown.ts";
 export * from "./signature.ts";
 export * from "./signerSet.ts";

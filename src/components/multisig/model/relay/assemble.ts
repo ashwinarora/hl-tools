@@ -136,6 +136,14 @@ export async function assembleProposal(
 			),
 		);
 	}
+	// A receipt on the relay is taken as the relay files it: it accepts one only
+	// from the finaliser's own session (`receipt_before`). It is not checked
+	// here the way a copy opened from a link or a file is (`saveProposal`),
+	// because the check needs every signature that was sent, and the relay
+	// holds only the ones their signers put there themselves: one that
+	// travelled by link and was sent all the same would make a true receipt
+	// fail. Until the relay keeps what was sent, or Hyperliquid's own record is
+	// asked, this is the finaliser's report by the relay's word.
 	const receipt = row.receipts
 		.map(receiptFromRow)
 		.reduce<Receipt | null>((best, r) => betterReceipt(best, r), null);

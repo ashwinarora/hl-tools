@@ -1,12 +1,21 @@
 import type { Proposal, Receipt } from "@hl-tools/core";
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { A, B, makeProposal, NOW, signAs } from "#/test/keys";
+import {
+	A,
+	B,
+	makeProposal,
+	NOW,
+	receiptFor,
+	refusedReceiptFor,
+	signAs,
+} from "#/test/keys";
 import {
 	betterReceipt,
 	deleteProposal,
 	listProposals,
 	loadProposal,
+	RECEIPT_LEFT_OUT,
 	receiptOk,
 	rewriteProposal,
 	saveProposal,
@@ -142,24 +151,68 @@ describe("history", () => {
 
 	it("keeps the better receipt", async () => {
 		const p = await signAs(makeProposal(), 1);
-		await saveProposal({ ...p, receipt: failed(NOW) });
+		await saveProposal({ ...p, receipt: await refusedReceiptFor(p, NOW) });
 		// a later failure replaces an earlier one
-		let r = await saveProposal({ ...p, receipt: failed(NOW + 5) });
+		let r = await saveProposal({
+			...p,
+			receipt: await refusedReceiptFor(p, NOW + 5),
+		});
 		expect(r.proposal.receipt?.submittedAt).toBe(NOW + 5);
+		expect(r.issues).toEqual([]);
 		// an accepted submission wins
 		r = await saveProposal({
 			...p,
-			receipt: receipt({ submittedAt: NOW + 1 }),
+			receipt: await receiptFor(p, { submittedAt: NOW + 1 }),
 		});
 		expect(receiptOk(r.proposal.receipt as Receipt)).toBe(true);
 		// and a stale failure arriving later does not displace it
-		r = await saveProposal({ ...p, receipt: failed(NOW + 99) });
+		r = await saveProposal({
+			...p,
+			receipt: await refusedReceiptFor(p, NOW + 99),
+		});
 		expect(receiptOk(r.proposal.receipt as Receipt)).toBe(true);
 		// a copy without a receipt keeps the stored one
 		r = await saveProposal(p);
 		expect(r.proposal.receipt).not.toBeNull();
 		expect(betterReceipt(null, null)).toBeNull();
 		expect(betterReceipt(failed(9), failed(3))?.submittedAt).toBe(9);
+	});
+
+	it("leaves out a receipt that is not its finaliser's (found in review: anyone could write one into a copy)", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 2);
+		// "accepted", with a signature that is nobody's: the proposal would read
+		// as submitted, and its finaliser could no longer send it from the page
+		let r = await saveProposal({ ...p, receipt: receipt() });
+		expect(r.proposal.receipt).toBeNull();
+		expect(r.saved).toBe(true);
+		expect(r.issues.map((i) => [i.code, i.severity])).toEqual([
+			["history.receipt_unsigned", "warning"],
+		]);
+		expect(r.issues[0]?.message).toBe(RECEIPT_LEFT_OUT);
+		// "refused", signed by a co-signer who is not the finaliser: the team
+		// would propose again while the first can still be sent
+		r = await saveProposal({
+			...p,
+			receipt: await refusedReceiptFor(p, NOW, 1),
+		});
+		expect(r.proposal.receipt).toBeNull();
+		expect((await loadProposal(p.digest)).proposal?.receipt).toBeNull();
+		// the finaliser's own report is kept, and a forged one does not displace it
+		const real = await refusedReceiptFor(p, NOW + 1);
+		r = await saveProposal({ ...p, receipt: real });
+		expect(r.proposal.receipt).toEqual(real);
+		r = await saveProposal({
+			...p,
+			receipt: receipt({ submittedAt: NOW + 9 }),
+		});
+		expect(r.proposal.receipt).toEqual(real);
+		expect(r.issues.map((i) => i.code)).toEqual(["history.receipt_unsigned"]);
+		// the receipt already held comes back beside a change (the page storing
+		// what it shows): no news, so nothing is said, whatever signatures the
+		// copy holds by now
+		r = await saveProposal({ ...p, signatures: [], receipt: real });
+		expect(r.proposal.receipt).toEqual(real);
+		expect(r.issues).toEqual([]);
 	});
 
 	it("lists newest first, filters by network and deletes", async () => {
