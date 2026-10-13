@@ -1602,6 +1602,85 @@ Run by the building session, on an evening when this machine's allowance for `tx
 - **Not seen in a browser:** a treasury with more than 300 transactions of its own (E2 stands in for it with a trimmed answer), the staking step's and the away notice's use of the same look-up (they go through the same hook; the rule's tests cover it).
 - The test treasury was left with 1 USDC more in perps (the transfer of E6) and one more withdrawn proposal in its log (E7).
 
+## 20. Multisig: a code review by a second session (2026-10-13)
+
+A second session read the code of both pull requests at `99cf0aa` without running any of it, and listed 41 findings: none critical or high, 6 medium, 19 low, 16 informational. The session that built the section went through them with what it knows of the design. 23 were fixed, each with a test where a rule changed; the other 18 are left, with the reason, at the end of this section. Nothing changed in the relay: no migration, no policy, no function.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 115 files, 3,059 tests, all passing |
+| Core coverage | `bunx vitest run --coverage` in `packages/hl-core` | 100 % of lines, branches, functions and statements for its scope (three new modules included) |
+| Database | `bun run db:test` | 1,008 assertions, all passing (no relay change) |
+| Advisors | `supabase db advisors --local` | no issues |
+| Relay integration | `bun run test:relay` | 78 tests, all passing on the final run; see Limits for one that failed once |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
+
+New: core `multisig/when.ts`, `multisig/shown.ts`, `multisig/receipt.ts` with their tests; app `model/chain/knownState.ts` with its test.
+
+### What was fixed
+
+| Finding | What was wrong | What it does now | Test |
+|---|---|---|---|
+| D-1 (medium) | a receipt ("accepted", "refused") in a copy opened from a link or a file was believed as written; anyone could write one | a receipt in a copy counts only when the signature in it is the finaliser's over this proposal's submission (`checkReceipt`); any other is left out with a sentence, and the proposal stays what it was | core `receipt.test.ts`, app `history.test.ts` |
+| E2-1, E2-3 (medium) | the notice of a signer list that differs said "signatures are always counted against the live list" above lists counted against the copy, and "the relay has been asked" also when the ask failed or was given up | it says the lists here count against the copy until the two match, says why an ask did not get through or that six asks did not help, and offers "Ask again" | `relay/signers.test.ts`, `relay/copy.test.ts` |
+| E2-2 (medium) | balances that had stopped updating carried no time | beside "Reconnecting…" or "Not updating": "figures as of" the last moment Hyperliquid was heard from while they were live | `live/account.test.ts` |
+| F-2 (medium) | a document with a date no calendar holds threw while a page was drawn | such a date is an issue of the document, and every sentence that prints a date is total (`when.ts`) | `when.test.ts`, `proposal.test.ts`, `describe.test.ts` |
+| G-1 | a switch to an account mode whose short code was never measured went out and used up the proposal's number | stopped before it is sent, with the reason | `sendCheck.test.ts` |
+| D-3 | a move whose second step had been sent alone offered its first step by itself | halted: "Step 2 was carried out by itself, so step 1 is not sent" | `move.test.ts` |
+| D-4 | a conversion was posted on the signer's own word that its account had signed | the signature must recover to the account at the point of posting | `convert.test.ts` |
+| D-5 | a validator's own name, a vault's name and a proposal's title were shown with characters that do not show (one of them turns the address after a name around) | dropped where the core reads them (`shownLine`, `shownNote`); a text that is signed or names something exactly (an API wallet's name) keeps them, written out | `shown.test.ts`, `proposal.test.ts`, `staking.test.ts`, `vault.test.ts`, `describe.test.ts`, `actions.test.ts` |
+| D-7 | a step of a move that could not be written as an action would have been left out without a word | nothing is proposed, with the reason | `actions.test.ts` |
+| D-9 | a token send before the token list was read took eight decimals for any token | blocked until the list is read, as Send USDC is | `actions.test.ts` |
+| D-11 | a unified treasury's withdrawal was held to the perps figure Hyperliquid reports beside its one balance (0.29 beside 16.6 on a lab treasury) | held to the larger of the two; nothing is claimed while either is unread | `send.test.ts`, `actions.test.ts` |
+| E2-4 | "Change signers" stayed on offer for a moment after Hyperliquid stopped reporting a signer set | Hyperliquid's own answer is enough: "Last known signers", no action links | browser |
+| E2-6 | "none on record" could be said before this browser's own proposals were read | the record is whole only once both are read; a part that cannot be read makes it "cannot be read" | `chain/knownState.test.ts` |
+| E2-8 | the first-use notice of a build without a relay said "No server holds anything" | reworded, and moved under the test for forbidden claims | `relay/copy.test.ts` |
+| E2-10 | a transaction id from the feed went into a link as it was | written as one path segment | `chain/columns.test.ts` |
+| F-4 | the paste box sent an address beginning `0x01` to the CoreWriter workbench | exact lengths are tested first | `detect.test.ts` |
+| F-5, F-6 | the privacy policy said "no trackers" without the faucet miner's wallet picker, and did not name the requests to add or re-check a treasury or what is removed by itself | all three are said | read in the browser |
+| N-1, N-2 | answered transfers read "checking…" while the list was read again; a cut list was recognised by one number | answers stay while the list is re-read; a list of 300 or more counts as cut | `chain/accountTxs.test.ts`, `explorer.test.ts` |
+| D-8, E2-12, docs | five help texts, one comment and four sentences in the docs said a little more or less than the code does | corrected | `help.test.ts` |
+
+### Measured for it
+
+| Question | Answer |
+|---|---|
+| What does Hyperliquid report for a unified account (lab treasury, testnet)? | `clearinghouseState.withdrawable` 0.291437 beside a spot USDC balance of 16.614529 with 2.818399 on hold: the perps figure is not what the account can move |
+| Does the one-off `allDexsClearinghouseState` frame name its account (E2-7)? | yes, it carries `user`, so a late frame for the previous treasury is filtered out like any other |
+| Do the receipts already in a browser pass the new check? | all 53 receipts of real testnet submissions kept in the test browser (sends, moves, vault actions, mode switches) are their finaliser's; checked in 104 ms in all |
+
+### In the browser (testnet, the 2-of-3 test treasury, Rabby)
+
+| # | Case | Seen |
+|---|---|---|
+| R1 | Treasury page, all six tabs | as before the round: balances live, signers with "Change signers", staking with the validator's name, the vault history, the Signing log, every transfer tied as in §19 |
+| R2 | The network cut while Overview is open | "figures as of 13 Oct 2026, 21:14:40 · Not updating · Try again"; "Live" again three seconds after it is back |
+| R3 | The relay's copy of the threshold set apart from Hyperliquid's in the local database | the notice: "Threshold on chain: 2. The relay is looking it up now. Until the two match, the lists on this page count signatures against the copy…"; gone once the relay had looked. The row that test left in the relay's history was removed again and the treasury's stamp put back |
+| R4 | An accepted proposal's page | "Submitted · accepted by Hyperliquid", as before |
+| R5 | A forged "accepted" saved into a proposal that was never sent | left out, with the sentence; the proposal is unchanged |
+| R6 | The propose form, every kind; the wizard; the inbox; Add a treasury; the privacy policy; the paste box with an address beginning `0x01`; the inspector with both samples | all render; the token form has its list; the address goes to the inspector; no draft was left behind |
+| R7 | Console | nothing of the app's |
+
+### Left as they are
+
+| Finding | Why |
+|---|---|
+| D-1 for receipts read from the relay | The relay takes a receipt only from the finaliser's session, and the browser cannot check it the way it checks a copy: the check needs every signature that was sent, and the relay holds only the ones their signers put there themselves. A true receipt would fail whenever one signature travelled by link. It waits for the relay to keep what was sent, or for Hyperliquid's own record to be asked. |
+| A finaliser who reports another answer than Hyperliquid gave | Nothing in a receipt is signed by Hyperliquid. Only its own record settles it; the same later work. |
+| F-1 (the inspector judges a non-canonical inner action as pasted) | Needs a measurement of what Hyperliquid does with one; not made here. |
+| D-2, D-12 | D-2 is unreachable through the path named, and the order rule is applied where the lists are made. D-12 is strict on purpose: key order is part of what is compared. |
+| E2-7 | Void: the frame carries `user` (measured above). |
+| D-6, D-10, D-13, E2-5, E2-9, E2-11, E2-13, F-3, F-7 to F-11 | Informational or cosmetic, none changes what is signed or sent. E2-11: the read is at most ten seconds old and the relay checks again before it stores. |
+| F-12 | Two test reports in the repository name a wallet: the owner's decision. |
+
+### Limits
+
+- A unified treasury's withdrawal was not sent: no withdrawal is made in testing. Which of the two figures Hyperliquid holds it to is still not measured; the page stops one only above both.
+- One relay integration test ("what a signer has read … takes two at once") failed once in three runs of the round, before any of its code was touched: two "Got it" at the same moment left the marker one entry behind. The guard takes its lock after the row has its number, so the later number can belong to the earlier writer. Not fixed here; it shows one read entry again.
+- The check of receipts tries the orders of at most five signatures; a copy with six or more whose order differs from the one that was sent would not be recognised. None of the 53 real ones needed more than the first try.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
