@@ -1531,10 +1531,76 @@ Run by the building session through its own connection to the browser, with two 
 - **Mainnet.** Nothing here was run on mainnet. Its lockups are from Hyperliquid's docs.
 - **A vault step's "carried out" has one witness.** The finaliser's own result closes a vault proposal. If that answer is lost, the page says the step may be carried out already and points to "On Hyperliquid"; nobody else can settle it, because the action carries no number of its own.
 - **A lockup inside the signing window** (a user vault's 20 seconds on testnet) could not be caught by hand in a browser: Submit held and then opening by itself is covered by the stage tests and was seen for an unstake in §17. What was seen here is the other case, a lockup longer than the proposal.
-- **The explorer.** What it shows for a vault action sent through a multi-sig was not measured; the pages do not depend on it.
+- **The explorer.** What it shows for a vault action sent through a multi-sig was not measured in this round; the pages do not depend on it. (Seen since, see §19: the inner `vaultTransfer` under the treasury.)
 - **No notice for what an API wallet does.** An API wallet can put a treasury's USDC into a vault without the signers. "While you were away" does not announce that, by decision: it stays about what the signers decided and who can act for the treasury. The row is in the Vaults tab's history as "none on record". A vault row that no proposal explains was not produced in a browser (it would take an API wallet's key acting on the test treasury); the unmatched case is a unit test of the matching rule.
 - **Not built:** sub-accounts, and every other action of the code family.
 - The test treasury was left as a manual account with its USDC in spot, 5 USDC in HLP (locked until 17 Oct 2026) and a few cents of dust in a user vault. The wallet used holds a custom network "Geth Testnet" (chain 1337) that can be removed in its settings.
+
+## 19. Multisig — one explorer request per account (2026-10-13)
+
+To say which proposal caused a transfer the page needs the transaction behind it, with the action's own number, and it asked Hyperliquid's explorer about each such transfer by itself, on every page load. That request is rationed by the day. The page now reads the account's newest transactions in one request and asks about a single transaction only when that list cannot have it (DECISIONS.md, "The explorer is asked once per account, and about a single transaction only when it has to be"). Frontend only: nothing is stored and the relay is not touched.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 111 files, 3,003 tests, all passing |
+| Core coverage | `bunx vitest run --coverage` in `packages/hl-core` | 100 % of lines, branches, functions and statements for its scope |
+| Relay integration | `bun run test:relay` | 78 tests, all passing (run to confirm nothing moved; no relay change) |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
+
+New: app `multisig/model/chain/accountTxs.test.ts`; core fixture `fixtures/explorer/testnet-userdetails.json`. Extended: core `test/explorer.test.ts`. Rule set "rate-limits" is 1.2.0.
+
+### What was measured first (the explorer, testnet unless said otherwise)
+
+| Question | Answer |
+|---|---|
+| Was the refusal of 12 October a limit, or missing data? | a limit: the very transaction refused that day was returned the next day; an unknown transaction gets other words ("invalid block height", "Unexpected error") |
+| Do look-ups of fresh transactions trip it? | 130 look-ups of transactions under half an hour old all went through |
+| And older ones? | of transactions two to six days old, the fourth was refused: "More than 100 archived blocks queried in one day" (the day's earlier look-ups counted). How much of the 130 fresh ones counted is not settled |
+| What still answers once it is refused? | no `txDetails` at all, a transaction 14 seconds old included; `userDetails` did, for every account asked |
+| What does `userDetails` return? | the account's newest transactions, newest first, each with time, account, the action as sent, block, transaction id and error: all 39 of the test treasury; exactly 300 for busy accounts, on mainnet too (it was 101 on 2026-10-08) |
+| What counts towards the 300? | everything the account did: proposals carried out, attempts Hyperliquid refused, and every order and cancel its API wallet placed (the lab treasury's 300 covered under two days; HLP's vault's, 53 minutes) |
+| Can it reach further back? | no: `startTime`, `endTime`, `from`, `to`, `before`, `limit`, `offset` and `page` are ignored, four other request names answer 422, and Hyperliquid's own explorer page sends the same bare request and pages through "1-10 of 300" |
+| Does Hyperliquid's answer to an accepted action carry the transaction id? | no: all 134 accepted submissions on the local relay were answered `{"status":"ok","response":{"type":"default"}}` |
+| Settled on the way | a staking step's transaction opens as its action (`tokenDelegate`), which §17 had left open; a vault action sent through a multi-sig shows as the inner `vaultTransfer` under the treasury |
+
+Hyperliquid's docs say that limits are per IP address, that every explorer request weighs 40 of 1,200 a minute, and that "older blocks which have not been recently queried may be weighted more heavily". The daily sentence is not in them, and the explorer's API is not documented at all.
+
+### The rule (`model/chain/accountTxs.test.ts`) and the adapter (`test/explorer.test.ts`)
+
+| Case | Result |
+|---|---|
+| A transaction the account's list holds is taken from it, whatever the case of its id; an entry without an id is left out | ✅ |
+| While the list is on its way nothing is asked about a single transaction | ✅ |
+| A list read since the transaction was wanted that does not hold it: the request of its own | ✅ |
+| A transaction wanted after the list was read: the list is read once more, and whatever it then holds the transaction is either taken from it or asked about by itself, never a third read | ✅ |
+| A list that could not be read: the request of its own for everything; one more try for something wanted later, and not again | ✅ |
+| No state asks in a loop (every combination of when it was wanted, when the list was tried and what it held) | ✅ |
+| The recorded answer for the lab treasury: newest first, the action with its number, a vault action without one, a refused attempt with its reason, an API wallet's order in the same list; an unused address reads as an empty list | ✅ |
+| The daily refusal in answer to `userDetails` is an error of its own, never "no transactions" | ✅ |
+
+### In the browser (testnet, the 2-of-3 test treasury, Rabby)
+
+Run by the building session, on an evening when this machine's allowance for `txDetails` was used up: the request was refused throughout (checked before and after), which is the condition the change is for. Requests to the explorer were counted by wrapping the page's `fetch`.
+
+| # | Case | Seen |
+|---|---|---|
+| E1 | "On Hyperliquid", fresh load | one `userDetails`, no `txDetails`; all 27 rows settled: 9 tied to their proposal, 7 "likely" (vault rows), 2 "Hyperliquid's own step", 2 "none on record", 7 that need none; no "checking…" and no "could not check" |
+| E2 | The same with the four oldest transactions cut out of the answer, as for an account past its newest 300 | one `userDetails` and one `txDetails`, for the one cut transaction a row needed; that row "could not check" (the allowance), every other row as in E1 |
+| E3 | The same with `userDetails` answering HTTP 500 | tried twice, then single requests as before the change: three went out, then the ten-minute rest; the rows "could not check" |
+| E4 | Overview with nothing waiting, Vaults, Staking, Signing log | no request to the explorer |
+| E5 | Away to another tab and back to "On Hyperliquid" | still one request in all |
+| E6 | A transfer made while the page was open (1 USDC from spot to perps: proposed, signed by two wallets, submitted from another tab) | the new row appeared, the list was read once more (two `userDetails` in all, no `txDetails`), and the row reads its proposal's title |
+| E7 | The page of an open proposal that looks exactly like that transfer and was never sent | one `userDetails`; it stays "Collecting signatures · 0 of 2": the transaction's number is the other proposal's |
+| E8 | Console | nothing of the app's |
+
+### Limits
+
+- **Measured on one day, on testnet.** That `userDetails` is not stopped by the daily allowance, and returns 300, is what was seen on 2026-10-13. Whether it has an allowance of its own is not known; mainnet's allowance was not measured (its `userDetails` also returned 300). If the request fails, the page does what it did before.
+- **The newest 300 only.** For an account whose API wallet trades, transfers drop out of the list quickly and then depend on the rationed request again. Keeping each proposal's transaction on the relay would cover that; it was considered and left for later.
+- **Not seen in a browser:** a treasury with more than 300 transactions of its own (E2 stands in for it with a trimmed answer), the staking step's and the away notice's use of the same look-up (they go through the same hook; the rule's tests cover it).
+- The test treasury was left with 1 USDC more in perps (the transfer of E6) and one more withdrawn proposal in its log (E7).
 
 ## Feedback round 1 (2026-10-04)
 
