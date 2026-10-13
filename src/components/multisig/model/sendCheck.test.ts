@@ -256,8 +256,24 @@ describe("checkBeforeSubmit", () => {
 		expect(await codes(to("disabled"), { open: new Error("timeout") })).toEqual(
 			[],
 		);
-		// a mode with no form of its own is not judged here
-		expect(await codes(to("portfolioMargin"))).toEqual([]);
+		// A mode nobody measured: the finaliser's signature could not be made
+		// the way Hyperliquid checks it, so it is stopped before any prompt
+		// and nothing is read for it.
+		const other = reads({ open: { positions: 0, orders: 0 } });
+		const refused = await checkBeforeSubmit(
+			payload(to("portfolioMargin")),
+			other.r,
+		);
+		expect(refused.map((r) => r.code)).toEqual(["mode-unmeasured"]);
+		expect(refused[0]?.message).toContain("“portfolioMargin”");
+		expect(refused[0]?.message).toContain(
+			"the proposal's number would be used up",
+		);
+		expect(other.asked).toEqual([]);
+		// a mode that is no name at all
+		expect(
+			await codes({ type: "userSetAbstraction", user: TREASURY, nonce: 1 }),
+		).toEqual(["mode-unmeasured"]);
 	});
 
 	it("stops the removal of an API wallet that is gone, and reads nothing else for it", async () => {

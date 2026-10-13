@@ -15,6 +15,7 @@ import { waitWords, weiToHype } from "./staking.ts";
 import { withdrawalOutcome } from "./transfer.ts";
 import type { PlainObject, RiskFlag } from "./types.ts";
 import { hlpNetwork, vaultHeadline } from "./vault.ts";
+import { isoTime } from "./when.ts";
 
 export interface DescribeContext {
 	/** Perp asset index → coin name (from the resolver universe). */
@@ -163,6 +164,7 @@ function partiesOf(type: string, action: PlainObject): readonly ActionParty[] {
 	return out;
 }
 
+/** A value in a sentence. An integer too large for a number arrives as a bigint, also nested: never throws. */
 const s = (v: unknown): string =>
 	typeof v === "string"
 		? v
@@ -170,7 +172,9 @@ const s = (v: unknown): string =>
 			? v.toString()
 			: v === undefined
 				? "?"
-				: JSON.stringify(v);
+				: JSON.stringify(v, (_key, x) =>
+						typeof x === "bigint" ? x.toString() : x,
+					);
 /** A `sendAsset` dex name in words: "" is the first perp dex, "spot" the spot balance. */
 const balanceName = (dex: unknown): string =>
 	dex === ""
@@ -293,12 +297,9 @@ export function describeAction(
 		case "scheduleCancel":
 			return action.time === undefined
 				? done("Remove the scheduled cancel (dead man's switch off)")
-				: done(
-						`Schedule cancel-all at ${new Date(Number(action.time)).toISOString()}`,
-						[
-							"Dead man's switch: every open order is cancelled at that time unless rescheduled.",
-						],
-					);
+				: done(`Schedule cancel-all at ${isoTime(Number(action.time))}`, [
+						"Dead man's switch: every open order is cancelled at that time unless rescheduled.",
+					]);
 		case "updateLeverage":
 			return done(
 				`Set ${coinOf(ctx, action.asset)} leverage to ${s(action.leverage)}x ${action.isCross ? "cross" : "isolated"}`,

@@ -216,6 +216,24 @@ describe("createProposal", () => {
 		expect(codes(r.issues)).toEqual(["nonce.future"]);
 		expect(r.proposal).not.toBeNull();
 	});
+	it("a nonce or an expiry beyond any date is an error and never an exception", () => {
+		// a date holds ±8.64e15 ms, less than the largest integer a document may carry:
+		// building the window's dates for such a number used to throw
+		const beyond = 9_000_000_000_000_000;
+		expect(Number.isSafeInteger(beyond)).toBe(true);
+		const r = base({ nonce: beyond });
+		expect(codes(r.issues)).toEqual(["nonce.out_of_range"]);
+		expect(r.proposal).toBeNull();
+		// the latest nonce whose whole window is still a date is taken as a nonce
+		const last = 8_640_000_000_000_000 - NONCE_WINDOW.pastMs;
+		expect(codes(base({ nonce: last }).issues)).toEqual(["nonce.future"]);
+		expect(codes(base({ nonce: last + 1 }).issues)).toEqual([
+			"nonce.out_of_range",
+		]);
+		expect(codes(base({ expiresAfter: beyond }).issues)).toEqual([
+			"expires.invalid",
+		]);
+	});
 	it("create.expires: past, unreachable, invalid, user-signed warning", () => {
 		expect(codes(base({ expiresAfter: NOW }).issues)).toEqual(["expires.past"]);
 		expect(codes(base({ expiresAfter: 1.5 }).issues)).toEqual([
@@ -379,6 +397,19 @@ describe("validateProposal", () => {
 		const late = validateProposal(docOf(good()), { now: NONCE + 3 * DAY });
 		expect(codes(late.issues)).toEqual(["nonce.expired"]);
 		expect(late.proposal).toEqual(good());
+	});
+	it("validate: a document whose nonce or expiry is beyond any date is refused, not thrown at", () => {
+		// anyone can hand a signer a link or a file: the validator has to answer for all of them
+		for (const [field, code] of [
+			["nonce", "nonce.out_of_range"],
+			["expiresAfter", "expires.invalid"],
+		] as const) {
+			const d = docOf(good());
+			(d.payload as Record<string, unknown>)[field] = 9_000_000_000_000_000;
+			const r = validateProposal(d);
+			expect(r.proposal).toBeNull();
+			expect(codes(r.issues)).toContain(code);
+		}
 	});
 	it("validate.action-not-canonical: reordered keys are rejected", () => {
 		const d = docOf(good());

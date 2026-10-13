@@ -44,6 +44,12 @@ export interface ExplorerHistory {
  * beyond saying that a list may be cut.
  */
 export const EXPLORER_PAGE_CAP = 300;
+/** Every length the explorer was seen to stop a list at: a list exactly that long may be cut. */
+const EXPLORER_CAPS_SEEN: readonly number[] = [101, EXPLORER_PAGE_CAP];
+/** Whether a list of this length may have been cut by the explorer. It gives no total, so this is the best that can be said. */
+export function explorerListMayBeCut(length: number): boolean {
+	return length >= EXPLORER_PAGE_CAP || EXPLORER_CAPS_SEEN.includes(length);
+}
 
 export interface ExplorerOptions {
 	readonly signal?: AbortSignal;
@@ -182,7 +188,7 @@ export async function explorerUserDetails<N extends Network>(
 	return observed(
 		network,
 		`POST ${res.url} userDetails`,
-		{ txs, truncated: txs.length >= EXPLORER_PAGE_CAP },
+		{ txs, truncated: explorerListMayBeCut(txs.length) },
 		(options.now ?? Date.now)(),
 	);
 }

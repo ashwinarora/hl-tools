@@ -27,6 +27,7 @@ import type {
 	RiskFlag,
 	Sig,
 } from "./types.ts";
+import { isMoment, isoTime, MAX_TIME_MS } from "./when.ts";
 
 export interface NonceWindow {
 	/** Earliest chain time at which the nonce is accepted (nonce − 1 day). */
@@ -52,6 +53,9 @@ export interface ProposalResult {
 	readonly flags: readonly RiskFlag[];
 	readonly issues: readonly Issue[];
 }
+
+/** The latest nonce whose whole window still lies inside what a date can hold. */
+const MAX_NONCE_MS = MAX_TIME_MS - NONCE_WINDOW.pastMs;
 
 const HEX32 = /^0x[0-9a-f]{64}$/;
 const LOWER_ADDRESS = /^0x[0-9a-f]{40}$/;
@@ -86,6 +90,17 @@ function nonceIssues(
 			),
 		];
 	}
+	// a date holds less than a safe integer does: beyond it there is no window to speak of
+	if (nonce > MAX_NONCE_MS) {
+		return [
+			issue(
+				"nonce.out_of_range",
+				"error",
+				`nonce ${nonce} is beyond any date; Hyperliquid nonces are millisecond timestamps.`,
+				{ path: "payload.nonce" },
+			),
+		];
+	}
 	const w = nonceWindow(nonce);
 	const issues: Issue[] = [];
 	if (now >= w.validUntil) {
@@ -93,7 +108,7 @@ function nonceIssues(
 			issue(
 				"nonce.expired",
 				timingSeverity,
-				`The nonce expired at ${new Date(w.validUntil).toISOString()}; the chain rejects it as too low. Re-propose with a fresh nonce (everyone signs again).`,
+				`The nonce expired at ${isoTime(w.validUntil)}; the chain rejects it as too low. Re-propose with a fresh nonce (everyone signs again).`,
 				{ path: "payload.nonce" },
 			),
 		);
@@ -102,7 +117,7 @@ function nonceIssues(
 			issue(
 				"nonce.future",
 				"warning",
-				`The nonce is more than 1 day ahead: it cannot be submitted before ${new Date(w.validFrom).toISOString()} (and expires at ${new Date(w.validUntil).toISOString()}).`,
+				`The nonce is more than 1 day ahead: it cannot be submitted before ${isoTime(w.validFrom)} (and expires at ${isoTime(w.validUntil)}).`,
 				{ path: "payload.nonce" },
 			),
 		);
@@ -118,12 +133,12 @@ function expiresIssues(
 	timingSeverity: "error" | "warning",
 ): Issue[] {
 	if (expiresAfter === null) return [];
-	if (!isSafeInt(expiresAfter) || expiresAfter < 0) {
+	if (!isSafeInt(expiresAfter) || expiresAfter < 0 || !isMoment(expiresAfter)) {
 		return [
 			issue(
 				"expires.invalid",
 				"error",
-				"expiresAfter must be null or a non-negative safe integer (milliseconds).",
+				"expiresAfter must be null or a non-negative safe integer (milliseconds) that is a date.",
 				{ path: "payload.expiresAfter" },
 			),
 		];
@@ -134,7 +149,7 @@ function expiresIssues(
 			issue(
 				"expires.past",
 				timingSeverity,
-				`expiresAfter ${new Date(expiresAfter).toISOString()} is in the past; the chain answers "Action already expired".`,
+				`expiresAfter ${isoTime(expiresAfter)} is in the past; the chain answers "Action already expired".`,
 				{ path: "payload.expiresAfter" },
 			),
 		);
@@ -542,7 +557,10 @@ export function validateProposal(
 			? null
 			: lowerAddress(p.vaultAddress, "payload.vaultAddress", issues);
 	issues.push(...nonceIssues(p.nonce, now, "warning"));
-	const nonce = isSafeInt(p.nonce) && p.nonce >= MIN_NONCE_MS ? p.nonce : null;
+	const nonce =
+		isSafeInt(p.nonce) && p.nonce >= MIN_NONCE_MS && p.nonce <= MAX_NONCE_MS
+			? p.nonce
+			: null;
 
 	let action: PlainObject | null = null;
 	let kind: Kind | null = null;

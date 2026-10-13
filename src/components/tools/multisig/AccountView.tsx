@@ -6,6 +6,7 @@ import {
 	describeAction,
 	EXPLORER_PAGE_CAP,
 	formatHype,
+	isoTime,
 	MULTISIG_FACTS,
 	type Network,
 	type PlainObject,
@@ -418,7 +419,7 @@ function AccountResult({
 											<AddressLine address={a.address} network={data.network} />
 										</td>
 										<td className={`${TD} whitespace-nowrap`}>
-											{new Date(a.validUntil).toISOString().slice(0, 10)}{" "}
+											{isoTime(a.validUntil).slice(0, 10)}{" "}
 											{a.expired ? (
 												<Pill tone="neutral">expired</Pill>
 											) : (
@@ -677,7 +678,7 @@ function HistoryTable({
 			<ObservedLine
 				network={network}
 				observedAt={observedAt}
-				source={`${history.txs.length} actions${history.truncated ? ` (capped: the explorer returns the newest ${EXPLORER_PAGE_CAP})` : ""}`}
+				source={`${history.txs.length} actions${history.truncated ? ` (may be cut: the explorer returns an account's newest transactions only, ${EXPLORER_PAGE_CAP} at last count)` : ""}`}
 			/>
 			<div className={TABLE}>
 				<table className="w-full min-w-[560px] border-collapse text-sm">
@@ -704,10 +705,7 @@ function HistoryTable({
 											className="hover:underline"
 											title={t.hash}
 										>
-											{new Date(t.time)
-												.toISOString()
-												.replace("T", " ")
-												.slice(0, 19)}
+											{isoTime(t.time).replace("T", " ").slice(0, 19)}
 										</a>
 									</td>
 									<td className={TD}>

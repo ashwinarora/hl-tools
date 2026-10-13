@@ -7,6 +7,7 @@ import type { Address } from "../identity.ts";
 import { type Issue, issue } from "../issues.ts";
 import { MAX_SIGNERS } from "../rules/multisig.ts";
 import type { Policy } from "./types.ts";
+import { isoTime } from "./when.ts";
 
 export interface AgentInput {
 	readonly name: string;
@@ -147,7 +148,7 @@ export function assessAccount(input: AccountInput): AccountAssessment {
 			issue(
 				"account.agent_expired",
 				"info",
-				`API wallet ${a.name || "main"} (${a.address}) expired on ${new Date(a.validUntil).toISOString()} and can no longer sign.`,
+				`API wallet ${a.name || "main"} (${a.address}) expired on ${isoTime(a.validUntil)} and can no longer sign.`,
 			),
 		);
 	}

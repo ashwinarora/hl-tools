@@ -8,6 +8,7 @@
  * leaves its fact unknown, and an unknown fact stops nothing.
  */
 import {
+	ABSTRACTION_ENVELOPE_CODES,
 	accountMode,
 	type Delegation,
 	isAgentRemoval,
@@ -80,6 +81,10 @@ interface Checked {
 
 const orNull = <T>(p: Promise<T>): Promise<T | null> => p.catch(() => null);
 
+/** A mode switch this tool cannot finish: said before any wallet prompt. */
+export const MODE_UNMEASURED = (mode: unknown): string =>
+	`This switches the account to a mode this tool was not tested with (${typeof mode === "string" ? `“${mode.slice(0, 40)}”` : "not named"}). The finaliser's signature for a mode switch has to be made in a way that was measured for the unified and the manual account only, so Hyperliquid would refuse this one and the proposal's number would be used up.`;
+
 export async function checkBeforeSubmit(
 	payload: Checked,
 	reads: SendReads,
@@ -94,6 +99,20 @@ export async function checkBeforeSubmit(
 	if (isAgentRemoval(action)) return checkRemoval(action, multiSigUser, reads);
 	const toMode = modeTargetOf(action);
 	if (toMode) return checkSwitch(toMode, multiSigUser, reads);
+	// A switch to a mode nobody measured. The finaliser's signature is made
+	// over a one-letter code for the mode (the core's `hashedEnvelopeAction`),
+	// and only the measured modes have one: over the long name Hyperliquid
+	// answered "Invalid multi-sig outer signer", which uses the number up.
+	if (action.type === "userSetAbstraction")
+		return typeof action.abstraction === "string" &&
+			action.abstraction in ABSTRACTION_ENVELOPE_CODES
+			? []
+			: [
+					{
+						code: "mode-unmeasured",
+						message: MODE_UNMEASURED(action.abstraction),
+					},
+				];
 	const shape = sendShape(action);
 	// nothing here bears on an action that moves no money
 	if (!shape && action.type !== "withdraw3") return [];

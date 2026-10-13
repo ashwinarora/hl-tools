@@ -6,6 +6,7 @@ import {
 	explainExchangeError,
 	fromPlain,
 	hashedEnvelopeAction,
+	isoTime,
 	MULTISIG_SAMPLES,
 	type Network,
 	nonceWindow,
@@ -395,12 +396,12 @@ export function ProposalResult({
 						},
 						{
 							label: "Nonce",
-							value: `${proposal.payload.nonce} · ${new Date(proposal.payload.nonce).toISOString()}`,
+							value: `${proposal.payload.nonce} · ${isoTime(proposal.payload.nonce)}`,
 							mono: true,
 						},
 						{
 							label: "Submittable",
-							value: `${new Date(window.validFrom).toISOString().slice(0, 16)} → ${new Date(window.validUntil).toISOString().slice(0, 16)} UTC`,
+							value: `${isoTime(window.validFrom).slice(0, 16)} → ${isoTime(window.validUntil).slice(0, 16)} UTC`,
 							mono: true,
 						},
 						{
@@ -417,7 +418,7 @@ export function ProposalResult({
 						{
 							label: "expiresAfter",
 							value: proposal.payload.expiresAfter
-								? new Date(proposal.payload.expiresAfter).toISOString()
+								? isoTime(proposal.payload.expiresAfter)
 								: "none",
 							mono: true,
 						},
@@ -688,7 +689,7 @@ function ReadinessPanel({
 					{receipt ? (
 						<Callout
 							tone={receipt.id === "ok" ? "success" : "danger"}
-							title={`Submitted ${new Date(receipt.at).toISOString()} → ${receipt.id}`}
+							title={`Submitted ${isoTime(receipt.at)} → ${receipt.id}`}
 						>
 							{receipt.id === "ok"
 								? "The chain accepted this proposal."

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	EXPLORER_PAGE_CAP,
 	ExplorerAllowanceError,
+	explorerListMayBeCut,
 	explorerTxDetails,
 	explorerUserDetails,
 	InfoRequestError,
@@ -117,6 +118,14 @@ describe("explorerUserDetails", () => {
 			fetch: fetchWith(200, { txs: [] }, capture),
 		});
 		expect(capture.url).toBe("https://rpc.hyperliquid.xyz/explorer");
+	});
+	it("says a list may be cut at either length the explorer was seen to stop at, and beyond", () => {
+		// 101 a week before 300: the note must not vanish if the cap moves back
+		expect(explorerListMayBeCut(101)).toBe(true);
+		expect(explorerListMayBeCut(EXPLORER_PAGE_CAP)).toBe(true);
+		expect(explorerListMayBeCut(EXPLORER_PAGE_CAP + 1)).toBe(true);
+		for (const n of [0, 39, 100, 102, 299])
+			expect(explorerListMayBeCut(n)).toBe(false);
 	});
 	it("flags truncation at the page cap and tolerates malformed entries", async () => {
 		const txs = Array.from({ length: EXPLORER_PAGE_CAP }, (_, i) => tx(i));

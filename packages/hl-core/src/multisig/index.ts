@@ -18,3 +18,4 @@ export * from "./staking.ts";
 export * from "./transfer.ts";
 export * from "./types.ts";
 export * from "./vault.ts";
+export * from "./when.ts";

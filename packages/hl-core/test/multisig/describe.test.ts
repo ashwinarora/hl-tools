@@ -328,6 +328,22 @@ describe("describeAction details", () => {
 		expect(
 			describeAction(SAMPLES.scheduleCancel as PlainObject).headline,
 		).toContain("Schedule cancel-all at 2026-");
+		// a time that is no date is written as the number it is, never thrown at
+		for (const time of [9_000_000_000_000_000, "soon"])
+			expect(
+				describeAction({ type: "scheduleCancel", time } as PlainObject)
+					.headline,
+			).toMatch(/^Schedule cancel-all at .*\(no date\)$/);
+	});
+	it("says a value that holds an integer too large for a number, also nested", () => {
+		// order-preserving parsing hands such an integer over as a bigint
+		const d = describeAction({
+			type: "somethingNew",
+			limits: { max: 12345678901234567890n, list: [1n, "a"] },
+			big: 98765432109876543210n,
+		} as unknown as PlainObject);
+		expect(d.lines.join(" ")).toContain('"max":"12345678901234567890"');
+		expect(d.lines.join(" ")).toContain("98765432109876543210");
 	});
 	it("USD micro-units are rendered as USDC, raw otherwise", () => {
 		expect(describeAction(SAMPLES.vaultTransfer as PlainObject).headline).toBe(
