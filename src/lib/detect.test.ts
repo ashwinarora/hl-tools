@@ -44,6 +44,12 @@ describe("detectInput", () => {
 		expect(tool("")).toBeNull();
 		expect(tool(`0x${"ab".repeat(32)}`)).toBe("trace");
 		expect(tool("0x01000001aabbccdd")).toBe("corewriter");
+		// an address or a token id that happens to begin with 01 is still one
+		expect(tool(`0x01${"ab".repeat(19)}`)).toBe("multisig");
+		expect(tool(`0x01${"ab".repeat(15)}`)).toBe("assets");
+		// CoreWriter bytes with their words: 4 bytes and one 32-byte word
+		expect(tool(`0x01000001${"00".repeat(32)}`)).toBe("corewriter");
+		expect(tool(`01000001${"00".repeat(32)}`)).toBe("corewriter");
 		expect(tool(`0x${"ab".repeat(16)}`)).toBe("assets");
 		expect(tool("HYPE")).toBe("assets");
 		expect(tool('{"status":"ok","response":{}}')).toBe("orders");

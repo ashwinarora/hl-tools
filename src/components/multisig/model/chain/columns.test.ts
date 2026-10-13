@@ -285,4 +285,13 @@ describe("links to Hyperliquid", () => {
 			`https://app.hyperliquid.xyz/explorer/tx/0x${"ab".repeat(32)}`,
 		);
 	});
+	it("a hash that is no hash still leads to that one page of the explorer", () => {
+		// whatever the feed holds, it is one path segment: no other path, no query
+		expect(explorerTxUrl("mainnet", "../../trade?x=1#y")).toBe(
+			"https://app.hyperliquid.xyz/explorer/tx/..%2F..%2Ftrade%3Fx%3D1%23y",
+		);
+		expect(explorerAccountUrl("mainnet", "0xAB/../x")).toBe(
+			"https://app.hyperliquid.xyz/explorer/address/0xab%2F..%2Fx",
+		);
+	});
 });

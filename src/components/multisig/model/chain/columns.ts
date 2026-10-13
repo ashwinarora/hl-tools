@@ -213,10 +213,14 @@ export function viewMoreUrl(
 
 /** The account on Hyperliquid's explorer. */
 export function explorerAccountUrl(network: Network, address: string): string {
-	return `${HL_APP[network]}/explorer/address/${address.toLowerCase()}`;
+	return `${HL_APP[network]}/explorer/address/${encodeURIComponent(address.toLowerCase())}`;
 }
 
-/** One transaction on Hyperliquid's explorer. */
+/**
+ * One transaction on Hyperliquid's explorer. The hash comes from Hyperliquid's
+ * feed as it is, so it is written as one path segment whatever it holds: a
+ * link made here leads to that page of the explorer and nowhere else.
+ */
 export function explorerTxUrl(network: Network, hash: string): string {
-	return `${HL_APP[network]}/explorer/tx/${hash.toLowerCase()}`;
+	return `${HL_APP[network]}/explorer/tx/${encodeURIComponent(hash.toLowerCase())}`;
 }
