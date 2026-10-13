@@ -1380,7 +1380,7 @@ The third part of Phase 6: vault deposits and withdrawals (signed as a code unde
 
 | Suite | Command | Result |
 |---|---|---|
-| Core and app unit tests | `bun --bun run test` | 110 files, 2,975 tests, all passing |
+| Core and app unit tests | `bun --bun run test` | 110 files, 2,985 tests, all passing |
 | Core coverage | `bunx vitest run --coverage` in `packages/hl-core` | 100 % of lines, branches, functions and statements for its scope (`src/multisig/**` with the new `vault.ts`) |
 | Relay database | `bun run db:test` | 18 files, 1,008 pgTAP tests, all passing (70 new in `180_vault_proposals.sql`); `supabase db advisors --local`: no issues. One migration, `relay_vault_proposals` |
 | Relay integration | `bun run test:relay` | 78 tests, all passing (3 new, vault proposals) |
@@ -1458,6 +1458,8 @@ The plan put this before any vault form was built.
 | Drafts: what is kept and for how long, the newest twenty, validation field by field on reading back, a link that asks for another kind, wallet, vault or "propose again" wins and leaves the draft alone; the store writes under its own key, replaces and drops a draft, and drops every draft of one account without touching another's | ✅ |
 | A sentence about an action is never cut at its colon; only a field and its value are a pair | ✅ |
 | A result the relay refuses because it already holds the proposal as accepted is done, not a problem | ✅ |
+| The Vaults tab's history, from the ledger rows Hyperliquid recorded for the lab's vault steps: every vault row and nothing else, the newest first; a deposit's amount; for a withdrawal what came back and what the leader kept (8.011514 asked, 8.010349 back, 0.001165 kept); a distribution and a vault's creation; nothing before the ledger was read | ✅ |
+| What a treasury page follows for the section on screen (`tabWants`): holdings alone where nothing else is shown and nothing waits; the ledger with look-ups while a proposal waits; everything on "On Hyperliquid"; on the Vaults tab the ledger and no look-up | ✅ |
 | Help texts and every new sentence against the forbidden claims and the jargon list | ✅ |
 
 ### The finaliser's click on a vault step (`moveFlow.test.ts`, against a stand-in for Hyperliquid)
@@ -1501,6 +1503,7 @@ Run by the building session through its own connection to the browser, with two 
 | V13 | Drafts | a reload brings the form back with "What you had filled in here … is back. This browser keeps it for a week." and "Clear"; "Clear" and a created proposal each leave `hl-tools:multisig-drafts` empty |
 | V14 | A copy of the app started without the signing network's link (and without a relay) | a vault proposal opened from a link: "A vault action: this copy of the app cannot sign it", no Sign or Submit; no "Vault" in the chooser; after the fix a link with `kind=vaultDeposit` opens the plain form |
 | V15 | Lists and records | the Pending tab, the Signing log and "While you were away" name a vault step, a removal and a mode switch in words ("Deposit 5 USDC into HLP (0xa150…b0a0)", "Remove the API wallet without a name", "Switch to a unified account: one balance"); a vault other than HLP is named by its short address in a list and by its own name on its page; a proposer's withdrawal of a vault proposal reads as any other |
+| V17 | The history on the Vaults tab (added after the round, at the user's request) | seven rows, the newest first: each deposit and withdrawal of the round with its vault, amount, the leader's share where there was one (0.000051 and 0.000065 USDC) and "likely" with a link to its proposal. The frames the page really sent: on the Overview with nothing waiting, holdings alone; on opening the Vaults tab one more, `userNonFundingLedgerUpdates`, and none for trades, orders or funding. No request to the explorer from that tab. No sideways scroll at 390 px, console clean |
 | V16 | Width, themes, console | no sideways scroll at 390 px on the Vaults tab, both vault forms and a vault proposal's page with the code panel (the table scrolls in its own box, the code wraps); both themes readable; the console holds nothing of the app's after the fix below (what remains is two wallet extensions arguing over `window.ethereum`) |
 
 ### What the browser found, and what changed
@@ -1529,7 +1532,8 @@ Run by the building session through its own connection to the browser, with two 
 - **A vault step's "carried out" has one witness.** The finaliser's own result closes a vault proposal. If that answer is lost, the page says the step may be carried out already and points to "On Hyperliquid"; nobody else can settle it, because the action carries no number of its own.
 - **A lockup inside the signing window** (a user vault's 20 seconds on testnet) could not be caught by hand in a browser: Submit held and then opening by itself is covered by the stage tests and was seen for an unstake in §17. What was seen here is the other case, a lockup longer than the proposal.
 - **The explorer.** What it shows for a vault action sent through a multi-sig was not measured; the pages do not depend on it.
-- **Not built:** a notice when a vault deposit appears with no proposal on record (an API wallet can make one), sub-accounts, and every other action of the code family.
+- **No notice for what an API wallet does.** An API wallet can put a treasury's USDC into a vault without the signers. "While you were away" does not announce that, by decision: it stays about what the signers decided and who can act for the treasury. The row is in the Vaults tab's history as "none on record". A vault row that no proposal explains was not produced in a browser (it would take an API wallet's key acting on the test treasury); the unmatched case is a unit test of the matching rule.
+- **Not built:** sub-accounts, and every other action of the code family.
 - The test treasury was left as a manual account with its USDC in spot, 5 USDC in HLP (locked until 17 Oct 2026) and a few cents of dust in a user vault. The wallet used holds a custom network "Geth Testnet" (chain 1337) that can be removed in its settings.
 
 ## Feedback round 1 (2026-10-04)
