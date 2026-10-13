@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const RATE_LIMIT_RULES = defineRuleSet({
 	id: "rate-limits",
 	title: "Rate-limit classes",
-	version: "1.1.0",
-	verifiedAt: "2026-10-08",
+	version: "1.2.0",
+	verifiedAt: "2026-10-13",
 	summary:
 		"Per-IP REST weight budget of 1200/min (exchange weight 1 + floor(batch/40); info weight 2, 20 or 60 plus per-item surcharges; explorer requests 40), WebSocket connection/subscription caps, 100 req/min on the public HyperEVM RPC, and per-address action budgets tied to traded volume.",
 	sources: [
@@ -19,6 +19,11 @@ export const RATE_LIMIT_RULES = defineRuleSet({
 			version: "1.1.0",
 			date: "2026-10-08",
 			note: "Explorer API requests (userDetails, txDetails, blockDetails) weigh 40 each; blockList adds 1 per block.",
+		},
+		{
+			version: "1.2.0",
+			date: "2026-10-13",
+			note: 'Measured on testnet, not in the docs (which say only that older blocks "may be weighted more heavily"). `txDetails` answers "More than 100 archived blocks queried in one day" once a network address has asked for about a hundred older transactions, and from then on for every hash that day, a transaction seconds old included; 130 look-ups of transactions under half an hour old went through before that. `userDetails` kept answering while `txDetails` was refused. It returns an account\'s newest 300 transactions (300 on mainnet too; 101 when first observed on 2026-10-08) and ignores `startTime`, `endTime`, `from`, `to`, `before`, `limit`, `offset` and `page`: there is no way to page further back, and Hyperliquid\'s own explorer page does not either.',
 		},
 	],
 });

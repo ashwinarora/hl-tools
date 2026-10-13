@@ -1,10 +1,17 @@
 /**
  * HyperCore explorer API (`<coreExplorerApiUrl>`, JSON POST like the info
  * endpoint). It is the only public source of an account's past actions, but
- * every request weighs 40 of the 1200/min per-IP budget and the answer is
- * capped at the newest ~101 transactions, so callers fetch on demand and never
- * poll. Multi-sig envelopes appear as their inner action attributed to the
- * multi-sig user; the leader and the signatures are not visible.
+ * every request weighs 40 of the 1200/min per-IP budget and `userDetails`
+ * answers with the account's newest transactions only (`EXPLORER_PAGE_CAP`),
+ * so callers fetch on demand and never poll. Multi-sig envelopes appear as
+ * their inner action attributed to the multi-sig user; the leader and the
+ * signatures are not visible.
+ *
+ * Two requests, rationed differently (measured on testnet, 2026-10-13):
+ * `txDetails` is refused for the rest of the day once an address has asked
+ * for about a hundred older transactions; `userDetails` kept answering then.
+ * One `userDetails` therefore does the work of many `txDetails` for anything
+ * among an account's newest transactions.
  */
 import { type Observed, observed } from "../identity.ts";
 import { type Network, networkConfig } from "../network.ts";
@@ -23,12 +30,20 @@ export interface ExplorerTx {
 
 export interface ExplorerHistory {
 	readonly txs: readonly ExplorerTx[];
-	/** The API returns at most ~101 entries; true when the list may be cut. */
+	/** The API returns the newest entries only; true when the list may be cut. */
 	readonly truncated: boolean;
 }
 
-/** Observed on testnet 2026-10-08: `userDetails` answered exactly 101 entries for a busy account. */
-export const EXPLORER_PAGE_CAP = 101;
+/**
+ * How many transactions `userDetails` answers with at most: the account's
+ * newest. Measured 2026-10-13: exactly 300 for busy accounts on mainnet and
+ * on testnet (fixtures/explorer/testnet-userdetails.json), whatever time
+ * range or paging field the request carried; Hyperliquid's own explorer page
+ * sends the same request and pages through those 300. It was 101 when first
+ * observed (testnet, 2026-10-08), so nothing should depend on the figure
+ * beyond saying that a list may be cut.
+ */
+export const EXPLORER_PAGE_CAP = 300;
 
 export interface ExplorerOptions {
 	readonly signal?: AbortSignal;
@@ -99,6 +114,27 @@ function txOf(t: Record<string, unknown>): ExplorerTx {
 	};
 }
 
+/**
+ * The explorer refused a request because this network address has used up its
+ * allowance for the day. Measured on testnet (2026-10-12 and 13): "More than
+ * 100 archived blocks queried in one day", answered with HTTP 200 to every
+ * `txDetails` from then on, a transaction seconds old included. It says
+ * nothing about the hash or the account, so it is an error and never "not
+ * found"; a caller should stop asking for a while instead of trying again.
+ */
+export class ExplorerAllowanceError extends InfoRequestError {
+	constructor(
+		network: Network,
+		body: InfoBody,
+		message: string,
+		status: number,
+	) {
+		super(network, body, message, status);
+		this.name = "ExplorerAllowanceError";
+	}
+}
+const ALLOWANCE_SPENT = /queried in one day/i;
+
 export async function explorerUserDetails<N extends Network>(
 	network: N,
 	user: string,
@@ -118,7 +154,19 @@ export async function explorerUserDetails<N extends Network>(
 			res.status,
 		);
 	}
-	const raw = (parsed as { txs?: unknown })?.txs;
+	const answer = (parsed ?? {}) as {
+		type?: unknown;
+		message?: unknown;
+		txs?: unknown;
+	};
+	// a refusal says nothing about the account: never "no transactions"
+	if (
+		answer.type === "error" &&
+		typeof answer.message === "string" &&
+		ALLOWANCE_SPENT.test(answer.message)
+	)
+		throw new ExplorerAllowanceError(network, body, answer.message, res.status);
+	const raw = answer.txs;
 	if (!Array.isArray(raw)) {
 		throw new InfoRequestError(
 			network,
@@ -148,27 +196,6 @@ export type ExplorerTxLookup =
 	| { readonly found: false; readonly reason: string };
 
 const TX_HASH = /^0x[0-9a-fA-F]{64}$/;
-
-/**
- * The explorer refused a look-up because this network address has used up its
- * allowance for the day. Measured on testnet (2026-10-12): "More than 100
- * archived blocks queried in one day", answered with HTTP 200 to every
- * look-up from then on, a transaction three seconds old included. It says
- * nothing about the hash, so it is an error and never "not found"; a caller
- * should stop asking for a while instead of trying again.
- */
-export class ExplorerAllowanceError extends InfoRequestError {
-	constructor(
-		network: Network,
-		body: InfoBody,
-		message: string,
-		status: number,
-	) {
-		super(network, body, message, status);
-		this.name = "ExplorerAllowanceError";
-	}
-}
-const ALLOWANCE_SPENT = /queried in one day/i;
 
 /**
  * Look one transaction up by hash. For a multi-sig transaction `user` is the

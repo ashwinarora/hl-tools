@@ -4,6 +4,7 @@ import {
 	assessAccount,
 	type DescribeContext,
 	describeAction,
+	EXPLORER_PAGE_CAP,
 	formatHype,
 	MULTISIG_FACTS,
 	type Network,
@@ -676,7 +677,7 @@ function HistoryTable({
 			<ObservedLine
 				network={network}
 				observedAt={observedAt}
-				source={`${history.txs.length} actions${history.truncated ? " (capped: the explorer returns the newest ~101)" : ""}`}
+				source={`${history.txs.length} actions${history.truncated ? ` (capped: the explorer returns the newest ${EXPLORER_PAGE_CAP})` : ""}`}
 			/>
 			<div className={TABLE}>
 				<table className="w-full min-w-[560px] border-collapse text-sm">

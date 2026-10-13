@@ -1,0 +1,158 @@
+{
+ "description": "Hyperliquid testnet explorer, recorded 2026-10-13. Answers to `userDetails` (POST https://rpc.hyperliquid-testnet.xyz/explorer, body {type:\"userDetails\",user}) exactly as received. `busy-account` is the lab treasury (lab keys; a 2-of-3 multi-sig with more than 300 transactions): the answer held exactly 300 transactions, the account's latest, and `body.txs` here is a slice of them, each entry untouched. Any `startTime`, `endTime`, `from`, `to`, `before`, `limit`, `offset` or `page` added to the request was ignored: the same 300 came back. The same request on mainnet also answered 300 for a busy account. `empty-account` is an address that has done nothing.",
+ "answers": [
+  {
+   "name": "busy-account",
+   "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+   "status": 200,
+   "returned": 300,
+   "oldestTime": 1791709063582,
+   "newestTime": 1791838257994,
+   "body": {
+    "type": "userDetails",
+    "txs": [
+     {
+      "time": 1791838240120,
+      "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+      "action": {
+       "type": "userSetAbstraction",
+       "signatureChainId": "0x66eee",
+       "hyperliquidChain": "Testnet",
+       "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+       "abstraction": "u",
+       "nonce": 1791838239562
+      },
+      "block": 730515544,
+      "hash": "0x53d1e017212ded36554b042b8ac858010200f7fcbc210c08f79a8b69e021c720",
+      "error": null
+     },
+     {
+      "time": 1791837510449,
+      "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+      "action": {
+       "type": "approveAgent",
+       "signatureChainId": "0x66eee",
+       "hyperliquidChain": "Testnet",
+       "agentAddress": "0x0000000000000000000000000000000000000000",
+       "agentName": "",
+       "nonce": 1791837509823
+      },
+      "block": 730504757,
+      "hash": "0xd2241eb0a0654635d39d042b8a9e3501050036963b68650775ecca035f692020",
+      "error": null
+     },
+     {
+      "time": 1791835431705,
+      "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+      "action": {
+       "type": "vaultTransfer",
+       "vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+       "isDeposit": false,
+       "usd": 2000000
+      },
+      "block": 730473090,
+      "hash": "0xcf5954d3aaafaca5d0d3042b8a22820108006cb945a2cb777322002669a38690",
+      "error": null
+     },
+     {
+      "time": 1791835395065,
+      "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+      "action": {
+       "type": "usdClassTransfer",
+       "signatureChainId": "0x66eee",
+       "hyperliquidChain": "Testnet",
+       "amount": "3",
+       "toPerp": true,
+       "nonce": 1791835394471
+      },
+      "block": 730472494,
+      "hash": "0x2ca0488eea945a7c2e1a042b8a202e01030060748597794ed068f3e1a9983466",
+      "error": null
+     },
+     {
+      "time": 1791825410329,
+      "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+      "action": {
+       "type": "tokenDelegate",
+       "signatureChainId": "0x66eee",
+       "hyperliquidChain": "Testnet",
+       "validator": "0x946bf3135c7d15e4462b510f74b6e304aabb5b21",
+       "wei": 10000,
+       "isUndelegate": false,
+       "nonce": 1791825409567
+      },
+      "block": 730316512,
+      "hash": "0xad6e1fc27a97e7e5aee7042b87bee001090037a8159b06b75136cb15399bc1d0",
+      "error": null
+     },
+     {
+      "time": 1791711737954,
+      "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+      "action": {
+       "type": "cancel",
+       "cancels": [
+        {
+         "a": 3,
+         "o": 62411394264
+        }
+       ]
+      },
+      "block": 728559476,
+      "hash": "0xb365c50a28cd90d1b4df042b6cef740000a0dcefc3c0afa3572e705ce7c16abc",
+      "error": null
+     },
+     {
+      "time": 1791711105379,
+      "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+      "action": {
+       "type": "order",
+       "orders": [
+        {
+         "a": 3,
+         "b": true,
+         "p": "65905",
+         "s": "0.00019",
+         "r": false,
+         "t": {
+          "limit": {
+           "tif": "Gtc"
+          }
+         }
+        }
+       ],
+       "grouping": "na"
+      },
+      "block": 728550632,
+      "hash": "0x425b124b1fb1fc1f43d4042b6ccce80103002a30bab51af1e623bd9ddeb5d609",
+      "error": null
+     },
+     {
+      "time": 1791838247751,
+      "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+      "action": {
+       "type": "userSetAbstraction",
+       "signatureChainId": "0x66eee",
+       "hyperliquidChain": "Testnet",
+       "user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+       "abstraction": "i",
+       "nonce": 1791838247217
+      },
+      "block": 730515654,
+      "hash": "0xe305cc78baf50e94e47f042b8ac8c6010100e45e55f82d6686ce77cb79f8e87f",
+      "error": "Cannot disable unified account with open positions, open orders, or active TWAP orders"
+     }
+    ]
+   }
+  },
+  {
+   "name": "empty-account",
+   "user": "0x00000000000000000000000000000000000000ff",
+   "status": 200,
+   "returned": 0,
+   "body": {
+    "type": "userDetails",
+    "txs": []
+   }
+  }
+ ]
+}

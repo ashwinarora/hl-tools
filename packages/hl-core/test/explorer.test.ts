@@ -29,6 +29,35 @@ const recorded = (name: string) => {
 	return r;
 };
 
+/** Answers to `userDetails` recorded from the testnet explorer on 2026-10-13. */
+const LISTS = (
+	JSON.parse(
+		readFileSync(
+			join(
+				dirname(fileURLToPath(import.meta.url)),
+				"..",
+				"fixtures",
+				"explorer",
+				"testnet-userdetails.json",
+			),
+			"utf8",
+		),
+	) as {
+		answers: {
+			name: string;
+			user: string;
+			status: number;
+			returned: number;
+			body: unknown;
+		}[];
+	}
+).answers;
+const list = (name: string) => {
+	const r = LISTS.find((x) => x.name === name);
+	if (!r) throw new Error(`no recorded list "${name}"`);
+	return r;
+};
+
 const USER = "0xF8365A35694F401a554E4Ffa51b5AfE3B203d148";
 const tx = (i: number, extra: Record<string, unknown> = {}) => ({
 	time: 1_791_475_799_000 + i,
@@ -103,6 +132,60 @@ describe("explorerUserDetails", () => {
 			action: { type: "unknown" },
 			error: null,
 		});
+	});
+	it("reads the recorded answer for a busy account: its newest transactions, each with the action as it was sent", async () => {
+		const rec = list("busy-account");
+		// the explorer answered with exactly as many as it ever returns
+		expect(rec.returned).toBe(EXPLORER_PAGE_CAP);
+		const r = await explorerUserDetails("testnet", rec.user, {
+			fetch: fetchWith(rec.status, rec.body),
+		});
+		const { txs } = r.data;
+		expect(txs.length).toBeGreaterThan(5);
+		// newest first, all of them this account's, each with its transaction id
+		expect(txs.map((t) => t.time)).toEqual(
+			[...txs.map((t) => t.time)].sort((a, b) => b - a),
+		);
+		expect(txs.every((t) => t.user === rec.user)).toBe(true);
+		expect(txs.every((t) => /^0x[0-9a-f]{64}$/.test(t.hash))).toBe(true);
+		// a user-signed action carries its own number, which is what ties it to a proposal
+		const move = txs.find((t) => t.action.type === "usdClassTransfer");
+		expect(move?.action).toMatchObject({ amount: "3", toPerp: true });
+		expect(typeof move?.action.nonce).toBe("number");
+		// a vault action carries none
+		const vault = txs.find((t) => t.action.type === "vaultTransfer");
+		expect(vault?.action).not.toHaveProperty("nonce");
+		// an attempt Hyperliquid refused is listed too, with its reason
+		const refusedOne = txs.find((t) => t.error !== null);
+		expect(refusedOne?.error).toBe(
+			"Cannot disable unified account with open positions, open orders, or active TWAP orders",
+		);
+		// what an API wallet did for the account is in the same list
+		expect(txs.some((t) => t.action.type === "order")).toBe(true);
+	});
+	it("reads the recorded answer for an account that has done nothing as an empty list", async () => {
+		const rec = list("empty-account");
+		const r = await explorerUserDetails("testnet", rec.user, {
+			fetch: fetchWith(rec.status, rec.body),
+		});
+		expect(r.data).toEqual({ txs: [], truncated: false });
+	});
+	it('a used-up allowance is an error, never "no transactions"', async () => {
+		// the refusal as the explorer words it (recorded for txDetails)
+		const refusal = recorded("allowance-spent");
+		const e = await explorerUserDetails("testnet", USER, {
+			fetch: fetchWith(refusal.status, refusal.body),
+		}).catch((x) => x);
+		expect(e).toBeInstanceOf(ExplorerAllowanceError);
+		expect((e as Error).message).toBe(
+			"More than 100 archived blocks queried in one day",
+		);
+		// any other error answer is not that
+		const other = await explorerUserDetails("testnet", USER, {
+			fetch: fetchWith(200, { type: "error", message: "something else" }),
+		}).catch((x) => x);
+		expect(other).not.toBeInstanceOf(ExplorerAllowanceError);
+		expect((other as Error).message).toMatch(/no txs/);
 	});
 	it("maps HTTP errors, 429, non-JSON and missing txs to InfoRequestError with the status", async () => {
 		await expect(
