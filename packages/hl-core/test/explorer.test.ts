@@ -204,6 +204,10 @@ describe("explorerUserDetails", () => {
 				fetch: fetchWith(200, { nope: 1 }),
 			}),
 		).rejects.toThrow(/no txs/);
+		// an answer that is no object at all is no list either
+		await expect(
+			explorerUserDetails("testnet", USER, { fetch: fetchWith(200, "null") }),
+		).rejects.toThrow(/no txs/);
 	});
 	it("network failures and aborts surface as InfoRequestError without a status", async () => {
 		const failing = (async () => {
