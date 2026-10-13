@@ -91,7 +91,7 @@ VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
 | `bun --bun run dev` | Dev server on port 3000 |
 | `bun --bun run build` | Production build into `.output/` |
 | `bun --bun run start` | Serve the production build (`node .output/server/index.mjs`) |
-| `bun --bun run test` | Vitest: protocol core and the app's pure logic (3,095 tests) |
+| `bun --bun run test` | Vitest: protocol core and the app's pure logic (3,098 tests) |
 | `bun --bun run check` | Biome lint + format check |
 | `bun run db:start` / `db:stop` | Start or stop the local relay (Supabase CLI and Docker) |
 | `bun run db:reset` | Rebuild the local relay database from `supabase/migrations/` |

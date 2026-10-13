@@ -1610,7 +1610,7 @@ A second session read the code of both pull requests at `99cf0aa` without runnin
 
 | Suite | Command | Result |
 |---|---|---|
-| Core and app unit tests | `bun --bun run test` | 116 files, 3,095 tests, all passing |
+| Core and app unit tests | `bun --bun run test` | 117 files, 3,098 tests, all passing |
 | Core coverage | `bunx vitest run --coverage` in `packages/hl-core` | 100 % of lines, branches, functions and statements for its scope (three new modules included) |
 | Database | `bun run db:test` | 1,008 assertions, all passing (no relay change) |
 | Advisors | `supabase db advisors --local` | no issues |
@@ -1683,13 +1683,15 @@ The fixed and left list went back to the reviewing session, which answered from 
 
 In the browser: a link was made of a transfer Hyperliquid had accepted, with the answer in its receipt changed to a refusal and the finaliser's real signature left in place, and opened on a copy of the app without a relay, in storage that had never seen the proposal. The page read "Carried out · the refusal reported here is not Hyperliquid's record", with one request to the explorer and no other host than Hyperliquid's. Before this change it read "Refused by Hyperliquid · cannot be sent again" and told the reader to propose it again.
 
+A third message from the reviewer made three further points. Two are answered in DECISIONS.md and left for later (the account's list of transactions could confirm or refute a receipt for every kind of action, not only the ones with a ledger row; a combining-mark limit clips some scripts). The third closed half of F-1 without a measurement: the inspector now puts one amber note on a pasted request whose inner action is not in Hyperliquid's own form, and keeps judging it as pasted (`tools/multisig/model.test.ts`; seen in the browser with the valid sample and a trailing zero added to its price).
+
 ### Left as they are
 
 | Finding | Why |
 |---|---|
 | D-1 for receipts read from the relay | The relay takes a receipt only from the finaliser's session, and the browser cannot check it the way it checks a copy: the check needs every signature that was sent, and the relay holds only the ones their signers put there themselves. A true receipt would fail whenever one signature travelled by link. It waits for the relay to keep what was sent, or for Hyperliquid's own record to be asked. |
 | A finaliser who reports another answer than Hyperliquid gave | Nothing in a receipt is signed by Hyperliquid. Only its own record settles it; the same later work. |
-| F-1 (the inspector judges a non-canonical inner action as pasted) | Needs a measurement of what Hyperliquid does with one; not made here. |
+| F-1 (the inspector judges a non-canonical inner action as pasted) | Half closed: the inspector now says so on such a request. Which of the two readings is Hyperliquid's still needs the measurement described in DECISIONS.md; not made here. |
 | D-2, D-12 | D-2 is unreachable through the path named, and the order rule is applied where the lists are made. D-12 is strict on purpose: key order is part of what is compared. |
 | E2-7 | Void: the frame carries `user` (measured above). |
 | D-6, D-10, D-13, E2-5, E2-9, E2-11, E2-13, F-3, F-7 to F-11 | Informational or cosmetic, none changes what is signed or sent. E2-11: the read is at most ten seconds old and the relay checks again before it stores. |
