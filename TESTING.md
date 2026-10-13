@@ -1604,17 +1604,17 @@ Run by the building session, on an evening when this machine's allowance for `tx
 
 ## 20. Multisig: a code review by a second session (2026-10-13)
 
-A second session read the code of both pull requests at `99cf0aa` without running any of it, and listed 41 findings: none critical or high, 6 medium, 19 low, 16 informational. The session that built the section went through them with what it knows of the design. 23 were fixed, each with a test where a rule changed; the other 18 are left, with the reason, at the end of this section. Nothing changed in the relay: no migration, no policy, no function.
+A second session read the code of both pull requests at `99cf0aa` without running any of it, and listed 41 findings: none critical or high, 6 medium, 19 low, 16 informational. The session that built the section went through them with what it knows of the design. 24 were fixed, each with a test where a rule changed (the last of them, F-1, after a measurement on testnet); the other 17 are left, with the reason, at the end of this section. The review itself changed nothing in the relay. One relay migration was added afterwards, at the owner's word, for a fault found on the way: see "Afterwards" below.
 
 ### Automated suites
 
 | Suite | Command | Result |
 |---|---|---|
-| Core and app unit tests | `bun --bun run test` | 117 files, 3,098 tests, all passing |
+| Core and app unit tests | `bun --bun run test` | 118 files, 3,109 tests, all passing |
 | Core coverage | `bunx vitest run --coverage` in `packages/hl-core` | 100 % of lines, branches, functions and statements for its scope (three new modules included) |
-| Database | `bun run db:test` | 1,008 assertions, all passing (no relay change) |
+| Database | `bun run db:test` | 1,015 assertions, all passing (7 new for the read markers' turn) |
 | Advisors | `supabase db advisors --local` | no issues |
-| Relay integration | `bun run test:relay` | 78 tests, all passing on the final run; see Limits for one that failed once |
+| Relay integration | `bun run test:relay` | 78 tests, all passing, eight runs in a row after the read markers' turn (one had failed once in four before it) |
 | Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
 
 New: core `multisig/when.ts`, `multisig/shown.ts`, `multisig/receipt.ts` with their tests; app `model/chain/knownState.ts` with its test, and `model/chain/recorded.test.ts`, which runs actions exactly as Hyperliquid's explorer recorded them against the actions the forms build.
@@ -1683,7 +1683,28 @@ The fixed and left list went back to the reviewing session, which answered from 
 
 In the browser: a link was made of a transfer Hyperliquid had accepted, with the answer in its receipt changed to a refusal and the finaliser's real signature left in place, and opened on a copy of the app without a relay, in storage that had never seen the proposal. The page read "Carried out · the refusal reported here is not Hyperliquid's record", with one request to the explorer and no other host than Hyperliquid's. Before this change it read "Refused by Hyperliquid · cannot be sent again" and told the reader to propose it again.
 
-A third message from the reviewer made three further points. Two are answered in DECISIONS.md and left for later (the account's list of transactions could confirm or refute a receipt for every kind of action, not only the ones with a ledger row; a combining-mark limit clips some scripts). The third closed half of F-1 without a measurement: the inspector now puts one amber note on a pasted request whose inner action is not in Hyperliquid's own form, and keeps judging it as pasted (`tools/multisig/model.test.ts`; seen in the browser with the valid sample and a trailing zero added to its price).
+A third message from the reviewer made three further points. Two are answered in DECISIONS.md and left for later (the account's list of transactions could confirm or refute a receipt for every kind of action, not only the ones with a ledger row; a combining-mark limit clips some scripts). The third closed half of F-1 without a measurement: the inspector now puts one amber note on a pasted request whose inner action is not in Hyperliquid's own form, and, at that point, kept judging it as pasted (superseded by the measurement under "Afterwards").
+
+### Afterwards: the measurement for F-1, and the read markers
+
+**F-1, measured and fixed.** With the owner's go, eight requests went through the 2-of-3 lab multi-sig on testnet (`fixtures/multisig/inner-form.json`), each a vault deposit of 1 USDC. That is under the minimum, so every one is refused and nothing moves, and the refusal says whether the signatures were accepted.
+
+| The inner action in the body | The signers signed | The leader signed | Hyperliquid answered |
+|---|---|---|---|
+| canonical | canonical | canonical | "Vault deposits must be at least $5." (the signatures passed) |
+| fields in another order | those bytes | those bytes | "Invalid multi-sig outer signer" |
+| fields in another order | canonical | canonical | "Vault deposits must be at least $5." |
+| address in capitals | those bytes | those bytes | "Invalid multi-sig outer signer" |
+| address in capitals | canonical | canonical | "Vault deposits must be at least $5." |
+| fields in another order | those bytes | canonical | "Invalid multi-sig inner signer" |
+| address in capitals | those bytes | canonical | "Invalid multi-sig inner signer" |
+| canonical | the reordered bytes | canonical | "Invalid multi-sig inner signer" |
+
+So Hyperliquid reads a request, writes the inner action out in its own form and checks every signature against that, whatever form was sent. The inspector judged a pasted request over the action as pasted, which gave Hyperliquid's verdict for two of those eight. It now judges over the canonical action (`requestAsJudged` in the core), as a proposal document always was, says so in one amber note when the pasted form differs, and names a signature made over the pasted bytes as that ("signed the action as originally written"). `test/multisig/innerForm.test.ts` replays all eight and gets Hyperliquid's answer for each; `tools/multisig/model.test.ts` covers the inspector's parser. In the browser, with the recorded requests pasted in: the one Hyperliquid let through reads "ready · 2 of 2 required signatures · leader authorized", the one it refused "not-ready · 0 of 2", both signatures "signed different bytes … as originally written", the envelope's "not the leader". Rule set "multisig" is 1.5.0. Not measured: a decimal string with trailing zeros inside a multi-sig request (a vault action has none).
+
+**The read markers (relay; one migration, `relay_read_mark_turn`).** "Got it" in "While you were away" writes a marker; the newest row per signer and treasury is the marker, newest meaning the highest id. Two "Got it" from one signer at the same moment (two tabs, two devices) were written one after the other under a lock, but a row has its id before that lock is taken, so the one written second could carry the lower id and the marker read back was one entry behind: a notice already read showed once more. It never concerned two different signers, or two treasuries. The relay's integration test "takes two at once" had caught it once in four runs. The turn is now taken per statement and per wallet, before any row has an id. pgTAP (`140_attention.sql`, 7 new): the marker is written under its wallet's own turn, the turn is taken before the row has its id (a test trigger notes the next id when the statement starts), another wallet's turn is its own, the turn is a trigger no client can skip. The integration suite then passed eight times in a row. `supabase db advisors --local`: no issues.
+
+**Two old reports.** `TEST_REPORT.md` and `TEST_REPORT_v2.md`, from the faucet miner's first tests, named a wallet. They are no longer tracked and are ignored from here on; they stay in the history of the commits that had them.
 
 ### Left as they are
 
@@ -1691,7 +1712,6 @@ A third message from the reviewer made three further points. Two are answered in
 |---|---|
 | D-1 for receipts read from the relay | The relay takes a receipt only from the finaliser's session, and the browser cannot check it the way it checks a copy: the check needs every signature that was sent, and the relay holds only the ones their signers put there themselves. A true receipt would fail whenever one signature travelled by link. It waits for the relay to keep what was sent, or for Hyperliquid's own record to be asked. |
 | A finaliser who reports another answer than Hyperliquid gave | Nothing in a receipt is signed by Hyperliquid. Only its own record settles it; the same later work. |
-| F-1 (the inspector judges a non-canonical inner action as pasted) | Half closed: the inspector now says so on such a request. Which of the two readings is Hyperliquid's still needs the measurement described in DECISIONS.md; not made here. |
 | D-2, D-12 | D-2 is unreachable through the path named, and the order rule is applied where the lists are made. D-12 is strict on purpose: key order is part of what is compared. |
 | E2-7 | Void: the frame carries `user` (measured above). |
 | D-6, D-10, D-13, E2-5, E2-9, E2-11, E2-13, F-3, F-7 to F-11 | Informational or cosmetic, none changes what is signed or sent. E2-11: the read is at most ten seconds old and the relay checks again before it stores. |
@@ -1700,7 +1720,6 @@ A third message from the reviewer made three further points. Two are answered in
 ### Limits
 
 - A unified treasury's withdrawal was not sent: no withdrawal is made in testing. Which of the two figures Hyperliquid holds it to is still not measured; the page stops one only above both.
-- One relay integration test ("what a signer has read … takes two at once") failed once in three runs of the round, before any of its code was touched: two "Got it" at the same moment left the marker one entry behind. The guard takes its lock after the row has its number, so the later number can belong to the earlier writer. Not fixed here; it shows one read entry again.
 - The check of receipts tries every order of at most five signatures. With six to ten it tries the copy's order and the sorted order, each with and without the finaliser's signature last; a copy in yet another order would not be recognised. None of the 53 real ones needed more than the first try.
 - A copy that says "accepted" is not compared with Hyperliquid's record: a page shows "As reported by the finaliser's browser. The ledger is the proof." under it and no more. Only a reported refusal is checked, because that is the answer that makes a team pay twice.
 - A reported refusal can be compared only for actions that leave a row in the ledger and are still among the account's newest 300 transactions (or for which a single look-up answers). For the others the page says what the finaliser's page recorded and to look before proposing again.

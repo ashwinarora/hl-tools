@@ -91,11 +91,11 @@ VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
 | `bun --bun run dev` | Dev server on port 3000 |
 | `bun --bun run build` | Production build into `.output/` |
 | `bun --bun run start` | Serve the production build (`node .output/server/index.mjs`) |
-| `bun --bun run test` | Vitest: protocol core and the app's pure logic (3,098 tests) |
+| `bun --bun run test` | Vitest: protocol core and the app's pure logic (3,109 tests) |
 | `bun --bun run check` | Biome lint + format check |
 | `bun run db:start` / `db:stop` | Start or stop the local relay (Supabase CLI and Docker) |
 | `bun run db:reset` | Rebuild the local relay database from `supabase/migrations/` |
-| `bun run db:test` | pgTAP: the relay's access rules, guards and worker (1,008 assertions) |
+| `bun run db:test` | pgTAP: the relay's access rules, guards and worker (1,015 assertions) |
 | `bun run test:relay` | Integration tests of the relay client against the local stack (78 tests) |
 | `bun run rpc:1337` | Serve the signing network's stand-in on `http://localhost:3337/rpc` (for vault forms) |
 
@@ -155,6 +155,7 @@ Every bug found in a browser should become a fixture, so the core never regresse
 | `multisig/staking.json` | a staking action is refused or accepted, or leaves the account in a state, other than the core predicts | `{ network, validators, notes, steps: [{ about, action, sentAt, before, answer, after, history }] }`, 18 staking actions through a multi-sig on testnet in the order they were sent, with what Hyperliquid reported before and after each; `test/multisig/staking.test.ts` replays every one |
 | `multisig/vaults.json` | a vault deposit or withdrawal is refused or accepted, or leaves the account in a state, other than the core predicts | `{ network, accounts, vaults, notes, steps: [{ about, account, action, sentAt, before, answer, after, ledger }] }`, 17 requests through multi-sigs on testnet (a unified and a manual treasury, every refusal, the lockup from both sides); `test/multisig/vault.test.ts` replays every one |
 | `multisig/mode-switch.json` | a switch between a manual and a unified account through a multi-sig is hashed, refused or accepted differently | `{ hashedAs, requests: [{ about, request, hashedAbstraction, answer }], switches: [{ about, account, before, request, hashedAbstraction, answer, after }] }`, each request exactly as posted; `test/multisig/modeSwitch.test.ts` recovers the finaliser from every one |
+| `multisig/inner-form.json` | Hyperliquid judges a multi-sig request's signatures over another writing of the inner action than this one | `{ account, policy, requests: [{ about, posted, innerSignedOver, outerSignedOver, request, answer }] }`, each request exactly as posted; `test/multisig/innerForm.test.ts` predicts every answer |
 | `multisig/evm-transfer.json` | a send from a multi-sig to a HyperEVM system address is answered differently | `{ account, tokens, sends: [{ about, action, answer }] }`, 7 sends on testnet; replayed by `test/multisig/transfer.test.ts` |
 | `multisig/agent-unnamed.json` | an API wallet without a name is listed, approved or removed differently | `{ account, steps: [{ about, action, answer, after }] }`, `after` being what `extraAgents` and `webData3` then reported; replayed by `test/multisig/account.test.ts` |
 | `explorer/testnet-userdetails.json` | the explorer's list of an account's newest transactions is read wrongly, or its size or paging changes | `{ answers: [{ name, user, status, returned, body }] }`, the answers to `userDetails` as received (for the lab treasury a slice of the 300, each entry untouched); read back by `test/explorer.test.ts` |
