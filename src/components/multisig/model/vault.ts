@@ -23,6 +23,7 @@ import {
 	isHlp,
 	issue,
 	judgeVaultSteps,
+	type LedgerRow,
 	type Network,
 	type PlainObject,
 	planDeposit,
@@ -531,3 +532,97 @@ export function vaultsSummaryLine(
 	if (!total.isPositive()) return null;
 	return `${usdcShown(total.toString())} USDC in ${deposits.length === 1 ? "1 vault" : `${deposits.length} vaults`}`;
 }
+
+// ------------------------------------------------------------------- the history
+
+/** What a vault row of the ledger records. */
+export type VaultEventKind =
+	| "deposit"
+	| "withdrawal"
+	| "distribution"
+	| "created";
+
+const EVENT_OF: Readonly<Record<string, VaultEventKind>> = {
+	vaultDeposit: "deposit",
+	vaultWithdraw: "withdrawal",
+	vaultDistribution: "distribution",
+	vaultCreate: "created",
+};
+
+/** How the history names each kind. */
+export const VAULT_EVENT: Readonly<Record<VaultEventKind, string>> = {
+	deposit: "Deposit",
+	withdrawal: "Withdrawal",
+	distribution: "Distribution",
+	created: "Vault created",
+};
+
+/** One vault row of an account's ledger, as the Vaults tab's history shows it. */
+export interface VaultEvent {
+	readonly key: string;
+	readonly time: number;
+	readonly kind: VaultEventKind;
+	/** The vault's address; null when the row names none. */
+	readonly vault: string | null;
+	/** What moved, in USDC: what went in, or what came back. Null when the row does not say. */
+	readonly amount: string | null;
+	/** A withdrawal: the leader's share of the profit, kept back. Null when there was none. */
+	readonly leaderShare: string | null;
+	/** A withdrawal: what closing positions for it cost. Null when it cost nothing. */
+	readonly closingCost: string | null;
+	/** The ledger's own row: its transaction, and what the "Proposal" cell is worked out from. */
+	readonly row: LedgerRow;
+}
+
+/** An amount a row gives, when it is more than nothing. */
+const more = (v: unknown): string | null => {
+	const d = typeof v === "string" ? Decimal.tryParse(v) : null;
+	return d?.isPositive() ? d.toString() : null;
+};
+
+/** Whether a ledger row is about a vault. */
+export const isVaultRow = (row: LedgerRow): boolean => row.type in EVENT_OF;
+
+/**
+ * The vault rows of an account's ledger, the newest first: every deposit,
+ * withdrawal and distribution Hyperliquid has on record for it, whoever made
+ * it (a proposal, another tool, an API wallet). Null while the ledger is not
+ * read. Nothing here is asked for: the ledger is what Hyperliquid pushes.
+ */
+export function vaultHistory(
+	ledger: readonly LedgerRow[] | null,
+): readonly VaultEvent[] | null {
+	if (ledger === null) return null;
+	return ledger
+		.filter(isVaultRow)
+		.map(
+			(row): VaultEvent => ({
+				key: row.key,
+				time: row.time,
+				kind: EVENT_OF[row.type] as VaultEventKind,
+				vault: row.counterparty,
+				amount: row.amount,
+				leaderShare:
+					row.type === "vaultWithdraw" ? more(row.delta.commission) : null,
+				closingCost:
+					row.type === "vaultWithdraw" ? more(row.delta.closingCost) : null,
+				row,
+			}),
+		)
+		.sort((a, b) => b.time - a.time || (a.key < b.key ? -1 : 1));
+}
+
+/** Every sentence of the history. */
+export const VAULT_HISTORY = {
+	title: "History",
+	about:
+		"Every vault deposit and withdrawal in Hyperliquid's record of this account, whoever made it.",
+	gap: "Rows from while this page was disconnected may be missing.",
+	all: "All transfers",
+	reading: "Reading from Hyperliquid…",
+	none: "No vault deposit or withdrawal in Hyperliquid's record of this account.",
+	matched:
+		"The last column says which proposal a row came from, when one on record agrees with it.",
+	unmatched:
+		"The last column says which proposal a row came from. The record of proposals cannot be read right now, so rows are not matched.",
+} as const;

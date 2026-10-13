@@ -207,6 +207,10 @@ export const HELP = {
 		title: "None on record",
 		body: "This transfer left the treasury and no proposal known here explains it. It was signed and sent some other way, for example with another tool. If none of the signers knows it, find out who signed it.",
 	},
+	vaultRowProposal: {
+		title: "Where a vault row came from",
+		body: "A vault action carries no number of its own, so a row is tied to a proposal as “likely” at most. “None on record” means no proposal known here agrees with it: it was made another way, for example by an API wallet, which can move money into a vault without the signers.",
+	},
 	recordAndLog: {
 		title: "Two records",
 		body: "The Signing log is what happened here: who proposed, signed and sent. “On Hyperliquid” is the account's own record of every transfer, trade and order, whoever caused it. The second is the proof. The first explains it.",

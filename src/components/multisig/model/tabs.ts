@@ -30,3 +30,36 @@ export function treasuryTab(raw: unknown): TreasuryTab | undefined {
 	if (raw === "signers") return "overview";
 	return TREASURY_TABS.find((t) => t === raw);
 }
+
+/** What a treasury page follows besides what the account holds. */
+export interface TabWants {
+	/** The ledger with trades, orders and funding. */
+	readonly history: boolean;
+	/** The ledger: deposits, withdrawals and transfers. */
+	readonly ledger: boolean;
+	/** Whether ledger rows are looked up on Hyperliquid's explorer. */
+	readonly lookUps: boolean;
+}
+
+/**
+ * What a treasury page follows live for the section on screen, `pending`
+ * being how many of the treasury's proposals are waiting. A page asks for no
+ * more than it shows:
+ *   history  only on "On Hyperliquid"
+ *   ledger   there, while a proposal waits (that is how the page notices one
+ *            that was carried out without the tool), and on the Vaults tab,
+ *            whose history is the ledger's vault rows
+ *   lookUps  where a row's transaction is compared with a proposal: on "On
+ *            Hyperliquid" and while a proposal waits. A vault row needs no
+ *            look-up, so the Vaults tab by itself spends nothing of the
+ *            explorer's daily allowance.
+ */
+export function tabWants(tab: TreasuryTab, pending: number): TabWants {
+	const chain = tab === "chain";
+	const waiting = pending > 0;
+	return {
+		history: chain,
+		ledger: chain || waiting || tab === "vaults",
+		lookUps: chain || waiting,
+	};
+}

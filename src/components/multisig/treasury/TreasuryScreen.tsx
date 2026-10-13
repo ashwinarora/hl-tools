@@ -22,7 +22,7 @@ import {
 } from "../model/relay/signers";
 import { isItself } from "../model/selfTreasury";
 import { shortAddress } from "../model/stage";
-import type { TreasuryTab } from "../model/tabs";
+import { type TreasuryTab, tabWants } from "../model/tabs";
 import { TreasuryNames, useNames } from "../names/Names";
 import { requestTreasury } from "../relay/api";
 import { useOpenProposals } from "../relay/openProposals";
@@ -146,17 +146,20 @@ export function TreasuryScreen({
 		[open.items, network, address],
 	);
 	// Trades, orders and funding are followed only while they are looked at.
-	// The ledger is followed then, and while a proposal is pending: that is how
-	// this page notices one that was carried out without the tool.
+	// The ledger is followed then, while a proposal is pending (that is how
+	// this page notices one that was carried out without the tool) and on the
+	// Vaults tab, whose history is its vault rows (`tabWants`).
+	const wants = tabWants(tab, openHere.length);
 	const live = useLiveTreasuryState(target, {
-		history: tab === "chain",
-		ledger: openHere.length > 0,
+		history: wants.history,
+		ledger: wants.ledger,
 	});
 	// With the relay's record unreadable nothing may be called "none on record":
-	// rows that could be a proposal's stay "checking…" until it is back.
+	// rows that could be a proposal's stay "checking…" until it is back. No
+	// transaction is looked up for a section that shows vault rows alone.
 	const match = useChainMatch(
 		target,
-		live.live.ledger,
+		wants.lookUps ? live.live.ledger : null,
 		known.proposals,
 		known.state === "ready",
 	);
@@ -540,6 +543,9 @@ export function TreasuryScreen({
 						canPropose={
 							!!me && (live.policy?.authorizedUsers ?? []).includes(me)
 						}
+						proposals={known.proposals}
+						proposalsState={known.state}
+						match={match}
 					/>
 				)}
 				{tab === "log" && <SigningLogTab treasury={treasury} me={me} />}

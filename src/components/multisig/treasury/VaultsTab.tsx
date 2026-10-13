@@ -1,25 +1,46 @@
 import type { Address, Network } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
+import type { ChainMatch } from "../live/useChainMatch";
 import { useVaultDetails, useVaults } from "../live/useVaults";
-import { compareAmount, compareNumber } from "../model/chain/columns";
+import {
+	amountText,
+	compareAmount,
+	compareNumber,
+	compareText,
+} from "../model/chain/columns";
 import { shortAddress } from "../model/parts";
 import { signingNetwork } from "../model/signingNetwork";
 import { untilWords } from "../model/time";
-import { usdcShown, VAULT, type VaultRow, vaultsView } from "../model/vault";
+import {
+	usdcShown,
+	VAULT,
+	VAULT_EVENT,
+	VAULT_HISTORY,
+	type VaultEvent,
+	type VaultRow,
+	vaultHistory,
+	vaultLabel,
+	vaultsView,
+} from "../model/vault";
 import { Checked } from "../shell/Checked";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
 import { Card, linkButton, linkButtonSm, Tag } from "../shell/kit";
 import { Figure, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
+import { ProposalCell, TimeCell } from "./ledgerCells";
+import type { KnownProposal, KnownState } from "./useKnownProposals";
 
 const usdc = (v: string | null) => (v === null ? "…" : usdcShown(v));
 
 /**
  * The treasury's money in vaults: what Hyperliquid reports, asked for once a
- * minute (nothing about vaults arrives over the live connection). Read-only;
- * the buttons open the forms that propose a deposit or a withdrawal.
+ * minute (what a deposit is worth arrives on no live channel). Below it, the
+ * history: the vault rows of the account's ledger, which Hyperliquid pushes
+ * as they happen, each with the proposal on record that agrees with it, if
+ * one does. Read-only; the buttons open the forms that propose a deposit or
+ * a withdrawal.
  */
 export function VaultsTab({
 	network,
@@ -27,6 +48,9 @@ export function VaultsTab({
 	state,
 	frozen,
 	canPropose,
+	proposals,
+	proposalsState,
+	match,
 }: {
 	network: Network;
 	address: Address;
@@ -35,6 +59,11 @@ export function VaultsTab({
 	frozen: boolean;
 	/** The connected wallet is one of its signers. */
 	canPropose: boolean;
+	/** Every proposal on record for this treasury: what a row of the history is tied to. */
+	proposals: readonly KnownProposal[];
+	proposalsState: KnownState;
+	/** Which proposal each ledger row belongs to (worked out by the page, once for all its tabs). */
+	match: ChainMatch;
 }) {
 	const now = useNow();
 	const vaults = useVaults(state.target);
@@ -141,6 +170,106 @@ export function VaultsTab({
 		? "Reading from Hyperliquid…"
 		: "Could not be read from Hyperliquid.";
 
+	// ---- the history: the ledger's vault rows, as Hyperliquid pushes them
+	const ledger = state.live.ledger;
+	const events = useMemo(() => vaultHistory(ledger), [ledger]);
+	const titles = useMemo(
+		() => new Map(proposals.map((p) => [p.digest as string, p.title])),
+		[proposals],
+	);
+	// a vault's own name, where its details were read for the table above
+	const names = useMemo(() => {
+		const m = new Map<string, string>();
+		for (const r of view.rows ?? []) if (r.name) m.set(r.vault, r.name);
+		return m;
+	}, [view.rows]);
+	const history = useMemo<DataColumn<VaultEvent>[]>(
+		() => [
+			{
+				id: "time",
+				header: "Time",
+				descFirst: true,
+				sort: (a, b) => compareNumber(a.time, b.time),
+				cell: (r) => (
+					<TimeCell at={r.time} network={network} hash={r.row.hash} />
+				),
+			},
+			{
+				id: "what",
+				header: "What",
+				sort: (a, b) => compareText(VAULT_EVENT[a.kind], VAULT_EVENT[b.kind]),
+				cell: (r) => VAULT_EVENT[r.kind],
+			},
+			{
+				id: "vault",
+				header: "Vault",
+				sort: (a, b) => compareText(a.vault, b.vault),
+				cell: (r) =>
+					r.vault === null ? (
+						"—"
+					) : (
+						<span title={r.vault} className="[overflow-wrap:anywhere]">
+							{vaultLabel(r.vault, network, names.get(r.vault))}
+						</span>
+					),
+			},
+			{
+				id: "amount",
+				header: "Amount",
+				numeric: true,
+				sort: (a, b) => compareAmount(a.amount, b.amount),
+				cell: (r) =>
+					r.amount === null ? (
+						"—"
+					) : (
+						<>
+							{amountText(r.amount)}
+							<span className="ml-1.5 font-sans text-xs text-muted-foreground">
+								USDC
+							</span>
+						</>
+					),
+			},
+			{
+				id: "share",
+				header: "Leader's share",
+				numeric: true,
+				sort: (a, b) => compareAmount(a.leaderShare, b.leaderShare),
+				cell: (r) =>
+					r.leaderShare === null && r.closingCost === null ? (
+						"—"
+					) : (
+						<span
+							title={
+								r.closingCost === null
+									? "Kept by the vault's leader out of the profit on what was withdrawn."
+									: `Kept by the vault's leader out of the profit on what was withdrawn. Closing positions for this withdrawal cost another ${amountText(r.closingCost)} USDC.`
+							}
+						>
+							{amountText(r.leaderShare ?? "0")}
+							<span className="ml-1.5 font-sans text-xs text-muted-foreground">
+								USDC
+							</span>
+						</span>
+					),
+			},
+			{
+				id: "proposal",
+				header: "Proposal",
+				headerExtra: <Help k="vaultRowProposal" />,
+				cell: (r) => (
+					<ProposalCell
+						match={match.of(r.row)}
+						titles={titles}
+						onRetry={() => match.retry(r.row)}
+					/>
+				),
+				cellClass: () => "whitespace-normal min-w-40",
+			},
+		],
+		[network, match, titles, names],
+	);
+
 	return (
 		<div className="flex flex-col gap-4">
 			<p className="text-xs text-muted-foreground">
@@ -196,6 +325,41 @@ export function VaultsTab({
 			</Card>
 			<p className="text-xs text-subtle-foreground">
 				{VAULT.risk} {VAULT.noRecommendation}
+			</p>
+
+			<Card
+				title={VAULT_HISTORY.title}
+				flush
+				footer={
+					<>
+						<span>
+							{VAULT_HISTORY.about}
+							{state.live.gaps.includes("ledger") && ` ${VAULT_HISTORY.gap}`}
+						</span>
+						<Link
+							to="/multisig/t/$network/$address"
+							params={{ network, address }}
+							search={{ tab: "chain" }}
+							className="whitespace-nowrap text-brand underline underline-offset-2"
+						>
+							{VAULT_HISTORY.all}
+						</Link>
+					</>
+				}
+			>
+				<DataTable
+					label="Vault history"
+					columns={history}
+					rows={events ?? []}
+					rowKey={(r) => r.key}
+					initialSort={{ id: "time", desc: true }}
+					empty={events === null ? VAULT_HISTORY.reading : VAULT_HISTORY.none}
+				/>
+			</Card>
+			<p className="mx-0.5 -mt-2 text-xs text-subtle-foreground">
+				{proposalsState === "unavailable"
+					? VAULT_HISTORY.unmatched
+					: VAULT_HISTORY.matched}
 			</p>
 		</div>
 	);

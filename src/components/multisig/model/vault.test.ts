@@ -1,20 +1,27 @@
+import { readFileSync } from "node:fs";
 import {
 	accountMode,
 	HLP_VAULT,
 	type Issue,
+	type LedgerRow,
+	parseLedger,
 	parseVaultDetails,
 	type VaultLookup,
 } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import { RECIPIENT } from "#/test/keys";
+import { HELP, HELP_JARGON } from "./help";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
 import {
 	isVaultKind,
+	isVaultRow,
 	kindOffered,
 	lockupWords,
 	planVault,
 	usdcShown,
 	VAULT,
+	VAULT_EVENT,
+	VAULT_HISTORY,
 	VAULT_REFUSALS,
 	type VaultInput,
 	type VaultRead,
@@ -22,6 +29,7 @@ import {
 	vaultActions,
 	vaultFactLines,
 	vaultFacts,
+	vaultHistory,
 	vaultLabel,
 	vaultStepSentence,
 	vaultsSummaryLine,
@@ -617,5 +625,144 @@ describe("the Vaults tab", () => {
 		expect(
 			vaultsSummaryLine([{ vault: V, equity: "0", lockedUntil: 0 }]),
 		).toBeNull();
+	});
+});
+
+describe("the Vaults tab's history", () => {
+	// the ledger rows Hyperliquid recorded for the lab's vault steps, as the
+	// socket delivers them (fixtures/multisig/vaults.json)
+	const lab = JSON.parse(
+		readFileSync(
+			new URL(
+				"../../../../packages/hl-core/fixtures/multisig/vaults.json",
+				import.meta.url,
+			),
+			"utf8",
+		),
+	) as { steps: { ledger?: { time: number; hash: string; delta: object } }[] };
+	const ME = "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7";
+	const recorded = lab.steps.flatMap((s) => (s.ledger ? [s.ledger] : []));
+	const ledger = parseLedger({ nonFundingLedgerUpdates: recorded }, ME)
+		?.rows as LedgerRow[];
+
+	it("is every vault row of the ledger, the newest first, and nothing else", () => {
+		expect(recorded).toHaveLength(7);
+		const events = vaultHistory(ledger) ?? [];
+		// six vault rows; the move from spot to perps between them is no vault row
+		expect(events.map((e) => e.kind)).toEqual([
+			"withdrawal",
+			"deposit",
+			"withdrawal",
+			"deposit",
+			"deposit",
+			"withdrawal",
+		]);
+		expect(ledger.filter((r) => !isVaultRow(r)).map((r) => r.type)).toEqual([
+			"accountClassTransfer",
+		]);
+		const times = events.map((e) => e.time);
+		expect(times).toEqual([...times].sort((a, b) => b - a));
+		expect(events.every((e) => e.vault === V)).toBe(true);
+		// each carries the ledger's own row: its transaction, and what the
+		// "Proposal" cell is worked out from
+		expect(events.every((e) => e.row.hash.startsWith("0x"))).toBe(true);
+		expect(new Set(events.map((e) => e.key)).size).toBe(6);
+	});
+
+	it("gives a deposit's amount, and for a withdrawal what came back and what the leader kept", () => {
+		const events = vaultHistory(ledger) ?? [];
+		const deposit = events.find((e) => e.kind === "deposit");
+		expect(deposit).toMatchObject({
+			amount: "5.0",
+			leaderShare: null,
+			closingCost: null,
+		});
+		// 8.011514 asked: 8.010349 came back, the leader kept 0.001165
+		const first = events[events.length - 1];
+		expect(first).toMatchObject({
+			kind: "withdrawal",
+			amount: "8.010349",
+			leaderShare: "0.001165",
+			closingCost: null,
+		});
+		// a commission of nothing is no share
+		expect(
+			events.find((e) => e.kind === "withdrawal" && e.amount === "2.999999")
+				?.leaderShare,
+		).toBeNull();
+	});
+
+	it("says what it has not read, reads an empty ledger as empty, and knows the rarer rows", () => {
+		expect(vaultHistory(null)).toBeNull();
+		expect(vaultHistory([])).toEqual([]);
+		const rare = parseLedger(
+			{
+				nonFundingLedgerUpdates: [
+					{
+						time: 3,
+						hash: `0x${"3".repeat(64)}`,
+						delta: { type: "vaultDistribution", vault: V, usdc: "1.5" },
+					},
+					{
+						time: 2,
+						hash: `0x${"2".repeat(64)}`,
+						delta: { type: "vaultCreate", vault: V, usdc: "100.0", fee: "0" },
+					},
+					{
+						time: 4,
+						hash: `0x${"4".repeat(64)}`,
+						delta: {
+							type: "vaultWithdraw",
+							vault: V,
+							requestedUsd: "10.0",
+							commission: "0.2",
+							closingCost: "0.05",
+							netWithdrawnUsd: "9.75",
+						},
+					},
+					// a send is not a vault row
+					{
+						time: 5,
+						hash: `0x${"5".repeat(64)}`,
+						delta: {
+							type: "send",
+							user: ME,
+							destination: RECIPIENT,
+							token: "USDC",
+							amount: "1",
+						},
+					},
+				],
+			},
+			ME,
+		)?.rows as LedgerRow[];
+		expect(
+			(vaultHistory(rare) ?? []).map((e) => [
+				VAULT_EVENT[e.kind],
+				e.amount,
+				e.leaderShare,
+				e.closingCost,
+			]),
+		).toEqual([
+			["Withdrawal", "9.75", "0.2", "0.05"],
+			["Distribution", "1.5", null, null],
+			["Vault created", "100.0", null, null],
+		]);
+	});
+
+	it("words promise nothing the product does not provide, in plain words", () => {
+		const texts = [
+			...Object.values(VAULT_HISTORY),
+			...Object.values(VAULT_EVENT),
+			HELP.vaultRowProposal.title,
+			HELP.vaultRowProposal.body,
+		];
+		for (const text of texts) {
+			for (const pattern of FORBIDDEN_CLAIMS)
+				expect(text, `${pattern}`).not.toMatch(pattern);
+			for (const word of HELP_JARGON) expect(text, `${word}`).not.toMatch(word);
+		}
+		// whoever made a row: the history is Hyperliquid's record, not this tool's
+		expect(VAULT_HISTORY.about).toContain("whoever made it");
 	});
 });
