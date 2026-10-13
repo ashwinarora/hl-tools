@@ -18,9 +18,11 @@
  */
 import {
 	type AccountMode,
+	cutTo,
 	Decimal,
 	type Issue,
 	isHlp,
+	isolated,
 	issue,
 	judgeVaultSteps,
 	type LedgerRow,
@@ -120,7 +122,7 @@ export function vaultLabel(
 	if (isHlp(address, network)) return `HLP (${shortAddress(address)})`;
 	const clean = name?.trim();
 	return clean
-		? `“${clean.slice(0, 40)}” (${shortAddress(address)})`
+		? `“${isolated(cutTo(clean, 40))}” (${shortAddress(address)})`
 		: `vault ${shortAddress(address)}`;
 }
 

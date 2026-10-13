@@ -10,8 +10,10 @@
 import {
 	ABSTRACTION_ENVELOPE_CODES,
 	accountMode,
+	cutTo,
 	type Delegation,
 	isAgentRemoval,
+	isolated,
 	judgeStakingSteps,
 	judgeVaultSteps,
 	type Network,
@@ -26,6 +28,7 @@ import {
 	type VaultLookup,
 	type VaultStep,
 	vaultActionOf,
+	visibleText,
 } from "@hl-tools/core";
 import { REMOVE_AGENT } from "./actions";
 import { judgeSwitch, type ModeTarget, modeTargetOf } from "./modeSwitch";
@@ -83,7 +86,7 @@ const orNull = <T>(p: Promise<T>): Promise<T | null> => p.catch(() => null);
 
 /** A mode switch this tool cannot finish: said before any wallet prompt. */
 export const MODE_UNMEASURED = (mode: unknown): string =>
-	`This switches the account to a mode this tool was not tested with (${typeof mode === "string" ? `“${mode.slice(0, 40)}”` : "not named"}). The finaliser's signature for a mode switch has to be made in a way that was measured for the unified and the manual account only, so Hyperliquid would refuse this one and the proposal's number would be used up.`;
+	`This switches the account to a mode this tool was not tested with (${typeof mode === "string" ? `“${isolated(cutTo(visibleText(mode), 40))}”` : "not named"}). The finaliser's signature for a mode switch has to be made in a way that was measured for the unified and the manual account only, so Hyperliquid would refuse this one and the proposal's number would be used up.`;
 
 export async function checkBeforeSubmit(
 	payload: Checked,

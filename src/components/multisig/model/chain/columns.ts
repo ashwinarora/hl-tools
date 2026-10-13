@@ -211,9 +211,17 @@ export function viewMoreUrl(
 	return `${HL_APP[network]}/${kind}/${address.toLowerCase()}`;
 }
 
+/**
+ * Text from Hyperliquid's feed as one path segment of a link. Half a
+ * surrogate pair is dropped first: `encodeURIComponent` throws on one, and a
+ * link must never be what stops a table from being drawn.
+ */
+const segment = (text: string): string =>
+	encodeURIComponent(text.toLowerCase().replace(/\p{Cs}/gu, ""));
+
 /** The account on Hyperliquid's explorer. */
 export function explorerAccountUrl(network: Network, address: string): string {
-	return `${HL_APP[network]}/explorer/address/${encodeURIComponent(address.toLowerCase())}`;
+	return `${HL_APP[network]}/explorer/address/${segment(address)}`;
 }
 
 /**
@@ -222,5 +230,5 @@ export function explorerAccountUrl(network: Network, address: string): string {
  * link made here leads to that page of the explorer and nowhere else.
  */
 export function explorerTxUrl(network: Network, hash: string): string {
-	return `${HL_APP[network]}/explorer/tx/${encodeURIComponent(hash.toLowerCase())}`;
+	return `${HL_APP[network]}/explorer/tx/${segment(hash)}`;
 }

@@ -10,7 +10,7 @@ import { RETURN_QUEUE, STAKE_LOCKUP } from "../rules/staking.ts";
 import { WITHDRAWAL_FEE_USDC } from "../rules/transfers.ts";
 import { VAULT_LOCKUP } from "../rules/vaults.ts";
 import { isAgentRemoval, riskFlags } from "./action.ts";
-import { visibleText } from "./shown.ts";
+import { isolated, visibleText } from "./shown.ts";
 import { parseSignersString } from "./signerSet.ts";
 import { waitWords, weiToHype } from "./staking.ts";
 import { withdrawalOutcome } from "./transfer.ts";
@@ -172,7 +172,7 @@ function partiesOf(type: string, action: PlainObject): readonly ActionParty[] {
  */
 const s = (v: unknown): string =>
 	typeof v === "string"
-		? visibleText(v)
+		? isolated(visibleText(v))
 		: typeof v === "bigint"
 			? v.toString()
 			: v === undefined

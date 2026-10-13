@@ -294,4 +294,15 @@ describe("links to Hyperliquid", () => {
 			"https://app.hyperliquid.xyz/explorer/address/0xab%2F..%2Fx",
 		);
 	});
+	it("a hash that cannot be encoded at all still gives a link, never an exception", () => {
+		// half a surrogate pair: encodeURIComponent throws on it
+		const half = String.fromCharCode(0xd800);
+		expect(() => encodeURIComponent(`0xab${half}`)).toThrow();
+		expect(explorerTxUrl("mainnet", `0xab${half}cd`)).toBe(
+			"https://app.hyperliquid.xyz/explorer/tx/0xabcd",
+		);
+		expect(explorerAccountUrl("testnet", `${half}0xab`)).toBe(
+			"https://app.hyperliquid-testnet.xyz/explorer/address/0xab",
+		);
+	});
 });

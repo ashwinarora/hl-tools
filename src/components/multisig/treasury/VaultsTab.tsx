@@ -87,8 +87,21 @@ export function VaultsTab({
 				cell: (r) => (
 					<span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-1.5">
 						<span className="[overflow-wrap:anywhere]">
-							{r.hlp ? "HLP" : r.name || "Vault"}
+							{/* Hyperliquid's own vault is told by its address and named
+							    plainly; any other vault's name is its leader's word, shown
+							    as a quotation, so one that calls itself "HLP" does not read
+							    like the real one */}
+							{r.hlp ? (
+								"HLP"
+							) : r.name ? (
+								<>
+									“<bdi>{r.name}</bdi>”
+								</>
+							) : (
+								"Vault"
+							)}
 						</span>
+						{r.hlp && <Tag>Hyperliquid's own vault</Tag>}
 						<span
 							className="font-mono text-xs text-muted-foreground"
 							title={r.vault}

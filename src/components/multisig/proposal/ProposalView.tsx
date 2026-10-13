@@ -1,6 +1,7 @@
 import {
 	type ActionPartyRole,
 	type Address,
+	cutTo,
 	describeAction,
 	type Hex,
 	type Issue,
@@ -30,6 +31,7 @@ import { useChainMatch, useTxLookups } from "../live/useChainMatch";
 import { CONTROL_REFRESH_MS } from "../live/useControl";
 import { useReceiver } from "../live/useReceiver";
 import { explorerTxUrl } from "../model/chain/columns";
+import { ledgerEvidence } from "../model/chain/match";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
 import { CHANGE } from "../model/change";
 import { receiptOk } from "../model/history";
@@ -189,10 +191,15 @@ export function ProposalView({
 	// While the relay holds it as not carried out, this page follows the
 	// treasury's ledger: if the finaliser sent it some other way, the transfer
 	// shows up there, and the relay is pointed at its transaction.
-	const unsettled =
-		row?.status === "open" ||
-		row?.status === "withdrawn" ||
-		row?.status === "declined";
+	// A proposal the relay does not hold (a link, a file) is followed the same
+	// way until this copy says it was accepted: what its receipt reports of a
+	// refusal is outside the receipt's signature, and Hyperliquid's own record
+	// of the account is what says whether the action was carried out.
+	const unsettled = row
+		? row.status === "open" ||
+			row.status === "withdrawn" ||
+			row.status === "declined"
+		: !(proposal.receipt && receiptOk(proposal.receipt));
 	// A vault step is followed in the ledger also when it is not shared: the
 	// ledger is the only place that shows a submission whose answer was lost.
 	const vaultPending =
@@ -218,6 +225,14 @@ export function ProposalView({
 		unsettled ? treasury.live.ledger : null,
 		candidates,
 		unsettled,
+	);
+	// What Hyperliquid's ledger of the account says of this very proposal: a
+	// row tied to it by its number (the transaction was read from the
+	// explorer), or a row like it that could not be compared.
+	const ledgerRows = unsettled ? treasury.live.ledger : null;
+	const onLedger = useMemo(
+		() => ledgerEvidence(ledgerRows, match.of, proposal.digest),
+		[ledgerRows, match.of, proposal.digest],
 	);
 	const status = row?.status ?? null;
 	const statusOf = useCallback(() => status, [status]);
@@ -327,7 +342,10 @@ export function ProposalView({
 				? { txHash: doc.relay.carriedOut?.txHash ?? null }
 				: onRecord?.kind === "matched"
 					? { txHash: onRecord.hash as Hex, seenBy: "page" }
-					: null,
+					: onLedger.tied
+						? { txHash: onLedger.tied as Hex, seenBy: "ledger" }
+						: null,
+		likeOnRecord: onLedger.like,
 		heldUntil: stakingStep.heldUntil ?? vaultStep.heldUntil,
 		codeSigning: signingNetwork() !== null,
 		closedUnknown: row?.status === "unknown",
@@ -431,7 +449,8 @@ export function ProposalView({
 	);
 	const carriedTx =
 		doc.relay.carriedOut?.txHash ??
-		(onRecord?.kind === "matched" ? onRecord.hash : null);
+		(onRecord?.kind === "matched" ? onRecord.hash : null) ??
+		onLedger.tied;
 	const treasuryName = listed
 		? nameOf(target.network, target.address as Address)
 		: shortAddress(target.address);
@@ -702,7 +721,8 @@ export function ProposalView({
 													stakingStep.validator.name.trim() && (
 														// the validator's own word for itself, as Hyperliquid lists it
 														<span className="ml-1.5 text-muted-foreground">
-															listed as “{stakingStep.validator.name.trim()}”
+															listed as “
+															<bdi>{stakingStep.validator.name.trim()}</bdi>”
 														</span>
 													)}
 												{party.role === "vault" &&
@@ -710,8 +730,11 @@ export function ProposalView({
 													vaultStep.vault.name.trim() && (
 														// the vault's own name, as Hyperliquid reports it
 														<span className="ml-1.5 text-muted-foreground">
-															named “{vaultStep.vault.name.trim().slice(0, 40)}”
-															on Hyperliquid
+															named “
+															<bdi>
+																{cutTo(vaultStep.vault.name.trim(), 40)}
+															</bdi>
+															” on Hyperliquid
 														</span>
 													)}
 											</dd>

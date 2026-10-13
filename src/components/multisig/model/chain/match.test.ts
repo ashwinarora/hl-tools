@@ -7,7 +7,9 @@ import {
 	judgeTx,
 	LANDS_AFTER_NONCE_MS,
 	LANDS_BEFORE_NONCE_MS,
+	ledgerEvidence,
 	type MatchCandidate,
+	type RowProposal,
 	rowProposal,
 	sameAction,
 	withdrawalNumber,
@@ -817,5 +819,65 @@ describe("vault rows of the ledger", () => {
 			).toEqual({
 				kind: "none",
 			});
+	});
+});
+
+describe("what the ledger says of one proposal", () => {
+	const mine = digest(1);
+	const a = row({ hash: `0x${"a1".repeat(32)}` as Hex });
+	const b = row({ hash: `0x${"b2".repeat(32)}` as Hex });
+	const cells = (...kinds: RowProposal[]) => {
+		const byHash = new Map([a, b].map((r, i) => [r.hash, kinds[i]]));
+		return (r: LedgerRow) => byHash.get(r.hash) ?? { kind: "none" as const };
+	};
+	it("a row tied to it by its number is its transaction", () => {
+		expect(
+			ledgerEvidence(
+				[a, b],
+				cells({ kind: "none" }, { kind: "matched", digest: mine }),
+				mine,
+			),
+		).toEqual({ tied: b.hash, like: false });
+		// a row tied to another proposal says nothing of this one
+		expect(
+			ledgerEvidence([a], cells({ kind: "matched", digest: digest(2) }), mine),
+		).toEqual({ tied: null, like: false });
+	});
+	it("a row that could not be told is 'like it', never proof", () => {
+		for (const cell of [
+			{ kind: "unchecked" },
+			{ kind: "checking" },
+			{ kind: "likely", digest: mine },
+			{ kind: "ambiguous", digests: [digest(2), mine] },
+		] as RowProposal[])
+			expect(ledgerEvidence([a], cells(cell), mine), cell.kind).toEqual({
+				tied: null,
+				like: true,
+			});
+		// likely or ambiguous for other proposals, or nothing to do with one
+		for (const cell of [
+			{ kind: "likely", digest: digest(2) },
+			{ kind: "ambiguous", digests: [digest(2), digest(3)] },
+			{ kind: "none" },
+			{ kind: "own-step" },
+			{ kind: "not-applicable" },
+		] as RowProposal[])
+			expect(ledgerEvidence([a], cells(cell), mine), cell.kind).toEqual({
+				tied: null,
+				like: false,
+			});
+	});
+	it("proof beats a look-alike, and no ledger says nothing", () => {
+		expect(
+			ledgerEvidence(
+				[a, b],
+				cells({ kind: "unchecked" }, { kind: "matched", digest: mine }),
+				mine,
+			),
+		).toEqual({ tied: b.hash, like: false });
+		expect(ledgerEvidence(null, cells(), mine)).toEqual({
+			tied: null,
+			like: false,
+		});
 	});
 });

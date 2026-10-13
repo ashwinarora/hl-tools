@@ -17,6 +17,7 @@ import {
 	hasErrors,
 	type Issue,
 	isAgentRemoval,
+	isolated,
 	issue,
 	type Move,
 	moveOf,
@@ -176,9 +177,9 @@ export function modeTargetFor(
 export const REMOVE_AGENT = {
 	/** How a wallet is called in a sentence: by its name, or as the one without. */
 	called: (name: string) =>
-		name ? `named "${visibleText(name)}"` : "without a name",
+		name ? `named "${isolated(visibleText(name))}"` : "without a name",
 	missing: (name: string) =>
-		`This treasury has no API wallet ${name ? `named "${visibleText(name)}"` : "without a name"}: there is nothing to remove, and Hyperliquid would refuse it.`,
+		`This treasury has no API wallet ${name ? `named "${isolated(visibleText(name))}"` : "without a name"}: there is nothing to remove, and Hyperliquid would refuse it.`,
 	none: "This treasury has no API wallet: there is nothing to remove.",
 	unread:
 		"The API wallets could not be read from Hyperliquid, so there is nothing to choose from yet.",

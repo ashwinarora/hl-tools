@@ -100,8 +100,20 @@ export interface StageInput {
 	 */
 	readonly carriedOut?: {
 		readonly txHash: Hex | null;
-		readonly seenBy?: "relay" | "page";
+		/**
+		 * "ledger": this page tied a row of Hyperliquid's ledger of the account
+		 * to this proposal by its number, with the transaction read from
+		 * Hyperliquid's explorer. That is Hyperliquid's own record, and it counts
+		 * over whatever a receipt in the copy reports.
+		 */
+		readonly seenBy?: "relay" | "page" | "ledger";
 	} | null;
+	/**
+	 * Hyperliquid's record of the account holds an action like this one that
+	 * could not be compared with it (the explorer did not answer, or the action
+	 * carries no number). Said beside a reported refusal: it may be carried out.
+	 */
+	readonly likeOnRecord?: boolean;
 	/** The relay closed the proposal in a way this version of the page does not know. */
 	readonly closedUnknown?: boolean;
 	/**
@@ -349,9 +361,16 @@ export function deriveStage(input: StageInput): Stage {
 		// said this way because the submitter may well have used this page, signed out
 		head = say`Carried out, not reported here`;
 		body =
-			input.carriedOut.seenBy === "page"
-				? say`Hyperliquid's own list of this account's staking steps holds this action, under this proposal's number: it was carried out, but its result was never reported here. Nothing more to sign.`
-				: say`Hyperliquid carried this action out, but its result was never reported here: it was submitted while signed out, or some other way. The relay checked the transaction itself. Nothing more to sign.`;
+			input.carriedOut.seenBy === "ledger"
+				? failedAttempt
+					? // a receipt's answer is outside its signature: the record decides
+						say`Hyperliquid's own record of this account holds this action, under this proposal's number: it was carried out. The copy opened here reports a refusal; the record is what counts. Nothing more to sign, and nothing to propose again.`
+					: say`Hyperliquid's own record of this account holds this action, under this proposal's number: it was carried out, but its result was never reported here. Nothing more to sign.`
+				: input.carriedOut.seenBy === "page"
+					? say`Hyperliquid's own list of this account's staking steps holds this action, under this proposal's number: it was carried out, but its result was never reported here. Nothing more to sign.`
+					: say`Hyperliquid carried this action out, but its result was never reported here: it was submitted while signed out, or some other way. The relay checked the transaction itself. Nothing more to sign.`;
+		if (input.carriedOut.seenBy === "ledger" && failedAttempt)
+			head = say`Carried out · the refusal reported here is not Hyperliquid's record`;
 	} else if (input.closedUnknown) {
 		phase = "closed";
 		head = say`Closed`;
@@ -398,7 +417,11 @@ export function deriveStage(input: StageInput): Stage {
 				? // the number was used before this attempt: by a submission that was
 					// refused, or by one that went through and whose answer never got here
 					say`Hyperliquid answered "duplicate nonce": this proposal's number had already been used by an earlier submission. If that one went through, the action is carried out already. Look at the treasury's record on Hyperliquid before proposing it again.`
-				: say`Hyperliquid refused this proposal when it was submitted, and a refused submission still uses up the proposal's number. Sending it again would only be answered "duplicate nonce". Propose it again: it gets a new number, and the signers sign once more.`;
+				: input.likeOnRecord
+					? // the answer in a receipt is what its finaliser wrote down, and
+						// the record holds something like this action: never "propose again"
+						say`This copy reports that Hyperliquid refused it. Hyperliquid's record of the account shows an action like this one, which could not be compared with it, so it may be carried out all the same. Look at the treasury's record on Hyperliquid before proposing it again: a new proposal is carried out whether or not this one was.`
+					: say`Hyperliquid refused this proposal when it was submitted, and a refused submission still uses up the proposal's number. Sending it again would only be answered "duplicate nonce". Propose it again: it gets a new number, and the signers sign once more. The refusal is what the finaliser's page recorded: if in doubt, look at the treasury's record on Hyperliquid first.`;
 	} else if (!r) {
 		phase = "judging";
 		head = say`Checking signatures…`;

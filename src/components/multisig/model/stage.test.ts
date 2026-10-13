@@ -919,6 +919,60 @@ describe("an action Hyperliquid would refuse before a certain moment", () => {
 	});
 });
 
+describe("what a receipt reports, against Hyperliquid's own record", () => {
+	// A receipt's signature covers the submission, not the answer written
+	// beside it: whoever holds a true receipt can write "refused" into a copy
+	// of a payment that went through (found in review). The record decides.
+	it("a row of the ledger tied to the proposal counts over a reported refusal", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 2);
+		const flipped = { ...p, receipt: ERR };
+		expect((await stage(flipped, { wallet: B })).phase).toBe("refused");
+		const s = await stage(flipped, {
+			wallet: B,
+			carriedOut: { txHash: `0x${"cd".repeat(32)}`, seenBy: "ledger" },
+		});
+		expect(s.phase).toBe("carried-out");
+		expect(s.headline).toBe(
+			"Carried out · the refusal reported here is not Hyperliquid's record",
+		);
+		expect(s.detail).toContain("nothing to propose again");
+		expect([s.canSign, s.canExecute]).toEqual([false, false]);
+	});
+	it("with no receipt at all it is a proposal carried out some other way", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 2);
+		const s = await stage(p, {
+			wallet: B,
+			carriedOut: { txHash: `0x${"cd".repeat(32)}`, seenBy: "ledger" },
+		});
+		expect(s.phase).toBe("carried-out");
+		expect(s.headline).toBe("Carried out, not reported here");
+		expect(s.detail).toBe(
+			"Hyperliquid's own record of this account holds this action, under this proposal's number: it was carried out, but its result was never reported here. Nothing more to sign.",
+		);
+	});
+	it("a row like it that could not be compared: never 'propose it again'", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 2);
+		const s = await stage(
+			{ ...p, receipt: ERR },
+			{
+				wallet: B,
+				likeOnRecord: true,
+			},
+		);
+		expect(s.phase).toBe("refused");
+		expect(s.detail).toContain("it may be carried out all the same");
+		expect(s.detail).toContain("before proposing it again");
+		expect(s.detail).not.toContain("Propose it again:");
+	});
+	it("a refusal is said as what the finaliser's page recorded", async () => {
+		const p = await signAs(await signAs(makeProposal(), 1), 2);
+		const s = await stage({ ...p, receipt: ERR }, { wallet: B });
+		expect(s.detail).toContain(
+			"The refusal is what the finaliser's page recorded",
+		);
+	});
+});
+
 describe("a staking step found in Hyperliquid's staking history", () => {
 	it("is carried out, and the page says where it saw that", async () => {
 		const p = await signAs(await signAs(makeProposal(), 1), 3);

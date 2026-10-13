@@ -416,3 +416,41 @@ export function approvalOf(
 		.sort((a, b) => b.nonce - a.nonce)[0];
 	return hit?.digest ?? null;
 }
+
+/** What an account's ledger says of one proposal. */
+export interface LedgerEvidence {
+	/** The transaction of a row tied to the proposal by its number; null when there is none. */
+	readonly tied: string | null;
+	/**
+	 * A row that may be the proposal's and could not be told: the explorer
+	 * did not answer or is still being asked, the action carries no number, or
+	 * several proposals fit.
+	 */
+	readonly like: boolean;
+}
+
+/**
+ * The ledger read for one proposal: `cell` is what the "Proposal" column
+ * says of a row when this proposal is the only one on offer (so every cell
+ * that is not "none" is about it).
+ */
+export function ledgerEvidence(
+	rows: readonly LedgerRow[] | null,
+	cell: (row: LedgerRow) => RowProposal,
+	digest: string,
+): LedgerEvidence {
+	let like = false;
+	for (const row of rows ?? []) {
+		const c = cell(row);
+		if (c.kind === "matched" && c.digest === digest)
+			return { tied: row.hash, like: false };
+		if (
+			c.kind === "unchecked" ||
+			c.kind === "checking" ||
+			(c.kind === "likely" && c.digest === digest) ||
+			(c.kind === "ambiguous" && c.digests.some((d) => d === digest))
+		)
+			like = true;
+	}
+	return { tied: null, like };
+}

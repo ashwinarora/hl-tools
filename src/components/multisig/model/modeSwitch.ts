@@ -12,6 +12,7 @@
 import {
 	type AccountMode,
 	accountMode,
+	isolated,
 	type PlainObject,
 	sendRefusal,
 } from "@hl-tools/core";
@@ -116,7 +117,7 @@ export function judgeSwitch(
 	);
 	if (lost.length > 0)
 		warnings.push(
-			`${plural(lost.length, "waiting proposal", "waiting proposals")} would be refused once this is carried out: ${lost.map((w) => `“${w.title}”`).join(", ")}. Carry ${lost.length === 1 ? "it" : "them"} out first, or propose ${lost.length === 1 ? "it" : "them"} again afterwards.`,
+			`${plural(lost.length, "waiting proposal", "waiting proposals")} would be refused once this is carried out: ${lost.map((w) => `“${isolated(w.title)}”`).join(", ")}. Carry ${lost.length === 1 ? "it" : "them"} out first, or propose ${lost.length === 1 ? "it" : "them"} again afterwards.`,
 		);
 	return { blocked, warnings };
 }

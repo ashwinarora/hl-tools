@@ -1,4 +1,5 @@
 import type { Address, Issue, Move, Proposal } from "@hl-tools/core";
+import { cutTo } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, ExternalLink } from "lucide-react";
@@ -492,14 +493,14 @@ function StepCard({
 					{staking.validator?.address === party.address &&
 						staking.validator.name.trim() && (
 							<span className="ml-1.5 text-muted-foreground">
-								listed as “{staking.validator.name.trim()}”
+								listed as “<bdi>{staking.validator.name.trim()}</bdi>”
 							</span>
 						)}
 					{party.role === "vault" &&
 						step.vault.vault?.address === party.address &&
 						step.vault.vault.name.trim() && (
 							<span className="ml-1.5 text-muted-foreground">
-								named “{step.vault.vault.name.trim().slice(0, 40)}” on
+								named “<bdi>{cutTo(step.vault.vault.name.trim(), 40)}</bdi>” on
 								Hyperliquid
 							</span>
 						)}

@@ -16,7 +16,17 @@
  * The request holds the signatures that counted when it was sent, in the order
  * the finaliser's copy had them. A copy read later can hold more of them, or
  * hold them in another order, so the check tries the likely selections first
- * and then the others, up to a budget.
+ * (those dated before the submission; every selection in the copy's order,
+ * each also with the finaliser's own signature last, where it is at the
+ * moment of sending; the same over the signers in sorted order) and then, for
+ * a short list, every order, all within a budget.
+ *
+ * What the check does not cover is the answer. `response` and `httpStatus`
+ * are outside the signature, so whoever holds a true receipt can write
+ * another answer beside the same signature. A receipt that passes says "the
+ * finaliser sent this"; whether it was accepted is for Hyperliquid's own
+ * record to say (the ledger, the staking history), and a page that has that
+ * record goes by it.
  */
 import type { Address } from "../identity.ts";
 import { envelopeDigest } from "./digest.ts";
@@ -28,10 +38,18 @@ import type {
 	Receipt,
 } from "./types.ts";
 
-/** How many selections of signatures are tried at most (each is one hash and one recovery). */
-export const RECEIPT_BUDGET = 2_000;
+/**
+ * How many selections of signatures are tried at most (each is one hash and
+ * one recovery). Ten signatures, the most an account can have, need 3,072
+ * for both orders with and without the finaliser's last.
+ */
+export const RECEIPT_BUDGET = 3_200;
 /** Up to this many signatures every order of every selection is tried too. */
 const EVERY_ORDER_UP_TO = 5;
+/** After this many selections the check steps aside for a moment. */
+const YIELD_EVERY = 32;
+const pause = (): Promise<void> =>
+	new Promise((resolve) => setTimeout(resolve, 0));
 
 /** finaliser: signed by the proposal's finaliser. unverified: not shown to be. */
 export type ReceiptCheck = "finaliser" | "unverified";
@@ -122,14 +140,37 @@ export async function checkReceipt(
 		return by === p.payload.outerSigner;
 	};
 
-	// what was on record when it was sent, as far as the copy says
+	// The finaliser's own signature is given at the moment of sending, so the
+	// request has it last whatever a later copy's order is.
+	const finaliserLast = (
+		chosen: readonly ProposalSignature[],
+	): readonly ProposalSignature[] => {
+		const own = chosen.find((s) => s.signer === p.payload.outerSigner);
+		return own ? [...chosen.filter((s) => s !== own), own] : chosen;
+	};
+	const either = async (
+		chosen: readonly ProposalSignature[],
+	): Promise<boolean> =>
+		(await isFinalisers(chosen)) || (await isFinalisers(finaliserLast(chosen)));
+
+	// What was on record when it was sent, as far as the copy says. Only the
+	// first thing tried: the dates are each signer's own clock.
 	const before = valid.filter(
 		(s) => s.at === null || s.at <= receipt.submittedAt,
 	);
-	if (await isFinalisers(before)) return "finaliser";
-	for (const chosen of inOrder(valid)) {
-		if (left <= 0) return "unverified";
-		if (await isFinalisers(chosen)) return "finaliser";
+	if (await either(before)) return "finaliser";
+	// then every selection, in the copy's order and in the signers' sorted
+	// order (a copy put together from sorted rows)
+	const sorted = [...valid].sort((a, b) => (a.signer < b.signer ? -1 : 1));
+	let since = 0;
+	for (const list of [valid, sorted]) {
+		for (const chosen of inOrder(list)) {
+			if (left <= 0) return "unverified";
+			if (await either(chosen)) return "finaliser";
+			// a document made to be slow must not hold the page: let it draw
+			since += 1;
+			if (since % YIELD_EVERY === 0) await pause();
+		}
 	}
 	if (valid.length <= EVERY_ORDER_UP_TO) {
 		for (const chosen of everyOrder(valid)) {

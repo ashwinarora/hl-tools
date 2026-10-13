@@ -428,9 +428,26 @@ describe("words", () => {
 		);
 		// testnet's HLP is an ordinary address on mainnet
 		expect(vaultLabel(HLP, "mainnet")).toBe("vault 0xa150…b0a0");
+		// a long name is cut, and says so; never inside a character
 		expect(vaultLabel(V, "testnet", "x".repeat(60))).toContain(
-			`“${"x".repeat(40)}”`,
+			`“${"x".repeat(40)}…”`,
 		);
+		expect(vaultLabel(V, "testnet", `${"x".repeat(39)}😀😀`)).toBe(
+			`“${"x".repeat(39)}😀…” (0x49d0…0e18)`,
+		);
+	});
+	it("a name written right to left cannot move the address after it", () => {
+		// no hidden character is needed for that: the letters themselves reorder
+		// the brackets and digits beside them, unless the name is closed off
+		const hebrew = String.fromCodePoint(0x5e9, 0x5dc, 0x5d5, 0x5dd);
+		const open = String.fromCodePoint(0x2068);
+		const close = String.fromCodePoint(0x2069);
+		expect(vaultLabel(V, "testnet", hebrew)).toBe(
+			`“${open}${hebrew}${close}” (0x49d0…0e18)`,
+		);
+		// the real HLP is told by its address, whatever another vault calls itself
+		expect(vaultLabel(V, "testnet", "HLP")).toBe("“HLP” (0x49d0…0e18)");
+		expect(vaultLabel(HLP, "testnet", "anything")).toBe("HLP (0xa150…b0a0)");
 	});
 
 	it("says each step, and a vault action as a line in a list", () => {

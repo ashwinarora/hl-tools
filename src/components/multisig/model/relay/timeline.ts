@@ -8,6 +8,7 @@ import {
 	type Address,
 	encodeProposal,
 	type Hex,
+	isolated,
 	type Network,
 	type Proposal,
 } from "@hl-tools/core";
@@ -65,7 +66,7 @@ export function buildTimeline(
 		return [
 			{ text: line, strong: true },
 			...(move ? [stepMark(move.step)] : []),
-			...(title ? [{ text: ` (“${title}”)`, quiet: true }] : []),
+			...(title ? [{ text: ` (“${isolated(title)}”)`, quiet: true }] : []),
 		];
 	};
 

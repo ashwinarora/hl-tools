@@ -24,9 +24,11 @@
 import {
 	type Address,
 	type AgentInfo,
+	cutTo,
 	Decimal,
 	type Hex,
 	isAgentRemoval,
+	isolated,
 	type LedgerRow,
 	type Proposal,
 	visibleText,
@@ -215,7 +217,9 @@ export function awayItems(i: {
 			: [
 					{ text: p.move ? p.move.line : p.line, strong: true },
 					...(p.move ? [stepMark(p.move.step)] : []),
-					...(p.title ? [{ text: ` (“${p.title}”)`, quiet: true }] : []),
+					...(p.title
+						? [{ text: ` (“${isolated(p.title)}”)`, quiet: true }]
+						: []),
 				];
 	/** What the reader had to do with a proposal; null when nothing (or when it cannot be told). */
 	const mine = (p: AwayProposal | null): "proposed" | "signed" | null =>
@@ -506,7 +510,7 @@ export function ledgerProgress(chain: AwayChain): "open" | "failed" | "done" {
 function agentName(name: string): string {
 	const tidy = visibleText(name.replace(/\s+/g, " ").trim());
 	if (!tidy) return "";
-	return `“${tidy.length > 40 ? `${tidy.slice(0, 40)}…` : tidy}” `;
+	return `“${isolated(cutTo(tidy, 40))}” `;
 }
 
 /** What a marker may carry about the chain (see the relay's `mark_chain_ok`). */

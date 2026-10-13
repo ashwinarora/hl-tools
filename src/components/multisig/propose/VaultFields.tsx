@@ -223,7 +223,14 @@ export function VaultFields({
 					{info ? (
 						<>
 							<p className="font-medium [overflow-wrap:anywhere]">
-								{info.name}{" "}
+								{/* told by its address, never by what a vault calls itself */}
+								{info.address === HLP_VAULT[network] ? (
+									VAULT.hlp
+								) : (
+									<>
+										“<bdi>{info.name}</bdi>”
+									</>
+								)}{" "}
 								<span className="font-mono text-xs font-normal text-muted-foreground">
 									{info.address}
 								</span>

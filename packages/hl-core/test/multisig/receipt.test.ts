@@ -1,12 +1,16 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	buildEnvelope,
 	checkReceipt,
 	classifySignatures,
+	createProposal,
 	envelopeDigest,
 	type Proposal,
 	type ProposalSignature,
+	padSig,
 	type Receipt,
+	recoverInnerSigner,
 } from "../../src/multisig/index.ts";
 import {
 	ADDRESSES,
@@ -143,22 +147,96 @@ describe("whose word a receipt is", () => {
 	});
 
 	it("stops at its budget, in either round", async () => {
-		const [a, b] = await signed(1, 2);
-		// sent as [B, A]; the copy holds [A, B]
-		const sent = proposalOf(userPayload(), [
-			b as ProposalSignature,
-			a as ProposalSignature,
-		]);
+		const [a, b, c] = (await signed(1, 2, 3)) as [
+			ProposalSignature,
+			ProposalSignature,
+			ProposalSignature,
+		];
+		const copy = proposalOf(userPayload(), [a, b, c]);
+		const sortedKey = [a, b, c]
+			.sort((x, y) => (x.signer < y.signer ? -1 : 1))
+			.map((s) => s.signer)
+			.join();
+		// an order no selection gives: not the copy's, not with the finaliser's
+		// (A's) last, not the sorted one
+		const sentOrder = (
+			[
+				[a, c, b],
+				[b, a, c],
+				[c, a, b],
+			] as ProposalSignature[][]
+		).find((o) => o.map((s) => s.signer).join() !== sortedKey);
+		const sent = proposalOf(userPayload(), sentOrder as ProposalSignature[]);
 		const receipt = await receiptFor(sent);
-		const copy = {
-			...sent,
-			signatures: [a as ProposalSignature, b as ProposalSignature],
-		};
-		// tries: [A,B], [B], [A], [] in order, then [B,A]
-		expect(await checkReceipt(copy, receipt, { budget: 5 })).toBe("finaliser");
-		expect(await checkReceipt(copy, receipt, { budget: 4 })).toBe("unverified");
-		expect(await checkReceipt(copy, receipt, { budget: 2 })).toBe("unverified");
+		expect(await checkReceipt(copy, receipt)).toBe("finaliser");
+		// the least budget that finds it, and one less: the round of every order
+		let least = 0;
+		while (
+			(await checkReceipt(copy, receipt, { budget: least })) !== "finaliser"
+		)
+			least += 1;
+		expect(least).toBeGreaterThan(8);
+		expect(await checkReceipt(copy, receipt, { budget: least - 1 })).toBe(
+			"unverified",
+		);
+		// and far too little: it stops among the selections
+		expect(await checkReceipt(copy, receipt, { budget: 3 })).toBe("unverified");
 		expect(await checkReceipt(copy, receipt, { budget: 0 })).toBe("unverified");
+	});
+
+	it("finds the finaliser's own signature last, and a sorted copy, in a long list too", async () => {
+		// six signers: too many for every order to be tried
+		const all = await signed(0, 1, 2, 3, 4, 5);
+		const policy = { ...POLICY, authorizedUsers: [...ADDRESSES] };
+		const sentAs = async (order: ProposalSignature[]) => {
+			const sent = proposalOf(userPayload(), order);
+			const classified = await classifySignatures(sent, policy);
+			const { request } = buildEnvelope(sent, {
+				signatureChainId: CHAIN,
+				classified,
+			});
+			return {
+				submittedAt: SENT,
+				signatureChainId: CHAIN,
+				outerSignature: await signDigest(
+					envelopeDigest(request, "testnet").digest as `0x${string}`,
+					1,
+				),
+				httpStatus: 200,
+				response: { status: "ok" },
+			} satisfies Receipt;
+		};
+		const [t, a, ...rest] = all as [
+			ProposalSignature,
+			ProposalSignature,
+			...ProposalSignature[],
+		];
+		// the finaliser (A) signed at the moment of sending: its signature went last
+		const lastReceipt = await sentAs([t, ...rest, a]);
+		expect(
+			await checkReceipt(proposalOf(userPayload(), all), lastReceipt),
+		).toBe("finaliser");
+		// sent from a copy that held the signers in sorted order
+		const sorted = [...all].sort((x, y) => (x.signer < y.signer ? -1 : 1));
+		const sortedReceipt = await sentAs(sorted);
+		expect(
+			await checkReceipt(
+				proposalOf(userPayload(), [...sorted].reverse()),
+				sortedReceipt,
+			),
+		).toBe("finaliser");
+	});
+
+	it("says who sent it, not what was answered: the answer is outside the signature", async () => {
+		const p = proposalOf(userPayload(), await signed(1, 2));
+		const real = await receiptFor(p);
+		// the same signature beside another answer still passes: a page must
+		// not take a receipt's "refused" or "accepted" for Hyperliquid's word
+		const flipped: Receipt = {
+			...real,
+			response: { status: "err", response: "Insufficient balance" },
+		};
+		expect(await checkReceipt(p, flipped)).toBe("finaliser");
 	});
 
 	it("does not try every order of a long list", async () => {
@@ -188,5 +266,77 @@ describe("whose word a receipt is", () => {
 		expect(await checkReceipt({ ...sent, signatures: all }, receipt)).toBe(
 			"unverified",
 		);
+	});
+});
+
+describe("a receipt Hyperliquid really answered (fixtures/multisig/mode-switch.json)", () => {
+	interface Recorded {
+		about: string;
+		request: {
+			action: {
+				signatureChainId: `0x${string}`;
+				signatures: { r: `0x${string}`; s: `0x${string}`; v: number }[];
+				payload: {
+					multiSigUser: `0x${string}`;
+					outerSigner: `0x${string}`;
+					action: Record<string, unknown>;
+				};
+			};
+			nonce: number;
+			signature: { r: `0x${string}`; s: `0x${string}`; v: number };
+		};
+		answer: { status: string; response: unknown };
+	}
+	const fx = JSON.parse(
+		readFileSync(
+			new URL("../../fixtures/multisig/mode-switch.json", import.meta.url),
+			"utf8",
+		),
+	) as { requests: Recorded[]; switches: Recorded[] };
+
+	/** The proposal and the receipt a page would hold of a recorded submission. */
+	async function held(r: Recorded) {
+		const made = createProposal(
+			{
+				network: "testnet",
+				multiSigUser: r.request.action.payload.multiSigUser,
+				outerSigner: r.request.action.payload.outerSigner,
+				action: r.request.action.payload.action as never,
+				nonce: r.request.nonce,
+			},
+			{ now: r.request.nonce },
+		).proposal as Proposal;
+		const signatures: ProposalSignature[] = [];
+		for (const raw of r.request.action.signatures) {
+			const sig = padSig(raw as never);
+			const signer = await recoverInnerSigner(made.digest, sig);
+			signatures.push({ ...sig, signer: signer as never, at: null });
+		}
+		const receipt: Receipt = {
+			submittedAt: r.request.nonce,
+			signatureChainId: r.request.action.signatureChainId,
+			outerSignature: padSig(r.request.signature as never),
+			httpStatus: 200,
+			response: r.answer as never,
+		};
+		return { proposal: { ...made, signatures }, receipt };
+	}
+
+	it("the accepted switches are their finaliser's: the one-letter code is hashed here as Hyperliquid hashes it", async () => {
+		expect(fx.switches.length).toBeGreaterThan(0);
+		for (const r of fx.switches.filter((x) => x.answer.status === "ok")) {
+			const { proposal, receipt } = await held(r);
+			expect(await checkReceipt(proposal, receipt), r.about).toBe("finaliser");
+		}
+	});
+	it("a submission Hyperliquid refused for its outer signature is nobody's here either", async () => {
+		const refused = fx.requests.filter(
+			(x) => x.answer.response === "Invalid multi-sig outer signer",
+		);
+		expect(refused.length).toBeGreaterThan(0);
+		for (const r of refused) {
+			const { proposal, receipt } = await held(r);
+			expect(await checkReceipt(proposal, receipt), r.about).toBe("unverified");
+		}
 	});
 });

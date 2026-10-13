@@ -127,6 +127,13 @@ describe("the words of staking", () => {
 		expect(validatorLabel(STRANGER, VALIDATORS)).toBe("0x0000…0099");
 		expect(validatorLabel(X, null)).toBe("0x0000…00a1");
 	});
+	it("a validator's name written right to left cannot move its address", () => {
+		const arabic = String.fromCodePoint(0x645, 0x631, 0x62d, 0x628, 0x627);
+		const named = [{ ...VALIDATORS[0], address: X, name: arabic }] as never;
+		expect(validatorLabel(X, named)).toBe(
+			`${String.fromCodePoint(0x2068)}${arabic}${String.fromCodePoint(0x2069)} (0x0000…00a1)`,
+		);
+	});
 	it("says what each step does", () => {
 		const steps: StakingAction[] = [
 			{ kind: "moveIn", amount: "50" },

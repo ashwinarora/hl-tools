@@ -21,6 +21,7 @@ import {
 	expectedRate,
 	HYPE_WEI_DECIMALS,
 	type Issue,
+	isolated,
 	issue,
 	judgeStakingSteps,
 	LOCKUP_MARGIN_MS,
@@ -114,7 +115,10 @@ export function validatorLabel(
 	validators: readonly Validator[] | null | undefined,
 ): string {
 	const name = validators?.find((v) => v.address === address)?.name.trim();
-	return name ? `${name} (${shortAddress(address)})` : shortAddress(address);
+	// closed off when written right to left: it must not move the address after it
+	return name
+		? `${isolated(name)} (${shortAddress(address)})`
+		: shortAddress(address);
 }
 
 /** What one step does, in Hyperliquid's own words for staking. */
