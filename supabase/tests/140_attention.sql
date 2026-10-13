@@ -22,6 +22,32 @@ language sql security definer as $$
 	order by id desc limit 1
 $$;
 
+-- for the turn a wallet takes before its marker is written (relay_read_mark_turn)
+create function tests.holds_turn(n int) returns boolean
+language sql security definer as $$
+	select exists (
+		select 1 from pg_locks l
+		where l.locktype = 'advisory' and l.pid = pg_backend_pid() and l.granted
+			and ((l.classid::bigint << 32) | l.objid::bigint)
+				= hashtextextended('hl-tools.relay.marks:' || tests.addr(n)::text, 0))
+$$;
+create table tests.id_before (next_id bigint);
+-- fires after the relay's own statement trigger (by name), and notes the id the next row will get
+create function tests.note_next_id() returns trigger
+language plpgsql security definer as $$
+begin
+	insert into tests.id_before
+		select case when is_called then last_value + 1 else last_value end from public.read_marks_id_seq;
+	return null;
+end $$;
+create trigger zz_note_next_id before insert on public.read_marks
+	for each statement execute function tests.note_next_id();
+create function tests.turn_came_first(n int) returns boolean
+language sql security definer as $$
+	select (select max(id) from public.read_marks where wallet = tests.addr(n))
+		= (select next_id from tests.id_before order by next_id desc limit 1)
+$$;
+
 select tests.make_wallet(n) from generate_series(1, 5) n;
 -- T10: wallets 1, 2, 3. T11: wallet 4. Wallet 5: nothing.
 select tests.seed_treasury('testnet', 10, 2, array[1, 2, 3]);
@@ -110,6 +136,19 @@ select throws_ok(format('select tests.mark(1, 10, %s)', tests.newest_event(10) +
 select throws_ok($$ select tests.mark(1, 10, -1) $$, 'P0001', 'relay.mark_invalid', 'nor before the first');
 select throws_ok($$ insert into public.read_marks (network, treasury, event_id) values ('testnet', tests.addr(10), null) $$,
 	'P0001', 'relay.mark_invalid', 'nor at nothing');
+
+-- one "Got it" at a time per wallet, and the turn is taken before the row has
+-- its id: otherwise, of two at the same moment, the later id could belong to
+-- the earlier writer and the marker read back would be one entry behind
+select ok(not tests.holds_turn(2), 'before a wallet marks anything it holds no turn');
+select tests.claims(2);
+select lives_ok(format('select tests.mark(2, 10, %s)', tests.newest_event(10)), 'another signer marks the same treasury');
+select ok(tests.holds_turn(2), 'a wallet''s marker is written under that wallet''s own turn');
+select ok(tests.turn_came_first(2), 'and the turn is taken before the row has its id');
+select ok(not tests.holds_turn(3), 'another wallet''s turn is its own: two signers never wait for each other');
+select tests.claims(1);
+select has_trigger('public', 'read_marks', 'read_mark_turn', 'the turn is a trigger of the table, so no client can skip it');
+select ok(not has_function_privilege('authenticated', 'private.read_mark_turn()', 'execute'), 'and not callable through the API');
 
 -- what only Hyperliquid knows
 select lives_ok(format($f$ select tests.mark(1, 10, %s, '{"ledgerTime": 1791400000000, "agents": ["0x7e57000000000000000000000000000000000aaa"]}') $f$, tests.newest_event(10)),
