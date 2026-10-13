@@ -40,6 +40,7 @@ import {
 	modeTargetFor,
 	REMOVE_AGENT,
 	sourcePocket,
+	wholeMove,
 } from "./actions";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
 import { type SignerCheck, signersField } from "./signerSet";
@@ -498,13 +499,27 @@ describe("buildAction / buildProposalInput", () => {
 		expect(codes(spot({ amount: "0.000001" }).issues)).toEqual([
 			"amount.precision",
 		]);
-		// without a token list the id is taken as written and 8 decimals are allowed
-		const blind = spot(
-			{ token: `NOPE:0x${"0".repeat(32)}`, amount: "0.00000001" },
-			ctx({ tokens: undefined }),
+		// without the token list nothing says how many decimals the token takes:
+		// PURR takes 5, and an amount of 8 would be refused with the number spent
+		const blind = spot({ amount: "0.00000001" }, ctx({ tokens: undefined }));
+		expect(codes(blind.issues)).toEqual(["token.list_missing"]);
+		expect(blind.issues[0]?.message).toBe(
+			"The token list of testnet is not loaded yet, and it says how many decimals PURR takes.",
 		);
-		expect(blind.issues).toEqual([]);
-		expect((blind.action as { amount: string }).amount).toBe("0.00000001");
+		expect(blind.action).toBeNull();
+	});
+
+	it("a move is never proposed with a step missing", () => {
+		const one = { type: "cDeposit" };
+		const whole: Issue[] = [];
+		expect(wholeMove([1, 2], [one, one], whole)).toHaveLength(2);
+		expect(wholeMove(null, [], whole)).toEqual([]);
+		expect(whole).toEqual([]);
+		const half: Issue[] = [];
+		expect(wholeMove([1, 2], [one], half)).toEqual([]);
+		expect(half.map((i) => [i.code, i.severity])).toEqual([
+			["action.step_unbuilt", "error"],
+		]);
 	});
 
 	it("warns, never blocks, when the amount exceeds an observed balance", () => {
@@ -546,6 +561,22 @@ describe("buildAction / buildProposalInput", () => {
 				ctx({ balances: { perpWithdrawable: "n/a" } }),
 			).issues,
 		).toEqual([]);
+		// a unified treasury has one balance: its withdrawal is not measured
+		// against the perps figure Hyperliquid reports beside it
+		const one = (amount: string, b: BuildContext["balances"]) =>
+			buildAction(
+				form({ kind: "withdraw3", destination: RECIPIENT, amount }),
+				ctx({ mode: UNIFIED, balances: b }),
+			).issues;
+		const lab = {
+			perpWithdrawable: "0.291437",
+			spot: [{ coin: "USDC", total: "16.614529", hold: "2.818399" }],
+		};
+		expect(one("5", lab)).toEqual([]);
+		expect(one("14", lab).map((i) => i.message)).toEqual([
+			"14 is more than the balance that can be moved observed just now (13.79613). The chain will reject it unless funds arrive first.",
+		]);
+		expect(one("14", { perpWithdrawable: "0.291437" })).toEqual([]);
 		const purr = (balances: BuildContext["balances"]) =>
 			buildAction(
 				form({

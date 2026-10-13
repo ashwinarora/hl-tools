@@ -59,6 +59,22 @@ export function spotAvailable(
 }
 
 /**
+ * The larger of two figures, or null when either is not known.
+ *
+ * For a bridge withdrawal from a unified account: Hyperliquid reports such an
+ * account's money as its spot balance, and its "withdrawable" there is a
+ * figure of its own (0.29 beside a balance of 16.6 on a lab treasury on
+ * 2026-10-13). Which of the two a withdrawal is held to has not been measured,
+ * so one is stopped only when it is above both.
+ */
+export function largerOf(a: string | null, b: string | null): string | null {
+	const x = a === null ? null : Decimal.tryParse(a);
+	const y = b === null ? null : Decimal.tryParse(b);
+	if (!x || !y) return null;
+	return (x.gt(y) ? x : y).toString();
+}
+
+/**
  * What Hyperliquid's two answers about an address make of it as a receiver:
  * `userRole` (is it new, an account, an API wallet…) and `userAbstraction`
  * (its mode; an address never used answers `default`).
@@ -203,11 +219,13 @@ export function preflight(action: PlainObject, facts: SendFacts): Refusal[] {
 	if (!shape?.amount || refusal) return out;
 	const unified = facts.mode?.kind === "unified";
 	const source =
-		shape.from === "perps"
-			? facts.perpsUsdc
-			: shape.from === "spot"
-				? spotAvailable(facts.spot, shape.token)
-				: null;
+		action.type === "withdraw3" && unified
+			? largerOf(facts.perpsUsdc, spotAvailable(facts.spot, "USDC"))
+			: shape.from === "perps"
+				? facts.perpsUsdc
+				: shape.from === "spot"
+					? spotAvailable(facts.spot, shape.token)
+					: null;
 	const held = source === null ? null : Decimal.tryParse(source);
 	if (held && shape.amount.gt(held)) {
 		out.push({

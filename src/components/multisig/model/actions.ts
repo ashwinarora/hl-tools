@@ -56,7 +56,7 @@ import {
 } from "./modeSwitch";
 import type { NonceMode } from "./nonce";
 import { selfRefusal } from "./selfSend";
-import { TO_HYPEREVM } from "./send";
+import { largerOf, TO_HYPEREVM } from "./send";
 import {
 	judgeSet,
 	type SignerCheck,
@@ -529,6 +529,28 @@ export interface BuiltAction {
 	readonly also: readonly PlainObject[];
 }
 
+/**
+ * A plan's steps as the actions built from them, or none and a reason. A step
+ * that could not be written as an action would otherwise be left out without
+ * a word, and what is left would be proposed as if it were the whole.
+ */
+export function wholeMove(
+	steps: readonly unknown[] | null,
+	actions: readonly PlainObject[],
+	issues: Issue[],
+): readonly PlainObject[] {
+	if (!steps || actions.length === steps.length) return actions;
+	issues.push(
+		issue(
+			"action.step_unbuilt",
+			"error",
+			"One step of this could not be written as an action, so nothing is proposed.",
+			{ path: "action.amount" },
+		),
+	);
+	return [];
+}
+
 /** The inner action for the chosen kind, or the reasons it cannot be built. */
 export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 	const issues: Issue[] = [];
@@ -614,13 +636,21 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				);
 			}
 			const amount = amountField(form.amount, USDC_DECIMALS, USDC, issues);
-			if (amount)
+			if (amount) {
+				// a unified account has one balance: see `largerOf`
+				const one = ctx.mode?.kind === "unified";
 				warnOverBalance(
 					amount,
-					ctx.balances?.perpWithdrawable,
-					"withdrawable perps balance",
+					one
+						? (largerOf(
+								ctx.balances?.perpWithdrawable ?? null,
+								spotFree(ctx, USDC) ?? null,
+							) ?? undefined)
+						: ctx.balances?.perpWithdrawable,
+					one ? "balance that can be moved" : "withdrawable perps balance",
 					issues,
 				);
+			}
 			// the bridge keeps its fee out of the amount: at the fee or below, Hyperliquid refuses
 			if (
 				amount &&
@@ -665,7 +695,19 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 						{ path: "action.token" },
 					),
 				);
-			} else if (ctx.tokens && !listed) {
+			} else if (!ctx.tokens) {
+				// how many decimals the token takes is in the list: without it an
+				// amount too fine for the token would be proposed, and a refusal
+				// uses up the proposal's number
+				issues.push(
+					issue(
+						"token.list_missing",
+						"error",
+						`The token list of ${ctx.network} is not loaded yet, and it says how many decimals ${token.split(":")[0]} takes.`,
+						{ path: "tokens" },
+					),
+				);
+			} else if (!listed) {
 				issues.push(
 					issue(
 						"token.unknown",
@@ -913,9 +955,11 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 			);
 			issues.push(...plan.issues);
 			// each step is its own proposal, numbered one after the other
-			const [first, ...rest] = plan.steps
-				? stakingActions(plan.steps, head, ctx.nonce)
-				: [];
+			const [first, ...rest] = wholeMove(
+				plan.steps,
+				plan.steps ? stakingActions(plan.steps, head, ctx.nonce) : [],
+				issues,
+			);
 			return done(first ?? null, rest);
 		}
 		case "vaultDeposit":
@@ -930,9 +974,11 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 			);
 			issues.push(...plan.issues);
 			// each step is its own proposal, numbered one after the other
-			const [first, ...rest] = plan.steps
-				? vaultActions(plan.steps, head, ctx.nonce)
-				: [];
+			const [first, ...rest] = wholeMove(
+				plan.steps,
+				plan.steps ? vaultActions(plan.steps, head, ctx.nonce) : [],
+				issues,
+			);
 			return done(first ?? null, rest);
 		}
 		case "raw": {

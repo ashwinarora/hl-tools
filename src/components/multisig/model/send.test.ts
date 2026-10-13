@@ -11,6 +11,7 @@ import type { Receiver } from "./actions";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
 import {
 	costLine,
+	largerOf,
 	modeRefusal,
 	preflight,
 	receiverOf,
@@ -187,6 +188,35 @@ describe("preflight: what Hyperliquid would refuse as things stand", () => {
 		).toContain("from its balance right now");
 		// another perp dex: its balance is not read here, so nothing is claimed
 		expect(codes(asset("xyz", "spot", "999"), f)).toEqual([]);
+	});
+	it("holds a unified treasury's withdrawal to its one balance, not to a perps figure", () => {
+		// as Hyperliquid reported a unified lab treasury on 2026-10-13
+		const f = facts({
+			mode: UNIFIED,
+			perpsUsdc: "0.291437",
+			spot: [{ coin: "USDC", total: "16.614529", hold: "2.818399" }],
+		});
+		const withdraw = (amount: string) => ({
+			type: "withdraw3",
+			destination: RECIPIENT,
+			amount,
+		});
+		expect(codes(withdraw("5"), f)).toEqual([]);
+		const over = preflight(withdraw("13.8"), f);
+		expect(over.map((x) => x.code)).toEqual(["transfer-balance"]);
+		expect(over[0]?.message).toBe(
+			"This sends 13.8 USDC, and the treasury can move 13.79613 from its balance right now.",
+		);
+		// one of the two figures was not read: nothing is claimed
+		expect(codes(withdraw("999"), { ...f, spot: null })).toEqual([]);
+		expect(codes(withdraw("999"), { ...f, perpsUsdc: null })).toEqual([]);
+		// an account with two balances is held to its perps balance, as before
+		expect(codes(withdraw("5"), { ...f, mode: MANUAL })).toEqual([
+			"transfer-balance",
+		]);
+		expect(largerOf("2", "10")).toBe("10");
+		expect(largerOf("10", "2")).toBe("10");
+		expect(largerOf("n/a", "2")).toBeNull();
 	});
 	it("stops a send to a new address that the treasury cannot pay the 1 USDC for", () => {
 		const held = (perps: string, spot: string): Partial<SendFacts> => ({

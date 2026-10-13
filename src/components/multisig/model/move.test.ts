@@ -111,6 +111,13 @@ describe("what two steps mean together", () => {
 		["step 1 was withdrawn", step("withdrawn"), step("withdrawn"), "halted"],
 		["step 1 expired", step("expired"), step("expired"), "halted"],
 		["step 2 can no longer follow", ready(), step("withdrawn"), "halted"],
+		["step 2 was sent by itself, step 1 is ready", ready(), done(), "halted"],
+		[
+			"step 2 was sent by itself, step 1 collects",
+			collecting(),
+			done(),
+			"halted",
+		],
 		["step 1 is done, step 2 was refused", done(), step("refused"), "broken"],
 		["step 1 is done, step 2 expired", done(), step("expired"), "broken"],
 		["a step is still being judged", step("judging"), ready(), "judging"],
@@ -127,6 +134,8 @@ describe("what two steps mean together", () => {
 			[step("refused"), ready()],
 			[ready(), step("withdrawn")],
 			[done(), step("refused")],
+			[ready(), done()],
+			[collecting(), done()],
 		] as [StepView, StepView][]) {
 			const m = deriveMoveStage(pair);
 			expect(m.settled).toBe(true);
@@ -139,6 +148,21 @@ describe("what two steps mean together", () => {
 			]);
 			expect(m.executeReason).not.toBeNull();
 		}
+	});
+
+	it("a first step is not sent after its second was sent by itself", () => {
+		// sent alone, step 1 would unstake after the stake, or move HYPE with nothing to stake
+		const m = deriveMoveStage([ready(), done()]);
+		expect([m.phase, m.unsure, m.canExecute]).toEqual(["halted", null, false]);
+		expect(m.headline).toBe(
+			"Step 2 was carried out by itself, so step 1 is not sent",
+		);
+		expect(m.executeReason).toBe("Step 2 was carried out already.");
+		// the staking history holds a step like the first: it is not said to be missing
+		const seen = deriveMoveStage([{ ...ready(), onRecord: "likely" }, done()]);
+		expect([seen.phase, seen.unsure, seen.toSend]).toEqual(["halted", 0, []]);
+		expect(seen.headline).toBe("Step 2 was carried out · step 1 may be too");
+		expect(seen.detail).not.toContain("not carried out");
 	});
 
 	const refusedWith = (id: string) =>

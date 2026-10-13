@@ -324,6 +324,25 @@ export function deriveMoveStage(
 			),
 			executeReason: "Step 2 can no longer follow.",
 		};
+	if (first === "open" && second === "done") {
+		// the second step was sent by itself, from another page or tool: the
+		// first, sent after it, would not be the move that was proposed
+		const seen = likeOnRecord(one);
+		return {
+			...base,
+			phase: "halted",
+			unsure: seen ? 0 : null,
+			...told(
+				seen
+					? "Step 2 was carried out · step 1 may be too"
+					: "Step 2 was carried out by itself, so step 1 is not sent",
+				seen
+					? "Hyperliquid's staking history shows a step like step 1, made after this move was proposed: the explorer did not say whether it is this one. Once it does, the step is marked carried out here. It is not sent from here after its second step."
+					: "The second step was sent by itself, from another page or tool. Sending the first after it would not be the move that was proposed. Propose the first by itself if it is still wanted.",
+			),
+			executeReason: "Step 2 was carried out already.",
+		};
+	}
 
 	// from here on something is still to be signed or sent
 	const open = [0, 1].filter((i) => states[i] === "open");
