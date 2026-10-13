@@ -83,6 +83,9 @@ export function useJudgement(
 			!parsed.networkFromInput && policy !== null && policy.threshold === 0,
 	});
 	const [judgement, setJudgement] = useState<Judgement | null>(null);
+	// a request pasted in another form than Hyperliquid's own: a signature made
+	// over that form is told from a stranger's
+	const asSent = parsed.source === "envelope" ? parsed.asSent : null;
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
@@ -100,6 +103,7 @@ export function useJudgement(
 						c.signature,
 						proposal,
 						policy,
+						asSent ? { originalAction: asSent } : {},
 					);
 				}
 			}
@@ -130,6 +134,7 @@ export function useJudgement(
 		parsed.outerSignature,
 		parsed.request,
 		parsed.source,
+		asSent,
 		network,
 		policy,
 	]);

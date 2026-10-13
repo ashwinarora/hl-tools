@@ -9,6 +9,7 @@ import { type Network, networkConfig } from "../network.ts";
 import { OUTER_KEY_ORDER, PAYLOAD_KEY_ORDER } from "../rules/multisig.ts";
 import { SIGNATURE_CHAIN_IDS } from "../rules/signing.ts";
 import type { TypedDataPayload } from "../signing.ts";
+import { prepareInnerAction } from "./action.ts";
 import { normaliseAddress } from "./address.ts";
 import { envelopeDigest, innerDigest } from "./digest.ts";
 import {
@@ -481,4 +482,58 @@ export function envelopeNetworkHint(req: EnvelopeRequest): Network | null {
 		if (networkConfig(n).hyperliquidChain === hc) return n;
 	}
 	return null;
+}
+
+/** A request as Hyperliquid judges it, beside the one that was sent. */
+export interface JudgedRequest {
+	/** The request with its inner action in Hyperliquid's own form: what every signature is checked against. */
+	readonly request: EnvelopeRequest;
+	/** The inner action as it was sent, when that is another form; null when it is the same. */
+	readonly asSent: PlainObject | null;
+	readonly issues: readonly Issue[];
+}
+
+/**
+ * The request Hyperliquid's check runs on. It reads the body, writes the
+ * inner action out in its own form (the fields in its own order, an address
+ * in lowercase) and hashes that: a signer's or the leader's signature made
+ * over any other writing of the same action is refused ("Invalid multi-sig
+ * inner signer", "Invalid multi-sig outer signer"), and one made over that
+ * form is accepted whatever form the body carried. Measured on testnet, see
+ * fixtures/multisig/inner-form.json.
+ *
+ * So a request body is judged like a proposal document: over the canonical
+ * action. An action this page cannot bring into that form (an unknown type,
+ * a field it cannot read) is judged as it was sent, since nothing better is
+ * known about it.
+ */
+export function requestAsJudged(
+	req: EnvelopeRequest,
+	network: Network,
+): JudgedRequest {
+	const sent = req.action.payload.action;
+	const prepared = prepareInnerAction(sent, network, req.nonce);
+	if (
+		!prepared.action ||
+		JSON.stringify(prepared.action) === JSON.stringify(sent)
+	)
+		return { request: req, asSent: null, issues: [] };
+	return {
+		request: {
+			...req,
+			action: {
+				...req.action,
+				payload: { ...req.action.payload, action: prepared.action },
+			},
+		},
+		asSent: sent,
+		issues: [
+			issue(
+				"action.not_canonical",
+				"warning",
+				"The inner action is not written the way Hyperliquid writes it (the order of its fields, a number's form or an address in capitals differ). Hyperliquid checks every signature against its own writing of the action, so that is what the signatures here are checked against. A signature made over the action as it was sent does not count there.",
+				{ path: "action.payload.action" },
+			),
+		],
+	};
 }

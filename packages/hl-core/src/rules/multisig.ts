@@ -8,7 +8,7 @@ export const NKTKAS_SIGNING: RuleSource = {
 export const MULTISIG_RULES = defineRuleSet({
 	id: "multisig",
 	title: "Native multi-sig",
-	version: "1.4.0",
+	version: "1.5.0",
 	verifiedAt: "2026-10-13",
 	summary:
 		"A multi-sig user is an ordinary account whose own key can no longer send; up to 10 authorized users sign, a leader (an authorized user, or a funded API wallet of one) collects at least `threshold` distinct signatures and submits a `multiSig` envelope. Inner L1 actions are hashed as `[multiSigUser, outerSigner, action]` with the envelope's nonce, vault and expiry; inner user-signed actions gain `payloadMultiSigUser` and `outerSigner` after `hyperliquidChain`. The leader signs `HyperliquidTransaction:SendMultiSig{hyperliquidChain, multiSigActionHash, nonce}` over the envelope with inner signatures trimmed. Only the leader's nonce set is used; the multi-sig user's rate limit is charged. An envelope Hyperliquid refuses still uses up its number for that leader, so a refused proposal has to be made again. An account's USDC sends (`usdSend`) are taken only in increasing order of their `time`: once a newer one is carried out, an older pending send or bridge withdrawal is refused. Every other kind of action is taken in any order.",
@@ -43,6 +43,11 @@ export const MULTISIG_RULES = defineRuleSet({
 			version: "1.4.0",
 			date: "2026-10-13",
 			note: 'Switching the account mode through an envelope (fixtures/multisig/mode-switch.json). For `userSetAbstraction`, Hyperliquid hashes the envelope with `abstraction` written as a one-letter code ("u" for unifiedAccount, "i" for disabled) while the posted action and the signers\' own signatures keep the long name: a leader who signs the envelope as posted is answered "Invalid multi-sig outer signer". Not documented. To unified is taken with a position and resting orders open (the perps and spot USDC become one balance); back to manual is refused while anything is open ("Cannot disable unified account with open positions, open orders, or active TWAP orders") and taken otherwise, the USDC staying in spot. Asking for the mode the account is already in is accepted and changes nothing. Not measured: portfolio margin, the letter for any other mode.',
+		},
+		{
+			version: "1.5.0",
+			date: "2026-10-13",
+			note: "The form of the inner action Hyperliquid hashes (fixtures/multisig/inner-form.json). Hyperliquid reads a multi-sig request, writes the inner action out in its own form (its fields in its own order, an address in lowercase) and checks every signature against that: the signers' and the leader's signatures made over the canonical form were accepted whatever form the body carried, and signatures made over the fields in another order or over an address in capitals were refused (\"Invalid multi-sig outer signer\" when the leader's was, \"Invalid multi-sig inner signer\" when only the signers' were). Measured with a vault deposit under the minimum, which is refused after the signatures are checked. So a pasted request is judged over the canonical action, as a proposal document always was (`requestAsJudged`). Not measured: a decimal string with trailing zeros inside a multi-sig request (a vault action has none).",
 		},
 	],
 });

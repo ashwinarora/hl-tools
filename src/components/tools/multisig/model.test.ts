@@ -1,7 +1,11 @@
-import type { EnvelopeRequest, PlainObject } from "@hl-tools/core";
+import {
+	type EnvelopeRequest,
+	exchangeRequestBody,
+	type PlainObject,
+} from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import { A, NONCE, TREASURY, usdSend } from "#/test/keys";
-import { proposalFromRequest } from "./model";
+import { parseEnvelopeText } from "./model";
 
 const ORDER: PlainObject = {
 	type: "order",
@@ -17,46 +21,57 @@ const ORDER: PlainObject = {
 	],
 	grouping: "na",
 };
-const request = (action: PlainObject): EnvelopeRequest => ({
-	action: {
-		type: "multiSig",
-		signatureChainId: "0x66eee",
-		signatures: [],
-		payload: { multiSigUser: TREASURY, outerSigner: A, action },
-	},
-	nonce: NONCE,
-	vaultAddress: null,
-	expiresAfter: null,
-});
-const codes = (action: PlainObject) =>
-	proposalFromRequest(request(action), "testnet").issues.map((i) => i.code);
+const SIG = { r: `0x${"11".repeat(32)}`, s: `0x${"22".repeat(32)}`, v: 27 };
+const body = (action: PlainObject): string => {
+	const request: EnvelopeRequest = {
+		action: {
+			type: "multiSig",
+			signatureChainId: "0x66eee",
+			signatures: [],
+			payload: { multiSigUser: TREASURY, outerSigner: A, action },
+		},
+		nonce: NONCE,
+		vaultAddress: null,
+		expiresAfter: null,
+	};
+	return JSON.stringify(exchangeRequestBody(request, SIG as never));
+};
+const parsed = (action: PlainObject) => {
+	const p = parseEnvelopeText(body(action), "testnet", NONCE);
+	if (p.kind !== "proposal" || p.source !== "envelope")
+		throw new Error(`not read as a request: ${p.kind}`);
+	return p;
+};
 
-describe("a pasted request whose inner action is not in Hyperliquid's own form", () => {
-	it("says nothing about an action written the way the SDKs write it", () => {
-		expect(codes(ORDER)).toEqual([]);
-		expect(codes(usdSend())).toEqual([]);
+describe("a pasted request is judged over Hyperliquid's own writing of its inner action", () => {
+	// measured on testnet: the core's fixtures/multisig/inner-form.json
+	it("one already in that form is judged as it is, with nothing said", () => {
+		for (const action of [ORDER, usdSend()]) {
+			const p = parsed(action);
+			expect(p.issues.map((i) => i.code)).toEqual([]);
+			expect(p.asSent).toBeNull();
+			expect(p.proposal.payload.action).toEqual(action);
+		}
 	});
-	it("says that its signatures are judged over the bytes as pasted (found in review)", () => {
+	it("one in another form is brought into it, says so, and keeps what was pasted", () => {
 		// a price with a trailing zero, as a hand-made request may carry it
 		const zero = {
 			...ORDER,
 			orders: [{ ...(ORDER.orders as PlainObject[])[0], p: "50000.0" }],
 		} as PlainObject;
-		const r = proposalFromRequest(request(zero), "testnet");
-		expect(r.issues.map((i) => [i.code, i.severity])).toEqual([
-			["action.as_pasted", "warning"],
+		const p = parsed(zero);
+		expect(p.issues.map((i) => [i.code, i.severity])).toEqual([
+			["action.not_canonical", "warning"],
 		]);
-		// the verdict is not flipped on a guess: the action judged is the pasted one
-		expect(r.proposal?.payload.action).toEqual(zero);
+		expect(p.proposal.payload.action).toEqual(ORDER);
+		expect(p.request.action.payload.action).toEqual(ORDER);
+		expect(p.asSent).toEqual(zero);
 		// the fields in another order
 		const { grouping, ...rest } = ORDER;
-		expect(codes({ grouping, ...rest } as PlainObject)).toEqual([
-			"action.as_pasted",
-		]);
-	});
-	it("an action it cannot read at all is left to the checks that say so", () => {
-		expect(codes({ type: "order" } as PlainObject)).not.toContain(
-			"action.as_pasted",
+		const turned = parsed({ grouping, ...rest } as PlainObject);
+		expect(Object.keys(turned.proposal.payload.action)).toEqual(
+			Object.keys(ORDER),
 		);
+		expect(Object.keys(turned.asSent ?? {})[0]).toBe("grouping");
 	});
 });

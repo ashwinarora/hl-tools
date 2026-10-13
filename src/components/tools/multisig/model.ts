@@ -9,11 +9,11 @@ import {
 	envelopeNetworkHint,
 	type Issue,
 	innerDigest,
-	issue,
 	type Network,
+	type PlainObject,
 	type Proposal,
 	parseEnvelope,
-	prepareInnerAction,
+	requestAsJudged,
 	type Sig,
 	signingFamilyFor,
 	toPlain,
@@ -42,7 +42,10 @@ export type ParsedEnvelopeInput =
 			readonly network: Network;
 			readonly networkFromInput: boolean;
 			readonly outerSignature: Sig | null;
+			/** The request as Hyperliquid judges it: its inner action in Hyperliquid's own form (the core's `requestAsJudged`). */
 			readonly request: EnvelopeRequest;
+			/** The inner action as it was pasted, when that is another form: tried when a signature does not match. */
+			readonly asSent: PlainObject | null;
 			readonly issues: readonly Issue[];
 	  };
 
@@ -53,31 +56,6 @@ function looksLikeDocument(value: unknown): boolean {
 		(value as { v?: unknown }).v === 1 &&
 		typeof (value as { payload?: unknown }).payload === "object"
 	);
-}
-
-/**
- * A pasted request is judged over its inner action exactly as pasted. A
- * proposal document is not: it must carry the action in the form Hyperliquid
- * hashes (`action.not_canonical`). For a plain action of the code family
- * Hyperliquid is known to hash its own writing of the action, whatever was
- * sent; whether it does the same for the action inside a multi-sig request
- * was not measured. So when the pasted action is not in that form, the
- * verdicts below are not flipped on a guess: the reader is told that they
- * are over the bytes as pasted, and what that may mean.
- */
-function asWritten(req: EnvelopeRequest, network: Network): Issue[] {
-	const pasted = req.action.payload.action;
-	const prepared = prepareInnerAction(pasted, network, req.nonce);
-	if (!prepared.action) return [];
-	if (JSON.stringify(prepared.action) === JSON.stringify(pasted)) return [];
-	return [
-		issue(
-			"action.as_pasted",
-			"warning",
-			"The inner action is not written the way Hyperliquid's own software writes it (the order of its fields, a number's trailing zeros or an address in capitals differ). The signatures below are checked over it exactly as pasted. If Hyperliquid hashes its own writing of the action, as it does for an action sent without a multi-sig, signatures made over these bytes would not count there.",
-			{ path: "action.payload.action" },
-		),
-	];
 }
 
 /** Build the proposal an envelope implies, so the engine can classify its signatures. */
@@ -98,7 +76,7 @@ export function proposalFromRequest(
 	if (!d.digest) return { proposal: null, issues: d.issues };
 	const type = String(req.action.payload.action.type);
 	return {
-		issues: [...d.issues, ...asWritten(req, network)],
+		issues: d.issues,
 		proposal: {
 			v: 1,
 			payload,
@@ -160,7 +138,12 @@ export function parseEnvelopeText(
 	if (!env.request) return { kind: "not-multisig", issues: env.issues };
 	const hint = envelopeNetworkHint(env.request);
 	const network = hint ?? fallbackNetwork;
-	const built = proposalFromRequest(env.request, network);
+	// Judged as Hyperliquid judges it: over its own writing of the inner
+	// action, whatever form was pasted (measured: the core's
+	// fixtures/multisig/inner-form.json). The pasted form is kept, so that a
+	// signature made over it is named as that and not as a stranger's.
+	const judged = requestAsJudged(env.request, network);
+	const built = proposalFromRequest(judged.request, network);
 	if (!built.proposal)
 		return { kind: "not-multisig", issues: [...env.issues, ...built.issues] };
 	return {
@@ -170,8 +153,9 @@ export function parseEnvelopeText(
 		network,
 		networkFromInput: hint !== null,
 		outerSignature: env.outerSignature,
-		request: env.request,
-		issues: [...env.issues, ...built.issues],
+		request: judged.request,
+		asSent: judged.asSent,
+		issues: [...env.issues, ...judged.issues, ...built.issues],
 	};
 }
 
