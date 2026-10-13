@@ -288,11 +288,12 @@ export function ProposalView({
 	const later = useMemo(
 		() =>
 			ordered && !settled && ledger
-				? laterSends(ledger, proposal.payload.action).map((r) =>
-						r.hash.toLowerCase(),
-					)
+				? laterSends(ledger, proposal.payload.action).map((r) => ({
+						account: target.address,
+						hash: r.hash.toLowerCase(),
+					}))
 				: [],
-		[ordered, settled, ledger, proposal.payload.action],
+		[ordered, settled, ledger, proposal.payload.action, target.address],
 	);
 	const laterTxs = useTxLookups(target.network, later);
 	const overtakenOnChain = useMemo(() => {

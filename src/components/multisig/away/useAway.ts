@@ -387,15 +387,19 @@ export function useAway(scope: AwayScope): Away {
 					};
 		}),
 	});
-	const hashes = useMemo(() => {
-		const out = new Set<string>();
-		for (const c of checks)
-			if (c.data?.onRecord && c.data.ledger)
-				for (const h of hashesToLookUp(c.data.ledger, c.data.candidates))
-					out.add(h);
-		return [...out];
-	}, [checks]);
-	const lookups = useTxLookups(network, hashes);
+	// each treasury's transfers that could be a proposal's, with the treasury
+	// they belong to: the explorer is asked once per treasury, not per transfer
+	const wanted = useMemo(() => {
+		const out = new Map<string, { account: string; hash: string }>();
+		checks.forEach((c, i) => {
+			const t = here[i];
+			if (t && c.data?.onRecord && c.data.ledger)
+				for (const hash of hashesToLookUp(c.data.ledger, c.data.candidates))
+					if (!out.has(hash)) out.set(hash, { account: t.address, hash });
+		});
+		return [...out.values()];
+	}, [checks, here]);
+	const lookups = useTxLookups(network, wanted);
 
 	const marksNow = marks.data;
 	const newsNow = news.data;

@@ -74,8 +74,11 @@ export function useStakingStep(
 				: [],
 		[target, staking.history, action, nonce, madeAt],
 	);
-	const hashes = useMemo(() => candidates.map((e) => e.hash), [candidates]);
-	const lookups = useTxLookups(network, hashes);
+	const wanted = useMemo(
+		() => candidates.map((e) => ({ account: multiSigUser, hash: e.hash })),
+		[candidates, multiSigUser],
+	);
+	const lookups = useTxLookups(network, wanted);
 	const record = useMemo<StepRecord | null>(
 		() =>
 			target
