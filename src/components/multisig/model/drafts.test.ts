@@ -235,6 +235,26 @@ describe("which form a link opens", () => {
 			proposeDraftFor(removeA, { kind: "removeAgent", agent: "" }),
 		).toBeNull();
 		expect(proposeDraftFor(removeA, { kind: "removeAgent" })).toBe(removeA);
+		// a row of the Vaults tab names its vault: a draft for another vault stays put
+		const VAULT_A = `0x${"a".repeat(40)}`;
+		const fromA: StoredDraft = {
+			at: NOW,
+			form: form({ kind: "vaultWithdraw", vault: VAULT_A, amount: "5" }),
+		};
+		expect(
+			proposeDraftFor(fromA, {
+				kind: "vaultWithdraw",
+				vault: VAULT_A.toUpperCase().replace("0X", "0x"),
+			}),
+		).toBe(fromA);
+		expect(
+			proposeDraftFor(fromA, {
+				kind: "vaultWithdraw",
+				vault: `0x${"b".repeat(40)}`,
+			}),
+		).toBeNull();
+		expect(proposeDraftFor(fromA, { kind: "vaultWithdraw" })).toBe(fromA);
+		expect(proposeDraftFor(fromA, { kind: "vaultDeposit" })).toBeNull();
 	});
 
 	it("tells a wizard's draft from a form's", () => {

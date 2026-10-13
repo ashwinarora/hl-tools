@@ -33,6 +33,7 @@ import { explorerTxUrl } from "../model/chain/columns";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
 import { CHANGE } from "../model/change";
 import { receiptOk } from "../model/history";
+import { labelledLine } from "../model/parts";
 import { refusalNote } from "../model/refusal";
 import { RELAY_COPY } from "../model/relay/copy";
 import { costLine, modeRefusal } from "../model/send";
@@ -662,14 +663,15 @@ export function ProposalView({
 								)}
 								<dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
 									{description.lines.map((line) => {
-										const cut = line.indexOf(": ");
-										return cut > 0 ? (
+										// a field and its value side by side; a sentence whole
+										const pair = labelledLine(line);
+										return pair ? (
 											<div key={line} className="contents">
 												<dt className="pt-0.5 text-xs text-muted-foreground">
-													{line.slice(0, cut)}
+													{pair.label}
 												</dt>
 												<dd className="[overflow-wrap:anywhere]">
-													{line.slice(cut + 2)}
+													{pair.value}
 												</dd>
 											</div>
 										) : (
@@ -756,6 +758,21 @@ export function ProposalView({
 											aria-hidden
 										/>
 										<span>{vaultStep.relocks}</span>
+									</p>
+								)}
+								{stage.phase === "collecting" && stage.closesFirst && (
+									// once it is ready the line under the title says this itself
+									<p
+										data-closes-first
+										className="mt-3 flex items-start gap-1.5 text-[13px] text-warning"
+									>
+										<span
+											className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+											aria-hidden
+										/>
+										<span>
+											<Sentence parts={stage.closesFirst} />
+										</span>
 									</p>
 								)}
 								{COSTED.has(stage.phase) &&

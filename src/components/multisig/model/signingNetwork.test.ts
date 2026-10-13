@@ -390,6 +390,9 @@ describe("the words about signing a code", () => {
 		CODE_COPY.absentHead,
 		CODE_COPY.absentBody,
 		CODE_COPY.signedUnder,
+		CODE_COPY.chainLabel,
+		CODE_COPY.chainHint("HyperEVM testnet", false),
+		CODE_COPY.chainHint("HyperEVM testnet", true),
 		HELP.signingCode.body,
 		HELP.signingNetwork.body,
 	];
@@ -407,6 +410,16 @@ describe("the words about signing a code", () => {
 		);
 		expect(CODE_COPY.missing).toContain(
 			"Nothing is ever sent on that network.",
+		);
+	});
+	it("say that the chain chosen in a vault form is the finaliser's, not the signers'", () => {
+		// the signers of a vault action never switch to that chain: only what
+		// is signed as readable data is under it
+		expect(CODE_COPY.chainHint("Arbitrum Sepolia", false)).toBe(
+			"Signers sign a code, under the signing network. Only the signature the finaliser submits with is under Arbitrum Sepolia; nothing is sent to that chain.",
+		);
+		expect(CODE_COPY.chainHint("Arbitrum Sepolia", true)).toContain(
+			"Step 1, and the signatures the finaliser submits with, are under Arbitrum Sepolia",
 		);
 	});
 });

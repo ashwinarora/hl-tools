@@ -171,6 +171,12 @@ export interface Stage {
 	 * `StageInput.heldUntil`): the moment it opens.
 	 */
 	readonly opensAt: number | null;
+	/**
+	 * The lockup ends only after the proposal has closed: as things stand
+	 * nobody can ever submit it. A sentence for every reader, while it is
+	 * still open; null otherwise.
+	 */
+	readonly closesFirst: readonly Part[] | null;
 	/** The live signer set differs from the one recorded when the proposal was made. */
 	readonly policyChanged: boolean;
 	/** The header is on the other network than the proposal: signing is refused until it is switched. */
@@ -265,6 +271,12 @@ export function deriveStage(input: StageInput): Stage {
 	const window = describeWindow(p.payload.nonce, now);
 	const lockedUntil =
 		input.heldUntil != null && input.heldUntil > now ? input.heldUntil : null;
+	// A lockup can be made longer (by adding to what is locked), never
+	// shorter: one that ends after the window does is a certainty, not a guess.
+	const outlasts =
+		lockedUntil !== null && lockedUntil >= window.validUntil
+			? say`The ${heldWhat(p.payload.action)} this takes from is locked until ${heldWhen(lockedUntil)}, and this proposal closes before that, on ${heldWhen(window.validUntil)}. It cannot be submitted in time: its proposer can withdraw it and make it again later.`
+			: null;
 
 	const isLeader = wallet !== null && wallet === leader;
 	const isSigner =
@@ -426,11 +438,13 @@ export function deriveStage(input: StageInput): Stage {
 	} else if (r.status === "ready") {
 		phase = "ready";
 		head = say`Ready · ${String(r.have)} of ${String(r.need)} signatures`;
-		body = lockedUntil
-			? say`${isLeader ? "You are the finaliser. It" : say`The finaliser ${who(leader)} submits it. It`} can be submitted from ${heldWhen(lockedUntil)}: the stake it takes from is locked until then · ${window.parts}.`
-			: isLeader
-				? say`You are the finaliser: submit it when you are ready · ${window.parts}.`
-				: say`The finaliser ${who(leader)} signs the envelope and submits · ${window.parts}.`;
+		body = outlasts
+			? outlasts
+			: lockedUntil
+				? say`${isLeader ? "You are the finaliser. It" : say`The finaliser ${who(leader)} submits it. It`} can be submitted from ${heldWhen(lockedUntil)}: the ${heldWhat(p.payload.action)} it takes from is locked until then · ${window.parts}.`
+				: isLeader
+					? say`You are the finaliser: submit it when you are ready · ${window.parts}.`
+					: say`The finaliser ${who(leader)} signs the envelope and submits · ${window.parts}.`;
 	} else {
 		phase = "collecting";
 		head = say`Collecting signatures · ${String(r.have)} of ${String(r.need)}`;
@@ -514,6 +528,9 @@ export function deriveStage(input: StageInput): Stage {
 			? lockedUntil
 			: null;
 
+	const closesFirst =
+		phase === "collecting" || phase === "ready" ? outlasts : null;
+
 	return {
 		phase,
 		role,
@@ -527,6 +544,7 @@ export function deriveStage(input: StageInput): Stage {
 		executeAddsSignature: canExecute && executeAddsSignature,
 		executeReason,
 		opensAt,
+		closesFirst,
 		policyChanged: policyChanged(p, policy),
 		networkMismatch,
 		failedAttempt,

@@ -10,7 +10,10 @@
  * itself would refuse: the button stays off and the reason stands beside the
  * field. A warning is one amber line. Everything else is a plain fact. A
  * withdrawal inside the lockup is none of these: it can be proposed and
- * signed now, and submitted once the lockup has ended (`opensAt`). Nothing
+ * signed now, and submitted once the lockup has ended (`opensAt`). Unless
+ * the lockup ends only after the proposal would have closed (HLP's four days
+ * against a signing window of two or three): Hyperliquid would then refuse
+ * it for as long as it is open, which is an error like any other. Nothing
  * here is a recommendation: which vault to use is the signers' choice.
  */
 import {
@@ -40,7 +43,7 @@ import {
 } from "@hl-tools/core";
 import { addressField, amountField } from "./fields";
 import { shortAddress } from "./parts";
-import { localDate, type TimeContext } from "./time";
+import { localDate, type TimeContext, untilWords } from "./time";
 
 export type VaultKind = "vaultDeposit" | "vaultWithdraw";
 export const VAULT_KINDS: readonly VaultKind[] = [
@@ -49,6 +52,16 @@ export const VAULT_KINDS: readonly VaultKind[] = [
 ];
 export const isVaultKind = (kind: string): kind is VaultKind =>
 	(VAULT_KINDS as readonly string[]).includes(kind);
+
+/**
+ * Whether a form of this kind is offered in this copy of the app. A vault
+ * action is signed as a code under the signing network; a copy set up
+ * without that network could make a vault proposal that nobody can sign
+ * there, so it opens no vault form: not from the chooser, not from a link, a
+ * kept draft or "propose again".
+ */
+export const kindOffered = (kind: string, canSignCodes: boolean): boolean =>
+	canSignCodes || !isVaultKind(kind);
 
 /** What Hyperliquid said about the treasury and about the vault the form names. A part that was not read is null. */
 export interface VaultRead {
@@ -268,14 +281,29 @@ function refusalDetail(
 }
 
 /**
+ * A deposit's lockup ends only after a proposal made now has closed, so a
+ * withdrawal from it could not be submitted at any moment it is open.
+ */
+export function lockupOutlasts(
+	opensAt: number,
+	closesAt: number,
+	now: number,
+): string {
+	return `The deposit this takes from is locked longer than this proposal would stay open: it can be withdrawn ${untilWords(opensAt, now)}, and a proposal made now closes ${untilWords(closesAt, now)}. Hyperliquid would refuse it the whole time. Make this proposal once the lockup has less time left than the signing window.`;
+}
+
+/**
  * The steps a form asks for and everything to say about them. `read` is null
- * while nothing has been read; `now` is the page's clock.
+ * while nothing has been read; `now` is the page's clock; `closesAt` is when
+ * a proposal made now stops being submittable (left out, no lockup is held
+ * against it).
  */
 export function planVault(
 	form: VaultInput,
 	read: VaultRead | null | undefined,
 	network: Network,
 	now: number,
+	closesAt?: number,
 ): VaultPlan {
 	const issues: Issue[] = [];
 	const none = (): VaultPlan => ({ steps: null, issues, opensAt: null });
@@ -344,6 +372,16 @@ export function planVault(
 		return none();
 	}
 
+	const opensAt = locked === null ? null : locked + VAULT_LOCKUP_MARGIN_MS;
+	if (opensAt !== null && closesAt !== undefined && opensAt >= closesAt) {
+		block(
+			"vault.lockup_outlasts",
+			lockupOutlasts(opensAt, closesAt, now),
+			ADDRESS,
+		);
+		return none();
+	}
+
 	if (deposit && held)
 		warn(
 			"vault.relocks",
@@ -361,11 +399,7 @@ export function planVault(
 				AMOUNT,
 			);
 	}
-	return {
-		steps,
-		issues,
-		opensAt: locked === null ? null : locked + VAULT_LOCKUP_MARGIN_MS,
-	};
+	return { steps, issues, opensAt };
 }
 
 /**

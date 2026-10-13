@@ -85,6 +85,16 @@ describe("relay copy", () => {
 			signHint({ type: "convertToMultiSigUser", signers: "null" }),
 		).toContain("“signers” as “null”");
 		expect(signHint({ type: "approveAgent" })).toContain("the API wallet");
+		// a removal names nobody: the prompt shows zeros where the address would be
+		const removal = signHint({
+			type: "approveAgent",
+			agentAddress: `0x${"0".repeat(40)}`,
+		});
+		expect(removal).toContain("an address of all zeros");
+		expect(removal).toContain("the name of the API wallet being removed");
+		expect(
+			signHint({ type: "approveAgent", agentAddress: `0x${"1".repeat(40)}` }),
+		).toContain("the address of the API wallet");
 		// an action this page has no sentence for, or a document that names none:
 		// nothing is promised that the prompt may not show
 		expect(signHint({ type: "somethingNew" })).toContain(

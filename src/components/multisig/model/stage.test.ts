@@ -19,6 +19,7 @@ import {
 	TREASURY,
 	usdSend,
 } from "#/test/keys";
+import { partsText } from "./parts";
 import {
 	changeInEffect,
 	deriveStage,
@@ -851,6 +852,58 @@ describe("an action Hyperliquid would refuse before a certain moment", () => {
 			expect(asB.opensAt).toBeNull();
 			expect(asB.detail).toMatch(/^You are the finaliser: submit it when/);
 		}
+	});
+
+	it("says the vault deposit, not the stake, when that is what is locked", async () => {
+		const deposit = makeProposal({
+			action: {
+				type: "vaultTransfer",
+				vaultAddress: `0x${"9".repeat(40)}`,
+				isDeposit: false,
+				usd: 4_000_000,
+			},
+		});
+		const ready = await signAs(await signAs(deposit, 1), 3);
+		const asB = await stage(ready, {
+			wallet: B,
+			heldUntil: until,
+			codeSigning: true,
+		});
+		expect(asB.executeReason).toContain("The deposit this takes from");
+		expect(asB.detail).toContain("the deposit it takes from is locked");
+		expect(asB.closesFirst).toBeNull();
+	});
+
+	it("a lockup that ends after the proposal closes can never be submitted, and every reader is told", async () => {
+		// HLP locks four days; a proposal is open for two or three
+		const p = await signAs(makeProposal(), 1);
+		const closes = (await stage(p, { wallet: A })).window.validUntil;
+		const late = closes + HOUR;
+		const sentence =
+			/^The stake this takes from is locked until \d{4}-\d\d-\d\d \d\d:\d\d, and this proposal closes before that, on \d{4}-\d\d-\d\d \d\d:\d\d\. It cannot be submitted in time: its proposer can withdraw it and make it again later\.$/;
+		for (const wallet of [A, B, C]) {
+			const collecting = await stage(p, { wallet, heldUntil: late });
+			expect(collecting.phase).toBe("collecting");
+			expect(partsText(collecting.closesFirst ?? [])).toMatch(sentence);
+			// both moments are parts, so a screen shows them in the reader's time
+			expect(
+				collecting.closesFirst?.filter((part) => part.when).map((x) => x.when),
+			).toEqual([late, closes]);
+		}
+		const ready = await signAs(p, 3);
+		const asB = await stage(ready, { wallet: B, heldUntil: late });
+		expect(asB.phase).toBe("ready");
+		expect(asB.canExecute).toBe(false);
+		// nothing promises an opening that comes too late
+		expect(asB.detail).toMatch(sentence);
+		expect(asB.detail).not.toContain("can be submitted from");
+		// exactly at the close is too late too; a moment before is not
+		expect(
+			(await stage(p, { wallet: A, heldUntil: closes })).closesFirst,
+		).not.toBeNull();
+		expect(
+			(await stage(p, { wallet: A, heldUntil: closes - 1 })).closesFirst,
+		).toBeNull();
 	});
 
 	it("is not what a page says while something else stops the proposal", async () => {

@@ -34,7 +34,12 @@ import {
 } from "../model/relay/assemble";
 import { relayIssue } from "../model/relay/errors";
 import type { Objection } from "../model/relay/positions";
-import { planPush, publishBlocker, type RelayKnown } from "../model/relay/push";
+import {
+	planPush,
+	publishBlocker,
+	type RelayKnown,
+	settledAlready,
+} from "../model/relay/push";
 import { type CarriedOut, carriedOutOf } from "../model/relay/report";
 import type { ProposalRow } from "../model/relay/rows";
 import type { ViewRow } from "../model/relay/views";
@@ -342,7 +347,8 @@ export function useProposalDoc(
 						: op.kind === "sign"
 							? await addSignature(client, me, key, op.signature)
 							: await recordReceipt(client, me, key, op.receipt);
-				if (r.issue) {
+				// told what an earlier push of the same result achieved: done
+				if (r.issue && !settledAlready(op, r.issue)) {
 					failed = r.issue;
 					break;
 				}

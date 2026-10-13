@@ -291,4 +291,10 @@ export const CODE_COPY = {
 		"A vault deposit or withdrawal is signed as a code, under a network the wallet has to hold. This copy of the app was set up without that network's link, so it can be read and checked here, not signed.",
 	signedUnder:
 		"Signed as a code under the signing network; nothing is sent on that network, and the wallet goes back to its own afterwards.",
+	/** The chain chooser of a vault form: the choice no longer covers the signers' own signatures. */
+	chainLabel: "The finaliser signs under",
+	chainHint: (chain: string, twoSteps: boolean) =>
+		twoSteps
+			? `The vault step is signed as a code, under the signing network. Step 1, and the signatures the finaliser submits with, are under ${chain}; nothing is sent to that chain.`
+			: `Signers sign a code, under the signing network. Only the signature the finaliser submits with is under ${chain}; nothing is sent to that chain.`,
 } as const;

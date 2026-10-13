@@ -117,7 +117,13 @@ export function VaultsTab({
 							cell: (r: VaultRow) => (
 								<Link
 									to="/multisig/propose"
-									search={{ treasury: address, network, kind: "vaultWithdraw" }}
+									// the form opens on this row's vault
+									search={{
+										treasury: address,
+										network,
+										kind: "vaultWithdraw",
+										vault: r.vault,
+									}}
 									className={linkButtonSm}
 									aria-label={`Withdraw from ${r.hlp ? "HLP" : r.name || shortAddress(r.vault)}`}
 								>

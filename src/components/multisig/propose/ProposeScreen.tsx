@@ -6,6 +6,7 @@ import {
 	type Issue,
 	infoClient,
 	type Network,
+	nonceWindow,
 	ORDERED_ACTION_TYPES,
 	orderFloor,
 	otherStep,
@@ -86,12 +87,19 @@ import { costLine, spotAvailable } from "../model/send";
 import { toLookUp, waitingProposals, wantedSet } from "../model/signerSet";
 import {
 	CODE_COPY,
+	isVaultAction,
 	signingChainOf,
 	signingNetwork,
 } from "../model/signingNetwork";
 import { isStakingKind, planStaking, STAKING } from "../model/staking";
 import { linkTransport } from "../model/transport";
-import { isVaultKind, planVault, VAULT, type VaultRead } from "../model/vault";
+import {
+	isVaultKind,
+	kindOffered,
+	planVault,
+	VAULT,
+	type VaultRead,
+} from "../model/vault";
 import { TreasuryNames, useNames } from "../names/Names";
 import { Sentence } from "../names/Sentence";
 import { CodePanel } from "../proposal/CodePanel";
@@ -144,6 +152,8 @@ export function ProposeScreen(props: {
 	kind?: string;
 	/** For Remove API wallet: the wallet's name ("" is the one without a name). */
 	agent?: string;
+	/** For a vault form: the vault's address. */
+	vault?: string;
 	/** The network in the link; a link without one takes the header's and is rewritten. */
 	network?: string;
 }) {
@@ -160,25 +170,37 @@ export function ProposeScreen(props: {
 			// a link that asks for another kind, or to re-propose another proposal,
 			// starts a new form: the form on screen is always the one the link names
 			// (and for a removal, another wallet: "remove A" then "remove B")
-			key={`${page.network}:${props.treasury ?? ""}:${props.kind ?? ""}:${props.supersedes ?? ""}:${props.agent === undefined ? "" : `agent=${props.agent}`}`}
+			// (and for a vault form, another vault)
+			key={`${page.network}:${props.treasury ?? ""}:${props.kind ?? ""}:${props.supersedes ?? ""}:${props.agent === undefined ? "" : `agent=${props.agent}`}:${props.vault ?? ""}`}
 			treasury={props.treasury}
 			supersedes={props.supersedes}
 			kind={props.kind}
 			agent={props.agent}
+			vault={props.vault}
 			network={page.network}
 		/>
 	);
 }
 
-/** The form a link opens: empty, or on the kind (and the API wallet) it asks for. */
-function formForLink(kind?: string, agent?: string): ActionForm {
+/** The form a link opens: empty, or on the kind (and the API wallet or the vault) it asks for. */
+function formForLink(
+	kind?: string,
+	agent?: string,
+	vault?: string,
+): ActionForm {
 	// the Signers card's "Convert back" opens the same form on that choice
 	if (kind === "convertBack")
 		return { ...DEFAULT_FORM, kind: "changeSigners", signers: "null" };
-	const asked = ACTION_KINDS.find((k) => k.kind === kind)?.kind;
+	const named = ACTION_KINDS.find((k) => k.kind === kind)?.kind;
+	// a vault form only where this copy of the app can sign what it makes
+	const asked =
+		named && kindOffered(named, signingNetwork() !== null) ? named : undefined;
 	// the Overview's "Remove" names the wallet; without a name there is one to choose
 	if (asked === "removeAgent")
 		return { ...DEFAULT_FORM, kind: asked, removeAgent: agent ?? null };
+	// a row of the Vaults tab names its vault; anything but an address is not taken
+	if (asked && isVaultKind(asked) && vault && ADDRESS_RE.test(vault.trim()))
+		return { ...DEFAULT_FORM, kind: asked, vault: vault.trim().toLowerCase() };
 	return asked ? { ...DEFAULT_FORM, kind: asked } : DEFAULT_FORM;
 }
 
@@ -192,19 +214,23 @@ function ProposeForm({
 	supersedes,
 	kind,
 	agent,
+	vault,
 	network,
 }: {
 	treasury?: string;
 	supersedes?: string;
 	kind?: string;
 	agent?: string;
+	vault?: string;
 	network: Network;
 }) {
 	const hydrated = useNetworkHydrated();
 	const navigate = useNavigate();
 	const client = useQueryClient();
 	const wallet = useWalletSigner();
-	const [form, setForm] = useState<ActionForm>(() => formForLink(kind, agent));
+	const [form, setForm] = useState<ActionForm>(() =>
+		formForLink(kind, agent, vault),
+	);
 	const [attempted, setAttempted] = useState(false);
 	const [failure, setFailure] = useState<{
 		title: string;
@@ -244,11 +270,17 @@ function ProposeForm({
 		if (!kept.hydrated || restoreTried.current) return;
 		restoreTried.current = true;
 		if (touched.current) return;
-		const stored = proposeDraftFor(kept.stored, { kind, supersedes, agent });
+		const stored = proposeDraftFor(kept.stored, {
+			kind,
+			supersedes,
+			agent,
+			vault,
+		});
 		if (!stored) return;
+		if (!kindOffered(stored.form.kind, signingNetwork() !== null)) return;
 		setForm(stored.form);
 		setRestoredAt(stored.at);
-	}, [kept.hydrated, kept.stored, kind, supersedes, agent]);
+	}, [kept.hydrated, kept.stored, kind, supersedes, agent, vault]);
 
 	const set = <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => {
 		touched.current = true;
@@ -264,7 +296,7 @@ function ProposeForm({
 		kept.clear();
 		touched.current = false;
 		setRestoredAt(null);
-		setForm(formForLink(kind, agent));
+		setForm(formForLink(kind, agent, vault));
 	};
 	const target = useMemo<AccountTarget | null>(
 		() => (hydrated && address ? { address, network } : null),
@@ -286,6 +318,11 @@ function ProposeForm({
 				const source = reproposeSource(old, network, address);
 				if (!source.ok) {
 					setNotCopied(source.text);
+					return;
+				}
+				// a vault proposal, in a copy of the app that cannot sign one
+				if (isVaultAction(old.payload) && signingNetwork() === null) {
+					setNotCopied(CODE_COPY.absentBody);
 					return;
 				}
 				setSuperseded(old);
@@ -443,6 +480,9 @@ function ProposeForm({
 					vaultRead,
 					network,
 					now,
+					// when a proposal made now would close: a lockup that ends later stops it
+					nonceWindow(proposalNonce(form.nonceMode, now, floor).nonce)
+						.validUntil,
 				)
 			: null;
 
@@ -949,9 +989,16 @@ function ProposeForm({
 										</Select>
 									</Field>
 									<Field
-										label="Signers sign under"
+										// a vault action is signed as a code: the choice is for what the finaliser signs
+										label={
+											vaultOn ? CODE_COPY.chainLabel : "Signers sign under"
+										}
 										trailing={<Help k="signingChain" />}
-										hint={`EIP-712 chain ${chain.hex} (${chain.id}). Every signer's wallet switches to ${chain.label} to sign; nothing is sent to that chain.`}
+										hint={
+											vaultOn
+												? `EIP-712 chain ${chain.hex} (${chain.id}). ${CODE_COPY.chainHint(chain.label, vaultPlan?.steps?.length === 2)}`
+												: `EIP-712 chain ${chain.hex} (${chain.id}). Every signer's wallet switches to ${chain.label} to sign; nothing is sent to that chain.`
+										}
 									>
 										<Segmented<InnerChain>
 											label="Signing chain"
@@ -972,11 +1019,16 @@ function ProposeForm({
 									<Field
 										label="Signing window"
 										trailing={<Help k="signingWindow" />}
-										// the moment in the reader's own time, like everywhere in the section
+										// The moment in the reader's own time, like everywhere in the
+										// section, and so only once the page runs in the browser: the
+										// server has another clock and another way of writing a date,
+										// and React would have to throw its copy of the form away.
 										hint={
 											<>
-												If created now: <Sentence parts={window.parts} />. After
-												that the chain rejects it and it must be re-proposed.
+												If created now:{" "}
+												{hydrated ? <Sentence parts={window.parts} /> : "…"}.
+												After that the chain rejects it and it must be
+												re-proposed.
 												{numbered.raised ? ` ${NUMBERED_AFTER}` : ""}
 												{actionType === "usdSend" &&
 												form.nonceMode === "extended"
@@ -1106,7 +1158,9 @@ function ProposeForm({
 													),
 												},
 												{
-													label: "Signers sign under",
+													label: vaultOn
+														? CODE_COPY.chainLabel
+														: "Signers sign under",
 													value: `${chain.label} · ${chain.hex}`,
 													mono: true,
 												},

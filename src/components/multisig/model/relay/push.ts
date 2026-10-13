@@ -113,6 +113,20 @@ export function publishRow(p: Proposal): PublishRow {
 	};
 }
 
+/**
+ * A write the relay refused that is done all the same. One case: a result
+ * for a proposal the relay already holds as accepted (its guard for results
+ * raises `relay.proposal_closed` for nothing else). Two pushes of one result
+ * can cross, the click that submitted and the catch-up in the background,
+ * and the second is then told what the first achieved.
+ */
+export function settledAlready(
+	op: PushOp,
+	refusal: { readonly code: string },
+): boolean {
+	return op.kind === "receipt" && refusal.code === "relay.proposal_closed";
+}
+
 export function planPush(i: PushInput): PushOp[] {
 	const { doc, me, relay } = i;
 	if (!me) return [];

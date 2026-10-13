@@ -159,15 +159,29 @@ const SIGN_HINT_OTHER =
 const SIGN_HINT_BACK =
 	"Your wallet will show the treasury, the finaliser and “signers” as “null”, which is the conversion back to a normal account. Check them there.";
 
+/**
+ * A removal carries no wallet's address: the prompt shows the address of all
+ * zeros, which is how Hyperliquid takes "nobody", and the name being removed.
+ */
+const SIGN_HINT_REMOVAL =
+	"Your wallet will show the treasury, the finaliser, an address of all zeros and the name of the API wallet being removed, which is empty for the one without a name. Check them there.";
+
 export function signHint(action: {
 	readonly type?: unknown;
 	readonly signers?: unknown;
+	readonly agentAddress?: unknown;
 }): string {
 	const type = action.type;
 	if (typeof type !== "string") return SIGN_HINT_OTHER;
 	if (PAYS.includes(type)) return RELAY_COPY.underSign;
 	if (type === "convertToMultiSigUser" && action.signers === "null")
 		return SIGN_HINT_BACK;
+	if (
+		type === "approveAgent" &&
+		typeof action.agentAddress === "string" &&
+		/^0x0{40}$/i.test(action.agentAddress)
+	)
+		return SIGN_HINT_REMOVAL;
 	return SIGN_HINTS[type] ?? SIGN_HINT_OTHER;
 }
 
@@ -198,6 +212,7 @@ export const SIGN_HINT_TEXTS: readonly string[] = [
 	...Object.values(SIGN_HINTS),
 	SIGN_HINT_OTHER,
 	SIGN_HINT_BACK,
+	SIGN_HINT_REMOVAL,
 	FINALISER_ONLY,
 	FINALISER_LAST,
 ];

@@ -153,12 +153,15 @@ export interface ProposeLink {
 	readonly supersedes?: string;
 	/** Remove API wallet: the wallet's name. */
 	readonly agent?: string;
+	/** A vault form: the vault's address. */
+	readonly vault?: string;
 }
 
 /**
  * The stored form to open the propose form with, or null. A link that asks
  * for something else wins: one that re-proposes a proposal, one that names
- * another kind than the draft's, or another API wallet to remove. The draft
+ * another kind than the draft's, another API wallet to remove or another
+ * vault. The draft
  * is left where it is; it is replaced only once something is typed.
  */
 export function proposeDraftFor(
@@ -180,6 +183,11 @@ export function proposeDraftFor(
 		if (link.kind === "convertBack" && form.signers !== "null") return null;
 	}
 	if (link.agent !== undefined && form.removeAgent !== link.agent) return null;
+	if (
+		link.vault !== undefined &&
+		form.vault.trim().toLowerCase() !== link.vault.trim().toLowerCase()
+	)
+		return null;
 	return stored;
 }
 

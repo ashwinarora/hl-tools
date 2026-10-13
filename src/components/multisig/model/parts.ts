@@ -24,6 +24,21 @@ export const shortAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 /** An address as a part: a screen may show its nickname next to it. */
 export const whoPart = (a: string): Part => ({ text: shortAddress(a), who: a });
 
+/**
+ * A line of an action's description that is a field and its value ("oid:
+ * buy 1 BTC", "leverage: 5"), as a pair; null for a sentence. A field's name
+ * has no space in it, and a sentence that carries a colon always has one
+ * before it, so a sentence is never cut in two at its colon.
+ */
+export function labelledLine(
+	line: string,
+): { readonly label: string; readonly value: string } | null {
+	const cut = line.indexOf(": ");
+	if (cut <= 0) return null;
+	const label = line.slice(0, cut);
+	return /\s/.test(label) ? null : { label, value: line.slice(cut + 2) };
+}
+
 export function partsText(parts: readonly Part[]): string {
 	return parts.map((p) => p.text).join("");
 }

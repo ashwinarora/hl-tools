@@ -1,5 +1,13 @@
+import { describeAction, type PlainObject } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
-import { joinParts, type Part, part, partsText, say } from "./parts";
+import {
+	joinParts,
+	labelledLine,
+	type Part,
+	part,
+	partsText,
+	say,
+} from "./parts";
 
 const A = `0x${"a".repeat(40)}`;
 const who: Part = { text: "0xaaaa…aaaa", who: A };
@@ -48,5 +56,70 @@ describe("joinParts", () => {
 		);
 		expect(joinParts([], ", ")).toEqual([]);
 		expect(joinParts([[who]], ", ")).toEqual([who]);
+	});
+});
+
+describe("labelledLine", () => {
+	it("takes a field and its value apart", () => {
+		expect(labelledLine("leverage: 5")).toEqual({
+			label: "leverage",
+			value: "5",
+		});
+		expect(labelledLine("91490942: buy 1 BTC at 60000")).toEqual({
+			label: "91490942",
+			value: "buy 1 BTC at 60000",
+		});
+	});
+	it("never cuts a sentence at its colon", () => {
+		for (const line of [
+			"A vault deposit can lose value: the vault's leader trades with it.",
+			"The bridge keeps 1 USDC of it as its fee: 4 USDC arrives.",
+			"Dead man's switch: every open order is cancelled at that time unless rescheduled.",
+			"No colon here.",
+			": nothing before it",
+		])
+			expect(labelledLine(line)).toBeNull();
+	});
+	it("leaves every sentence the core writes about a guided action whole", () => {
+		const treasury = `0x${"1".repeat(40)}`;
+		const head = { signatureChainId: "0x3e6", hyperliquidChain: "Testnet" };
+		const actions: PlainObject[] = [
+			{ type: "vaultTransfer", vaultAddress: A, isDeposit: true, usd: 5e6 },
+			{ type: "vaultTransfer", vaultAddress: A, isDeposit: false, usd: 5e6 },
+			{
+				type: "approveAgent",
+				...head,
+				agentAddress: A,
+				agentName: "",
+				nonce: 1,
+			},
+			{
+				type: "approveAgent",
+				...head,
+				agentAddress: `0x${"0".repeat(40)}`,
+				agentName: "",
+				nonce: 1,
+			},
+			{
+				type: "userSetAbstraction",
+				...head,
+				user: treasury,
+				abstraction: "unifiedAccount",
+				nonce: 1,
+			},
+			{
+				type: "userSetAbstraction",
+				...head,
+				user: treasury,
+				abstraction: "disabled",
+				nonce: 1,
+			},
+			{ type: "withdraw3", ...head, destination: A, amount: "5", time: 1 },
+		];
+		for (const action of actions) {
+			const { lines } = describeAction(action, { network: "testnet" });
+			expect(lines.length).toBeGreaterThan(0);
+			for (const line of lines) expect(labelledLine(line)).toBeNull();
+		}
 	});
 });

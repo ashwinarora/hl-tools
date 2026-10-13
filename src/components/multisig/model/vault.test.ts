@@ -10,6 +10,7 @@ import { RECIPIENT } from "#/test/keys";
 import { FORBIDDEN_CLAIMS } from "./relay/copy";
 import {
 	isVaultKind,
+	kindOffered,
 	lockupWords,
 	planVault,
 	usdcShown,
@@ -70,6 +71,18 @@ const plan = (form: VaultInput, r: VaultRead | null = read()) =>
 	planVault(form, r, "testnet", NOW);
 const codes = (issues: readonly Issue[]) =>
 	issues.map((i) => `${i.severity}:${i.code}`);
+
+describe("a copy of the app without the signing network", () => {
+	it("offers no vault form, and every other form as before", () => {
+		expect(kindOffered("vaultDeposit", false)).toBe(false);
+		expect(kindOffered("vaultWithdraw", false)).toBe(false);
+		expect(kindOffered("vaultDeposit", true)).toBe(true);
+		for (const kind of ["sendUsdc", "stake", "accountMode", "raw"]) {
+			expect(kindOffered(kind, false)).toBe(true);
+			expect(kindOffered(kind, true)).toBe(true);
+		}
+	});
+});
 
 describe("a deposit", () => {
 	it("is one step when the perps balance can release it", () => {
@@ -237,6 +250,47 @@ describe("a withdrawal", () => {
 		expect(p.issues).toEqual([]);
 		// a little after the lockup's end: clocks differ, and a refusal uses the proposal up
 		expect(p.opensAt).toBe(NOW + 2 * DAY + 5_000);
+	});
+
+	it("is blocked when the lockup ends only after the proposal would have closed", () => {
+		// HLP: four days locked, and a proposal is open for two (three at most)
+		const locked = held("100", NOW + 4 * DAY);
+		const closes = NOW + 2 * DAY;
+		const p = planVault(wd("20"), locked, "testnet", NOW, closes);
+		expect(codes(p.issues)).toEqual(["error:vault.lockup_outlasts"]);
+		expect(p.steps).toBeNull();
+		expect(p.opensAt).toBeNull();
+		// beside the vault it is about, with both lengths, and what to do
+		expect(p.issues[0]?.path).toBe("action.vaultAddress");
+		expect(p.issues[0]?.message).toBe(
+			"The deposit this takes from is locked longer than this proposal would stay open: it can be withdrawn in 4 days, and a proposal made now closes in 2 days. Hyperliquid would refuse it the whole time. Make this proposal once the lockup has less time left than the signing window.",
+		);
+		// the longer window is long enough for a lockup of under three days
+		const fits = planVault(
+			wd("20"),
+			held("100", NOW + 2 * DAY + 3_600_000),
+			"testnet",
+			NOW,
+			NOW + 3 * DAY - 3_600_000,
+		);
+		expect(fits.issues).toEqual([]);
+		expect(fits.opensAt).toBe(NOW + 2 * DAY + 3_600_000 + 5_000);
+		// the few seconds kept after the lockup's end count: ending with the
+		// window is too late
+		const edge = planVault(
+			wd("20"),
+			held("100", closes - 5_000),
+			"testnet",
+			NOW,
+			closes,
+		);
+		expect(codes(edge.issues)).toEqual(["error:vault.lockup_outlasts"]);
+		// a caller that names no closing moment holds no lockup against it
+		expect(plan(wd("20"), locked).issues).toEqual([]);
+		// and a deposit is never held up by it
+		expect(
+			codes(planVault(dep("20"), locked, "testnet", NOW, closes).issues),
+		).toEqual(["warning:vault.relocks"]);
 	});
 
 	it("is blocked when it asks for more than the deposit is worth, or there is none", () => {

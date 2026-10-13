@@ -464,7 +464,7 @@ export function YourPart({
 					)}
 				</div>
 			)}
-			{waits && stage.opensAt !== null && (
+			{waits && stage.opensAt !== null && !stage.closesFirst && (
 				<p className="mt-2.5 flex flex-wrap items-center gap-1 text-[13px] text-muted-foreground">
 					<span>
 						Submit opens on <When at={stage.opensAt} /> (

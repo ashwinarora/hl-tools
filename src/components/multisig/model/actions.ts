@@ -23,6 +23,7 @@ import {
 	multiSigEvmRefusal,
 	type Network,
 	networkConfig,
+	nonceWindow,
 	type PlainObject,
 	type Policy,
 	type Proposal,
@@ -924,6 +925,8 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 				ctx.vault,
 				ctx.network,
 				ctx.now ?? ctx.nonce,
+				// the proposal's number is also its deadline
+				nonceWindow(ctx.nonce).validUntil,
 			);
 			issues.push(...plan.issues);
 			// each step is its own proposal, numbered one after the other

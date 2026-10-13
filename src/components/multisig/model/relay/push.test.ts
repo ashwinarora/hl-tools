@@ -9,6 +9,7 @@ import {
 	publishBlocker,
 	publishRow,
 	type RelayKnown,
+	settledAlready,
 } from "./push";
 
 const SIG = {
@@ -185,6 +186,29 @@ describe("planPush", () => {
 			"sign",
 			"receipt",
 		]);
+	});
+});
+
+describe("settledAlready", () => {
+	const closed = { code: "relay.proposal_closed" };
+	it("a result the relay refuses because it already holds the proposal as accepted is done", () => {
+		expect(
+			settledAlready({ kind: "receipt", receipt: receipt() }, closed),
+		).toBe(true);
+	});
+	it("any other refusal of a result is a problem, and so is a closed proposal for a signature", () => {
+		const op = { kind: "receipt", receipt: receipt() } as const;
+		for (const code of [
+			"relay.not_finaliser",
+			"relay.rate_limited",
+			"relay.unreachable",
+			"relay.not_allowed",
+		])
+			expect(settledAlready(op, { code })).toBe(false);
+		// a signature that arrives after the proposal closed was not counted
+		expect(settledAlready({ kind: "sign", signature: SIG }, closed)).toBe(
+			false,
+		);
 	});
 });
 
