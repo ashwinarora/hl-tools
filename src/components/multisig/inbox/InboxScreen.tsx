@@ -24,6 +24,7 @@ import {
 import { ShellPage } from "../shell/ShellPage";
 import { useTreasuryNames } from "../treasuryName";
 import { AwayNotice } from "./AwayNotice";
+import { FirstRun } from "./FirstRun";
 import { ProposalRows } from "./ProposalRows";
 
 /**
@@ -82,6 +83,8 @@ export function InboxScreen() {
 			}
 		>
 			<div className="flex flex-col gap-4">
+				{/* someone who has no treasury yet: how it works, until hidden */}
+				{!loadingTreasuries && treasuries.length === 0 && <FirstRun sharing />}
 				<AwayNotice scope="all" />
 				{groups.finish.length > 0 && (
 					<section>

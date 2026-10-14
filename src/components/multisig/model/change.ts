@@ -41,6 +41,8 @@ export const CHANGE = {
 	// The conversion back to a normal account: nothing to fill in, only to understand.
 	backLink: "Convert this treasury back to a normal account instead",
 	backTitle: "Convert back to a normal account",
+	/** Its own choice in the propose form's picker: the same action as `backLink`. */
+	backChoice: "Convert back",
 	backLead:
 		"After this the account is a normal account again. Whoever holds its own key controls everything it holds, alone. The signers decide nothing any more.",
 	backUndo: "Keep it a treasury and change its signers instead",

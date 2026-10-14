@@ -74,6 +74,7 @@ import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
 import { ActionBar } from "./ActionBar";
 import { CopyNotes } from "./CopyNotes";
+import { FirstSign } from "./FirstSign";
 import { Notices } from "./Notices";
 import { OlderSends } from "./OlderSends";
 import { RecordNote } from "./RecordNote";
@@ -616,6 +617,7 @@ export function ProposalView({
 							) : undefined
 						}
 					/>
+					<FirstSign canSign={ACTIONABLE.has(stage.phase) && stage.canSign} />
 					{/* also for a copy that came by link or file: what it says of the
 					    answer is its finaliser's report, whoever carried it here */}
 					{stage.phase === "submitted" && !stage.role.includes("finaliser") && (

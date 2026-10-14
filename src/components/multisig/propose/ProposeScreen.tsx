@@ -66,6 +66,7 @@ import {
 	sourcePocket,
 } from "../model/actions";
 import { type InnerChain, innerChain } from "../model/chains";
+import { CHANGE } from "../model/change";
 import {
 	DRAFT_COPY,
 	draftKey,
@@ -663,8 +664,16 @@ function ProposeForm({
 				? k.kind === "vaultDeposit"
 					? [{ value: "vault", label: VAULT.label }]
 					: []
-				: [{ value: k.kind as string, label: k.label }],
+				: k.kind === "changeSigners"
+					? // converting back is the same action with no signers: its own choice here
+						[
+							{ value: k.kind as string, label: k.label },
+							{ value: "convertBack", label: CHANGE.backChoice },
+						]
+					: [{ value: k.kind as string, label: k.label }],
 	);
+	const converting =
+		form.kind === "changeSigners" && form.signers.trim() === "null";
 	const window = describeWindow(previewNonce, previewNow);
 
 	// With the relay in use and this wallet in its copy of the signer list, a new
@@ -911,18 +920,29 @@ function ProposeForm({
 										<Segmented<string>
 											label="Action"
 											value={
-												stakingOn ? "staking" : vaultOn ? "vault" : form.kind
+												stakingOn
+													? "staking"
+													: vaultOn
+														? "vault"
+														: converting
+															? "convertBack"
+															: form.kind
 											}
-											onChange={(v) =>
+											onChange={(v) => {
 												set(
 													"kind",
 													v === "staking"
 														? "stake"
 														: v === "vault"
 															? "vaultDeposit"
-															: (v as ActionKind),
-												)
-											}
+															: v === "convertBack"
+																? "changeSigners"
+																: (v as ActionKind),
+												);
+												// the signers field says which of the two it is
+												if (v === "convertBack") set("signers", "null");
+												else if (converting) set("signers", "");
+											}}
 											options={choices}
 										/>
 										{vaultOn && vaultPlan ? (

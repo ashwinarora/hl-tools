@@ -63,6 +63,7 @@ import {
 } from "./actions";
 import { CodePanel } from "./CodePanel";
 import { CopyNotes } from "./CopyNotes";
+import { FirstSign } from "./FirstSign";
 import { Notices } from "./Notices";
 import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
@@ -302,6 +303,7 @@ export function MoveView({
 					>
 						<Sentence parts={stage.detailParts} />
 					</Callout>
+					<FirstSign canSign={!stage.settled && stage.canSign} />
 					<Notices
 						items={{
 							"copy-notes": copyNotesShown(notes).length > 0 && (

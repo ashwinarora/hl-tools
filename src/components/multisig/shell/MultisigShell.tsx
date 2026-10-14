@@ -14,6 +14,7 @@ import { useNetwork } from "#/store/networkStore";
 import { AwayKeeper } from "../away/AwayKeeper";
 import { useAway } from "../away/useAway";
 import { CREATE } from "../model/create";
+import { GLOSSARY_TITLE } from "../model/guide";
 import { RELAY_COPY } from "../model/relay/copy";
 import {
 	countNeeds,
@@ -407,6 +408,12 @@ function ShellFoot() {
 			<span className="font-mono text-2xs text-subtle-foreground">
 				rules: {rules.map((r) => `${r.id}@${r.version}`).join(" · ")}
 			</span>
+			<Link
+				to="/multisig/glossary"
+				className="hover:text-foreground hover:underline"
+			>
+				{GLOSSARY_TITLE}
+			</Link>
 			{relayConfig() && (
 				<Link to="/privacy" className="hover:text-foreground hover:underline">
 					{RELAY_COPY.smallPrintLink}

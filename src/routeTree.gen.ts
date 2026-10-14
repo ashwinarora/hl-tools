@@ -28,6 +28,7 @@ import { Route as ToolsAssetsRouteImport } from './routes/tools/assets'
 import { Route as MultisigProposeRouteImport } from './routes/multisig/propose'
 import { Route as MultisigProposalRouteImport } from './routes/multisig/proposal'
 import { Route as MultisigOpenRouteImport } from './routes/multisig/open'
+import { Route as MultisigGlossaryRouteImport } from './routes/multisig/glossary'
 import { Route as MultisigCreateRouteImport } from './routes/multisig/create'
 import { Route as MultisigAddRouteImport } from './routes/multisig/add'
 import { Route as FaucetMinerHowToUseRouteImport } from './routes/faucet-miner/how-to-use'
@@ -128,6 +129,11 @@ const MultisigOpenRoute = MultisigOpenRouteImport.update({
   path: '/open',
   getParentRoute: () => MultisigRouteRoute,
 } as any)
+const MultisigGlossaryRoute = MultisigGlossaryRouteImport.update({
+  id: '/glossary',
+  path: '/glossary',
+  getParentRoute: () => MultisigRouteRoute,
+} as any)
 const MultisigCreateRoute = MultisigCreateRouteImport.update({
   id: '/create',
   path: '/create',
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/multisig/add': typeof MultisigAddRoute
   '/multisig/create': typeof MultisigCreateRoute
+  '/multisig/glossary': typeof MultisigGlossaryRoute
   '/multisig/open': typeof MultisigOpenRoute
   '/multisig/proposal': typeof MultisigProposalRoute
   '/multisig/propose': typeof MultisigProposeRoute
@@ -182,6 +189,7 @@ export interface FileRoutesByTo {
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/multisig/add': typeof MultisigAddRoute
   '/multisig/create': typeof MultisigCreateRoute
+  '/multisig/glossary': typeof MultisigGlossaryRoute
   '/multisig/open': typeof MultisigOpenRoute
   '/multisig/proposal': typeof MultisigProposalRoute
   '/multisig/propose': typeof MultisigProposeRoute
@@ -208,6 +216,7 @@ export interface FileRoutesById {
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/multisig/add': typeof MultisigAddRoute
   '/multisig/create': typeof MultisigCreateRoute
+  '/multisig/glossary': typeof MultisigGlossaryRoute
   '/multisig/open': typeof MultisigOpenRoute
   '/multisig/proposal': typeof MultisigProposalRoute
   '/multisig/propose': typeof MultisigProposeRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/faucet-miner/how-to-use'
     | '/multisig/add'
     | '/multisig/create'
+    | '/multisig/glossary'
     | '/multisig/open'
     | '/multisig/proposal'
     | '/multisig/propose'
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
     | '/faucet-miner/how-to-use'
     | '/multisig/add'
     | '/multisig/create'
+    | '/multisig/glossary'
     | '/multisig/open'
     | '/multisig/proposal'
     | '/multisig/propose'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/faucet-miner/how-to-use'
     | '/multisig/add'
     | '/multisig/create'
+    | '/multisig/glossary'
     | '/multisig/open'
     | '/multisig/proposal'
     | '/multisig/propose'
@@ -451,6 +463,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MultisigOpenRouteImport
       parentRoute: typeof MultisigRouteRoute
     }
+    '/multisig/glossary': {
+      id: '/multisig/glossary'
+      path: '/glossary'
+      fullPath: '/multisig/glossary'
+      preLoaderRoute: typeof MultisigGlossaryRouteImport
+      parentRoute: typeof MultisigRouteRoute
+    }
     '/multisig/create': {
       id: '/multisig/create'
       path: '/create'
@@ -498,6 +517,7 @@ const FaucetMinerRouteRouteWithChildren =
 interface MultisigRouteRouteChildren {
   MultisigAddRoute: typeof MultisigAddRoute
   MultisigCreateRoute: typeof MultisigCreateRoute
+  MultisigGlossaryRoute: typeof MultisigGlossaryRoute
   MultisigOpenRoute: typeof MultisigOpenRoute
   MultisigProposalRoute: typeof MultisigProposalRoute
   MultisigProposeRoute: typeof MultisigProposeRoute
@@ -508,6 +528,7 @@ interface MultisigRouteRouteChildren {
 const MultisigRouteRouteChildren: MultisigRouteRouteChildren = {
   MultisigAddRoute: MultisigAddRoute,
   MultisigCreateRoute: MultisigCreateRoute,
+  MultisigGlossaryRoute: MultisigGlossaryRoute,
   MultisigOpenRoute: MultisigOpenRoute,
   MultisigProposalRoute: MultisigProposalRoute,
   MultisigProposeRoute: MultisigProposeRoute,
