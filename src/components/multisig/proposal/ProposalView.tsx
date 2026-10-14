@@ -15,7 +15,7 @@ import {
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Callout } from "#/components/hub/status";
 import {
 	FLAG_TEXT,
@@ -35,6 +35,7 @@ import { ledgerEvidence } from "../model/chain/match";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
 import { CHANGE } from "../model/change";
 import { receiptOk } from "../model/history";
+import { copyNotesShown, nextStepLabel } from "../model/notices";
 import { labelledLine } from "../model/parts";
 import { refusalNote } from "../model/refusal";
 import { RELAY_COPY } from "../model/relay/copy";
@@ -71,7 +72,9 @@ import { useKnownProposals } from "../treasury/useKnownProposals";
 import { useTreasuryNames } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
+import { ActionBar } from "./ActionBar";
 import { CopyNotes } from "./CopyNotes";
+import { Notices } from "./Notices";
 import { OlderSends } from "./OlderSends";
 import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
@@ -494,6 +497,9 @@ export function ProposalView({
 		</Link>
 	);
 
+	// on a phone, the bar at the bottom brings this wallet's part into view
+	const partRef = useRef<HTMLDivElement>(null);
+
 	// who signs, as far as this page trusts: the chain's list once it is read
 	const signersNow =
 		state.policy && state.policy.authorizedUsers.length > 0
@@ -617,118 +623,150 @@ export function ProposalView({
 							{RELAY_COPY.reportedReceipt}
 						</p>
 					)}
-					{/* the report against Hyperliquid's record, from this browser */}
-					{stage.phase === "submitted" && (
-						<RecordNote network={target.network} proposal={proposal} />
+					{/* what it does, and the warnings that apply to it: the headline is
+					    the signed action, the title above it is not signed */}
+					{(proposal.meta.title ||
+						description.flags.length > 0 ||
+						!description.known) && (
+						<div className="flex flex-col gap-2 px-0.5">
+							{proposal.meta.title && (
+								<p className="text-balance text-[17px] font-medium [overflow-wrap:anywhere]">
+									{description.headline}
+								</p>
+							)}
+							{(description.flags.length > 0 || !description.known) && (
+								<div className="flex flex-wrap gap-1.5">
+									{description.flags.map((f) => (
+										<Tag
+											key={f}
+											tone={
+												FLAG_TEXT[f]?.tone === "danger"
+													? "danger"
+													: FLAG_TEXT[f]?.tone === "info"
+														? "info"
+														: "warn"
+											}
+										>
+											{FLAG_TEXT[f]?.label ?? f}
+										</Tag>
+									))}
+									{!description.known && <Tag>unknown action type</Tag>}
+								</div>
+							)}
+						</div>
 					)}
-					{stage.failedAttempt && stage.phase === "carried-out" && (
-						// the copy's answer against Hyperliquid's record: the record is above
-						<Callout
-							tone="warning"
-							title={`This copy reports a refusal: ${stage.failedAttempt.message}`}
-						>
-							The answer in a copy is what was written into it. Hyperliquid's
-							own record of the account, above, is what counts.
-						</Callout>
-					)}
-					{stage.failedAttempt && stage.phase !== "carried-out" && (
-						<Callout
-							tone="danger"
-							title={`The last attempt to send it was refused: ${stage.failedAttempt.message}`}
-							action={
-								// "already used" often means it went through somewhere else: the ledger says
-								stage.failedAttempt.id === "nonce-duplicate" ? (
-									<Link
-										to="/tools/multisig"
-										search={{ view: "account", address: target.address }}
-										className={linkButtonSm}
+					<Notices
+						items={{
+							// the report against Hyperliquid's record, from this browser
+							record: stage.phase === "submitted" && (
+								<RecordNote network={target.network} proposal={proposal} />
+							),
+							"copy-refusal": stage.failedAttempt &&
+								stage.phase === "carried-out" && (
+									// the copy's answer against Hyperliquid's record: the record is above
+									<Callout
+										tone="warning"
+										title={`This copy reports a refusal: ${stage.failedAttempt.message}`}
 									>
-										Check Hyperliquid's record in the inspector
-									</Link>
-								) : undefined
-							}
-						>
-							{refusalNote(stage.failedAttempt)}
-						</Callout>
-					)}
-					{aside && (
-						<Callout tone="info" title={aside.title}>
-							{aside.body}
-						</Callout>
-					)}
-					<CopyNotes notes={notes} />
-					{blocked && (
-						<Callout tone="warning" title={blocked.title} action={repropose}>
-							{blocked.message}
-						</Callout>
-					)}
-					{shortfall.length > 0 && (
-						<Callout
-							tone="warning"
-							title="Hyperliquid would refuse this as things stand"
-						>
-							{shortfall.map((r) => r.message).join(" ")} It can still be
-							signed: the balances may change before it is sent.
-						</Callout>
-					)}
-					{COSTED.has(stage.phase) && <OlderSends proposal={proposal} />}
-					{/* once nobody signs any more, how signatures are counted is moot */}
-					{stage.policyChanged && !CLOSED.has(stage.phase) && (
-						<Callout
-							tone="warning"
-							title="The signers changed since this was proposed"
-						>
-							Signatures are counted against the signers Hyperliquid reports
-							now, not the ones written in the proposal.
-						</Callout>
-					)}
-					{doc.storageError && (
-						<Callout tone="warning" title="Not saved in this browser">
-							{doc.storageError} The proposal stays on this page until you close
-							it; download the file to keep it.
-						</Callout>
-					)}
-					{doc.relay.issue && (
-						<Callout
-							tone={doc.relay.issue.severity === "error" ? "danger" : "warning"}
-							title={doc.relay.issue.message}
-						>
-							{doc.relay.issue.fix}
-						</Callout>
-					)}
-					{relayNotes.map((n) => (
-						// what this browser refused to take from the relay's copy
-						<Callout key={n.code + n.message} tone="warning" title={n.message}>
-							{n.fix}
-						</Callout>
-					))}
+										The answer in a copy is what was written into it.
+										Hyperliquid's own record of the account, above, is what
+										counts.
+									</Callout>
+								),
+							rejected: stage.failedAttempt &&
+								stage.phase !== "carried-out" && (
+									<Callout
+										tone="danger"
+										title={`The last attempt to send it was refused: ${stage.failedAttempt.message}`}
+										action={
+											// "already used" often means it went through somewhere else: the ledger says
+											stage.failedAttempt.id === "nonce-duplicate" ? (
+												<Link
+													to="/tools/multisig"
+													search={{ view: "account", address: target.address }}
+													className={linkButtonSm}
+												>
+													Check Hyperliquid's record in the inspector
+												</Link>
+											) : undefined
+										}
+									>
+										{refusalNote(stage.failedAttempt)}
+									</Callout>
+								),
+							aside: aside && (
+								<Callout tone="info" title={aside.title}>
+									{aside.body}
+								</Callout>
+							),
+							"copy-notes": copyNotesShown(notes).length > 0 && (
+								<CopyNotes notes={notes} />
+							),
+							"refused-now": blocked && (
+								<Callout
+									tone="warning"
+									title={blocked.title}
+									action={repropose}
+								>
+									{blocked.message}
+								</Callout>
+							),
+							shortfall: shortfall.length > 0 && (
+								<Callout
+									tone="warning"
+									title="Hyperliquid would refuse this as things stand"
+								>
+									{shortfall.map((r) => r.message).join(" ")} It can still be
+									signed: the balances may change before it is sent.
+								</Callout>
+							),
+							"older-sends": COSTED.has(stage.phase) && (
+								<OlderSends proposal={proposal} />
+							),
+							// once nobody signs any more, how signatures are counted is moot
+							"signers-changed": stage.policyChanged &&
+								!CLOSED.has(stage.phase) && (
+									<Callout
+										tone="warning"
+										title="The signers changed since this was proposed"
+									>
+										Signatures are counted against the signers Hyperliquid
+										reports now, not the ones written in the proposal.
+									</Callout>
+								),
+							"not-saved": doc.storageError && (
+								<Callout tone="warning" title="Not saved in this browser">
+									{doc.storageError} The proposal stays on this page until you
+									close it; download the file to keep it.
+								</Callout>
+							),
+							sharing: doc.relay.issue && (
+								<Callout
+									tone={
+										doc.relay.issue.severity === "error" ? "danger" : "warning"
+									}
+									title={doc.relay.issue.message}
+								>
+									{doc.relay.issue.fix}
+								</Callout>
+							),
+							// what this browser refused to take from the relay's copy
+							"sharing-notes": relayNotes.map((n) => (
+								<Callout
+									key={n.code + n.message}
+									tone="warning"
+									title={n.message}
+								>
+									{n.fix}
+								</Callout>
+							)),
+						}}
+					/>
 
 					<div className="grid grid-cols-1 items-start gap-4 min-[861px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 						<div className="flex min-w-0 flex-col gap-4">
 							<Card title="Action">
-								<p className="text-balance text-[17px] font-medium [overflow-wrap:anywhere]">
-									{description.headline}
-								</p>
-								{(description.flags.length > 0 || !description.known) && (
-									<div className="mt-2 flex flex-wrap gap-1.5">
-										{description.flags.map((f) => (
-											<Tag
-												key={f}
-												tone={
-													FLAG_TEXT[f]?.tone === "danger"
-														? "danger"
-														: FLAG_TEXT[f]?.tone === "info"
-															? "info"
-															: "warn"
-												}
-											>
-												{FLAG_TEXT[f]?.label ?? f}
-											</Tag>
-										))}
-										{!description.known && <Tag>unknown action type</Tag>}
-									</div>
-								)}
-								<dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
+								<dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
 									{description.lines.map((line) => {
 										// a field and its value side by side; a sentence whole
 										const pair = labelledLine(line);
@@ -952,19 +990,25 @@ export function ProposalView({
 								)}
 							</Card>
 							{ACTIONABLE.has(stage.phase) && (
-								<YourPart
-									// what one wallet did ("Signature added", a refusal) is not
-									// said to the next one that connects
-									key={wallet.address ?? "nobody"}
-									proposal={proposal}
-									stage={stage}
-									wallet={wallet}
-									doc={doc}
-									have={ready?.have ?? 0}
-									need={ready?.need ?? null}
-									signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
-									now={clock}
-								/>
+								<div
+									ref={partRef}
+									tabIndex={-1}
+									className="scroll-mt-20 outline-none"
+								>
+									<YourPart
+										// what one wallet did ("Signature added", a refusal) is not
+										// said to the next one that connects
+										key={wallet.address ?? "nobody"}
+										proposal={proposal}
+										stage={stage}
+										wallet={wallet}
+										doc={doc}
+										have={ready?.have ?? 0}
+										need={ready?.need ?? null}
+										signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
+										now={clock}
+									/>
+								</div>
 							)}
 						</div>
 						<div className="flex min-w-0 flex-col gap-4">
@@ -1011,6 +1055,10 @@ export function ProposalView({
 							</div>
 						</div>
 					</details>
+					<ActionBar
+						label={ACTIONABLE.has(stage.phase) ? nextStepLabel(stage) : null}
+						target={partRef}
+					/>
 				</div>
 			</ShellPage>
 		</TreasuryNames>

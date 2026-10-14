@@ -43,7 +43,7 @@ export function Toaster(props: ToasterProps) {
 					cancelButton: "bg-muted text-muted-foreground",
 					error: "!border-destructive/50 !bg-destructive/10 !text-destructive",
 					success: "!border-emerald-500/40 !bg-emerald-500/10",
-					warning: "!border-amber-500/40 !bg-amber-500/10 !text-amber-500",
+					warning: "!border-warning/40 !bg-warning-soft !text-warning",
 				},
 			}}
 			{...props}

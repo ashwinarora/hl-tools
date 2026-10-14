@@ -3,7 +3,7 @@ import { cutTo } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, ExternalLink } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Callout, IssueList, type Tone } from "#/components/hub/status";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useNetwork } from "#/store/networkStore";
@@ -16,6 +16,7 @@ import {
 	type MovePhase,
 	moveSentence,
 } from "../model/move";
+import { copyNotesShown, nextStepLabel } from "../model/notices";
 import { refusalNote } from "../model/refusal";
 import { cancelNote, RELAY_COPY, signHint } from "../model/relay/copy";
 import { relayActions } from "../model/relay/status";
@@ -35,6 +36,7 @@ import {
 import type { RelayClient } from "../relay/client";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
+import { Heard } from "../shell/Heard";
 import { Help } from "../shell/Help";
 import {
 	Btn,
@@ -51,6 +53,7 @@ import { TreasuryStrip } from "../TreasuryStrip";
 import { useTreasuryNames } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
+import { ActionBar } from "./ActionBar";
 import {
 	finaliseMove,
 	type Outcome,
@@ -60,6 +63,7 @@ import {
 } from "./actions";
 import { CodePanel } from "./CodePanel";
 import { CopyNotes } from "./CopyNotes";
+import { Notices } from "./Notices";
 import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
@@ -230,6 +234,8 @@ export function MoveView({
 			s.doc.relay.row?.status === "open" &&
 			!s.doc.relay.expired,
 	);
+	// on a phone, the bar at the bottom brings this wallet's part into view
+	const partRef = useRef<HTMLDivElement>(null);
 	const relayIssues = [...issues[0], ...issues[1]].filter((i) =>
 		i.code.startsWith("relay."),
 	);
@@ -296,26 +302,38 @@ export function MoveView({
 					>
 						<Sentence parts={stage.detailParts} />
 					</Callout>
-					<CopyNotes notes={notes} />
-					{docs.map(
-						(d, i) =>
-							d.relay.issue && (
-								<Callout
-									key={steps[i]?.proposal.digest}
-									tone={
-										d.relay.issue.severity === "error" ? "danger" : "warning"
-									}
-									title={d.relay.issue.message}
-								>
-									{d.relay.issue.fix}
-								</Callout>
+					<Notices
+						items={{
+							"copy-notes": copyNotesShown(notes).length > 0 && (
+								<CopyNotes notes={notes} />
 							),
-					)}
-					{relayIssues.map((n) => (
-						<Callout key={n.code + n.message} tone="warning" title={n.message}>
-							{n.fix}
-						</Callout>
-					))}
+							sharing: docs.map(
+								(d, i) =>
+									d.relay.issue && (
+										<Callout
+											key={steps[i]?.proposal.digest}
+											tone={
+												d.relay.issue.severity === "error"
+													? "danger"
+													: "warning"
+											}
+											title={d.relay.issue.message}
+										>
+											{d.relay.issue.fix}
+										</Callout>
+									),
+							),
+							"sharing-notes": relayIssues.map((n) => (
+								<Callout
+									key={n.code + n.message}
+									tone="warning"
+									title={n.message}
+								>
+									{n.fix}
+								</Callout>
+							)),
+						}}
+					/>
 
 					<div className="grid grid-cols-1 items-start gap-4 min-[861px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 						<div className="flex min-w-0 flex-col gap-4">
@@ -369,13 +387,19 @@ export function MoveView({
 								/>
 							))}
 							{(!stage.settled || leftOpen) && (
-								<MovePart
-									// what one wallet did is not said to the next one that connects
-									key={wallet.address ?? "nobody"}
-									steps={steps}
-									signers={signersNow}
-									now={clock}
-								/>
+								<div
+									ref={partRef}
+									tabIndex={-1}
+									className="scroll-mt-20 outline-none"
+								>
+									<MovePart
+										// what one wallet did is not said to the next one that connects
+										key={wallet.address ?? "nobody"}
+										steps={steps}
+										signers={signersNow}
+										now={clock}
+									/>
+								</div>
 							)}
 						</div>
 						<div className="flex min-w-0 flex-col gap-4">
@@ -442,6 +466,20 @@ export function MoveView({
 							</p>
 						</div>
 					</details>
+					<ActionBar
+						label={
+							!stage.settled || leftOpen
+								? nextStepLabel({
+										canSign: stage.canSign,
+										canExecute: stage.canExecute,
+										executeAddsSignature: stage.toSend.some(
+											(i) => steps[i]?.stage.executeAddsSignature,
+										),
+									})
+								: null
+						}
+						target={partRef}
+					/>
 				</div>
 			</ShellPage>
 		</TreasuryNames>
@@ -1054,27 +1092,32 @@ function MovePart({
 					/>
 				</Callout>
 			)}
-			{outcome?.ok === true && (
-				<Callout tone="success" title="Signed" className="mt-3">
-					{steps[0].doc.relay.known
-						? "Your co-signers see it now."
-						: "Saved in this browser. Nobody else can see it yet: use Share below to send it to your co-signers."}
-				</Callout>
-			)}
-			{outcome?.ok === false && (
-				<Callout
-					tone="danger"
-					title="Not everything was signed"
-					className="mt-3"
-				>
-					<IssueList plain issues={outcome.issues} />
-				</Callout>
-			)}
-			{failure && (
-				<Callout tone="danger" title={failure.title} className="mt-3">
-					<IssueList plain issues={failure.issues} />
-				</Callout>
-			)}
+			<Heard
+				when={outcome ?? failure}
+				urgent={outcome?.ok === false || !!failure}
+			>
+				{outcome?.ok === true && (
+					<Callout tone="success" title="Signed" className="mt-3">
+						{steps[0].doc.relay.known
+							? "Your co-signers see it now."
+							: "Saved in this browser. Nobody else can see it yet: use Share below to send it to your co-signers."}
+					</Callout>
+				)}
+				{outcome?.ok === false && (
+					<Callout
+						tone="danger"
+						title="Not everything was signed"
+						className="mt-3"
+					>
+						<IssueList plain issues={outcome.issues} />
+					</Callout>
+				)}
+				{failure && (
+					<Callout tone="danger" title={failure.title} className="mt-3">
+						<IssueList plain issues={failure.issues} />
+					</Callout>
+				)}
+			</Heard>
 		</Card>
 	);
 }

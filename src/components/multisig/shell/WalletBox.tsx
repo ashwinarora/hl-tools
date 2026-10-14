@@ -94,7 +94,7 @@ export function useShellWallet() {
 /** "By signing in you agree to the Privacy Policy." */
 export function SmallPrint({ className }: { className?: string }) {
 	return (
-		<span className={cn("text-[11px] text-subtle-foreground", className)}>
+		<span className={cn("text-xs text-subtle-foreground", className)}>
 			{RELAY_COPY.smallPrintBefore}
 			<Link to="/privacy" className="text-brand underline underline-offset-2">
 				{RELAY_COPY.smallPrintLink}
@@ -169,6 +169,58 @@ function WalletLine({
 			</span>
 			{action}
 		</div>
+	);
+}
+
+/**
+ * The phone bar's one line: who is connected and in what state, with the
+ * full box one tap away (`MobileBar`). Says no more than the box does.
+ */
+export function WalletSummary() {
+	const w = useShellWallet();
+	const relay = useRelay();
+	const state = !w.mounted
+		? "…"
+		: relay.mode === "on"
+			? relay.channel === "joined"
+				? "signed in · live"
+				: relay.channel === "down"
+					? "signed in · reconnecting…"
+					: "signed in"
+			: relay.mode === "restoring"
+				? "checking your session…"
+				: relay.mode === "unreachable"
+					? "can't reach the sharing service"
+					: relay.mode === "signed-out"
+						? w.connected
+							? "not signed in"
+							: "no wallet connected"
+						: w.chainId !== null
+							? `on ${chainLabel(w.chainId)}`
+							: w.connected
+								? "connected"
+								: "no wallet connected";
+	return (
+		<span className="flex min-w-0 items-center gap-2">
+			<Avatar className="size-5" />
+			<span className="min-w-0 truncate text-[13px]">
+				{w.address && (
+					<span className="font-mono" title={w.address}>
+						{short(w.address)}
+						{" · "}
+					</span>
+				)}
+				<span
+					className={
+						relay.mode === "unreachable"
+							? "text-warning"
+							: "text-subtle-foreground"
+					}
+				>
+					{state}
+				</span>
+			</span>
+		</span>
 	);
 }
 

@@ -2,7 +2,14 @@ import { type Address, isNetwork, type Network } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Pencil } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { CopyButton } from "#/components/hub/CopyButton";
 import { Callout } from "#/components/hub/status";
 import {
@@ -34,7 +41,15 @@ import { useRequest, useTreasury } from "../relay/queries";
 import { useExecutionReporter } from "../relay/useExecutionReporter";
 import { useRelay } from "../relay/useRelay";
 import { Help } from "../shell/Help";
-import { Card, linkButton, NetTag, SignsTag, TabList, Tag } from "../shell/kit";
+import {
+	Card,
+	linkButton,
+	NetTag,
+	SignsTag,
+	TabList,
+	TabPanel,
+	Tag,
+} from "../shell/kit";
 import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
@@ -101,6 +116,7 @@ export function TreasuryScreen({
 	const navigate = useNavigate();
 	const queries = useQueryClient();
 	const markSeen = useMultisigPrefs((s) => s.markSeen);
+	const tabsId = useId();
 
 	const valid = isNetwork(rawNetwork) && ADDRESS_RE.test(rawAddress);
 	const network: Network = isNetwork(rawNetwork) ? rawNetwork : "mainnet";
@@ -520,6 +536,7 @@ export function TreasuryScreen({
 					<AwayNotice scope={awayScope} />
 				</div>
 				<TabList
+					id={tabsId}
 					label="Treasury sections"
 					value={tab}
 					onChange={setTab}
@@ -537,66 +554,68 @@ export function TreasuryScreen({
 						{ value: "chain", label: "On Hyperliquid" },
 					]}
 				/>
-				{tab === "overview" && (
-					<OverviewTab
-						network={network}
-						address={address}
-						state={live}
-						me={me}
-						treasury={treasury}
-						proposals={known.proposals}
-					/>
-				)}
-				{tab === "pending" && me && (
-					<PendingTab
-						items={pending}
-						loading={open.loading}
-						me={me}
-						frozen={frozen}
-						first={known.state === "ready" && known.proposals.length === 0}
-						network={network}
-						address={address}
-					/>
-				)}
-				{tab === "staking" && (
-					<StakingTab
-						network={network}
-						address={address}
-						state={live}
-						frozen={frozen}
-					/>
-				)}
-				{tab === "vaults" && (
-					<VaultsTab
-						network={network}
-						address={address}
-						state={live}
-						frozen={frozen}
-						canPropose={
-							!!me && (live.policy?.authorizedUsers ?? []).includes(me)
-						}
-						proposals={known.proposals}
-						proposalsState={known.state}
-						match={match}
-					/>
-				)}
-				{tab === "log" && (
-					<SigningLogTab
-						treasury={treasury}
-						me={me}
-						checkRecord={wants.record}
-					/>
-				)}
-				{tab === "chain" && (
-					<ChainTab
-						network={network}
-						address={address}
-						state={live}
-						proposals={known.proposals}
-						proposalsState={known.state}
-						match={match}
-					/>
-				)}
+				<TabPanel id={tabsId} value={tab}>
+					{tab === "overview" && (
+						<OverviewTab
+							network={network}
+							address={address}
+							state={live}
+							me={me}
+							treasury={treasury}
+							proposals={known.proposals}
+						/>
+					)}
+					{tab === "pending" && me && (
+						<PendingTab
+							items={pending}
+							loading={open.loading}
+							me={me}
+							frozen={frozen}
+							first={known.state === "ready" && known.proposals.length === 0}
+							network={network}
+							address={address}
+						/>
+					)}
+					{tab === "staking" && (
+						<StakingTab
+							network={network}
+							address={address}
+							state={live}
+							frozen={frozen}
+						/>
+					)}
+					{tab === "vaults" && (
+						<VaultsTab
+							network={network}
+							address={address}
+							state={live}
+							frozen={frozen}
+							canPropose={
+								!!me && (live.policy?.authorizedUsers ?? []).includes(me)
+							}
+							proposals={known.proposals}
+							proposalsState={known.state}
+							match={match}
+						/>
+					)}
+					{tab === "log" && (
+						<SigningLogTab
+							treasury={treasury}
+							me={me}
+							checkRecord={wants.record}
+						/>
+					)}
+					{tab === "chain" && (
+						<ChainTab
+							network={network}
+							address={address}
+							state={live}
+							proposals={known.proposals}
+							proposalsState={known.state}
+							match={match}
+						/>
+					)}
+				</TabPanel>
 			</ShellPage>
 		</TreasuryNames>
 	);

@@ -9,7 +9,7 @@ const current = "bg-surface-3 font-medium text-foreground";
 
 export function RailHeading({ children }: { children: ReactNode }) {
 	return (
-		<h3 className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-subtle-foreground">
+		<h3 className="mb-1.5 px-2.5 text-xs font-semibold uppercase tracking-[0.07em] text-subtle-foreground">
 			{children}
 		</h3>
 	);
@@ -50,7 +50,7 @@ export function RailLink({
 			<span className="min-w-0 flex-1">
 				<span className="block truncate">{children}</span>
 				{sub && (
-					<span className="block truncate font-mono text-[11px] text-subtle-foreground">
+					<span className="block truncate font-mono text-xs text-subtle-foreground">
 						{sub}
 					</span>
 				)}

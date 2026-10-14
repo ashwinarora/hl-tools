@@ -5,8 +5,16 @@
  * every screen. Sizes follow the approved mockup; colours are the hub's.
  */
 import type { Network } from "@hl-tools/core";
-import type { ComponentProps, ReactNode } from "react";
+import {
+	type ComponentProps,
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { Button } from "#/components/ui/button";
+import { tabsKeyDown } from "#/lib/tabs";
 import { cn } from "#/lib/utils";
 import { Help } from "./Help";
 
@@ -75,7 +83,7 @@ export function Tag({
 		<span
 			title={title}
 			className={cn(
-				"inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-px text-[11px] font-medium",
+				"inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-px text-xs font-medium",
 				TAG[tone],
 				className,
 			)}
@@ -89,7 +97,7 @@ export function NetTag({ network }: { network: Network }) {
 	return (
 		<span
 			className={cn(
-				"inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-px text-[11px] font-medium",
+				"inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-px text-xs font-medium",
 				network === "mainnet"
 					? "border-mainnet/40 text-mainnet"
 					: "border-testnet/40 text-testnet",
@@ -133,7 +141,7 @@ export function Count({
 	return (
 		<span
 			className={cn(
-				"inline-grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums",
+				"inline-grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-xs font-semibold tabular-nums",
 				quiet
 					? "bg-surface-3 text-muted-foreground"
 					: "bg-brand text-brand-foreground",
@@ -245,7 +253,10 @@ export function Btn({
 		<Button
 			size="sm"
 			className={cn(
-				size === "md" ? "h-[34px] px-3.5 text-[13px]" : "h-7 px-2.5 text-xs",
+				// a finger's width on a phone, the mockup's heights from `sm` up
+				size === "md"
+					? "h-11 px-3.5 text-[13px] sm:h-[34px]"
+					: "h-11 px-2.5 text-xs sm:h-7",
 				className,
 			)}
 			{...props}
@@ -255,48 +266,135 @@ export function Btn({
 
 /** The same look for a link that should read as a button. */
 export const linkButton =
-	"inline-flex h-[34px] items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-border-strong bg-surface px-3.5 text-[13px] font-medium no-underline transition-colors hover:bg-surface-2";
+	"inline-flex h-11 sm:h-[34px] items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-border-strong bg-surface px-3.5 text-[13px] font-medium no-underline transition-colors hover:bg-surface-2";
 export const linkButtonSm =
-	"inline-flex h-7 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-border-strong bg-surface px-2.5 text-xs font-medium no-underline transition-colors hover:bg-surface-2";
+	"inline-flex h-11 sm:h-7 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-border-strong bg-surface px-2.5 text-xs font-medium no-underline transition-colors hover:bg-surface-2";
 export const backLink =
-	"inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground no-underline transition-colors hover:bg-surface-2 hover:text-foreground";
+	"inline-flex h-11 sm:h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground no-underline transition-colors hover:bg-surface-2 hover:text-foreground";
 
-/** The tabs of a treasury page. `aria-selected` carries the state, as in the mockup. */
+/** The ids that tie a tab to its panel (`aria-controls`, `aria-labelledby`). */
+export const tabIds = (base: string, value: string) => ({
+	tab: `${base}-tab-${value}`,
+	panel: `${base}-panel-${value}`,
+});
+
+/**
+ * The tabs of a treasury page (WAI-ARIA APG): arrows, Home and End move
+ * between them, and only the selected one is in the tab order. Where the
+ * row is wider than the screen it scrolls, its edges fade where more tabs
+ * are hidden, and the selected tab is scrolled into view.
+ */
 export function TabList<T extends string>({
+	id,
 	label,
 	value,
 	tabs,
 	onChange,
 }: {
+	/** The base of the tabs' and panels' ids, shared with `TabPanel`. */
+	id: string;
 	label: string;
 	value: T;
 	tabs: readonly { value: T; label: ReactNode; count?: number }[];
 	onChange: (value: T) => void;
 }) {
+	const row = useRef<HTMLDivElement>(null);
+	const [more, setMore] = useState({ left: false, right: false });
+	const measure = useCallback(() => {
+		const el = row.current;
+		if (!el) return;
+		const left = el.scrollLeft > 1;
+		const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+		setMore((m) =>
+			m.left === left && m.right === right ? m : { left, right },
+		);
+	}, []);
+	useEffect(() => {
+		const el = row.current;
+		if (!el) return;
+		measure();
+		const seen = new ResizeObserver(measure);
+		seen.observe(el);
+		return () => seen.disconnect();
+	}, [measure]);
+	// the selected tab in view, also when a link opened the page on it
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `value` is when the selected tab changes
+	useEffect(() => {
+		row.current
+			?.querySelector<HTMLElement>('[aria-selected="true"]')
+			?.scrollIntoView({ block: "nearest", inline: "nearest" });
+	}, [value]);
+	const mask =
+		more.left || more.right
+			? `linear-gradient(to right, ${more.left ? "transparent, black 24px" : "black"}, ${more.right ? "black calc(100% - 24px), transparent" : "black"})`
+			: undefined;
 	return (
 		<div
+			ref={row}
 			role="tablist"
 			aria-label={label}
+			onScroll={measure}
+			onKeyDown={(e) =>
+				tabsKeyDown(
+					e,
+					tabs.map((t) => t.value),
+					value,
+					onChange,
+				)
+			}
+			style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
 			className="mb-4 flex gap-0.5 overflow-x-auto overflow-y-hidden border-b border-border [scrollbar-width:none]"
 		>
-			{tabs.map((t) => (
-				<button
-					key={t.value}
-					type="button"
-					role="tab"
-					aria-selected={t.value === value}
-					onClick={() => onChange(t.value)}
-					className={cn(
-						"inline-flex items-center gap-[7px] whitespace-nowrap border-b-2 px-3 py-[9px] text-sm transition-colors",
-						t.value === value
-							? "border-brand font-medium text-foreground"
-							: "border-transparent text-muted-foreground hover:text-foreground",
-					)}
-				>
-					{t.label}
-					{t.count ? <Count n={t.count} quiet /> : null}
-				</button>
-			))}
+			{tabs.map((t) => {
+				const ids = tabIds(id, t.value);
+				const selected = t.value === value;
+				return (
+					<button
+						key={t.value}
+						id={ids.tab}
+						type="button"
+						role="tab"
+						aria-selected={selected}
+						aria-controls={ids.panel}
+						tabIndex={selected ? 0 : -1}
+						onClick={() => onChange(t.value)}
+						className={cn(
+							"inline-flex min-h-11 items-center gap-[7px] whitespace-nowrap border-b-2 px-3 py-[9px] text-sm transition-colors sm:min-h-0",
+							selected
+								? "border-brand font-medium text-foreground"
+								: "border-transparent text-muted-foreground hover:text-foreground",
+						)}
+					>
+						{t.label}
+						{t.count ? <Count n={t.count} quiet /> : null}
+					</button>
+				);
+			})}
+		</div>
+	);
+}
+
+/** The panel of the selected tab: labelled by it, and reachable with Tab from the row. */
+export function TabPanel({
+	id,
+	value,
+	children,
+}: {
+	id: string;
+	value: string;
+	children: ReactNode;
+}) {
+	const ids = tabIds(id, value);
+	return (
+		<div
+			role="tabpanel"
+			id={ids.panel}
+			aria-labelledby={ids.tab}
+			// biome-ignore lint/a11y/noNoninteractiveTabindex: the APG pattern: a panel takes the focus after its tab
+			tabIndex={0}
+			className="outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-md"
+		>
+			{children}
 		</div>
 	);
 }

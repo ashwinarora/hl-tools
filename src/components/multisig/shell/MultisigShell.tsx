@@ -1,6 +1,6 @@
 import type { Address, Network } from "@hl-tools/core";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ArrowUpRight, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ShieldCheck } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { Callout } from "#/components/hub/status";
 import { tool, toolRuleSets, toolVerifiedAt } from "#/lib/tools";
@@ -29,7 +29,8 @@ import { useRelay } from "../relay/useRelay";
 import { useTreasuryNames } from "../treasuryName";
 import { Btn, Count, Tag } from "./kit";
 import { Rail, RailHeading, RailLink } from "./Rail";
-import { WalletBox } from "./WalletBox";
+import { BelowTitleProvider } from "./ShellPage";
+import { WalletBox, WalletSummary } from "./WalletBox";
 
 /**
  * The Multisig section's own frame inside the hub: the hub's top bar stays,
@@ -76,9 +77,16 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 					{relay.mode === "on" && <NetworkHint />}
 					{relay.mode === "on" && <AwayKeeper />}
 					{relay.mode === "on" && <TitleCount />}
-					<MobileBar />
-					<FirstUse />
-					{children}
+					<BelowTitleProvider
+						value={
+							<>
+								<MobileBar />
+								<FirstUse />
+							</>
+						}
+					>
+						{children}
+					</BelowTitleProvider>
 					<ShellFoot />
 				</main>
 			</div>
@@ -239,11 +247,11 @@ function MobileSwitcher() {
 						params: { network: nav.network, address: v },
 					});
 			}}
-			className="h-9 w-full min-w-0 rounded-md border border-border-strong bg-surface px-2.5 text-sm"
+			className="h-11 w-full min-w-0 rounded-md border border-border-strong bg-surface px-2.5 text-sm sm:h-9"
 		>
 			{here === "__other" && <option value="__other">Go to…</option>}
 			<option value="">
-				Needs you ({nav.needs}){nav.unread ? " · changes" : ""}
+				Needs you ({nav.needs}){nav.unread ? " · something changed" : ""}
 			</option>
 			{nav.treasuries.map((t) => (
 				<option key={t.address} value={t.address}>
@@ -252,7 +260,7 @@ function MobileSwitcher() {
 						? `${t.threshold} of ${t.signers.length}`
 						: "no longer a multi-sig"}
 					{t.needs > 0 ? ` · ${t.needs} need you` : ""}
-					{t.unread ? " · changed" : ""}
+					{t.unread ? " · something changed" : ""}
 				</option>
 			))}
 			<option value="__create">+ {CREATE.title}</option>
@@ -296,30 +304,51 @@ function TitleCount() {
 	return null;
 }
 
-/** Below the rail's breakpoint the identity box sits above the screen, with the way to links and files. */
+/**
+ * Below the rail's breakpoint, one line under the page's title: who is
+ * connected and in what state. The rail's contents (the wallet box, the way
+ * to every treasury, links and files) are behind "Menu", which closes again
+ * when the page changes.
+ */
 function MobileBar() {
 	const relay = useRelay();
+	const path = useRouterState({ select: (s) => s.location.pathname });
 	return (
-		<div className="mb-4 flex flex-col gap-2 min-[861px]:hidden">
-			<WalletBox />
-			{relay.mode === "on" && <MobileSwitcher />}
-			<span className="flex flex-wrap justify-end gap-x-4 gap-y-1 self-end">
-				{relay.mode === "off" && (
+		<details
+			key={path}
+			className="group mb-4 rounded-[10px] border border-border bg-surface min-[861px]:hidden"
+		>
+			<summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 [&::-webkit-details-marker]:hidden">
+				<WalletSummary />
+				<span className="flex shrink-0 items-center gap-1 text-[13px] font-medium text-muted-foreground">
+					Menu
+					<ChevronDown
+						className="size-4 transition-transform group-open:rotate-180"
+						aria-hidden
+					/>
+				</span>
+			</summary>
+			<div className="flex flex-col gap-2 border-t border-border p-3">
+				<WalletBox />
+				{relay.mode === "on" && <MobileSwitcher />}
+				<span className="flex flex-wrap gap-x-4 gap-y-1">
+					{relay.mode === "off" && (
+						<Link
+							to="/multisig/create"
+							className="inline-flex min-h-11 items-center text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+						>
+							{CREATE.title}
+						</Link>
+					)}
 					<Link
-						to="/multisig/create"
-						className="text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+						to="/multisig/open"
+						className="inline-flex min-h-11 items-center text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
 					>
-						{CREATE.title}
+						Open or start a proposal
 					</Link>
-				)}
-				<Link
-					to="/multisig/open"
-					className="text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
-				>
-					Open or start a proposal
-				</Link>
-			</span>
-		</div>
+				</span>
+			</div>
+		</details>
 	);
 }
 

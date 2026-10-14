@@ -5,8 +5,9 @@ import { Help } from "./Help";
 import { ago } from "./kit";
 
 /**
- * "Checked 2 minutes ago", with a way to check now. One per box whose figures
+ * "Updated 2 minutes ago", with a way to check now. One per box whose figures
  * are asked for and not pushed: who controls the account, and its staking.
+ * How often it is asked again is the help text's to say.
  */
 export function Checked({
 	observedAt,
@@ -39,7 +40,7 @@ export function Checked({
 							: "Not read yet."
 					: failed
 						? `The last check failed. Shown as read ${ago(observedAt, now)}.`
-						: `Checked ${ago(observedAt, now)} · again every minute while this page is open`}
+						: `Updated ${ago(observedAt, now)}`}
 				<Help k={help} />
 			</span>
 			<button
@@ -48,7 +49,7 @@ export function Checked({
 				disabled={checking}
 				aria-label={`Check ${what} again now`}
 				title="Check again now"
-				className="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-60"
+				className="inline-flex size-11 items-center justify-center rounded sm:size-6 text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-60"
 			>
 				<RefreshCw
 					className={cn("size-3.5", checking && "animate-spin")}

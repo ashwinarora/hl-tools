@@ -34,6 +34,7 @@ import {
 } from "../model/stage";
 import { untilWords } from "../model/time";
 import { Sentence } from "../names/Sentence";
+import { Heard } from "../shell/Heard";
 import { Help } from "../shell/Help";
 import { Btn, Card, Tag } from "../shell/kit";
 import { When } from "../shell/live";
@@ -87,6 +88,8 @@ export function YourPart({
 	const [outcome, setOutcome] = useState<Outcome | null>(null);
 	const [steps, setSteps] = useState<Record<StepId, StepState> | null>(null);
 	const [failure, setFailure] = useState<readonly Issue[] | null>(null);
+	/** Hyperliquid's answer to this page's own send: accepted, or not. */
+	const [sent, setSent] = useState<boolean | null>(null);
 	const [confirm, setConfirm] = useState(false);
 	const [finishing, setFinishing] = useState(false);
 	// the wallet answered that it lacks the signing network: the code panel offers to add it
@@ -149,6 +152,7 @@ export function YourPart({
 	const doSubmit = async () => {
 		setOutcome(null);
 		setFailure(null);
+		setSent(null);
 		setSteps(FRESH);
 		setFinishing(true);
 		const result = await finalise({
@@ -164,9 +168,13 @@ export function YourPart({
 			return;
 		}
 		setNeedsNetwork(false);
-		if (!result.ok) setFailure(result.issues);
+		if (!result.ok) {
+			setFailure(result.issues);
+			return;
+		}
+		setSent(result.accepted);
 		// a staking step that went through changed what the treasury has in staking
-		else if (result.accepted && stakingActionOf(proposal.payload.action))
+		if (result.accepted && stakingActionOf(proposal.payload.action))
 			void refreshStaking(
 				queries,
 				proposal.payload.network,
@@ -501,23 +509,48 @@ export function YourPart({
 					<Sentence parts={cancelNote(stage.window.validUntil)} />
 				</Callout>
 			)}
-			{outcome?.ok === true && (
-				<Callout tone="success" title="Signature added" className="mt-3">
-					{doc.relay.known
-						? "Your co-signers see it now."
-						: "Saved in this browser. Nobody else can see it yet: use Share below to send it to your co-signers."}
-				</Callout>
-			)}
-			{outcome?.ok === false && (
-				<Callout tone="danger" title="Not signed" className="mt-3">
-					<IssueList plain issues={outcome.issues} />
-				</Callout>
-			)}
-			{failure && (
-				<Callout tone="danger" title="Not sent" className="mt-3">
-					<IssueList plain issues={failure} />
-				</Callout>
-			)}
+			<Heard
+				when={outcome ?? failure ?? sent}
+				urgent={outcome?.ok === false || !!failure || sent === false}
+			>
+				{outcome?.ok === true && (
+					<Callout tone="success" title="Signature added" className="mt-3">
+						{doc.relay.known
+							? "Your co-signers see it now."
+							: "Saved in this browser. Nobody else can see it yet: use Share below to send it to your co-signers."}
+					</Callout>
+				)}
+				{outcome?.ok === false && (
+					<Callout tone="danger" title="Not signed" className="mt-3">
+						<IssueList plain issues={outcome.issues} />
+					</Callout>
+				)}
+				{failure && (
+					<Callout tone="danger" title="Not sent" className="mt-3">
+						<IssueList plain issues={failure} />
+					</Callout>
+				)}
+				{sent === true && (
+					<Callout
+						tone="success"
+						title="Sent · accepted by Hyperliquid"
+						className="mt-3"
+					>
+						The top of this page shows it against Hyperliquid's record in a
+						moment.
+					</Callout>
+				)}
+				{sent === false && (
+					<Callout
+						tone="danger"
+						title="Sent · refused by Hyperliquid"
+						className="mt-3"
+					>
+						Its reason is at the top of this page. A refused proposal cannot be
+						sent again: propose it again.
+					</Callout>
+				)}
+			</Heard>
 		</Card>
 	);
 }

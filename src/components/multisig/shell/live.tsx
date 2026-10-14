@@ -97,7 +97,7 @@ export function LiveBadge({
 			)}
 			<output
 				title={s.title}
-				className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface px-2 py-px text-[11px] font-medium text-muted-foreground"
+				className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface px-2 py-px text-xs font-medium text-muted-foreground"
 			>
 				<span
 					aria-hidden

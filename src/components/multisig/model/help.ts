@@ -112,7 +112,7 @@ export const HELP = {
 		body: "Balances, positions and orders are pushed by Hyperliquid as they change, so there is no need to reload. If the connection drops, the badge says so and the page reconnects by itself.",
 	},
 	checked: {
-		title: "Checked a moment ago",
+		title: "Updated a moment ago",
 		body: "Signers, API wallets and how the account keeps its money are read from Hyperliquid once a minute while this page is open. The round arrow reads them again at once.",
 	},
 	staking: {

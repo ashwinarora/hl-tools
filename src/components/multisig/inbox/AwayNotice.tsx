@@ -1,7 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { ChevronDown } from "lucide-react";
+import { useId, useMemo } from "react";
 import { toast } from "sonner";
 import { Callout } from "#/components/hub/status";
+import { useMultisigPrefs, usePrefsHydrated } from "#/store/multisigPrefsStore";
 import {
 	type AwayGroup,
 	type AwayScope,
@@ -103,6 +105,11 @@ function Lines({ group }: { group: AwayGroup }) {
 export function AwayNotice({ scope }: { scope: AwayScope }) {
 	const away = useAway(scope);
 	const nameOf = useTreasuryNames();
+	// folded or not is the reader's, remembered in this browser for every page that has it
+	const hydrated = usePrefsHydrated();
+	const folded = useMultisigPrefs((s) => s.awayFolded) && hydrated;
+	const setFolded = useMultisigPrefs((s) => s.setAwayFolded);
+	const bodyId = useId();
 	const single = typeof scope === "object";
 	const groups = away.groups;
 	const others = scope === "all" && away.notChecked > 0;
@@ -135,8 +142,23 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 		>
 			<header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
 				<h2 className="flex flex-wrap items-center gap-x-1.5 text-sm font-semibold">
-					{RELAY_COPY.awayTitle}
+					<button
+						type="button"
+						aria-expanded={!folded}
+						aria-controls={bodyId}
+						onClick={() => setFolded(!folded)}
+						className="-mx-1 inline-flex min-h-11 items-center gap-1 rounded px-1 hover:text-foreground sm:min-h-0"
+					>
+						<ChevronDown
+							className={`size-4 transition-transform ${folded ? "-rotate-90" : ""}`}
+							aria-hidden
+						/>
+						{RELAY_COPY.awayTitle}
+					</button>
 					<span className="font-normal text-subtle-foreground">
+						{folded
+							? `· ${groups.reduce((n, g) => n + g.items.length, 0)} to read`
+							: null}{" "}
 						· since <When at={since} />
 					</span>
 					<Help k="away" />
@@ -161,67 +183,69 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 					</Btn>
 				)}
 			</header>
-			{away.issue && (
-				<p className="border-b border-border px-4 py-2 text-xs text-warning">
-					{away.issue.message} {away.issue.fix}
-				</p>
-			)}
-			{groups.map((g) => (
-				<div
-					key={`${g.network}:${g.treasury}`}
-					className="border-t border-border px-4 py-3 first-of-type:border-t-0"
-				>
-					{!single && (
-						<div className="mb-1.5 flex items-center justify-between gap-2.5">
-							<Link
-								to="/multisig/t/$network/$address"
-								params={{ network: g.network, address: g.treasury }}
-								className="min-w-0 truncate text-[13px] font-semibold text-foreground no-underline hover:underline"
+			<div id={bodyId} hidden={folded}>
+				{away.issue && (
+					<p className="border-b border-border px-4 py-2 text-xs text-warning">
+						{away.issue.message} {away.issue.fix}
+					</p>
+				)}
+				{groups.map((g) => (
+					<div
+						key={`${g.network}:${g.treasury}`}
+						className="border-t border-border px-4 py-3 first-of-type:border-t-0"
+					>
+						{!single && (
+							<div className="mb-1.5 flex items-center justify-between gap-2.5">
+								<Link
+									to="/multisig/t/$network/$address"
+									params={{ network: g.network, address: g.treasury }}
+									className="min-w-0 truncate text-[13px] font-semibold text-foreground no-underline hover:underline"
+								>
+									{nameOf(g.network, g.treasury)}
+								</Link>
+								<Btn
+									size="sm"
+									variant="outline"
+									disabled={away.busy}
+									onClick={() => void gotIt([g], RELAY_COPY.awayGotIt)}
+								>
+									Got it
+								</Btn>
+							</div>
+						)}
+						<NamesFor network={g.network} treasury={g.treasury}>
+							<ul className="flex flex-col gap-1.5">
+								<Lines group={g} />
+								{g.items.length > SHOWN && (
+									<li className="text-xs text-muted-foreground">
+										and {g.items.length - SHOWN} more, in the{" "}
+										<Link
+											to="/multisig/t/$network/$address"
+											params={{ network: g.network, address: g.treasury }}
+											search={{ tab: "log" }}
+											className="underline underline-offset-2"
+										>
+											Signing log
+										</Link>
+									</li>
+								)}
+							</ul>
+						</NamesFor>
+						{g.chain !== "checked" && (
+							<p
+								className={`mt-2 text-xs ${g.chain === "failed" || g.chain === "partly" ? "text-warning" : "text-subtle-foreground"}`}
 							>
-								{nameOf(g.network, g.treasury)}
-							</Link>
-							<Btn
-								size="sm"
-								variant="outline"
-								disabled={away.busy}
-								onClick={() => void gotIt([g], RELAY_COPY.awayGotIt)}
-							>
-								Got it
-							</Btn>
-						</div>
-					)}
-					<NamesFor network={g.network} treasury={g.treasury}>
-						<ul className="flex flex-col gap-1.5">
-							<Lines group={g} />
-							{g.items.length > SHOWN && (
-								<li className="text-xs text-muted-foreground">
-									and {g.items.length - SHOWN} more, in the{" "}
-									<Link
-										to="/multisig/t/$network/$address"
-										params={{ network: g.network, address: g.treasury }}
-										search={{ tab: "log" }}
-										className="underline underline-offset-2"
-									>
-										Signing log
-									</Link>
-								</li>
-							)}
-						</ul>
-					</NamesFor>
-					{g.chain !== "checked" && (
-						<p
-							className={`mt-2 text-xs ${g.chain === "failed" || g.chain === "partly" ? "text-warning" : "text-subtle-foreground"}`}
-						>
-							{CHAIN_LINE[g.chain]}
-						</p>
-					)}
-				</div>
-			))}
-			{others && (
-				<p className="border-t border-border px-4 py-2 text-xs text-subtle-foreground">
-					{RELAY_COPY.awayOthers}
-				</p>
-			)}
+								{CHAIN_LINE[g.chain]}
+							</p>
+						)}
+					</div>
+				))}
+				{others && (
+					<p className="border-t border-border px-4 py-2 text-xs text-subtle-foreground">
+						{RELAY_COPY.awayOthers}
+					</p>
+				)}
+			</div>
 		</section>
 	);
 }
