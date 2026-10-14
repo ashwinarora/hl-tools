@@ -1734,6 +1734,98 @@ So Hyperliquid reads a request, writes the inner action out in its own form and 
 - A copy that says "accepted" is not compared with Hyperliquid's record: a page shows "As reported by the finaliser's browser. The ledger is the proof." under it and no more. Only a reported refusal is checked, because that is the answer that makes a team pay twice.
 - A reported refusal can be compared only for actions that leave a row in the ledger and are still among the account's newest 300 transactions (or for which a single look-up answers). For the others the page says what the finaliser's page recorded and to look before proposing again.
 
+## 21. Multisig: the pre-launch fixes from the QA campaign (2026-10-14)
+
+Another session tested the section for mainnet readiness and compared it with HyperSig: four bugs (R1 to R4), a high read rate (P1), 37 smaller points (U1 to U37, C2) and 65 wording points. The owner and the building session went through all of it and decided each one; this section is what was built and checked, in eight commits on `feat/multisig-live`. Nothing here touched mainnet; the browser checks ran on testnet in Brave with Rabby, on the dev server with the signing network's stand-in on :3337.
+
+### Automated suites
+
+| Suite | Command | Result |
+|---|---|---|
+| Core and app unit tests | `bun --bun run test` | 129 files, 3,330 tests, all passing |
+| Core coverage | `bunx vitest run --coverage` in `packages/hl-core` | 41 files, 1,683 tests; 100 % of lines, branches, functions and statements |
+| Database | `bun run db:test` | 1,015 assertions, all passing (no migration in this round) |
+| Advisors | `supabase db advisors --local` | no issues |
+| Relay integration | `bun run test:relay` | 78 tests, all passing |
+| Types, lint, build | `bunx tsc --noEmit`, `bun --bun run check`, `bun --bun run build` | clean |
+
+New tests: `model/relay/serial.test.ts` (one push at a time), `model/chain/record.test.ts` and `recordCopy.test.ts` (Hyperliquid's record, replaying `fixtures/multisig/explorer-record.json`), `jargon.test.ts` (every sentence on the section's screens against the jargon list), `src/lib/tabs.test.ts`, `model/notices.test.ts`, `store/multisigPrefsStore.test.ts`, `model/guide.test.ts`, `src/lib/download.test.ts`, `model/chain/csv.test.ts`, and the withdrawal row in core `wsAccount.test.ts` (replaying `fixtures/multisig/unified-withdrawal.json`, measured on mainnet by the QA run).
+
+### The proposal page follows storage, with one push path (R2, R1, P1, U28, U29, U33)
+
+| Check | Before | After |
+|---|---|---|
+| R2: two tabs on one proposal, the second signature made in the other tab after a wallet switch | the first tab stayed on "1 of 2" until reloaded | it turned "Ready · 2 of 2 signatures" with no reload |
+| R1: signing as the second signer | two signature writes, the second answered 409 Conflict | one write, no 409 |
+| P1: an open proposal page, idle | 21 relay reads on load, 3 in the next idle minute (the 60-second read of open proposals) | not counted again; by design, a tab coming back into view no longer reads anything while the live channel is joined |
+| P1: one signature, start to settled | 36 relay requests in 44 s (proposals 15, views 4, events 6, signatures 2, treasuries 3, nicknames 3, read marks 3) | 21 in 40 s (proposals 10, views 3, events 4, signatures 1, treasuries 1, nicknames 1, read marks 1) |
+| U28: a second `#share=` link pasted into the same tab | the old proposal stayed | the new one opens and the fragment is stripped |
+| U29: a link opened with `window.open`, and a click from the inbox | could stay on "Opening the proposal…" | opens at once; a request that does not answer within 10 s ends, and "This is taking longer than it should" offers a way out |
+
+### Hyperliquid's record on accepted proposals (R3)
+
+| Case | Seen |
+|---|---|
+| A testnet send accepted by Hyperliquid | "On Hyperliquid's record. Carried out 14 Oct 2026, 02:29. Transaction" |
+| A copy whose refusal was edited to "accepted", opened by link in an isolated context | red: "Refused on Hyperliquid's record: Insufficient balance for withdrawal" |
+| The same, with the explorer's list stubbed empty | amber, never folded: "Not on Hyperliquid's record" |
+| Signing log of the test treasury | every accepted entry, both steps of each move included, tagged "on Hyperliquid's record", from one explorer request for the page |
+
+Measured for it on five lab multi-sigs: a mode switch is listed with its one-letter code; an envelope refused for its outer signature is not listed at all; a refused execution is listed with its `error`.
+
+### The remaining bugs (R4, U12, U6, U21, U22, U24, C2, U27 and the rest)
+
+| Case | Seen |
+|---|---|
+| R4: a proposal on a treasury reported as unified (read stubbed) | no Sign button; "Cannot be sent while the treasury is a unified account." in Your part |
+| U24: a 100,000 USDC withdrawal proposal | "Hyperliquid would refuse this as things stand: This sends 100000 USDC, and the treasury can move 2 from its perps balance right now." |
+| C2, U35: a withdrawal numbered after a waiting send | "An older USDC send is still waiting", on the form and on the page |
+| U22: a newer send | "Sending this first shuts out 2 older …", for every signer |
+| U16, U10: the withdraw form | no "required" message before a field is left; Create off with the reason beside it |
+| U21: inbox | "cannot be finished: refused", "…: a later send went first" |
+| U6, U12, U27, U8 and the messages of 3k | by their tests; U6 and U12 by reading the screens after a wallet switch |
+
+All test proposals of these checks were cancelled afterwards; none was sent.
+
+### Phone and accessibility
+
+| Check | Seen |
+|---|---|
+| Proposal page at 375×812, a signer who can sign | title first, one-line wallet bar, status, summary, the stop notice open, then the action; a bar at the bottom "Sign ▾" that brings "Your part" into view under the sticky header and hides while it is on screen; no bar for a signer who has signed, none at 1440×900 |
+| Notes fold | with the proposal reads to the sharing service refused: "1 note", opening to "The sharing service could not be reached. Links and files still work." |
+| Light theme at both sizes | right colours; amber text oklch(0.48 0.13 70), 5.9:1 on the page; `theme-color` "#f9fafb" in light (one tag, written by the theme script: the router keeps one tag per name) |
+| Treasury tabs at 375 | ArrowLeft from Overview wraps to "On Hyperliquid", focus follows, the row scrolls with a faded edge; Home goes back; the tree has six tabs, one focusable, and a tabpanel named by its tab |
+| Network switch with mainnet selected | radio "Testnet" with the description "Something needs you on testnet."; its name stays "Testnet" |
+| "While you were away" | folded, still folded after a reload, opened again |
+| "Updated … ago" | "Updated just now"; the refresh button 24 px on a desktop, 44 px on a phone |
+| Console | nothing of the app's (only the wallet extensions' own messages) |
+
+### Newcomers
+
+| Check | Seen |
+|---|---|
+| `/multisig` with no wallet (isolated context) | "How this works" in six numbered steps with "Words used here"; the two cards; "Create a treasury" and "Look at a treasury" (the inspector, `?view=account`); "Hide this" hides the card, still hidden after a reload |
+| `/multisig/glossary` at 375 | 18 terms, the expert's word beside two; linked from the footer |
+| The propose form | "Convert back" after "Change signers"; each switches to the other cleanly |
+| Signers pasted on separate lines | both added as two signers (the paste box reads the pasted text itself; a dispatched paste event, since CDP's key press does not paste) |
+| A proposal the reader can sign, card not hidden | one line: "You have been asked to sign…" with "Got it" |
+
+### Features
+
+| Check | Seen |
+|---|---|
+| A testnet bridge withdrawal's row | "−1 USDC, arrives · 2 requested, fee 1 USDC", beside its proposal "withdraw 2 USDC" |
+| Download CSV, Transfers (download intercepted in the page) | `hl-transfers-testnet-…-2026-10-14.csv`: the withdrawal as `-1,USDC,1.0,USDC,2,<hash>,<proposal>`, a vault withdrawal as `likely <proposal>` |
+| Download CSV, Signing log | first bytes EF BB BF; header `Time (UTC),What happened,Proposal,Hyperliquid's record`; oldest first; addresses whole |
+| The whole figure on hover | "1.99 USDC" → 1.996729; table cells 1.99 → 1.996762 and -0.003237 → -0.0032378497; a figure that lost nothing to the cut has no title |
+
+### Limits
+
+- Phone wallets and WalletConnect are out of this round; the section offers only the wallets in the browser.
+- The bottom bar on a phone brings the reader's part into view; it never signs by itself.
+- The CSV holds the rows the page has loaded: the Signing log's loaded pages, and the "On Hyperliquid" lists as Hyperliquid sent them (the newest trades and orders, then every new one).
+- Hosting and launch work (headers, the faucet miner's origin, production env) come after this round.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
