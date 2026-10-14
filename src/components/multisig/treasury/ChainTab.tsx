@@ -52,7 +52,8 @@ const LISTS: readonly {
 		part: "ledger",
 		more: "transferHistory",
 		about: "Deposits, withdrawals and transfers, as Hyperliquid lists them.",
-		empty: "No transfers yet.",
+		empty:
+			"No deposits, withdrawals or transfers yet. Send USDC to this treasury's address on Hyperliquid to fund it.",
 	},
 	{
 		id: "trades",

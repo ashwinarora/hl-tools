@@ -155,10 +155,10 @@ describe("what the notice says is being done about a difference", () => {
 	});
 	it("says the relay was asked only of an ask that got through", () => {
 		expect(recheckLine(state())).toBe(
-			"The relay has been asked to look again; this page updates by itself.",
+			"The sharing service has been asked to look again; this page updates by itself.",
 		);
 		expect(recheckLine(state({ checking: true }))).toBe(
-			"The relay is looking it up now.",
+			"The sharing service is checking this treasury on Hyperliquid now…",
 		);
 	});
 	it("says why an ask did not get through, and that the asking has stopped", () => {
@@ -169,7 +169,7 @@ describe("what the notice says is being done about a difference", () => {
 			"The copy could not be brought up to date. The relay could not be reached.",
 		);
 		expect(recheckLine(state({ gaveUp: true }))).toBe(
-			`The relay was asked ${RECHECK_MAX} times and its copy still differs. It may not be reaching Hyperliquid right now.`,
+			`The sharing service was asked ${RECHECK_MAX} times and its copy of the signers still differs from Hyperliquid's. It may not be reaching Hyperliquid right now; try again later.`,
 		);
 		// a refusal says more than "asked six times"
 		expect(recheckLine(state({ gaveUp: true, refused: "No." }))).toContain(
@@ -190,7 +190,7 @@ describe("what the notice says is being done about a difference", () => {
 		expect(requestRefusal({ status: "pending", reason: null })).toBeNull();
 		expect(requestRefusal({ status: "done", reason: null })).toBeNull();
 		expect(requestRefusal({ status: "failed", reason: "lookup_failed" })).toBe(
-			"The relay could not reach Hyperliquid for this lookup. Try again in a minute.",
+			"The sharing service could not reach Hyperliquid for this look-up. Try again in a minute.",
 		);
 		expect(requestRefusal({ status: "rejected", reason: null })).toBe(
 			"The relay refused the request.",

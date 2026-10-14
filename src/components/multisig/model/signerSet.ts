@@ -15,6 +15,7 @@
 import {
 	type Address,
 	checksumMismatch,
+	isSystemAddress,
 	isZeroAddress,
 	nonceWindow,
 	type Policy,
@@ -59,13 +60,16 @@ export interface Pasted {
 	readonly addresses: readonly string[];
 	/** What was there and is not an address. */
 	readonly rejected: readonly string[];
+	/** Addresses the paste held more than once, as first typed: kept once, and said. */
+	readonly repeated: readonly string[];
 }
 
 /** One address or many, separated by anything a chat or a spreadsheet puts between them. */
 export function parsePasted(text: string): Pasted {
 	const addresses: string[] = [];
 	const rejected: string[] = [];
-	const seen = new Set<string>();
+	const repeated: string[] = [];
+	const seen = new Map<string, string>();
 	for (const raw of text.split(/[\s,;|]+/)) {
 		const token = raw.replace(/^[("'[<]+|[)"'\]>.:]+$/g, "");
 		if (!token) continue;
@@ -74,20 +78,24 @@ export function parsePasted(text: string): Pasted {
 			continue;
 		}
 		const key = token.toLowerCase();
-		if (seen.has(key)) continue;
-		seen.add(key);
+		const first = seen.get(key);
+		if (first !== undefined) {
+			if (!repeated.includes(first)) repeated.push(first);
+			continue;
+		}
+		seen.set(key, token);
 		addresses.push(token);
 	}
-	return { addresses, rejected };
+	return { addresses, rejected, repeated };
 }
 
 export interface Added {
 	/** The list afterwards, as typed. */
 	readonly entries: readonly string[];
-	/** Already in the list: an address is a signer once. */
-	readonly duplicates: number;
-	/** Left out because the list was full. */
-	readonly overMax: number;
+	/** Already in the list, as pasted: an address is a signer once. */
+	readonly duplicates: readonly string[];
+	/** Left out because the list was full, as pasted. */
+	readonly overMax: readonly string[];
 }
 
 /** Put pasted addresses into the list: no address twice, never more than ten. */
@@ -97,16 +105,16 @@ export function addEntries(
 ): Added {
 	const out = [...entries];
 	const have = new Set(out.map((e) => e.toLowerCase()));
-	let duplicates = 0;
-	let overMax = 0;
+	const duplicates: string[] = [];
+	const overMax: string[] = [];
 	for (const a of pasted) {
 		const key = a.toLowerCase();
 		if (have.has(key)) {
-			duplicates += 1;
+			duplicates.push(a);
 			continue;
 		}
 		if (out.length >= SIGNERS_MAX) {
-			overMax += 1;
+			overMax.push(a);
 			continue;
 		}
 		have.add(key);
@@ -183,11 +191,17 @@ export interface SignerRow {
 	readonly recheck: boolean;
 }
 
+/** An address nobody holds the key of: the zero address, and HyperEVM's own system addresses. */
+export const isKeyless = (address: string): boolean =>
+	isZeroAddress(address) || isSystemAddress(address);
+
 function addedLines(
 	typed: string,
 	address: Address,
 	self: Address,
 	check: SignerCheck | undefined,
+	/** The first conversion of the account; otherwise a change of an existing treasury's signers. */
+	converting: boolean,
 ): { lines: Line[]; pending: boolean; recheck: boolean } {
 	const lines: Line[] = [];
 	let recheck = false;
@@ -196,7 +210,9 @@ function addedLines(
 			line(
 				"blocked",
 				"signer.self",
-				"This is the account being converted. An account cannot be its own signer.",
+				converting
+					? "This is the account being converted. An account cannot be its own signer."
+					: "This is the treasury itself. An account cannot be its own signer.",
 			),
 		);
 	}
@@ -216,6 +232,14 @@ function addedLines(
 				"warning",
 				"signer.zero",
 				"This is the zero address. Nobody holds its key, so it can never sign.",
+			),
+		);
+	} else if (isSystemAddress(address)) {
+		lines.push(
+			line(
+				"warning",
+				"signer.system",
+				"This is one of HyperEVM's own addresses. Nobody holds its key, so it can never sign.",
 			),
 		);
 	}
@@ -320,7 +344,13 @@ export function signerRows(input: {
 			});
 			continue;
 		}
-		const a = addedLines(typed, address, self, input.checks.get(address));
+		const a = addedLines(
+			typed,
+			address,
+			self,
+			input.checks.get(address),
+			input.current == null,
+		);
 		const lines = [...a.lines].sort((x, y) => ORDER[x.level] - ORDER[y.level]);
 		const level = worst(lines);
 		rows.push({
@@ -394,7 +424,7 @@ const SET_TEXT: Readonly<Record<string, string>> = {
 	"lockout.all_keys_required":
 		"One lost key locks the account for good. Hyperliquid has no recovery.",
 	"lockout.leader_removed":
-		"The signer who will submit this proposal is removed by it. They can still submit it.",
+		"The signer who will send this proposal is removed by it. They can still send it.",
 	"lockout.all_current_removed":
 		"None of the current signers remain. This hands the treasury over.",
 	"lockout.unreachable":
@@ -506,7 +536,7 @@ export interface ThresholdLines {
 export function thresholdLines(
 	n: number,
 	k: number | null,
-	/** How many of the listed signers can never sign (the zero address). */
+	/** How many of the listed signers can never sign (`isKeyless`). */
 	unable = 0,
 ): ThresholdLines | null {
 	if (k === null || n < 1 || k < 1 || k > n) return null;
@@ -524,7 +554,9 @@ export function thresholdLines(
 			stolen: "Stolen keys: no number of keys can move anything.",
 			lost: "Lost keys: it is locked from the start.",
 			warning:
-				"With this list the account is locked for good the moment it takes effect: nobody holds the zero address's key, and Hyperliquid has no recovery.",
+				able === 0
+					? "Nobody could ever sign for this treasury: everything in it would be locked for good."
+					: "With this list the account is locked for good the moment it takes effect: some of these addresses have no key anybody holds, and Hyperliquid has no recovery.",
 		};
 	}
 	const spare = able - k;
@@ -539,14 +571,16 @@ export function thresholdLines(
 			warning:
 				unable === 0
 					? "One key controls the account. This only changes which key that is."
-					: "One key controls the account: nobody holds the zero address's key.",
+					: "One key controls the account: the others have no key anybody holds.",
 		};
 	}
 	const who = unable === 0 ? "signers" : "signers who can sign";
 	return {
 		summary:
 			k === able
-				? `All ${able} ${who} must sign every time.`
+				? able === 2
+					? `Both ${who} must sign every time.`
+					: `All ${able} ${who} must sign every time.`
 				: k === 1
 					? `Any one of the ${able} ${who} can act alone.`
 					: `Any ${k} of the ${able} ${who} can act.`,
@@ -735,12 +769,10 @@ function affectedParts(
 	have: number,
 	need: number,
 ): Part[] {
-	if (effects.includes("ends")) return say`can no longer be submitted`;
+	if (effects.includes("ends")) return say`can no longer be sent`;
 	const clauses: Part[][] = [];
 	if (effects.includes("cannot-submit"))
-		clauses.push(
-			say`can no longer be submitted: ${who(finaliser)} was to submit it`,
-		);
+		clauses.push(say`can no longer be sent: ${who(finaliser)} was to send it`);
 	if (effects.includes("loses-signature"))
 		clauses.push(
 			say`loses the signature of ${joinParts(
@@ -754,7 +786,7 @@ function affectedParts(
 		);
 	if (effects.includes("becomes-ready"))
 		clauses.push(
-			say`becomes ready to submit: ${String(have)} of ${String(need)}`,
+			say`becomes ready to send: ${String(have)} of ${String(need)}`,
 		);
 	return joinParts(clauses, " · ");
 }

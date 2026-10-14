@@ -128,10 +128,10 @@ export function inboxGroup(e: InboxEntry, me: Address): InboxGroup | null {
 export function finishLabel(
 	e: InboxEntry,
 	me: Address,
-): "Submit" | "Sign and submit" {
+): "Send" | "Sign and send" {
 	const signed = e.counted.includes(me);
 	const ready = e.counted.length >= e.threshold;
-	return signed || ready ? "Submit" : "Sign and submit";
+	return signed || ready ? "Send" : "Sign and send";
 }
 
 /**

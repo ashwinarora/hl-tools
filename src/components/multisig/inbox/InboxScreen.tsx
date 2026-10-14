@@ -8,7 +8,7 @@ import {
 import { useNetwork } from "#/store/networkStore";
 import { CREATE } from "../model/create";
 import { RELAY_COPY } from "../model/relay/copy";
-import { groupInbox, orderMatters } from "../model/relay/inbox";
+import { countNeeds, groupInbox, orderMatters } from "../model/relay/inbox";
 import { type OpenProposal, useOpenProposals } from "../relay/openProposals";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -38,6 +38,9 @@ export function InboxScreen() {
 	const me = relay.wallet as Address;
 	const { items, unverified, loading, issue } = useOpenProposals();
 	const { rows: treasuries, loading: loadingTreasuries } = useTreasuries();
+	// the most likely "where did it go?": it waits on the other network
+	const other = network === "mainnet" ? "testnet" : "mainnet";
+	const elsewhere = me ? countNeeds(items, me, other) : 0;
 	const nameOf = useTreasuryNames();
 	const hydrated = usePrefsHydrated();
 	const hidden = useMultisigPrefs((s) => s.hidden);
@@ -91,7 +94,8 @@ export function InboxScreen() {
 						</Card>
 						<p className="mx-0.5 mt-1.5 text-xs text-subtle-foreground">
 							You were named finaliser on these. One click signs what is left
-							and submits.
+							and sends it to Hyperliquid. Sending is final once Hyperliquid
+							accepts it.
 							{ordered
 								? " Some of these have to go in order: finish the older one first."
 								: ""}
@@ -154,6 +158,14 @@ export function InboxScreen() {
 									<br />
 									New proposals from your co-signers appear here the moment they
 									are created.
+									{elsewhere > 0 && (
+										<>
+											<br />
+											Looking for {other}? {elsewhere}{" "}
+											{elsewhere === 1 ? "needs" : "need"} you there: switch the
+											network in the header.
+										</>
+									)}
 								</>
 							) : (
 								<>
@@ -179,8 +191,8 @@ export function InboxScreen() {
 				{unverified > 0 && (
 					<p className="mx-0.5 text-xs text-warning">
 						{unverified === 1
-							? "1 proposal on the relay does not verify (its document does not match its digest) and is not shown."
-							: `${unverified} proposals on the relay do not verify and are not shown.`}
+							? "1 shared proposal was hidden because its contents did not pass this browser's check. Ask its proposer to share it again."
+							: `${unverified} shared proposals were hidden because their contents did not pass this browser's check. Ask their proposers to share them again.`}
 					</p>
 				)}
 			</div>

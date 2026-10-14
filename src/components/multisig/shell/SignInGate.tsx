@@ -28,8 +28,9 @@ export function SignInGate({
 		return (
 			<Card>
 				<p className="text-sm text-muted-foreground">
-					This build has no relay, so there is nothing to show here. Proposals
-					still work as links and files.
+					Sign-in is not available on this site, so there is no list to show.
+					You can still open and start proposals, and pass them on by link or
+					file.
 				</p>
 				<Link to="/multisig/open" className={`${linkButton} mt-3`}>
 					Open or start a proposal

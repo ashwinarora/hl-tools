@@ -57,11 +57,11 @@ describe("describeWalletError", () => {
 		);
 		expect(e.kind).toBe("switch-unsupported");
 		expect(e.message).toContain(
-			"Switch to HyperEVM testnet (998) in the wallet",
+			"switch to HyperEVM testnet (998), then press the button again",
 		);
 		expect(
 			describeWalletError(named("SwitchChainNotSupportedError")).message,
-		).toContain("Switch in the wallet");
+		).toContain("switch to the network this page asks for");
 		const unknown = describeWalletError({ code: 4902 }, "HyperEVM (999)");
 		expect(unknown.kind).toBe("chain-unknown");
 		expect(unknown.message).toContain("(HyperEVM (999))");

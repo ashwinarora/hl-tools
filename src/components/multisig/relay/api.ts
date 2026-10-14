@@ -484,7 +484,7 @@ export async function requestTreasury(
 			issue: issue(
 				"relay.error",
 				"error",
-				"The relay accepted the request but did not return it.",
+				"The sharing service accepted the request but did not return it.",
 			),
 		};
 	}

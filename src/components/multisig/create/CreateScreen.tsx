@@ -3,7 +3,6 @@ import {
 	accountMode,
 	infoClient,
 	issue,
-	isZeroAddress,
 	type Network,
 	type Policy,
 	type SignerSet,
@@ -45,6 +44,7 @@ import { RELAY_COPY } from "../model/relay/copy";
 import { registerStep } from "../model/relay/register";
 import {
 	addEntries,
+	isKeyless,
 	judgeSet,
 	parsePasted,
 	SIGNERS_MAX,
@@ -303,7 +303,12 @@ function Wizard({
 		const added = addEntries(entries, pasted.addresses);
 		setEntries(added.entries);
 		setPasteNote(
-			CREATE.pasted(added.duplicates, added.overMax, pasted.rejected),
+			CREATE.pasted(
+				pasted.repeated,
+				added.duplicates,
+				added.overMax,
+				pasted.rejected,
+			),
 		);
 		keep(added.entries, threshold);
 	};
@@ -554,9 +559,7 @@ function Wizard({
 	}
 
 	const lines =
-		k === null
-			? null
-			: thresholdLines(n, k, entries.filter(isZeroAddress).length);
+		k === null ? null : thresholdLines(n, k, entries.filter(isKeyless).length);
 	const said = outcome ? outcomeText(outcome, account) : null;
 	const perp = d?.perp.ok ? d.perp.observed.data : null;
 	const spot = d?.spot.ok ? d.spot.observed.data.balances : null;
@@ -759,7 +762,7 @@ function Wizard({
 								account,
 								set.threshold,
 								n,
-								entries.filter(isZeroAddress).length,
+								entries.filter(isKeyless).length,
 							)}
 						</p>
 					)}

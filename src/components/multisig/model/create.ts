@@ -17,6 +17,16 @@ import { shortAddress } from "./stage";
 const plural = (n: number, one: string, many: string) =>
 	`${n} ${n === 1 ? one : many}`;
 
+/** "0x1111…1111", "0x1111…1111, 0x2222…2222 and 2 more": addresses named, a few at most. */
+const named = (addresses: readonly string[]): string => {
+	const shown = addresses.slice(0, 3).map(shortAddress);
+	const more = addresses.length - shown.length;
+	if (more > 0) return `${shown.join(", ")} and ${more} more`;
+	return shown.length <= 1
+		? (shown[0] ?? "")
+		: `${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`;
+};
+
 export const CREATE = {
 	title: "Create a treasury",
 	/** Also read in a build without a relay, where nobody signs in. */
@@ -39,13 +49,21 @@ export const CREATE = {
 	/** So "in use" is not read as "verified to be that person". */
 	noSigners: "No signers yet.",
 	/** Under the box after a paste: what was not added, and why. */
-	pasted: (duplicates: number, overMax: number, rejected: readonly string[]) =>
+	pasted: (
+		repeated: readonly string[],
+		duplicates: readonly string[],
+		overMax: readonly string[],
+		rejected: readonly string[],
+	) =>
 		[
-			duplicates > 0
-				? `${plural(duplicates, "address was", "addresses were")} already in the list.`
+			repeated.length > 0
+				? `${named(repeated)} ${repeated.length === 1 ? "was" : "were"} listed more than once; ${repeated.length === 1 ? "it is" : "each is"} kept once.`
 				: "",
-			overMax > 0
-				? `${plural(overMax, "address was", "addresses were")} left out: a treasury has at most 10 signers.`
+			duplicates.length > 0
+				? `${named(duplicates)} ${duplicates.length === 1 ? "was" : "were"} already in the list.`
+				: "",
+			overMax.length > 0
+				? `${named(overMax)} ${overMax.length === 1 ? "was" : "were"} left out: a treasury has at most 10 signers.`
 				: "",
 			rejected.length > 0
 				? `Not ${rejected.length === 1 ? "an address" : "addresses"}: ${rejected
@@ -66,9 +84,10 @@ export const CREATE = {
 		"The signers can change this number, and who signs, later with a proposal.",
 	infoTitle: "What converting does and does not do",
 	info: [
-		"This changes the account on HyperCore only. On HyperEVM and on every other blockchain, this address stays under its own key and can transact exactly as before. Anything sent to it there is not protected by the signers.",
+		"Once converted, this account's own key cannot act alone any more: the signers you choose act for it, as many of them together as you set.",
+		"This changes the account on Hyperliquid's trading side only. On HyperEVM, Hyperliquid's EVM side, and on every other blockchain, this address stays under its own key and can transact exactly as before. Anything sent to it there is not protected by the signers.",
 		"Converting moves no funds and costs nothing. Balances, positions and history stay as they are.",
-		"Keep this account's key. It still controls the address outside HyperCore, and it is what gets the account back if the signers ever convert it back.",
+		"Keep this account's key. It still controls the address outside Hyperliquid's trading side, and once the signers convert it back, it controls the account on Hyperliquid again.",
 		"Money can still be sent to this address on Hyperliquid as before.",
 	],
 	/** Above the button: what is about to change, in place of any confirmation. */
@@ -84,23 +103,25 @@ export const CREATE = {
 					? "The one signer above can."
 					: "The one signer above who can sign can."
 				: k === able
-					? `Only all ${able} ${who} together can.`
+					? able === 2
+						? `Only both ${who} together can.`
+						: `Only all ${able} ${who} together can.`
 					: `Any ${k} of the ${able} ${who} can.`
 		} Only they can undo it.`;
 	},
 	button: (account: string, k: number, n: number) =>
 		`Convert ${shortAddress(account)} into a ${k}-of-${n} treasury`,
-	buttonIdle: "Convert this account",
+	buttonIdle: "Convert this account into a treasury",
 	/** While the wallet prompt is open. */
 	inWallet: (k: number, n: number) =>
-		`Your wallet shows the ${plural(n, "signer address", "signer addresses")} and the threshold, ${k}. Check them there before you sign.`,
+		`Your wallet shows the ${plural(n, "signer address", "signer addresses")} and the threshold, ${k}. It may call this an unknown signature type: check the signers and the threshold it shows before you sign.`,
 	checking: "Checking the signers on Hyperliquid…",
 	sending: "Sending the conversion to Hyperliquid…",
 	reading: "Reading the signer list back from Hyperliquid…",
 	doneTitle: "Your treasury is set up",
 	done: (account: string, k: number, n: number) =>
 		`${shortAddress(account)} is now a ${k}-of-${n} treasury.`,
-	readBack: "Read back from Hyperliquid.",
+	readBack: "Confirmed with Hyperliquid.",
 	switchNow:
 		"You are signed in as the treasury itself, which can no longer act. Choose one of its signers in your wallet to use it.",
 	/** Before the list of signers on the success screen. */

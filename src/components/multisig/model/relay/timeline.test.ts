@@ -40,7 +40,7 @@ describe("buildTimeline", () => {
 			}),
 		];
 		expect(texts(events)).toEqual([
-			`Send 120 USDC to 0x9a01…77c2 was accepted by Hyperliquid. Submitted by ${short(C)}.`,
+			`Send 120 USDC to 0x9a01…77c2 was accepted by Hyperliquid. Sent by ${short(C)}.`,
 			`${short(C)} signed Send 120 USDC to 0x9a01…77c2.`,
 			`You proposed Send 120 USDC to 0x9a01…77c2 and signed. Finaliser: ${short(C)}.`,
 		]);
@@ -204,12 +204,12 @@ describe("buildTimeline", () => {
 		expect(
 			texts([eventRow("proposal_withdrawn", { digest: D1, actor: B })]),
 		).toEqual([
-			`Send 120 USDC to 0x9a01…77c2 was withdrawn by the proposer, ${short(B)}.`,
+			`Send 120 USDC to 0x9a01…77c2 was cancelled by the proposer, ${short(B)}.`,
 		]);
 		expect(
 			texts([eventRow("proposal_declined", { digest: D1, actor: A })]),
 		).toEqual([
-			"Send 120 USDC to 0x9a01…77c2 was declined by the finaliser, you.",
+			"Send 120 USDC to 0x9a01…77c2 will not be sent: you, its finaliser, said no.",
 		]);
 	});
 
@@ -303,22 +303,22 @@ describe("buildTimeline", () => {
 			])[0];
 		// answered by Hyperliquid: the proposal's number is used up
 		expect(rejected({ accepted: false, http_status: 200 })).toBe(
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Submitted by ${short(B)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
 		);
 		// never reached Hyperliquid's books: that one can go again
 		expect(rejected({ accepted: false, http_status: 502 })).toBe(
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Submitted by ${short(B)}. The request did not get through (HTTP 502), so it can be sent again.`,
+			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. The request did not get through (HTTP 502), so it can be sent again.`,
 		);
 		// an entry that does not say: nothing is claimed either way
 		expect(rejected({ accepted: false })).toBe(
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Submitted by ${short(B)}. Open it to see why.`,
+			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. Open it to see why.`,
 		);
 	});
 
 	it("falls back to 'a proposal' when the document is not at hand", () => {
 		expect(
 			texts([eventRow("proposal_withdrawn", { digest: D2, actor: B })]),
-		).toEqual([`A proposal was withdrawn by the proposer, ${short(B)}.`]);
+		).toEqual([`A proposal was cancelled by the proposer, ${short(B)}.`]);
 		expect(
 			texts([eventRow("signature_added", { digest: D2, actor: B })]),
 		).toEqual([`${short(B)} signed a proposal.`]);
@@ -402,7 +402,7 @@ describe("buildTimeline", () => {
 				null,
 			),
 		).toEqual([
-			"Send 120 USDC to 0x9a01…77c2 was withdrawn by the proposer, someone.",
+			"Send 120 USDC to 0x9a01…77c2 was cancelled by the proposer, someone.",
 		]);
 	});
 
@@ -417,7 +417,7 @@ describe("buildTimeline", () => {
 				}),
 			]),
 		).toEqual([
-			`Send 120 USDC to 0x9a01…77c2 was carried out without being reported here. The relay checked the transaction on Hyperliquid; ${short(B)} noticed it.`,
+			`Send 120 USDC to 0x9a01…77c2 was carried out without being reported here. Its transaction was found on Hyperliquid; ${short(B)} noticed it.`,
 		]);
 		// the one who noticed, reading it
 		expect(
@@ -435,7 +435,7 @@ describe("buildTimeline", () => {
 		expect(
 			texts([eventRow("proposal_carried_out", { id: 5, digest: D1 })]),
 		).toEqual([
-			"Send 120 USDC to 0x9a01…77c2 was carried out without being reported here. The relay checked the transaction on Hyperliquid.",
+			"Send 120 USDC to 0x9a01…77c2 was carried out without being reported here. Its transaction was found on Hyperliquid.",
 		]);
 	});
 
@@ -452,7 +452,7 @@ describe("buildTimeline", () => {
 			data: { accepted: true, http_status: 200 },
 		});
 		expect(texts([carried, accepted])).toEqual([
-			`Send 120 USDC to 0x9a01…77c2 was accepted by Hyperliquid. Submitted by ${short(C)}.`,
+			`Send 120 USDC to 0x9a01…77c2 was accepted by Hyperliquid. Sent by ${short(C)}.`,
 		]);
 		// a rejected attempt afterwards does not unsay that it was carried out
 		const rejected = eventRow("submission_recorded", {
@@ -585,7 +585,7 @@ describe("a move of two steps in the Signing log", () => {
 			...both("submission_recorded", 7, C, { accepted: true }),
 		];
 		expect(said(events)).toEqual([
-			`${MOVE} (both steps) was accepted by Hyperliquid. Submitted by ${short(C)}.`,
+			`${MOVE} (both steps) was accepted by Hyperliquid. Sent by ${short(C)}.`,
 			`${short(C)} signed ${MOVE} (both steps).`,
 			`You proposed ${MOVE} (both steps) and signed. Finaliser: ${short(C)}.`,
 		]);
@@ -618,8 +618,8 @@ describe("a move of two steps in the Signing log", () => {
 			}),
 		];
 		expect(said(events)).toEqual([
-			`Hyperliquid rejected ${MOVE} (step 2 of 2). Submitted by ${short(C)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
-			`${MOVE} (step 1 of 2) was accepted by Hyperliquid. Submitted by ${short(C)}.`,
+			`Hyperliquid rejected ${MOVE} (step 2 of 2). Sent by ${short(C)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+			`${MOVE} (step 1 of 2) was accepted by Hyperliquid. Sent by ${short(C)}.`,
 			`${short(C)} signed ${MOVE} (step 1 of 2).`,
 		]);
 	});
@@ -649,7 +649,7 @@ describe("a move of two steps in the Signing log", () => {
 			`${short(C)} took back their no to ${MOVE} (both steps).`,
 		]);
 		expect(said(both("proposal_withdrawn", 1, A))).toEqual([
-			`${MOVE} (both steps) was withdrawn by the proposer, you.`,
+			`${MOVE} (both steps) was cancelled by the proposer, you.`,
 		]);
 	});
 

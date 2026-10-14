@@ -180,7 +180,7 @@ export function ownPosition(i: {
 	const mine = i.standing.objected.find((o) => o.signer === i.me);
 	if (!mine) return null;
 	return i.me === i.finaliser
-		? say`You said no. You are the one who has to submit this, so it cannot go ahead unless you change your mind.`
+		? say`You said no. You are the one who has to send this, so it cannot go ahead unless you change your mind.`
 		: say`You said no, ${agoWords(mine.at, i.now)}.`;
 }
 
@@ -228,11 +228,14 @@ export function blockedText(i: {
 	const finaliser = names([i.finaliser], me, true);
 	const again = names([i.finaliser], me, false);
 	return {
-		headline: say`Cannot be submitted as things stand`,
+		headline:
+			i.finaliser === me
+				? say`Waiting on you`
+				: say`Cannot be sent as things stand`,
 		detail:
 			i.finaliser === me
-				? say`You said no, and you are the one who has to submit this proposal. It goes ahead only if you change your mind. To have someone else submit it, propose it again with a different finaliser. ${end}`
-				: say`${finaliser} said no, and ${again} is the one who has to submit this proposal. It goes ahead only if ${again} changes their mind. To have someone else submit it, propose it again with a different finaliser. ${end}`,
+				? say`You said no, and you are the one who sends this proposal. It goes ahead only if you change your mind. To have someone else send it, propose it again with a different finaliser. ${end}`
+				: say`${finaliser} said no, and ${again} is the one who sends this proposal. It goes ahead only if ${again} changes their mind. To have someone else send it, propose it again with a different finaliser. ${end}`,
 	};
 }
 

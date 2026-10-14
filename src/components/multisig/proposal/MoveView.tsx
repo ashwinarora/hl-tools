@@ -17,7 +17,7 @@ import {
 	moveSentence,
 } from "../model/move";
 import { refusalNote } from "../model/refusal";
-import { RELAY_COPY, signHint } from "../model/relay/copy";
+import { cancelNote, RELAY_COPY, signHint } from "../model/relay/copy";
 import { relayActions } from "../model/relay/status";
 import { type Phase, shortAddress } from "../model/stage";
 import { actionLine } from "../model/staking";
@@ -428,7 +428,7 @@ export function MoveView({
 						<div className="mt-4 flex flex-col gap-4">
 							<TreasuryStrip state={treasury} wallet={me} />
 							<p className="text-[13px] text-muted-foreground">
-								Each step is a proposal of its own, with its own digest and
+								Each step is a proposal of its own, with its own number and
 								signatures:{" "}
 								{steps.map((s, i) => (
 									<span key={s.proposal.digest}>
@@ -470,7 +470,7 @@ function StepCard({
 	// what the staking history holds is said unless the step is done, or was
 	// refused for a reason of Hyperliquid's own (that submission did nothing)
 	const ask = !done && (!stage.failedAttempt || duplicate);
-	const before = open ? "submitting" : "proposing it again";
+	const before = open ? "sending it" : "proposing it again";
 	return (
 		<Card
 			title={`Step ${number} of 2`}
@@ -606,7 +606,7 @@ function StepCard({
 
 const ROWS: readonly { id: StepId; label: string }[] = [
 	{ id: "inner", label: "your signature on the action" },
-	{ id: "envelope", label: "your signature on the envelope" },
+	{ id: "envelope", label: "your signature as finaliser" },
 	{ id: "submit", label: "sent to Hyperliquid" },
 ];
 type Marks = Record<number, Partial<Record<StepId, StepState>>>;
@@ -687,7 +687,7 @@ function MovePart({
 			const r = await write(client, as);
 			setFailure(
 				r.issue
-					? { title: "The relay did not take it", issues: [r.issue] }
+					? { title: "The sharing service did not take it", issues: [r.issue] }
 					: null,
 			);
 			// the relay took this wallet's signatures back with it: this browser's copies follow
@@ -882,7 +882,7 @@ function MovePart({
 						})),
 					)}`
 				: stage.signed > 0 && stage.toSign.length === 0
-					? `You signed ${stage.signed === 2 ? "both steps" : "what is left to sign"}. ${isFinaliser ? "" : `The finaliser ${shortAddress(finaliser)} submits.`}`
+					? `You signed ${stage.signed === 2 ? "both steps" : "what is left to sign"}. ${isFinaliser ? "" : `The finaliser ${shortAddress(finaliser)} sends it.`}`
 					: (stage.executeReason ?? "");
 
 	return (
@@ -914,7 +914,8 @@ function MovePart({
 							disabled={off}
 							onClick={submit}
 						>
-							{adds ? "Sign and submit" : "Submit"} {which(stage.toSend)}
+							{adds ? "Sign and send" : "Send"} {which(stage.toSend)} to
+							Hyperliquid
 						</Btn>
 					) : stage.canSign ? (
 						<Btn
@@ -932,7 +933,7 @@ function MovePart({
 							disabled
 							title="Hyperliquid would refuse it before the stake's lockup has ended."
 						>
-							Submit {which(stage.toSend)}
+							Send {which(stage.toSend)} to Hyperliquid
 						</Btn>
 					)}
 					{can.takeBack.length > 0 && (
@@ -982,7 +983,7 @@ function MovePart({
 							disabled={off}
 							onClick={() => setConfirm(true)}
 						>
-							Withdraw
+							Cancel for everyone
 						</Btn>
 					)}
 				</div>
@@ -990,7 +991,7 @@ function MovePart({
 			{waits && stage.opensAt !== null && (
 				<p className="mt-2.5 flex flex-wrap items-center gap-1 text-[13px] text-muted-foreground">
 					<span>
-						Submit opens on <When at={stage.opensAt} /> (
+						Sending opens on <When at={stage.opensAt} /> (
 						{untilWords(stage.opensAt, now)}): the stake this takes from is
 						locked until then.
 						{stage.canSign ? " You can sign now." : ""}
@@ -1014,15 +1015,15 @@ function MovePart({
 					can.takeBackNo.length > 0 ||
 					can.withdraw.length > 0) && (
 					<p className="mt-2 text-xs text-subtle-foreground">
-						A no, its taking back and a withdrawal cover both steps: they are
-						one move.
+						A no, its taking back and cancelling cover both steps: they are one
+						move.
 					</p>
 				)}
 			{confirm && (
 				<Callout
 					tone="warning"
 					className="mt-3"
-					title="Withdraw this move?"
+					title="Cancel this move for everyone?"
 					action={
 						<div className="flex flex-wrap items-center gap-2">
 							<Btn
@@ -1035,7 +1036,7 @@ function MovePart({
 									void act((c, as) => withdrawMove(c, as, can.withdraw));
 								}}
 							>
-								Yes, withdraw
+								Yes, cancel it
 							</Btn>
 							<Btn size="sm" variant="ghost" onClick={() => setConfirm(false)}>
 								Keep it
@@ -1043,14 +1044,21 @@ function MovePart({
 						</div>
 					}
 				>
-					{RELAY_COPY.endingNote}
+					<Sentence
+						parts={cancelNote(
+							Math.min(
+								steps[0].stage.window.validUntil,
+								steps[1].stage.window.validUntil,
+							),
+						)}
+					/>
 				</Callout>
 			)}
 			{outcome?.ok === true && (
 				<Callout tone="success" title="Signed" className="mt-3">
 					{steps[0].doc.relay.known
 						? "Your co-signers see it now."
-						: "Saved in this browser. Pass the move on so the others can sign."}
+						: "Saved in this browser. Nobody else can see it yet: use Share below to send it to your co-signers."}
 				</Callout>
 			)}
 			{outcome?.ok === false && (

@@ -35,7 +35,7 @@ export function recordLine(v: OnRecord): RecordLine {
 			return {
 				tone: "wrong",
 				// Hyperliquid's reason ends with its own full stop, or not
-				text: `Hyperliquid's record shows it was refused: ${v.error.trim().replace(/\.+$/, "") || "no reason given"}. It was not carried out, whatever the report of its submission says.`,
+				text: `Hyperliquid's record shows it was refused: ${v.error.trim().replace(/\.+$/, "") || "no reason given"}. It was not carried out, whatever the report of its sending says.`,
 				again: false,
 			};
 		case "missing":

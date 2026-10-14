@@ -48,7 +48,7 @@ export interface StoredProposal {
 
 /** Said when a copy's report of a submission is not its finaliser's, and was left out. */
 export const RECEIPT_LEFT_OUT =
-	"This copy says the proposal was submitted already, but that report is not signed by its finaliser. It was left out, and nothing here counts the proposal as submitted because of it.";
+	"This copy says the proposal was sent already, but that report is not signed by its finaliser. It was left out, and nothing here counts the proposal as sent because of it.";
 
 export const receiptLeftOut = (): Issue =>
 	issue("history.receipt_unsigned", "warning", RECEIPT_LEFT_OUT);
@@ -206,7 +206,7 @@ function conflict(existing: Proposal): SaveResult {
 			issue(
 				"history.payload_conflict",
 				"error",
-				"This copy has the same digest as a stored proposal but a different payload (vault address or expiry). It was not merged.",
+				"This copy matches a saved proposal but carries other extra fields (a vault address or an expiry), which signers do not sign. It was not merged.",
 				{
 					fix: "Compare both copies in the Multisig Inspector; delete the stored one only if you trust the new copy.",
 				},

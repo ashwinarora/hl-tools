@@ -244,7 +244,7 @@ export function SigningLogTab({
 				)}
 			</Card>
 			<p className="mx-0.5 mt-2 text-xs text-subtle-foreground">
-				Kept by this tool: who proposed, who signed and who submitted. What
+				Kept by this tool: who proposed, who signed and who sent it. What
 				Hyperliquid itself recorded (transfers, trades) is under “On
 				Hyperliquid”. The export holds every entry loaded above and the
 				proposals they refer to.

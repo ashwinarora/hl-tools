@@ -311,7 +311,7 @@ export function VaultFields({
 						{plan.opensAt !== null && (
 							<li>
 								The deposit this takes from is locked. It can be proposed and
-								signed now, and submitted from <When at={plan.opensAt} /> (
+								signed now, and sent from <When at={plan.opensAt} /> (
 								{untilWords(plan.opensAt, now)}).
 							</li>
 						)}

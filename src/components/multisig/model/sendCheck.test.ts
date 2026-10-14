@@ -266,9 +266,7 @@ describe("checkBeforeSubmit", () => {
 		);
 		expect(refused.map((r) => r.code)).toEqual(["mode-unmeasured"]);
 		expect(refused[0]?.message).toContain("“portfolioMargin”");
-		expect(refused[0]?.message).toContain(
-			"the proposal's number would be used up",
-		);
+		expect(refused[0]?.message).toContain("use up the proposal's number");
 		expect(other.asked).toEqual([]);
 		// a mode that is no name at all
 		expect(

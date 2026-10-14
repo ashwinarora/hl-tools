@@ -134,12 +134,12 @@ export function AddTreasuryScreen() {
 						}}
 					>
 						<Field
-							label={`Multi-sig account address on ${ready ? network : "…"}`}
+							label={`Treasury address on ${ready ? network : "…"}`}
 							trailing={<Help k="treasury" />}
 							htmlFor="ms-add"
 							error={
 								input.trim() && !valid
-									? "A 20-byte hex address: 0x followed by 40 hex digits."
+									? "An address starts with 0x followed by 40 letters and digits (0-9, a-f)."
 									: undefined
 							}
 						>
@@ -185,7 +185,7 @@ export function AddTreasuryScreen() {
 						{current && state.isMultiSig === false && (
 							<Callout
 								tone="warning"
-								title={`This account is not a multi-sig on ${current.network}`}
+								title={`This address is not a treasury on ${current.network}`}
 							>
 								Only a native multi-sig account can be added. Check the address
 								and the network selected in the header.
@@ -217,7 +217,8 @@ export function AddTreasuryScreen() {
 									title="This account is a multi-sig, but your wallet is not one of its signers"
 								>
 									Only a signer, or the account itself, can add a treasury. Ask
-									a signer to add it, or switch wallets.
+									a signer to add it, or switch your wallet to one of its
+									signers.
 								</Callout>
 							)}
 						{current &&
@@ -274,9 +275,9 @@ export function AddTreasuryScreen() {
 							)}
 
 						{request?.status === "pending" && slow && (
-							<Callout tone="neutral" title="Queued behind other lookups">
-								The relay looks accounts up one at a time. This page moves on by
-								itself when yours is done.
+							<Callout tone="neutral" title="Queued behind other look-ups">
+								The sharing service looks accounts up on Hyperliquid one at a
+								time. This page moves on by itself when yours is done.
 							</Callout>
 						)}
 						{request &&

@@ -287,9 +287,9 @@ export function awayItems(i: {
 					});
 				accepted(
 					rel
-						? say`${action(p, true)}, which you ${rel}, was carried out. Submitted by ${who(e.actor)}.`
+						? say`${action(p, true)}, which you ${rel}, was carried out. Sent by ${who(e.actor)}.`
 						: !p
-							? say`${action(p, true)} was carried out. Submitted by ${who(e.actor)}.`
+							? say`${action(p, true)} was carried out. Sent by ${who(e.actor)}.`
 							: others.length
 								? say`${action(p, true)} was carried out. Signed by ${names(others)}; you did not sign.`
 								: say`${action(p, true)} was carried out. You did not sign.`,
@@ -312,13 +312,13 @@ export function awayItems(i: {
 			case "withdrawn":
 				if (rel && e.actor !== me)
 					item(
-						say`${action(p, true)}, which you ${rel}, was withdrawn by the proposer, ${who(e.actor)}.`,
+						say`${action(p, true)}, which you ${rel}, was cancelled by the proposer, ${who(e.actor)}.`,
 					);
 				break;
 			case "declined":
 				if (rel && e.actor !== me)
 					item(
-						say`${action(p, true)}, which you ${rel}, was declined by the finaliser, ${who(e.actor)}.`,
+						say`${action(p, true)}, which you ${rel}, will not be sent: ${who(e.actor)}, its finaliser, said no.`,
 					);
 				break;
 		}
@@ -351,7 +351,7 @@ export function awayItems(i: {
 			p.createdBy === me
 				? "proposed"
 				: p.finaliser === me
-					? "have to submit"
+					? "have to send"
 					: null;
 		if (!rel) continue;
 		out.push({
@@ -376,7 +376,7 @@ export function awayItems(i: {
 		out.push({
 			key: `expired:${p.digest}`,
 			at: p.expiresAt,
-			parts: say`${action(p, true)}, which you ${rel}, expired before it was submitted.`,
+			parts: say`${action(p, true)}, which you ${rel}, expired before it was sent.`,
 			go: { kind: "proposal", digest: p.digest },
 		});
 	}

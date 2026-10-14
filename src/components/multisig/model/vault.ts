@@ -400,7 +400,7 @@ export function planVault(
 		if (asked.mul(Decimal.parse("100")).gte(worth.mul(Decimal.parse("99"))))
 			warn(
 				"vault.nearly_all",
-				`This is nearly all of the deposit, which is worth ${usdc(worth.toString())} now. Its worth moves with the vault: if it is below the amount when this is submitted, Hyperliquid refuses it.`,
+				`This is nearly all of the deposit, which is worth ${usdc(worth.toString())} now. Its worth moves with the vault: if it is below the amount when this is sent, Hyperliquid refuses it.`,
 				AMOUNT,
 			);
 	}

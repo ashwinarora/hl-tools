@@ -98,7 +98,7 @@ describe("relayIssue", () => {
 			const i = relayIssue(e);
 			expect(i.code).toBe("relay.unreachable");
 			expect(i.message).toBe(
-				"The relay could not be reached. Links and files still work.",
+				"The sharing service could not be reached. Links and files still work.",
 			);
 		}
 		expect(isUnreachable(pg("42501", "permission denied"))).toBe(false);
@@ -138,11 +138,13 @@ describe("relayIssue", () => {
 		expect(relayIssue(undefined).code).toBe("relay.error");
 		expect(relayIssue(null).code).toBe("relay.error");
 		expect(relayIssue("boom").message).toBe(
-			"The relay answered with an error: boom",
+			"The sharing service answered with an error: boom",
 		);
-		expect(relayIssue({}).message).toBe("The relay answered with an error.");
+		expect(relayIssue({}).message).toBe(
+			"The sharing service answered with an error.",
+		);
 		expect(relayIssue(pg("XX000", "internal error")).message).toBe(
-			"The relay answered with an error: internal error",
+			"The sharing service answered with an error: internal error",
 		);
 	});
 });

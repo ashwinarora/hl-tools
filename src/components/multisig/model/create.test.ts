@@ -24,6 +24,12 @@ const facts = (over: Partial<AccountFacts> = {}): AccountFacts => ({
 const codes = (f: Partial<AccountFacts>) =>
 	accountLines(facts(f)).lines.map((l) => l.code);
 
+const P1 = "0x00000000000000000000000000000000000000a1";
+const P2 = "0x00000000000000000000000000000000000000a2";
+const P3 = "0x00000000000000000000000000000000000000a3";
+const P4 = "0x00000000000000000000000000000000000000a4";
+const P5 = "0x00000000000000000000000000000000000000a5";
+
 describe("accountLines: the account being converted", () => {
 	it("an ordinary account with nothing open has nothing to say", () => {
 		expect(accountLines(facts())).toEqual({ lines: [], blockedBy: null });
@@ -96,8 +102,8 @@ describe("the wizard's sentences", () => {
 		...Object.values(CREATE).flatMap((v) =>
 			typeof v === "string" ? [v] : Array.isArray(v) ? [...v] : [],
 		),
-		CREATE.pasted(2, 1, ["foo", "bar"]),
-		CREATE.pasted(1, 0, []),
+		CREATE.pasted([P1], [P1, P2], [P3], ["foo", "bar"]),
+		CREATE.pasted([P1, P2], [P1], [], []),
 		CREATE.before(TREASURY, 2, 3),
 		CREATE.before(TREASURY, 3, 3),
 		CREATE.before(TREASURY, 1, 1),
@@ -123,19 +129,23 @@ describe("the wizard's sentences", () => {
 			for (const claim of FORBIDDEN_CLAIMS)
 				expect(t, `${claim} in "${t}"`).not.toMatch(claim);
 	});
-	it("avoid the developer's words, except the one the reader asked for", () => {
-		// "HyperCore" is named on purpose: the block says where the change applies
-		const jargon = HELP_JARGON.filter((w) => !w.test("HyperCore"));
+	it("avoid the developer's words", () => {
 		for (const t of texts)
-			for (const word of jargon)
+			for (const word of HELP_JARGON)
 				expect(t, `${word} in "${t}"`).not.toMatch(word);
 	});
-	it("say what a paste left out", () => {
-		expect(CREATE.pasted(0, 0, [])).toBe("");
-		expect(CREATE.pasted(1, 2, ["nope"])).toBe(
-			"1 address was already in the list. 2 addresses were left out: a treasury has at most 10 signers. Not an address: nope.",
+	it("say what a paste left out, naming the addresses", () => {
+		expect(CREATE.pasted([], [], [], [])).toBe("");
+		expect(CREATE.pasted([P1], [], [], [])).toBe(
+			"0x0000…00a1 was listed more than once; it is kept once.",
 		);
-		expect(CREATE.pasted(0, 0, ["a", "b", "c", "d", "e"])).toBe(
+		expect(CREATE.pasted([], [P1], [P2, P3], ["nope"])).toBe(
+			"0x0000…00a1 was already in the list. 0x0000…00a2 and 0x0000…00a3 were left out: a treasury has at most 10 signers. Not an address: nope.",
+		);
+		expect(CREATE.pasted([], [], [P1, P2, P3, P4, P5], [])).toBe(
+			"0x0000…00a1, 0x0000…00a2, 0x0000…00a3 and 2 more were left out: a treasury has at most 10 signers.",
+		);
+		expect(CREATE.pasted([], [], [], ["a", "b", "c", "d", "e"])).toBe(
 			"Not addresses: a, b, c and 2 more.",
 		);
 	});
@@ -162,7 +172,7 @@ describe("the wizard's sentences", () => {
 		);
 		// below that, the sentence counts the signers who can sign
 		expect(CREATE.before(TREASURY, 2, 3, 1)).toContain(
-			"Only all 2 signers above who can sign together can.",
+			"Only both signers above who can sign together can.",
 		);
 		expect(CREATE.before(TREASURY, 1, 4, 1)).toContain(
 			"Any 1 of the 3 signers above who can sign can.",
@@ -180,9 +190,11 @@ describe("the wizard's sentences", () => {
 			"3 signer addresses and the threshold, 2",
 		);
 		expect(CREATE.inWallet(1, 1)).toContain("1 signer address and");
-		expect(CREATE.info).toHaveLength(4);
-		expect(CREATE.info[0]).toContain("HyperCore only");
-		expect(CREATE.info[2]).toContain("Keep this account's key");
+		expect(CREATE.info).toHaveLength(5);
+		// said on every conversion, whatever the signers and the number
+		expect(CREATE.info[0]).toContain("own key cannot act alone any more");
+		expect(CREATE.info[1]).toContain("Hyperliquid's trading side only");
+		expect(CREATE.info[3]).toContain("Keep this account's key");
 	});
 });
 

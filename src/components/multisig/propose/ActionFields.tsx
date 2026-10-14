@@ -501,7 +501,7 @@ export function ActionFields({
 					label="Action JSON"
 					htmlFor="ms-raw"
 					error={error("raw")}
-					hint="A user-signed action such as sendAsset or approveBuilderFee. The signing chain, the network and the nonce are filled in by this page."
+					hint="For experts: paste the action as JSON (for example a sendAsset). This page fills in the network, the signing chain and the time."
 				>
 					<TextArea
 						id="ms-raw"

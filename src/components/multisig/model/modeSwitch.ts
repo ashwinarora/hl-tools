@@ -56,7 +56,7 @@ export function unmeasuredSwitch(action: PlainObject): string | null {
 
 /** Said before any wallet prompt, and on the proposal's page before anyone signs. */
 export const MODE_UNMEASURED = (mode: unknown): string =>
-	`This switches the account to a mode this tool was not tested with (${typeof mode === "string" ? `“${isolated(cutTo(visibleText(mode), 40))}”` : "not named"}). The finaliser's signature for a mode switch has to be made in a way that was measured for the unified and the manual account only, so Hyperliquid would refuse this one and the proposal's number would be used up.`;
+	`This page was not tested with the mode ${typeof mode === "string" ? `“${isolated(cutTo(visibleText(mode), 40))}”` : "named here"}, so it cannot sign a switch to it: Hyperliquid would refuse it and use up the proposal's number. Use the unified or the manual account.`;
 
 /**
  * The switch a treasury in this mode would make: the other of the two. Null

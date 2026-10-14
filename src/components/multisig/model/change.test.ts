@@ -59,7 +59,7 @@ describe("the Change signers form's sentences", () => {
 	it("counts the waiting proposals that end", () => {
 		expect(CHANGE.backWaiting(0)).toBe("");
 		expect(CHANGE.backWaiting(1)).toBe(
-			"1 waiting proposal can no longer be submitted afterwards.",
+			"1 waiting proposal can no longer be sent afterwards.",
 		);
 		expect(CHANGE.backWaiting(2)).toContain("2 waiting proposals");
 	});

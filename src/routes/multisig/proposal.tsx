@@ -279,16 +279,16 @@ function Missing({
 				{refused ? (
 					<EmptyState
 						icon={FileQuestion}
-						title="The relay's copy of this proposal does not verify"
-						description="This browser checks every document against its digest before showing it, and this one does not match, so it was ignored. Ask whoever proposed it for the link or the file, and paste it on the start page."
+						title="The shared copy of this proposal did not pass this browser's check"
+						description="This browser checks every proposal before showing it, and this copy does not match what it claims to be, so it was ignored. Ask whoever proposed it for the link or the file, and paste it on the start page."
 						sample={digest}
 						action={open}
 					/>
 				) : (
 					<EmptyState
 						icon={FileQuestion}
-						title="No proposal with that digest, here or on the relay"
-						description="This browser has not seen it, and the relay has none your wallet can open: it was never shared, or your wallet is not a signer of its treasury in the relay's copy of the signer list. If you were sent the document, paste it on the start page."
+						title="This proposal is not here"
+						description="This browser has not seen it, and none of your shared proposals matches. Ask whoever sent it for the link or the file, and paste it on the start page."
 						sample={digest}
 						action={open}
 					/>
@@ -309,8 +309,8 @@ function Missing({
 		return (
 			<EmptyState
 				icon={FileQuestion}
-				title="This browser has no proposal with that digest"
-				description="Proposals live in the link or file you were sent, and in the history of the browser that opened them. Open the link again, or paste the document on the start page."
+				title="This proposal is not here"
+				description="Proposals travel in the link or file you were sent, and stay in the browser that opened them. Open the link again, or paste the document on the start page."
 				sample={digest}
 				action={open}
 			/>
@@ -319,7 +319,7 @@ function Missing({
 	return (
 		<EmptyState
 			icon={FileQuestion}
-			title="This browser has no proposal with that digest"
+			title="This proposal is not here"
 			description={
 				relay.mode === "restoring"
 					? "Checking your session…"

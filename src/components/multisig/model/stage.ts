@@ -306,7 +306,7 @@ export function deriveStage(input: StageInput): Stage {
 	// shorter: one that ends after the window does is a certainty, not a guess.
 	const outlasts =
 		lockedUntil !== null && lockedUntil >= window.validUntil
-			? say`The ${heldWhat(p.payload.action)} this takes from is locked until ${heldWhen(lockedUntil)}, and this proposal closes before that, on ${heldWhen(window.validUntil)}. It cannot be submitted in time: its proposer can withdraw it and make it again later.`
+			? say`The ${heldWhat(p.payload.action)} this takes from is locked until ${heldWhen(lockedUntil)}, and this proposal closes before that, on ${heldWhen(window.validUntil)}. It cannot be sent in time: its proposer can cancel it and make it again later.`
 			: null;
 
 	const isLeader = wallet !== null && wallet === leader;
@@ -373,8 +373,8 @@ export function deriveStage(input: StageInput): Stage {
 	if (accepted) {
 		const at = p.receipt?.submittedAt ?? 0;
 		phase = "submitted";
-		head = say`Submitted · accepted by Hyperliquid`;
-		body = say`Submitted ${{ text: isoTime(at), when: at }}. Nothing more to sign.`;
+		head = say`Sent · accepted by Hyperliquid`;
+		body = say`Sent ${{ text: isoTime(at), when: at }}. Nothing more to sign.`;
 	} else if (input.carriedOut) {
 		phase = "carried-out";
 		// said this way because the submitter may well have used this page, signed out
@@ -387,21 +387,21 @@ export function deriveStage(input: StageInput): Stage {
 					: say`Hyperliquid's own record of this account holds this action, under this proposal's number: it was carried out, but its result was never reported here. Nothing more to sign.`
 				: input.carriedOut.seenBy === "page"
 					? say`Hyperliquid's own list of this account's staking steps holds this action, under this proposal's number: it was carried out, but its result was never reported here. Nothing more to sign.`
-					: say`Hyperliquid carried this action out, but its result was never reported here: it was submitted while signed out, or some other way. The relay checked the transaction itself. Nothing more to sign.`;
+					: say`Hyperliquid carried this action out, but its result was never reported here: it was sent while signed out, or some other way. Its transaction was found on Hyperliquid. Nothing more to sign.`;
 		if (input.carriedOut.seenBy === "ledger" && failedAttempt)
 			head = say`Carried out · the refusal reported here is not Hyperliquid's record`;
 	} else if (input.closedUnknown) {
 		phase = "closed";
 		head = say`Closed`;
-		body = say`The relay marks this proposal as closed in a way this version of the page does not know. Reload the page to get the current one.`;
+		body = say`This proposal was closed in a way this version of the page does not recognise. Reload the page to update it.`;
 	} else if (input.ended?.kind === "withdrawn") {
 		phase = "withdrawn";
-		head = say`Withdrawn by the proposer, ${who(input.ended.by)}`;
-		body = say`Signatures already given remain valid on chain until the window closes (${window.parts}), and only the finaliser ${who(leader)} could still submit it.`;
+		head = say`Cancelled by the proposer, ${who(input.ended.by)}`;
+		body = say`Signatures already given stay valid on Hyperliquid until the window closes (${window.parts}), and only the finaliser ${who(leader)} could still send it.`;
 	} else if (input.ended?.kind === "declined") {
 		phase = "declined";
-		head = say`Declined by the finaliser, ${who(input.ended.by)}`;
-		body = say`It will not be submitted. Re-propose it with a different finaliser if it is still wanted.`;
+		head = say`The finaliser, ${who(input.ended.by)}, will not send it`;
+		body = say`The finaliser said no. Propose it again with a different finaliser if it is still wanted.`;
 	} else if (changeInEffect(p, policy)) {
 		// before anything about signatures: they would be counted against the
 		// signers this very proposal put in place
@@ -413,8 +413,8 @@ export function deriveStage(input: StageInput): Stage {
 				: say`The treasury's signers on Hyperliquid are the ones this proposal asks for. Nothing more to sign.`;
 	} else if (p.meta.kind === "l1" && !isVaultAction(p.payload)) {
 		phase = "unsupported";
-		head = say`An L1 action: inspect only`;
-		body = say`Orders, cancels and other L1 actions are outside the signer. It can be read and checked here, not signed.`;
+		head = say`A trading action: read only here`;
+		body = say`Orders, cancels and similar trading actions cannot be signed from this page. You can read and check it here; sign it with another tool.`;
 	} else if (p.meta.kind === "l1" && !input.codeSigning) {
 		phase = "unsupported";
 		head = say`${CODE_COPY.absentHead}`;
@@ -422,7 +422,7 @@ export function deriveStage(input: StageInput): Stage {
 	} else if (unsignedFields) {
 		phase = "unsupported";
 		head = say`This document sets a vault address or an expiry`;
-		body = say`Signers of a user-signed action do not sign those two fields, so anyone could have added them. This page will not sign or submit it.`;
+		body = say`Signers do not sign those two fields, so anyone who handled this copy could have added them. This page will not sign or send it. Ask the proposer for a fresh copy.`;
 	} else if (unmeasuredSwitch(p.payload.action) !== null && !failedAttempt) {
 		// before anyone signs: signatures cannot make it go through
 		phase = "unsupported";
@@ -435,47 +435,51 @@ export function deriveStage(input: StageInput): Stage {
 	) {
 		// before anything about signatures: no signature changes it any more
 		phase = "refused";
-		head = say`Refused by Hyperliquid · cannot be sent again`;
+		head =
+			failedAttempt.id !== "nonce-duplicate" && input.likeOnRecord
+				? say`Refused, as reported · it may have happened anyway`
+				: say`Refused by Hyperliquid · cannot be sent again`;
 		body =
 			failedAttempt.id === "nonce-duplicate"
-				? // the number was used before this attempt: by a submission that was
+				? // the number was used before this attempt: by an attempt that was
 					// refused, or by one that went through and whose answer never got here
-					say`Hyperliquid answered "duplicate nonce": this proposal's number had already been used by an earlier submission. If that one went through, the action is carried out already. Look at the treasury's record on Hyperliquid before proposing it again.`
+					// jargon: Hyperliquid's own answer, quoted for whoever searches for it
+					say`Hyperliquid answered that this proposal's number was already used ("duplicate nonce"). If the earlier attempt went through, the action has already happened. Look at the treasury's record on Hyperliquid before proposing it again.`
 				: input.likeOnRecord
 					? // the answer in a receipt is what its finaliser wrote down, and
 						// the record holds something like this action: never "propose again"
-						say`This copy reports that Hyperliquid refused it. Hyperliquid's record of the account shows an action like this one, which could not be compared with it, so it may be carried out all the same. Look at the treasury's record on Hyperliquid before proposing it again: a new proposal is carried out whether or not this one was.`
-					: say`Hyperliquid refused this proposal when it was submitted, and a refused submission still uses up the proposal's number. Sending it again would only be answered "duplicate nonce". Propose it again: it gets a new number, and the signers sign once more. The refusal is what the finaliser's page recorded: if in doubt, look at the treasury's record on Hyperliquid first.`;
+						say`This copy says Hyperliquid refused it, but Hyperliquid's record shows a similar action. Check the record before proposing it again: a new proposal would run a second time.`
+					: say`Hyperliquid refused this. A refused proposal cannot be sent again: its number is used up. Propose it again: it gets a new number, and every signer signs once more. The refusal is what the finaliser's page recorded: if in doubt, look at the treasury's record on Hyperliquid first.`;
 	} else if (!r) {
 		phase = "judging";
 		head = say`Checking signatures…`;
-		body = say`Recovering every signer and fetching the live signer set.`;
+		body = say`Checking the signatures against the treasury's current signers…`;
 	} else if (r.status === "expired") {
 		phase = "expired";
 		head = say`Expired`;
-		body = say`The signing window ${window.parts}. Re-propose it with a fresh nonce; collected signatures do not carry over.`;
+		body = say`The signing window ${window.parts}. Propose it again: it gets a new number, and every signer signs once more.`;
 	} else if (input.overtaken || failedAttempt?.id === "nonce-used") {
 		// before "ready": signatures change nothing once Hyperliquid will refuse it
 		phase = "overtaken";
-		head = say`Cannot be submitted any more`;
+		head = say`Cannot be sent any more`;
 		body = say`Hyperliquid takes a treasury's USDC sends in the order they were proposed, and a newer one has been carried out. This one would be refused. Propose it again: it gets a new number, and the signers sign once more.`;
 	} else if (r.status === "not-multisig") {
 		phase = "not-multisig";
-		head = say`Not a multi-sig on ${p.payload.network}`;
-		body = say`${who(p.payload.multiSigUser)} has no signer set there, so no signature can count.`;
+		head = say`Not a treasury on ${p.payload.network}`;
+		body = say`Hyperliquid reports no signers for ${who(p.payload.multiSigUser)} there, so no signature can count.`;
 	} else if (r.status === "unknown") {
 		phase = "unknown";
-		head = say`Signer set not loaded`;
-		body = say`The signer set could not be fetched, so nothing can be judged yet.`;
+		head = say`Signers not loaded`;
+		body = say`The signers could not be read from Hyperliquid, so nothing can be judged yet.`;
 	} else if (r.status === "not-yet-valid") {
 		phase = "not-yet-valid";
-		head = say`Not submittable yet · ${String(r.have)} of ${String(r.need)}`;
+		head = say`Cannot be sent yet · ${String(r.have)} of ${String(r.need)}`;
 		body = say`The signing window ${window.parts}. Signers can sign in the meantime.`;
 	} else if (finaliserLeft(p, policy)) {
 		// counted before "ready": enough signatures change nothing when nobody can submit
 		phase = "stuck";
 		head = say`Cannot be finished`;
-		body = say`Only the finaliser can submit a proposal, and ${isLeader ? "your wallet" : who(leader)} is no longer one of this treasury's signers. Withdraw it and propose it again with another finaliser.`;
+		body = say`Only the finaliser can send a proposal, and ${isLeader ? "your wallet" : who(leader)} is no longer one of this treasury's signers. Cancel it and propose it again with another finaliser.`;
 	} else if (position?.blocked && held) {
 		// Before "ready" and "collecting": as things stand it goes nowhere. It
 		// stays open all the same: a no can be taken back.
@@ -488,10 +492,10 @@ export function deriveStage(input: StageInput): Stage {
 		body = outlasts
 			? outlasts
 			: lockedUntil
-				? say`${isLeader ? "You are the finaliser. It" : say`The finaliser ${who(leader)} submits it. It`} can be submitted from ${heldWhen(lockedUntil)}: the ${heldWhat(p.payload.action)} it takes from is locked until then · ${window.parts}.`
+				? say`${isLeader ? "You are the finaliser. It" : say`The finaliser ${who(leader)} sends it. It`} can be sent from ${heldWhen(lockedUntil)}: the ${heldWhat(p.payload.action)} it takes from is locked until then · ${window.parts}.`
 				: isLeader
-					? say`You are the finaliser: submit it when you are ready · ${window.parts}.`
-					: say`The finaliser ${who(leader)} signs the envelope and submits · ${window.parts}.`;
+					? say`You are the finaliser: send it when you are ready · ${window.parts}.`
+					: say`The finaliser ${who(leader)} sends it · ${window.parts}.`;
 	} else {
 		phase = "collecting";
 		head = say`Collecting signatures · ${String(r.have)} of ${String(r.need)}`;
@@ -538,7 +542,7 @@ export function deriveStage(input: StageInput): Stage {
 							: role === "treasury"
 								? partsText(switchSentence(policy?.authorizedUsers ?? []))
 								: !isSigner
-									? `${shortAddress(wallet ?? "")} is not in the signer set.`
+									? `${shortAddress(wallet ?? "")} is not one of this treasury's signers.`
 									: hasSigned
 										? "You signed this."
 										: // the finaliser takes the no back first; submitting is its own step
@@ -567,9 +571,9 @@ export function deriveStage(input: StageInput): Stage {
 						: networkMismatch
 							? wrongNetwork
 							: role === "disconnected"
-								? "Connect the finaliser's wallet to submit."
+								? "Connect the finaliser's wallet to send it."
 								: !isLeader
-									? `Only the finaliser ${shortAddress(leader)} can submit.`
+									? `Only the finaliser ${shortAddress(leader)} can send it.`
 									: lockedUntil
 										? `The ${heldWhat(p.payload.action)} this takes from is still locked, and Hyperliquid would refuse it until the lockup has ended.`
 										: null;

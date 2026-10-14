@@ -501,7 +501,7 @@ export function OverviewTab({
 							{state.error
 								? "The signer list could not be read from Hyperliquid."
 								: state.isMultiSig === false
-									? "Hyperliquid reports no signer set for this account."
+									? "Hyperliquid reports no signers for this account."
 									: reading}
 						</Quiet>
 					) : (
@@ -657,6 +657,13 @@ export function OverviewTab({
 							</>
 						)}
 						on <When at={treasury.createdAt} />.
+						{/* a conversion back and a new one, or a change of signers, since */}
+						{treasury.changedAt > treasury.createdAt + 60_000 && (
+							<>
+								{" "}
+								Its signers last changed on <When at={treasury.changedAt} />.
+							</>
+						)}
 						{treasury.addedBy !== me && ` ${RELAY_COPY.addedByOther}`}
 					</span>
 					{hydrated && (

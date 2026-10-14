@@ -168,7 +168,8 @@ const mayBeDone = (s: StepView): boolean =>
 /** Why a step that is over may have been carried out all the same. */
 const maybe = (s: StepView, n: 1 | 2): Part[] =>
 	duplicate(s)
-		? say`Step ${String(n)}: Hyperliquid answered "duplicate nonce" to it, so its number had been used by an earlier submission. If that one went through, the step is carried out already. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was.`
+		? // jargon: Hyperliquid's own answer, quoted for whoever searches for it
+			say`Step ${String(n)}: Hyperliquid answered that its number was already used ("duplicate nonce"). If the earlier attempt went through, the step has already happened. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was.`
 		: say`Step ${String(n)}: ${s.stage.headlineParts}. Hyperliquid's staking history shows a step like it, so it may have been carried out all the same: the explorer did not say. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was.`;
 
 /**
@@ -177,8 +178,8 @@ const maybe = (s: StepView, n: 1 | 2): Part[] =>
  */
 export const leftOpenNote = (canWithdraw: boolean): string =>
 	canWithdraw
-		? "What is left of this move cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again."
-		: "What is left of this move cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it and propose it again.";
+		? "What is left of this move cannot be sent, so nothing here needs a signature. Cancel it, then propose it again."
+		: "What is left of this move cannot be sent, so nothing here needs your signature. Its proposer can cancel it and propose it again.";
 
 const count = (s: StepView) => `${s.have} of ${s.need ?? "?"}`;
 
@@ -226,7 +227,7 @@ export function deriveMoveStage(
 			phase: "judging",
 			...told(
 				"Checking signatures…",
-				"Recovering every signer and fetching the live signer set.",
+				"Checking the signatures against the treasury's current signers…",
 			),
 			executeReason: "Checking signatures…",
 		};

@@ -187,7 +187,7 @@ export const REMOVE_AGENT = {
 	what: "That wallet stops acting for the treasury once this is carried out. Nothing else changes: balances, positions and open orders stay as they are.",
 	/** Hyperliquid takes one removal at a time ("User has pending agent removal"). */
 	oneAtATime:
-		"Hyperliquid takes one removal at a time: submit a second one a minute or two after the first.",
+		"Hyperliquid takes one removal at a time: send a second one a minute or two after the first.",
 } as const;
 
 /** One of the two balances of a manual account. */
@@ -358,7 +358,7 @@ function warnOverBalance(
 			issue(
 				"amount.exceeds_balance",
 				"warning",
-				`${amount.toString()} is more than the ${what} observed just now (${b.toString()}). The chain will reject it unless funds arrive first.`,
+				`${amount.toString()} is more than the ${what} observed just now (${b.toString()}). Hyperliquid will refuse it unless funds arrive first.`,
 				{ path: "action.amount" },
 			),
 		);
@@ -512,7 +512,7 @@ function warnAboutSend(
 			issue(
 				"fee.not_covered",
 				"warning",
-				"The destination is new, so this costs 1 USDC on top of the amount, and the balances observed just now do not cover both. The chain will reject it unless funds arrive first.",
+				"This is a first send to a new address, so it costs 1 USDC on top of the amount, and the treasury cannot cover both right now. Hyperliquid will refuse it unless more USDC arrives first.",
 				{ path: "action.amount" },
 			),
 		);
@@ -1058,7 +1058,7 @@ function rawAction(
 			issue(
 				"raw.nested_envelope",
 				"error",
-				"Paste the inner action, not a multiSig envelope.",
+				'Paste only the action itself (the part inside "action"), not the whole multi-sig request.',
 				{ path },
 			),
 		);
@@ -1080,7 +1080,7 @@ function rawAction(
 			issue(
 				"raw.l1_out_of_scope",
 				"error",
-				`"${type}" is an L1 action (orders, cancels, leverage, sub-account moves). Of those, only vault deposits and withdrawals are proposals here, through the Vault form.`,
+				`"${type}" is a trading action (orders, cancels, leverage, sub-account moves). Of those, only vault deposits and withdrawals are proposals here, through the Vault form.`,
 				{
 					path,
 					fix: "To trade with multi-sig funds, propose an API wallet and trade with its key.",
@@ -1126,7 +1126,7 @@ function rawAction(
 			issue(
 				"raw.field_overridden",
 				"info",
-				`${overridden.join(", ")} ${overridden.length > 1 ? "are" : "is"} set by this page (signing chain, network and nonce) and replaced what you pasted.`,
+				`${overridden.join(", ")} ${overridden.length > 1 ? "are" : "is"} set by this page (signing chain, network and time) and replaced what you pasted.`,
 				{ path },
 			),
 		);
@@ -1253,7 +1253,7 @@ export function buildProposalInputs(
 			issue(
 				"finaliser.not_signer",
 				"error",
-				"The finaliser must be one of the current signers: only an authorized user can submit.",
+				"The finaliser must be one of the current signers: only a signer can send a proposal.",
 				{ path },
 			),
 		);

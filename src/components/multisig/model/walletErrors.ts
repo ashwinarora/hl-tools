@@ -49,7 +49,7 @@ export function describeWalletError(
 	if (links.some((x) => nameOf(x) === "SwitchChainNotSupportedError"))
 		return {
 			kind: "switch-unsupported",
-			message: `This wallet cannot switch chains from a page. Switch${to} in the wallet, then retry.`,
+			message: `Your wallet cannot switch networks for this page. Open your wallet, switch${to || " to the network this page asks for"}, then press the button again.`,
 		};
 	if (
 		links.some(
@@ -58,7 +58,7 @@ export function describeWalletError(
 	)
 		return {
 			kind: "chain-unknown",
-			message: `The wallet does not know this chain and would not add it. Add it${to ? ` (${chainLabel})` : ""} in the wallet, then retry.`,
+			message: `Your wallet does not know this network and would not add it. Add it${to ? ` (${chainLabel})` : ""} in your wallet, then press the button again.`,
 		};
 	const short = (links[0] as { shortMessage?: unknown })?.shortMessage;
 	return {

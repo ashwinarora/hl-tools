@@ -169,8 +169,8 @@ async function closedMeanwhile(doc: Doc): Promise<Issue[] | null> {
 	return problem(
 		"relay.proposal_closed",
 		row.ending.kind === "withdrawn"
-			? `The proposer ${shortAddress(row.ending.endedBy)} withdrew this proposal a moment ago. Nothing was signed or submitted.`
-			: "This proposal was declined. Nothing was signed or submitted.",
+			? `The proposer ${shortAddress(row.ending.endedBy)} cancelled this proposal a moment ago. Nothing was signed or sent.`
+			: "Its finaliser said no and will not send it. Nothing was signed or sent.",
 	);
 }
 
@@ -254,7 +254,7 @@ async function signToSubmit(i: {
 				? ready.issues
 				: problem(
 						"execute",
-						`Not ready: ${ready.have} of ${ready.need ?? "?"} signatures count against the current signer set.`,
+						`Not ready: ${ready.have} of ${ready.need ?? "?"} signatures count against the current signers.`,
 					),
 		);
 	}
@@ -306,8 +306,8 @@ async function post(i: {
 				"execute",
 				// in a move, "nothing was submitted" would deny the step before it
 				i.acceptedBefore
-					? `The request for this step did not reach Hyperliquid${gotNoAnswer(e) ? "" : `: ${errorMessage(e).replace(/\.$/, "")}`}. The step before it was accepted and stands. This step was not submitted; it is safe to try again.`
-					: `The request did not reach Hyperliquid${gotNoAnswer(e) ? "" : `: ${errorMessage(e).replace(/\.$/, "")}`}. Nothing was submitted; it is safe to try again.`,
+					? `The request for this step did not reach Hyperliquid${gotNoAnswer(e) ? "" : `: ${errorMessage(e).replace(/\.$/, "")}`}. The step before it was accepted and stands. This step was not sent; it is safe to try again.`
+					: `The request did not reach Hyperliquid${gotNoAnswer(e) ? "" : `: ${errorMessage(e).replace(/\.$/, "")}`}. Nothing was sent; it is safe to try again.`,
 			),
 		};
 	}

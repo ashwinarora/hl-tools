@@ -97,11 +97,11 @@ function Row({ entry, onDelete }: { entry: Entry; onDelete: () => void }) {
 						</span>
 					)}
 					{outcomes.every((o) => o === "ok") ? (
-						<Pill tone="success">submitted</Pill>
+						<Pill tone="success">sent</Pill>
 					) : outcomes.includes("error") ? (
 						<Pill tone="danger">rejected</Pill>
 					) : outcomes.includes("ok") ? (
-						<Pill tone="info">step 1 submitted</Pill>
+						<Pill tone="info">step 1 sent</Pill>
 					) : null}
 					<When at={row.updatedAt} />
 				</span>
@@ -142,7 +142,7 @@ export function HistoryList({ network }: { network: Network }) {
 			title="Recent in this browser"
 			description={
 				relayOff
-					? "Proposals you made or opened here. Stored in this browser only (IndexedDB); the chain knows nothing of a proposal until it is submitted."
+					? "Proposals you made or opened here, saved in this browser. Hyperliquid sees nothing until one is sent. Clearing this site's data removes them."
 					: RELAY_COPY.recentHere
 			}
 			actions={

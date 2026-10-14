@@ -285,7 +285,7 @@ export const CODE_COPY = {
 	didNotSwitch:
 		"The wallet did not go to the signing network. Switch to it in the wallet, then sign again.",
 	wouldNotAdd: (net: SigningNetwork) =>
-		`The wallet would not add the signing network. Add a network with chain id ${SIGNING_CHAIN_ID} and this link in the wallet, then sign again: ${net.rpcUrl}`,
+		`Your wallet refused to add the signing network. To add it by hand: in your wallet, add a custom network with chain ID ${SIGNING_CHAIN_ID} and, as its URL, ${net.rpcUrl}. It holds no money and nothing is sent on it. Then press Sign again.`,
 	absentHead: "A vault action: this copy of the app cannot sign it",
 	absentBody:
 		"A vault deposit or withdrawal is signed as a code, under a network the wallet has to hold. This copy of the app was set up without that network's link, so it can be read and checked here, not signed.",
@@ -295,6 +295,6 @@ export const CODE_COPY = {
 	chainLabel: "The finaliser signs under",
 	chainHint: (chain: string, twoSteps: boolean) =>
 		twoSteps
-			? `The vault step is signed as a code, under the signing network. Step 1, and the signatures the finaliser submits with, are under ${chain}; nothing is sent to that chain.`
-			: `Signers sign a code, under the signing network. Only the signature the finaliser submits with is under ${chain}; nothing is sent to that chain.`,
+			? `The vault step is signed as a code, under the signing network. Step 1, and the finaliser's own signature, are under ${chain}; nothing is sent on that network.`
+			: `Signers sign a code, under the signing network. Only the finaliser's own signature is under ${chain}; nothing is sent on that network.`,
 } as const;

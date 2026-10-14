@@ -119,12 +119,13 @@ export interface RecheckState {
  * is true only of an ask that got through and is still being answered.
  */
 export function recheckLine(s: RecheckState): string {
-	if (s.checking) return "The relay is looking it up now.";
+	if (s.checking)
+		return "The sharing service is checking this treasury on Hyperliquid now…";
 	if (s.refused !== null)
 		return `The copy could not be brought up to date. ${s.refused}`;
 	if (s.gaveUp)
-		return `The relay was asked ${RECHECK_MAX} times and its copy still differs. It may not be reaching Hyperliquid right now.`;
-	return "The relay has been asked to look again; this page updates by itself.";
+		return `The sharing service was asked ${RECHECK_MAX} times and its copy of the signers still differs from Hyperliquid's. It may not be reaching Hyperliquid right now; try again later.`;
+	return "The sharing service has been asked to look again; this page updates by itself.";
 }
 
 /** A page may ask by hand once the asking by itself has stopped or was refused. */
@@ -141,10 +142,11 @@ export const COUNTED_MEANWHILE =
 /** Why the relay finished a request without doing what was asked, by its `reason`. */
 export const REQUEST_REASONS: Readonly<Record<string, string>> = {
 	not_a_signer:
-		"The relay looked the account up and your wallet is not one of its signers.",
-	not_multisig: "The relay looked the account up and it is not a multi-sig.",
+		"The sharing service looked the account up on Hyperliquid, and your wallet is not one of its signers.",
+	not_multisig:
+		"The sharing service looked the account up on Hyperliquid, and it is not a treasury there.",
 	lookup_failed:
-		"The relay could not reach Hyperliquid for this lookup. Try again in a minute.",
+		"The sharing service could not reach Hyperliquid for this look-up. Try again in a minute.",
 };
 
 /**

@@ -56,11 +56,11 @@ export function StartProposal({ wallet }: { wallet?: string | null }) {
 					}}
 				>
 					<Field
-						label="Multi-sig account (treasury)"
+						label="Treasury address"
 						htmlFor="ms-treasury"
 						error={
 							input.trim() && !valid
-								? "A 20-byte hex address: 0x followed by 40 hex digits."
+								? "An address starts with 0x followed by 40 letters and digits (0-9, a-f)."
 								: undefined
 						}
 					>

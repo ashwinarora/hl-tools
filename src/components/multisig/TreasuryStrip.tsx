@@ -1,4 +1,4 @@
-import { visibleText } from "@hl-tools/core";
+import { type Network, visibleText } from "@hl-tools/core";
 import { Loader2 } from "lucide-react";
 import { KeyValueGrid, Panel } from "#/components/hub/layout";
 import {
@@ -11,8 +11,43 @@ import { AddressLine, short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
 import { API_WALLET_ROW } from "./model/apiWallet";
 import { balanceView, modeLabel } from "./model/mode";
+import { useTreasuries } from "./relay/queries";
 import { When } from "./shell/live";
 import type { TreasuryState } from "./useTreasuryState";
+
+/**
+ * An address Hyperliquid reports no signers for. A treasury the sharing
+ * service knows was converted back is said as that, with when it noticed:
+ * the reader made no mistake. Anything else may be a wrong address or network.
+ */
+function NotATreasury({
+	address,
+	network,
+}: {
+	address: string;
+	network: Network;
+}) {
+	const { rows } = useTreasuries();
+	const known = rows.find(
+		(t) =>
+			t.network === network &&
+			t.address === address.toLowerCase() &&
+			t.frozenAt !== null,
+	);
+	return known?.frozenAt ? (
+		<>
+			{short(address)} was converted back to a normal account (seen{" "}
+			<When at={known.frozenAt} />
+			). Nothing new can be proposed for it.
+		</>
+	) : (
+		<>
+			Hyperliquid reports no signers for {short(address)} there. If it was a
+			treasury, it has been converted back to a normal account; if not, check
+			the address and the network in the header.
+		</>
+	);
+}
 
 /**
  * The treasury at a glance, on every signer screen: who must sign, which API
@@ -59,12 +94,12 @@ export function TreasuryStrip({
 					aria-busy="true"
 				>
 					<Loader2 className="size-4 animate-spin" aria-hidden /> Reading the
-					signer set on {target.network}…
+					signers on {target.network}…
 				</div>
 			) : state.error ? (
 				<Callout
 					tone="danger"
-					title="Could not read the signer set"
+					title="Could not read the signers from Hyperliquid"
 					action={
 						<Button size="sm" variant="outline" onClick={state.refetch}>
 							Retry
@@ -74,9 +109,8 @@ export function TreasuryStrip({
 					{state.error}
 				</Callout>
 			) : state.isMultiSig === false ? (
-				<Callout tone="warning" title={`Not a multi-sig on ${target.network}`}>
-					{short(target.address)} has no signer set there. Check the address and
-					the network in the header.
+				<Callout tone="warning" title={`Not a treasury on ${target.network}`}>
+					<NotATreasury address={target.address} network={target.network} />
 				</Callout>
 			) : (
 				<div className="space-y-3">

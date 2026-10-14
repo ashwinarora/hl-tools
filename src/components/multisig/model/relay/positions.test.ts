@@ -421,16 +421,16 @@ describe("the sentences, as approved", () => {
 			now: NOW,
 		});
 		expect(read(others?.headline ?? null)).toBe(
-			"Cannot be submitted as things stand",
+			"Cannot be sent as things stand",
 		);
 		// no "he" or "she": the page knows an address, not a person
 		expect(read(others?.detail ?? null)).toBe(
-			"Bob said no, and Bob is the one who has to submit this proposal. It goes ahead only if Bob changes their mind. To have someone else submit it, propose it again with a different finaliser. Otherwise it lapses on 2026-10-14 16:20 UTC, in 1 day 6 hours.",
+			"Bob said no, and Bob is the one who sends this proposal. It goes ahead only if Bob changes their mind. To have someone else send it, propose it again with a different finaliser. Otherwise it lapses on 2026-10-14 16:20 UTC, in 1 day 6 hours.",
 		);
 		expect(
 			read(ownPosition({ standing: s, me: BOB, finaliser: BOB, now: NOW })),
 		).toBe(
-			"You said no. You are the one who has to submit this, so it cannot go ahead unless you change your mind.",
+			"You said no. You are the one who has to send this, so it cannot go ahead unless you change your mind.",
 		);
 		const self = blockedText({
 			standing: s,
@@ -440,7 +440,7 @@ describe("the sentences, as approved", () => {
 			now: NOW,
 		});
 		expect(read(self?.detail ?? null)).toMatch(
-			/^You said no, and you are the one who has to submit this proposal\. It goes ahead only if you change your mind\./,
+			/^You said no, and you are the one who sends this proposal\. It goes ahead only if you change your mind\./,
 		);
 	});
 

@@ -17,7 +17,12 @@ import { useNetworkStore } from "#/store/networkStore";
 import { refreshStaking } from "../live/useStaking";
 import { refreshVaults } from "../live/useVaults";
 import { modeTargetOf } from "../model/modeSwitch";
-import { finishHint, RELAY_COPY, signHint } from "../model/relay/copy";
+import {
+	cancelNote,
+	finishHint,
+	RELAY_COPY,
+	signHint,
+} from "../model/relay/copy";
 import { objectionNote, ownPosition } from "../model/relay/positions";
 import { relayActions } from "../model/relay/status";
 import { CODE_COPY } from "../model/signingNetwork";
@@ -209,7 +214,7 @@ export function YourPart({
 		...(adds || (steps && steps.inner !== "todo")
 			? [{ id: "inner" as const, label: "Your signature on the action" }]
 			: []),
-		{ id: "envelope", label: "Your signature on the envelope" },
+		{ id: "envelope", label: "Your signature as finaliser" },
 		{ id: "submit", label: `Sent to Hyperliquid ${network}` },
 	];
 
@@ -269,23 +274,23 @@ export function YourPart({
 	const note =
 		stage.phase === "stuck"
 			? actions.withdraw
-				? "It cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again with another finaliser."
-				: "It cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it."
+				? "It cannot be sent, so nothing here needs a signature. Cancel it, then propose it again with another finaliser."
+				: "It cannot be sent, so nothing here needs your signature. Its proposer can cancel it."
 			: stage.phase === "overtaken" || stage.phase === "refused"
 				? actions.withdraw
-					? "It cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again."
-					: "It cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it and propose it again."
+					? "It cannot be sent, so nothing here needs a signature. Cancel it, then propose it again."
+					: "It cannot be sent, so nothing here needs your signature. Its proposer can cancel it and propose it again."
 				: stage.canExecute
 					? adds
-						? "Your signature completes the threshold. Two wallet prompts, then it is sent."
-						: `One wallet prompt, then it is sent. ${finishHint(proposal.payload.action, false)}`
+						? `Your signature completes the number needed. Two wallet prompts, then it is sent to Hyperliquid. ${RELAY_COPY.sendIsFinal}`
+						: `One wallet prompt, then it is sent to Hyperliquid. ${RELAY_COPY.sendIsFinal} ${finishHint(proposal.payload.action, false)}`
 					: stage.canSign
-						? `${signHint(proposal.payload.action)}${stage.signsCode ? ` ${CODE_COPY.signedUnder}` : chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
+						? `${signHint(proposal.payload.action)}${stage.signsCode ? ` ${CODE_COPY.signedUnder}` : chain ? ` Your wallet may ask to switch to ${chain.label} first, then to sign. Nothing is sent or paid there.` : ""}`
 						: stage.hasSigned
 							? stage.phase === "ready"
-								? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to submit.`
+								? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to send it.`
 								: waiting
-									? `You signed this. It needs ${waiting} more.`
+									? `You signed this. It needs ${waiting} more ${waiting === 1 ? "signature" : "signatures"}; then ${isFinaliser ? "you send" : `${shortAddress(outerSigner)} sends`} it. You can close this page.`
 									: "You signed this."
 							: (stage.signReason ?? stage.executeReason ?? "");
 	// the wallet is the treasury account: the same sentence as on its own page
@@ -345,7 +350,7 @@ export function YourPart({
 							disabled={wallet.busy || doc.relay.busy}
 							onClick={submit}
 						>
-							{adds ? "Sign and submit" : "Submit"}
+							{adds ? "Sign and send to Hyperliquid" : "Send to Hyperliquid"}
 						</Btn>
 					) : stage.canSign ? (
 						<Btn
@@ -364,13 +369,14 @@ export function YourPart({
 							disabled
 							title={`Hyperliquid would refuse it before the ${held}'s lockup has ended.`}
 						>
-							Submit
+							Send to Hyperliquid
 						</Btn>
 					)}
 					{actions.takeBack && (
 						<Btn
 							variant="outline"
 							disabled={doc.relay.busy || wallet.busy}
+							title={RELAY_COPY.takeBackHint}
 							onClick={() => {
 								setOutcome(null);
 								void doc.takeBack();
@@ -414,7 +420,7 @@ export function YourPart({
 							disabled={doc.relay.busy}
 							onClick={() => setConfirm(true)}
 						>
-							Withdraw
+							Cancel for everyone
 						</Btn>
 					)}
 				</div>
@@ -422,7 +428,7 @@ export function YourPart({
 			{waits && stage.opensAt !== null && !stage.closesFirst && (
 				<p className="mt-2.5 flex flex-wrap items-center gap-1 text-[13px] text-muted-foreground">
 					<span>
-						Submit opens on <When at={stage.opensAt} /> (
+						Sending opens on <When at={stage.opensAt} /> (
 						{untilWords(stage.opensAt, now)}): the {held} this takes from is
 						locked until then.
 						{stage.canSign ? " You can sign now." : ""}
@@ -471,7 +477,7 @@ export function YourPart({
 				<Callout
 					tone="warning"
 					className="mt-3"
-					title="Withdraw this proposal?"
+					title="Cancel this proposal for everyone?"
 					action={
 						<div className="flex flex-wrap items-center gap-2">
 							<Btn
@@ -484,7 +490,7 @@ export function YourPart({
 									void doc.withdraw();
 								}}
 							>
-								Yes, withdraw
+								Yes, cancel it
 							</Btn>
 							<Btn size="sm" variant="ghost" onClick={() => setConfirm(false)}>
 								Keep it
@@ -492,14 +498,14 @@ export function YourPart({
 						</div>
 					}
 				>
-					{RELAY_COPY.endingNote}
+					<Sentence parts={cancelNote(stage.window.validUntil)} />
 				</Callout>
 			)}
 			{outcome?.ok === true && (
 				<Callout tone="success" title="Signature added" className="mt-3">
 					{doc.relay.known
 						? "Your co-signers see it now."
-						: "Saved in this browser. Pass the proposal on so the others can sign."}
+						: "Saved in this browser. Nobody else can see it yet: use Share below to send it to your co-signers."}
 				</Callout>
 			)}
 			{outcome?.ok === false && (
@@ -508,7 +514,7 @@ export function YourPart({
 				</Callout>
 			)}
 			{failure && (
-				<Callout tone="danger" title="Not submitted" className="mt-3">
+				<Callout tone="danger" title="Not sent" className="mt-3">
 					<IssueList plain issues={failure} />
 				</Callout>
 			)}

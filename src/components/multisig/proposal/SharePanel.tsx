@@ -344,8 +344,8 @@ export function SharePanel({
 						</Button>
 					}
 				>
-					Its digest is {result.digest.slice(0, 18)}…, not this one's. It was
-					saved to this browser's history.
+					It is another proposal ({result.digest.slice(0, 10)}…), not this one.
+					It was saved to this browser's history.
 				</Callout>
 			)}
 			{result?.kind === "failed" && (
@@ -368,8 +368,8 @@ export function SharePanel({
 				<div className="border-t border-border p-4">
 					<p className="mb-4 text-xs text-muted-foreground">
 						The document is the whole proposal. A link or a file carries it to a
-						signer who does not use the relay; what they send back is merged
-						here, with every signature verified first.
+						signer who does not use the sharing service; what they send back is
+						merged here, with every signature checked first.
 					</p>
 					{body}
 				</div>

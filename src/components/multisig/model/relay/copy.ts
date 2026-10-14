@@ -1,3 +1,6 @@
+import { weiToHype } from "@hl-tools/core";
+import { type Part, say } from "../parts";
+
 /**
  * Every sentence the relay-era screens say about what happens to your data,
  * in one place so it can be checked (copy.test.ts): nothing here may promise
@@ -12,35 +15,37 @@ export const RELAY_COPY = {
 	signedOutRail:
 		"Sign in to see your treasuries and what your co-signers have proposed.",
 	landingMeta:
-		"Propose, sign and submit native Hyperliquid multi-sig actions with your own wallet.",
+		"Propose, sign and send native Hyperliquid multi-sig actions with your own wallet.",
 	teamTitle: "With your team",
 	teamBody:
 		"Sign in with your wallet to see your treasuries, what is waiting for your signature, and who signed what.",
-	teamSmall: "One wallet prompt. It approves nothing and moves nothing.",
+	teamSmall:
+		"One wallet prompt. It approves nothing and moves nothing, whatever network the message names.",
 	soloTitle: "Without signing in",
 	soloBody:
 		"Everything also works with links and files passed by hand. Nothing is stored for you.",
 	withoutUs: "You can always do this without us.",
 	recentHere:
-		"Proposals you made or opened here, as this browser keeps them (IndexedDB). The chain knows nothing of a proposal until it is submitted.",
-	unreachable: "Relay unreachable. Links and files still work.",
+		"Proposals you made or opened here, saved in this browser. Hyperliquid sees nothing until one is sent. Clearing this site's data removes them.",
+	unreachable:
+		"Can't reach the sharing service. Your co-signers' updates will not show until it is back. You can still share by link or file.",
 	// Several wallets can stay signed in in one browser; only the connected one is in use.
 	othersHow:
 		"Choose one of them in your wallet to use it, with no new signature. While another wallet is connected, nothing is read or sent for these.",
-	// a proposal made while the relay is not in use stays where it was made
+	// a proposal made while the sharing service is not in use stays where it was made
 	notSignedInLocal:
 		"You are not signed in, so it stays in this browser until you pass it on: your co-signers do not see it in their lists.",
 	unreachableLocal:
-		"The relay cannot be reached, so it stays in this browser until you pass it on.",
+		"The sharing service cannot be reached, so it stays in this browser until you pass it on.",
 	connectOneOf:
 		"Connect a wallet that is signed in here to continue, or sign in with another one.",
 	signOutAll: "Sign out all wallets",
 	firstUseTitle: "This section signs and sends real transactions",
 	firstUseBody:
-		"You approve every signature in your own wallet, and a submitted action cannot be undone. Read the destination and amount in the wallet prompt each time, and rehearse on testnet first.",
+		"You approve every signature in your own wallet, and once Hyperliquid accepts an action it cannot be undone. Read the destination and amount in the wallet prompt each time, and rehearse on testnet first.",
 	// the same notice in a build without a relay: how a proposal travels there
 	firstUseBodySolo:
-		"Proposals are signed with your wallet and submitted to Hyperliquid from this browser. A proposal travels as a link or a file, and every signature is verified here before anything is sent. Rehearse on testnet first.",
+		"Proposals are signed with your wallet and sent to Hyperliquid from this browser. A proposal travels as a link or a file, and every signature is checked here before anything is sent. Rehearse on testnet first.",
 	underSign:
 		"Your wallet will show the treasury, the finaliser, the destination and the amount. Check them there.",
 	shareOnlyHere:
@@ -56,10 +61,12 @@ export const RELAY_COPY = {
 	takeBackNo: "Take back my no",
 	saidNoAfterSigning:
 		"Saying no takes your signature back here. On Hyperliquid a signature already given still counts until the signing window closes.",
-	endingNote:
-		"It leaves everyone's pending list and cannot be brought back. Signatures already given stay valid until the signing window closes.",
 	reportedReceipt:
-		"As reported by the finaliser's browser. The ledger is the proof.",
+		"As reported by the finaliser's browser. Hyperliquid's record is the proof.",
+	takeBackHint:
+		"Removes it from this page. A copy someone already has still counts on Hyperliquid until the signing window closes.",
+	/** Under the button that sends: it is final. */
+	sendIsFinal: "Once Hyperliquid accepts it, it cannot be undone.",
 	addMeta:
 		"Paste its address once. After that, every co-signer who signs in sees it automatically.",
 	// Nicknames. They are shared with the treasury's signers through the relay,
@@ -101,7 +108,8 @@ export const RELAY_COPY = {
 	registered: "Its signers find it in their list when they sign in.",
 	registerFailed:
 		"The account is converted, but it could not be added to its signers' lists just now. Any signer can add it under “Add an existing one”.",
-	registeredByAccount: "Registered by the account itself when it was converted",
+	registeredByAccount:
+		"Registered by the account itself when it was first converted",
 	registerSelfTitle: "this is the wallet you are signed in with",
 	registerSelfBody:
 		"Register it so that its signers find it in their list. You will not see it here yourself: sign in as one of its signers for that.",
@@ -111,6 +119,16 @@ export const RELAY_COPY = {
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;
+
+/**
+ * What cancelling a proposal for everyone does, and what it does not: it
+ * leaves every list, but the signatures already given stay valid on
+ * Hyperliquid until the window closes (`until`), so the finaliser could
+ * still send it. Shown before the proposer confirms.
+ */
+export function cancelNote(until: number): Part[] {
+	return say`This cannot be undone. It leaves everyone's list, but it does not stop the proposal on Hyperliquid: the signatures already given stay valid until ${{ text: `${new Date(until).toISOString().slice(0, 16).replace("T", " ")} UTC`, when: until }}, and the finaliser could still send it.`;
+}
 
 /**
  * What can be said after "Hyperliquid rejected …" from the history entry
@@ -132,8 +150,17 @@ export function afterRejection(httpStatus: unknown): string {
  * is: the prompt shows the treasury and the finaliser every time, and then
  * the fields of the action itself.
  */
-const STAKING_WEI_HINT =
-	"Your wallet will show the treasury, the finaliser and the amount as a whole number: 100000000 is 1 HYPE. Check them there.";
+/** "the amount as 10000000, which is 0.1 HYPE": the figure the wallet shows, and what it is. */
+function weiAmount(wei: unknown): string {
+	const hype = weiToHype(wei);
+	return hype === null
+		? "the amount as a whole number of HYPE's smallest unit (100000000 is 1 HYPE)"
+		: `the amount as ${String(wei)}, which is ${hype} HYPE`;
+}
+const STAKING_WEI_HINT = (wei: unknown) =>
+	`Your wallet will show the treasury, the finaliser and ${weiAmount(wei)}. Check them there.`;
+const UNSTAKE_HINT = (wei: unknown) =>
+	`Your wallet will show the treasury, the finaliser, the validator's address and ${weiAmount(wei)}. “isUndelegate” reads false for a stake and true for an unstake. Check them there.`;
 const SIGN_HINTS: Readonly<Record<string, string>> = {
 	convertToMultiSigUser:
 		"Your wallet will show the treasury, the finaliser and the new list of signers with the number that must sign. Check them there.",
@@ -146,11 +173,13 @@ const SIGN_HINTS: Readonly<Record<string, string>> = {
 	// signed as a code: the wallet shows no field of the action
 	vaultTransfer:
 		"Your wallet will show a code, not the action: the field “connectionId”. Compare it with the code on this page before you sign.",
-	// the staking actions carry HYPE as a whole number with 8 decimals
+};
+
+/** The staking actions carry HYPE as a whole number with 8 decimals: said with its figure. */
+const WEI_HINTS: Readonly<Record<string, (wei: unknown) => string>> = {
 	cDeposit: STAKING_WEI_HINT,
 	cWithdraw: STAKING_WEI_HINT,
-	tokenDelegate:
-		"Your wallet will show the treasury, the finaliser, the validator's address and the amount as a whole number: 100000000 is 1 HYPE. “isUndelegate” reads false for a stake and true for an unstake. Check them there.",
+	tokenDelegate: UNSTAKE_HINT,
 };
 
 /** The actions that pay someone: the prompt names a destination and an amount. */
@@ -173,9 +202,12 @@ export function signHint(action: {
 	readonly type?: unknown;
 	readonly signers?: unknown;
 	readonly agentAddress?: unknown;
+	readonly wei?: unknown;
 }): string {
 	const type = action.type;
 	if (typeof type !== "string") return SIGN_HINT_OTHER;
+	const wei = WEI_HINTS[type];
+	if (wei) return wei(action.wei);
 	if (PAYS.includes(type)) return RELAY_COPY.underSign;
 	if (type === "convertToMultiSigUser" && action.signers === "null")
 		return SIGN_HINT_BACK;
@@ -213,6 +245,7 @@ export function finishHint(
 
 export const SIGN_HINT_TEXTS: readonly string[] = [
 	...Object.values(SIGN_HINTS),
+	...Object.values(WEI_HINTS).flatMap((hint) => [hint(10_000_000), hint(null)]),
 	SIGN_HINT_OTHER,
 	SIGN_HINT_BACK,
 	SIGN_HINT_REMOVAL,

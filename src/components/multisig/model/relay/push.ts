@@ -84,20 +84,20 @@ export function isRelayVaultAction(action: PlainObject): boolean {
 	);
 }
 
-/** Why a proposal cannot be shared through the relay; null when it can. */
+/** Why a proposal cannot be shared through the sharing service; null when it can. */
 export function publishBlocker(p: Proposal): string | null {
 	if (p.payload.vaultAddress !== null || p.payload.expiresAfter !== null) {
-		return "A proposal with a vault address or an expiry cannot be shared through the relay.";
+		return "A proposal with a vault address or an expiry cannot be shared through the sharing service. It still works as a link or a file.";
 	}
 	// the kind has to be the action's own: a vault deposit or withdrawal is the
 	// one action signed as a code that is shared, and it is never user-signed
 	if (p.payload.action.type === "vaultTransfer") {
 		return p.meta.kind === "l1" && isRelayVaultAction(p.payload.action)
 			? null
-			: "This vault action is not in the form the relay takes, so it cannot be shared through it.";
+			: "This vault action is not in the form the sharing service takes, so it cannot be shared through it. It still works as a link or a file.";
 	}
 	if (p.meta.kind !== "user-signed") {
-		return "Of the actions signed as a code, only a vault deposit or withdrawal can be shared through the relay.";
+		return "Of the actions signed as a code, only a vault deposit or withdrawal can be shared through the sharing service.";
 	}
 	return null;
 }

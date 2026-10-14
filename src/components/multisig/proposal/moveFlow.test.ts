@@ -321,7 +321,7 @@ describe("the finaliser's click on a move of two steps", () => {
 		expect(result).toMatchObject({ ok: false, index: 1, sent: 1 });
 		const said = result.ok ? "" : (result.issues[0]?.message ?? "");
 		expect(said).toBe(
-			"The request for this step did not reach Hyperliquid. The step before it was accepted and stands. This step was not submitted; it is safe to try again.",
+			"The request for this step did not reach Hyperliquid. The step before it was accepted and stands. This step was not sent; it is safe to try again.",
 		);
 		expect(said).not.toContain("Nothing was submitted");
 		expect((await stored(one)).receipt?.response).toMatchObject({
@@ -339,7 +339,7 @@ describe("the finaliser's click on a move of two steps", () => {
 		});
 		expect(none).toMatchObject({ ok: false, index: 0, sent: 0 });
 		expect(none.ok ? "" : none.issues[0]?.message).toContain(
-			"Nothing was submitted; it is safe to try again.",
+			"Nothing was sent; it is safe to try again.",
 		);
 	});
 

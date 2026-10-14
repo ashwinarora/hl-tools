@@ -168,7 +168,7 @@ describe("awayItems: an action carried out", () => {
 				proposals: [theirs({ signers: [A, B], title: "Audit fee" })],
 			}),
 		).toEqual([
-			`Send 120 USDC to 0x9a01…77c2 (“Audit fee”), which you signed, was carried out. Submitted by ${short(C)}.`,
+			`Send 120 USDC to 0x9a01…77c2 (“Audit fee”), which you signed, was carried out. Sent by ${short(C)}.`,
 		]);
 		expect(
 			texts({
@@ -176,7 +176,7 @@ describe("awayItems: an action carried out", () => {
 				proposals: [theirs({ createdBy: A, signers: [A, B] })],
 			}),
 		).toEqual([
-			`Send 120 USDC to 0x9a01…77c2, which you proposed, was carried out. Submitted by ${short(C)}.`,
+			`Send 120 USDC to 0x9a01…77c2, which you proposed, was carried out. Sent by ${short(C)}.`,
 		]);
 	});
 	it("says nothing to the one who submitted it", () => {
@@ -186,7 +186,7 @@ describe("awayItems: an action carried out", () => {
 	});
 	it("still tells when the document is not at hand, without claiming who signed", () => {
 		expect(texts({ events: [accepted(11, C)] })).toEqual([
-			`A proposal was carried out. Submitted by ${short(C)}.`,
+			`A proposal was carried out. Sent by ${short(C)}.`,
 		]);
 	});
 	it("tells everyone when it was carried out outside the tool", () => {
@@ -244,7 +244,7 @@ describe("awayItems: the end of something you proposed or signed", () => {
 				proposals: [mineToo],
 			}),
 		).toEqual([
-			`Send 120 USDC to 0x9a01…77c2, which you signed, was withdrawn by the proposer, ${short(B)}.`,
+			`Send 120 USDC to 0x9a01…77c2, which you signed, was cancelled by the proposer, ${short(B)}.`,
 		]);
 		expect(
 			texts({
@@ -252,7 +252,7 @@ describe("awayItems: the end of something you proposed or signed", () => {
 				proposals: [theirs({ createdBy: A, signers: [A] })],
 			}),
 		).toEqual([
-			`Send 120 USDC to 0x9a01…77c2, which you proposed, was declined by the finaliser, ${short(C)}.`,
+			`Send 120 USDC to 0x9a01…77c2, which you proposed, will not be sent: ${short(C)}, its finaliser, said no.`,
 		]);
 	});
 	it("leaves out the ones you had no part in", () => {
@@ -288,7 +288,7 @@ describe("awayItems: the end of something you proposed or signed", () => {
 				proposals: [theirs({ signers: [A, B] })],
 			}),
 		).toEqual([
-			`Send 120 USDC to 0x9a01…77c2, which you signed, was carried out. Submitted by ${short(C)}.`,
+			`Send 120 USDC to 0x9a01…77c2, which you signed, was carried out. Sent by ${short(C)}.`,
 		]);
 		// withdrawn, then carried out anyway by another route
 		expect(
@@ -318,7 +318,7 @@ describe("awayItems: the end of something you proposed or signed", () => {
 		});
 		const got = items({ proposals: [expired] });
 		expect(got.map((x) => partsText(x.parts))).toEqual([
-			"Send 120 USDC to 0x9a01…77c2, which you signed, expired before it was submitted.",
+			"Send 120 USDC to 0x9a01…77c2, which you signed, expired before it was sent.",
 		]);
 		expect(got[0]?.at).toBe(NOW + 3_600_000);
 		// not yours; not expired yet; expired before the marker; or it ended another way
@@ -848,7 +848,7 @@ describe("a co-signer's no", () => {
 	const lines = (list: ReturnType<typeof items>) =>
 		list.map((x) => partsText(x.parts));
 
-	it("is told when it stands on something you proposed, or have to submit", () => {
+	it("is told when it stands on something you proposed, or have to send", () => {
 		expect(
 			lines(
 				items({
@@ -867,7 +867,7 @@ describe("a co-signer's no", () => {
 				}),
 			),
 		).toEqual([
-			`${short(B)} said no to Send 120 USDC to 0x9a01…77c2, which you have to submit.`,
+			`${short(B)} said no to Send 120 USDC to 0x9a01…77c2, which you have to send.`,
 		]);
 	});
 
@@ -981,7 +981,7 @@ describe("a move of two steps in the notice", () => {
 				proposals: [step(1), step(2)],
 			}),
 		).toEqual([
-			`${MOVE} (both steps), which you proposed, was carried out. Submitted by ${short(C)}.`,
+			`${MOVE} (both steps), which you proposed, was carried out. Sent by ${short(C)}.`,
 		]);
 	});
 	it("the line leads to the move", () => {
@@ -1027,7 +1027,7 @@ describe("a move of two steps in the notice", () => {
 			}).sort(),
 		).toEqual(
 			[
-				`${MOVE} (step 1 of 2), which you proposed, was carried out. Submitted by ${short(C)}.`,
+				`${MOVE} (step 1 of 2), which you proposed, was carried out. Sent by ${short(C)}.`,
 				`Hyperliquid rejected ${MOVE} (step 2 of 2), which you proposed. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
 			].sort(),
 		);
@@ -1049,7 +1049,7 @@ describe("a move of two steps in the notice", () => {
 	it("a move that expired is said once", () => {
 		const lapsed = { status: "open" as const, expiresAt: NOW + 1000 };
 		expect(texts({ proposals: [step(1, lapsed), step(2, lapsed)] })).toEqual([
-			`${MOVE} (both steps), which you proposed, expired before it was submitted.`,
+			`${MOVE} (both steps), which you proposed, expired before it was sent.`,
 		]);
 	});
 });

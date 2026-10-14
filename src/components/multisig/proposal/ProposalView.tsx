@@ -490,7 +490,7 @@ export function ProposalView({
 			}}
 			className={linkButtonSm}
 		>
-			Re-propose
+			Propose it again
 		</Link>
 	);
 
@@ -575,7 +575,7 @@ export function ProposalView({
 										search={{ view: "account", address: target.address }}
 										className={linkButtonSm}
 									>
-										Check the ledger in the inspector
+										Check Hyperliquid's record in the inspector
 									</Link>
 								)
 							) : stage.phase === "carried-out" ? (
@@ -634,7 +634,7 @@ export function ProposalView({
 					{stage.failedAttempt && stage.phase !== "carried-out" && (
 						<Callout
 							tone="danger"
-							title={`The last submission was rejected: ${stage.failedAttempt.message}`}
+							title={`The last attempt to send it was refused: ${stage.failedAttempt.message}`}
 							action={
 								// "already used" often means it went through somewhere else: the ledger says
 								stage.failedAttempt.id === "nonce-duplicate" ? (
@@ -643,7 +643,7 @@ export function ProposalView({
 										search={{ view: "account", address: target.address }}
 										className={linkButtonSm}
 									>
-										Check the ledger in the inspector
+										Check Hyperliquid's record in the inspector
 									</Link>
 								) : undefined
 							}
@@ -676,10 +676,10 @@ export function ProposalView({
 					{stage.policyChanged && !CLOSED.has(stage.phase) && (
 						<Callout
 							tone="warning"
-							title="The signer set changed since this was proposed"
+							title="The signers changed since this was proposed"
 						>
-							Signatures are counted against the signer set the chain reports
-							now, not the one recorded in the document.
+							Signatures are counted against the signers Hyperliquid reports
+							now, not the ones written in the proposal.
 						</Callout>
 					)}
 					{doc.storageError && (
@@ -882,7 +882,7 @@ export function ProposalView({
 												>
 													Look at On Hyperliquid
 												</Link>{" "}
-												before submitting.
+												before sending it.
 											</span>
 										</p>
 									)}
@@ -912,10 +912,10 @@ export function ProposalView({
 														>
 															Look at that transaction
 														</a>{" "}
-														before submitting.
+														before sending it.
 													</>
 												) : (
-													"Hyperliquid's staking history shows several steps like this one, and the explorer did not say whether one of them is this proposal. Look at the treasury's Staking history before submitting."
+													"Hyperliquid's staking history shows several steps like this one, and the explorer did not say whether one of them is this proposal. Look at the treasury's Staking history before sending it."
 												)}
 											</span>
 										</p>
@@ -990,9 +990,10 @@ export function ProposalView({
 					<details className="group min-w-0">
 						<summary className="cursor-pointer list-none text-[13px] font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
 							<span className="group-open:hidden">
-								▸ Details: treasury, digests, each signature, the envelope
+								{/* jargon: the expert fold, named by what it holds */}▸ For
+								experts: treasury, digests, each signature, the envelope
 							</span>
-							<span className="hidden group-open:inline">▾ Details</span>
+							<span className="hidden group-open:inline">▾ For experts</span>
 						</summary>
 						<div className="mt-4 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
 							<TreasuryStrip state={treasury} wallet={me} />

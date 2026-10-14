@@ -189,14 +189,14 @@ describe("what the finaliser's row offers (audit F-018)", () => {
 	it("asks for their signature only while it is still needed", () => {
 		// one short, and theirs would be the last: one press signs and submits
 		expect(finishLabel(entry({ finaliser: A, counted: [B] }), A)).toBe(
-			"Sign and submit",
+			"Sign and send",
 		);
 		// the others already reached the number: submitting is one wallet prompt
 		expect(finishLabel(entry({ finaliser: A, counted: [B, C] }), A)).toBe(
-			"Submit",
+			"Send",
 		);
 		expect(finishLabel(entry({ finaliser: A, counted: [A, B] }), A)).toBe(
-			"Submit",
+			"Send",
 		);
 	});
 });
@@ -228,7 +228,7 @@ describe("a proposal somebody said no to", () => {
 		// the finaliser can still finish it: a no is not a veto
 		const ready = entry({ finaliser: B, counted: [A, B], objected: [C] });
 		expect(inboxGroup(ready, B)).toBe("finish");
-		expect(finishLabel(ready, B)).toBe("Submit");
+		expect(finishLabel(ready, B)).toBe("Send");
 	});
 
 	it("asks nobody while it cannot go ahead as things stand", () => {
@@ -273,12 +273,12 @@ describe("the two steps of a move as one entry", () => {
 		expect(inboxGroup(m, A)).toBe("waiting");
 		// the finaliser's signature on both would complete both: one click finishes
 		expect(inboxGroup(m, B)).toBe("finish");
-		expect(finishLabel(m, B)).toBe("Sign and submit");
+		expect(finishLabel(m, B)).toBe("Sign and send");
 	});
 	it("is ready when both steps are", () => {
 		const m = move({ counted: [A, C] }, { counted: [C, A] });
 		expect(inboxGroup(m, B)).toBe("finish");
-		expect(finishLabel(m, B)).toBe("Submit");
+		expect(finishLabel(m, B)).toBe("Send");
 		expect(inboxGroup(m, A)).toBe("waiting");
 	});
 	it("is one thing to do, not two", () => {

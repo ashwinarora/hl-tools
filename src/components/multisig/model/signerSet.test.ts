@@ -23,6 +23,7 @@ import {
 	addEntries,
 	affectedProposals,
 	changeSummary,
+	isKeyless,
 	judgeSet,
 	type OnRecord,
 	parsePasted,
@@ -40,6 +41,7 @@ import {
 } from "./signerSet";
 
 const D = "0x00000000000000000000000000000000000000dd" as Address;
+const ZERO = "0x0000000000000000000000000000000000000000";
 const CHECKSUMMED = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed";
 const ok: SignerCheck = { state: "ready", role: "user", multiSig: null };
 const checks = (entries: Record<string, SignerCheck>) =>
@@ -70,8 +72,8 @@ describe("addEntries", () => {
 			addEntries([A], [A, B, B.toUpperCase().replace("0X", "0x")]),
 		).toEqual({
 			entries: [A, B],
-			duplicates: 2,
-			overMax: 0,
+			duplicates: [A, B.toUpperCase().replace("0X", "0x")],
+			overMax: [],
 		});
 		const many = Array.from(
 			{ length: 12 },
@@ -79,7 +81,7 @@ describe("addEntries", () => {
 		);
 		const r = addEntries([], many);
 		expect(r.entries).toHaveLength(SIGNERS_MAX);
-		expect(r.overMax).toBe(2);
+		expect(r.overMax).toEqual(many.slice(SIGNERS_MAX));
 	});
 });
 
@@ -394,6 +396,53 @@ describe("thresholdLines: what a number means", () => {
 	});
 });
 
+describe("addresses nobody holds the key of", () => {
+	it("are the zero address and HyperEVM's own addresses, and get a line each", () => {
+		const SYSTEM = "0x2222222222222222222222222222222222222222";
+		expect(isKeyless(ZERO)).toBe(true);
+		expect(isKeyless(SYSTEM)).toBe(true);
+		expect(isKeyless(A)).toBe(false);
+		const [row] = signerRows({
+			entries: [SYSTEM],
+			self: TREASURY,
+			checks: new Map([
+				[SYSTEM, { state: "ready", role: "user", multiSig: null }],
+			]),
+		});
+		expect(row?.lines.map((l) => [l.level, l.text])).toEqual([
+			[
+				"warning",
+				"This is one of HyperEVM's own addresses. Nobody holds its key, so it can never sign.",
+			],
+			["shown", "In use on Hyperliquid."],
+		]);
+	});
+	it("says the treasury itself, not the account being converted, in a change of signers", () => {
+		const [created] = signerRows({
+			entries: [TREASURY],
+			self: TREASURY,
+			checks: new Map(),
+		});
+		const [changed] = signerRows({
+			entries: [TREASURY],
+			self: TREASURY,
+			checks: new Map(),
+			current: [A, B],
+		});
+		expect(created?.lines[0]?.text).toBe(
+			"This is the account being converted. An account cannot be its own signer.",
+		);
+		expect(changed?.lines[0]?.text).toBe(
+			"This is the treasury itself. An account cannot be its own signer.",
+		);
+	});
+	it("says both signers, not all 2", () => {
+		expect(thresholdLines(2, 2)?.summary).toBe(
+			"Both signers must sign every time.",
+		);
+	});
+});
+
 describe("a list that can never reach its number (raised by the audit, 2026-10-12)", () => {
 	it("says the account would be locked for good, where the number is chosen", () => {
 		// the zero address as the only signer: Hyperliquid takes it, nobody can sign
@@ -402,11 +451,13 @@ describe("a list that can never reach its number (raised by the audit, 2026-10-1
 			stolen: "Stolen keys: no number of keys can move anything.",
 			lost: "Lost keys: it is locked from the start.",
 			warning:
-				"With this list the account is locked for good the moment it takes effect: nobody holds the zero address's key, and Hyperliquid has no recovery.",
+				"Nobody could ever sign for this treasury: everything in it would be locked for good.",
 		});
-		expect(thresholdLines(3, 3, 1)?.summary).toBe(
-			"Only 2 of these 3 can ever sign, and 3 must.",
-		);
+		expect(thresholdLines(3, 3, 1)).toMatchObject({
+			summary: "Only 2 of these 3 can ever sign, and 3 must.",
+			warning:
+				"With this list the account is locked for good the moment it takes effect: some of these addresses have no key anybody holds, and Hyperliquid has no recovery.",
+		});
 	});
 
 	it("counts only the signers who can sign, below the fully locked case too", () => {
@@ -432,7 +483,7 @@ describe("a list that can never reach its number (raised by the audit, 2026-10-1
 			stolen: "Stolen keys: that 1 key is enough to take everything.",
 			lost: "Lost keys: if it is lost, the account is locked for good.",
 			warning:
-				"One key controls the account: nobody holds the zero address's key.",
+				"One key controls the account: the others have no key anybody holds.",
 		});
 		expect(thresholdLines(3, 2, 0)).toEqual(thresholdLines(3, 2));
 	});
@@ -549,7 +600,7 @@ describe("waiting proposals and what a change does to them", () => {
 			/loses the signature of 0x.*: 0 of 2 left/,
 		);
 		expect(partsText(out[1]?.parts ?? [])).toMatch(
-			/can no longer be submitted: 0x.* was to submit it/,
+			/can no longer be sent: 0x.* was to send it/,
 		);
 	});
 
@@ -578,7 +629,7 @@ describe("waiting proposals and what a change does to them", () => {
 			["half", ["becomes-ready"]],
 		]);
 		expect(partsText(lowered[0]?.parts ?? [])).toBe(
-			"becomes ready to submit: 1 of 1",
+			"becomes ready to send: 1 of 1",
 		);
 	});
 
@@ -620,7 +671,7 @@ describe("waiting proposals and what a change does to them", () => {
 				lost: [A],
 			}),
 		]);
-		expect(partsText(out[0]?.parts ?? [])).toBe("can no longer be submitted");
+		expect(partsText(out[0]?.parts ?? [])).toBe("can no longer be sent");
 	});
 });
 

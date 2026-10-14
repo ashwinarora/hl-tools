@@ -870,14 +870,14 @@ function ProposeForm({
 							<>
 								<TreasuryStrip state={state} wallet={wallet.address} />
 								{notCopied && (
-									<Callout tone="warning" title="Not re-proposing">
+									<Callout tone="warning" title="Not proposing it again">
 										{notCopied}
 									</Callout>
 								)}
 								{superseded && (
-									<Callout tone="info" title="Re-proposing">
+									<Callout tone="info" title="Proposing it again">
 										Started from the proposal {short(superseded.digest)}. This
-										is a new proposal with a new nonce: signatures do not carry
+										is a new proposal with a new number: signatures do not carry
 										over.
 									</Callout>
 								)}
@@ -1003,7 +1003,7 @@ function ProposeForm({
 											trailing={<Help k="finaliser" />}
 											htmlFor="ms-finaliser"
 											error={error("finaliser")}
-											hint="The signer who will be there at the end: only this wallet can sign the envelope and submit. If they sign last, they finish in one sitting."
+											hint="The signer who sends it to Hyperliquid once enough have signed. Only this wallet can send it. Pick someone who will be around before the window closes."
 										>
 											<Select
 												id="ms-finaliser"
@@ -1026,9 +1026,18 @@ function ProposeForm({
 											}
 											trailing={<Help k="signingChain" />}
 											hint={
-												vaultOn
-													? `EIP-712 chain ${chain.hex} (${chain.id}). ${CODE_COPY.chainHint(chain.label, vaultPlan?.steps?.length === 2)}`
-													: `EIP-712 chain ${chain.hex} (${chain.id}). Every signer's wallet switches to ${chain.label} to sign; nothing is sent to that chain.`
+												<>
+													{vaultOn
+														? CODE_COPY.chainHint(
+																chain.label,
+																vaultPlan?.steps?.length === 2,
+															)
+														: `Signed for ${chain.label}. Your wallet may ask to switch to it. Nothing is sent or paid there.`}
+													<span className="mt-0.5 block font-mono text-subtle-foreground">
+														{/* jargon: the exact values, for experts */}
+														Technical: EIP-712 chain {chain.hex} ({chain.id})
+													</span>
+												</>
 											}
 										>
 											<Segmented<InnerChain>
@@ -1058,8 +1067,8 @@ function ProposeForm({
 												<>
 													If created now:{" "}
 													{hydrated ? <Sentence parts={window.parts} /> : "…"}.
-													After that the chain rejects it and it must be
-													re-proposed.
+													After that Hyperliquid refuses it, and it has to be
+													proposed again.
 													{numbered.raised ? ` ${NUMBERED_AFTER}` : ""}
 													{actionType === "usdSend" &&
 													form.nonceMode === "extended"
@@ -1115,7 +1124,7 @@ function ProposeForm({
 											Preview <NetworkBadge network={network} />
 										</span>
 									}
-									description="What signers will be asked to sign. The nonce and the digest are fixed when you create."
+									description="What every signer will sign."
 								>
 									{action && described ? (
 										<div className="space-y-4">
@@ -1184,7 +1193,7 @@ function ProposeForm({
 														),
 													},
 													{
-														label: "Finaliser (leader)",
+														label: "Finaliser",
 														value: ADDRESS_RE.test(form.finaliser) ? (
 															<AddressLine
 																address={form.finaliser}
@@ -1221,8 +1230,8 @@ function ProposeForm({
 								</Panel>
 								{action && (
 									<Panel
-										title="Inner action"
-										description="The canonical action, as it will be hashed. Its time or nonce field is replaced when you create."
+										title="The exact action (for experts)"
+										description="As every signer will sign it. Its time field is set when you create it."
 									>
 										<CodeBlock
 											content={stringifyJson(fromPlain(action), 2)}
@@ -1260,13 +1269,14 @@ function ProposeForm({
 											</p>
 										) : (
 											<p className="text-sm text-muted-foreground">
-												Creating fixes the nonce and the digest and saves the
+												Creating fixes what everyone will sign and saves the
 												proposal in this browser. Nothing is sent to Hyperliquid
-												until the finaliser submits.{" "}
+												yet. Next: you sign, your co-signers sign, then the
+												finaliser sends it.{" "}
 												{sharing
 													? RELAY_COPY.createdShared
 													: relay.mode === "on"
-														? "The relay does not list your wallet as a signer of this treasury, so it stays in this browser until you share it."
+														? "The sharing service does not list your wallet as a signer of this treasury yet, so it stays in this browser until you pass it on."
 														: relay.mode === "signed-out"
 															? RELAY_COPY.notSignedInLocal
 															: relay.mode === "unreachable"
@@ -1307,8 +1317,8 @@ function ProposeForm({
 												onClick={() => void create(false)}
 											>
 												{twoSteps
-													? "Create both without signing"
-													: "Create without signing"}
+													? "Create both, sign later"
+													: "Create, sign later"}
 											</Button>
 										</div>
 										{twoSteps && (
@@ -1365,7 +1375,7 @@ function ProposeForm({
 										) : ready && !iAmSigner ? (
 											<p className="text-xs text-muted-foreground">
 												{wallet.address
-													? `${short(wallet.address)} is not in the signer set, so it can draft a proposal but not sign it.`
+													? `${short(wallet.address)} is not one of this treasury's signers, so it can draft a proposal but not sign it.`
 													: "Connect a signer's wallet to sign on the spot, or create the proposal unsigned and pass it on."}
 											</p>
 										) : null}

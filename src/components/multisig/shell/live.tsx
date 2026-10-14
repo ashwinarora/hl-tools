@@ -69,7 +69,7 @@ const LIVE: Record<LiveStatus, { text: string; dot: string; title: string }> = {
 		text: "Live updates unavailable",
 		dot: "bg-danger",
 		title:
-			"Hyperliquid would not send live updates to this connection. It limits how many accounts one network address may follow at once.",
+			"Hyperliquid would not send live updates to this connection. It limits how many accounts one network address may follow at once: close other Hyperliquid tabs or tools, then reload.",
 	},
 };
 

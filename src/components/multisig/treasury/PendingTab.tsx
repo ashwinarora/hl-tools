@@ -33,8 +33,7 @@ export function PendingTab({
 				frozen && items.length > 0 ? (
 					<span>
 						This account is no longer a multi-sig, so these can no longer be
-						signed or submitted. They stay listed until their signing window
-						closes.
+						signed or sent. They stay listed until their signing window closes.
 					</span>
 				) : orderMatters(items.map((i) => i.proposal.payload.action)) ? (
 					<span className="inline-flex flex-wrap items-center gap-x-1">

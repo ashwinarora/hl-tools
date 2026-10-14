@@ -48,7 +48,7 @@ export const CHANGE = {
 	backWaiting: (n: number) =>
 		n === 0
 			? ""
-			: `${plural(n, "waiting proposal", "waiting proposals")} can no longer be submitted afterwards.`,
+			: `${plural(n, "waiting proposal", "waiting proposals")} can no longer be sent afterwards.`,
 	// What the change does to the proposals still waiting.
 	affectedTitle: "Waiting proposals this changes",
 	affectedNone: "No waiting proposal is affected.",

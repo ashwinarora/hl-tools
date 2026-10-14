@@ -69,7 +69,7 @@ describe("nonce", () => {
 		expect(three.submittableNow).toBe(true);
 		expect(three.hoursLeft).toBe(71);
 		expect(three.text).toMatch(
-			/^submittable until \d{4}-\d\d-\d\d \d\d:\d\d UTC \(71 h left\)$/,
+			/^can be sent until \d{4}-\d\d-\d\d \d\d:\d\d UTC \(71 h left\)$/,
 		);
 	});
 

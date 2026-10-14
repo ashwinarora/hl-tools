@@ -86,6 +86,7 @@ export function OpenProposal({
 						onChange={(e) => setText(e.target.value)}
 						rows={5}
 						className="min-h-24"
+						// jargon: what a pasted document looks like, as it is
 						placeholder='{"v":1,"payload":{"network":"testnet","multiSigUser":"0x…", …}}  or  https://…/multisig/proposal#share=…'
 						data-private
 					/>

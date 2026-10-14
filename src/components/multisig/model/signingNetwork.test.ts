@@ -343,7 +343,7 @@ describe("adding the signing network to a wallet", () => {
 			ok: false,
 			why: "failed",
 			message:
-				"The wallet would not add the signing network. Add a network with chain id 1337 and this link in the wallet, then sign again: http://localhost:3337/rpc",
+				"Your wallet refused to add the signing network. To add it by hand: in your wallet, add a custom network with chain ID 1337 and, as its URL, http://localhost:3337/rpc. It holds no money and nothing is sent on it. Then press Sign again.",
 		});
 		// it said yes to adding and still does not have it
 		const liar = wallet({ on: { wallet_addEthereumChain: () => null } });
@@ -416,10 +416,10 @@ describe("the words about signing a code", () => {
 		// the signers of a vault action never switch to that chain: only what
 		// is signed as readable data is under it
 		expect(CODE_COPY.chainHint("Arbitrum Sepolia", false)).toBe(
-			"Signers sign a code, under the signing network. Only the signature the finaliser submits with is under Arbitrum Sepolia; nothing is sent to that chain.",
+			"Signers sign a code, under the signing network. Only the finaliser's own signature is under Arbitrum Sepolia; nothing is sent on that network.",
 		);
 		expect(CODE_COPY.chainHint("Arbitrum Sepolia", true)).toContain(
-			"Step 1, and the signatures the finaliser submits with, are under Arbitrum Sepolia",
+			"Step 1, and the finaliser's own signature, are under Arbitrum Sepolia",
 		);
 	});
 });

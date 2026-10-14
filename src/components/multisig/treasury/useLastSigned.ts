@@ -39,7 +39,7 @@ export function useLastSigned(
 		staleTime: 60_000,
 		retry: 1,
 		queryFn: async (): Promise<ReadonlyMap<Address, LastSigned>> => {
-			if (!client) throw new Error("no relay client");
+			if (!client) throw new Error("not signed in");
 			const { rows } = unwrap(
 				await listSignatureEvents(client, network, treasury, SIGNED_WINDOW),
 			);

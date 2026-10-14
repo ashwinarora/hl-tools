@@ -75,7 +75,7 @@ export async function assembleProposal(
 				issue(
 					"relay.row_invalid",
 					"error",
-					`The relay's copy of ${row.digest} is not a valid proposal document and was ignored.`,
+					"A shared proposal is not one this page can read, and was ignored. Ask its proposer to share it again.",
 				),
 				...decoded.issues,
 			],
@@ -97,7 +97,7 @@ export async function assembleProposal(
 				issue(
 					"relay.row_mismatch",
 					"error",
-					`The relay files a document under ${row.digest} that does not match it (digest, network, treasury, finaliser or nonce differ). It was ignored.`,
+					"A shared proposal did not match its own details and was ignored. Nothing needs doing; ask its proposer to share it again if it is missing.",
 				),
 			],
 		};
@@ -209,7 +209,7 @@ export async function effectiveProposal(
 				issue(
 					"relay.local_conflict",
 					"error",
-					"This browser holds a different proposal under the same digest (vault address or expiry differ). The shared copy is shown; the local one was not merged.",
+					"This browser holds another copy of this proposal with different extra fields (a vault address or an expiry), which signers do not sign. The shared copy is shown; the one in this browser was not merged.",
 					{
 						fix: "Compare both in the Multisig Inspector before signing anything.",
 					},

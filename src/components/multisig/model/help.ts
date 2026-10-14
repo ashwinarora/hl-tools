@@ -33,7 +33,7 @@ export const HELP = {
 	},
 	signingWindow: {
 		title: "Signing window",
-		body: "How long a proposal can still be sent: two days from when it was made, or almost three for a send made with the longer window. After that Hyperliquid refuses it and its signatures are worth nothing. It can then be proposed again.",
+		body: "How long a proposal can still be sent: two days from when it was made, or almost three for one dated ahead (the form's “Give signers 3 days”). After that Hyperliquid refuses it and its signatures are worth nothing. It can then be proposed again.",
 	},
 	signingChain: {
 		title: "Signed under a chain",
@@ -145,7 +145,7 @@ export const HELP = {
 	},
 	vaultLockup: {
 		title: "Vault lockup",
-		body: "A deposit cannot be taken out for a while after it goes in: four days for HLP, one day for other vaults by Hyperliquid's documentation. Adding to a deposit starts the wait again for all of it. A withdrawal can be signed before and submitted after.",
+		body: "A deposit cannot be taken out for a while after it goes in: four days for HLP, one day for other vaults by Hyperliquid's documentation. Adding to a deposit starts the wait again for all of it. A withdrawal can be signed before and sent after.",
 	},
 	signingCode: {
 		title: "Signing a code",
@@ -188,12 +188,12 @@ export const HELP = {
 		body: "Hyperliquid takes two kinds of payment only in order of their dates: a USDC send written as raw JSON, and a withdrawal to Arbitrum. Once such a send goes through, older ones of both kinds are refused and have to be proposed again. The Send forms here are not bound by this.",
 	},
 	waysOut: {
-		title: "Take back, say no, withdraw",
-		body: "Take back removes your own signature. Saying no tells the others you are against it, and ends nothing. Only the proposer can withdraw a proposal for everyone. A signature already given still counts on Hyperliquid until the signing window closes: these are agreements, not locks.",
+		title: "Take back, say no, cancel",
+		body: "Take back removes your own signature. Saying no tells the others you are against it, and ends nothing. Only the proposer can cancel a proposal for everyone. A signature already given still counts on Hyperliquid until the signing window closes: these are agreements, not locks.",
 	},
 	sayNo: {
 		title: "Saying no",
-		body: "A no tells your co-signers you are against this proposal. It ends nothing: the others can still sign and submit it if enough of them agree. While the proposal is open you can take your no back, or sign, which replaces it.",
+		body: "A no tells your co-signers you are against this proposal. It ends nothing: the others can still sign it, and the finaliser send it, if enough of them agree. While the proposal is open you can take your no back, or sign, which replaces it.",
 	},
 	seen: {
 		title: "Seen",
@@ -217,7 +217,7 @@ export const HELP = {
 	},
 	outside: {
 		title: "Carried out, not reported here",
-		body: "Hyperliquid carried this action out, but its result was never reported here: it was submitted while signed out, or some other way. The transaction was looked up on Hyperliquid and the proposal closed, so that nobody signs it a second time.",
+		body: "Hyperliquid carried this action out, but its result was never reported here: it was sent while signed out, or some other way. The transaction was looked up on Hyperliquid and the proposal closed, so that nobody signs it a second time.",
 	},
 	away: {
 		title: "While you were away",

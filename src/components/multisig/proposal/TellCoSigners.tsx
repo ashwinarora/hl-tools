@@ -143,7 +143,7 @@ export function TellCoSigners({
 				<>
 					<p className="text-sm text-muted-foreground">
 						{blocker ??
-							`This ${also ? "move" : "proposal"} has not been shared, and your wallet is not in the relay's list of signers for its treasury, so it cannot be shared from here. It still works as a link or a file.`}
+							`You can't share this ${also ? "move" : "proposal"} from here: your wallet is not listed as a signer of this treasury yet. Open the treasury page to check again, or send it as a link or a file.`}
 					</p>
 					{!blocker && (
 						<div className="mt-3">

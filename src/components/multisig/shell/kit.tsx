@@ -111,7 +111,7 @@ export function NetTag({ network }: { network: Network }) {
 export function SignsTag() {
 	return (
 		<span className="inline-flex items-center gap-1">
-			<Tag title="This section signs with your wallet and submits to Hyperliquid">
+			<Tag title="This section signs with your wallet and sends to Hyperliquid">
 				Signs &amp; sends
 			</Tag>
 			<Help k="signsAndSends" />

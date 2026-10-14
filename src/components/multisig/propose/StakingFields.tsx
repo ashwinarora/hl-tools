@@ -227,13 +227,13 @@ export function StakingFields({
 						{steps.some((s) => s.kind === "return") && (
 							<li>
 								The HYPE lands in spot {queueWords(network)} after the return is
-								submitted, by itself, with no further signature.
+								sent, by itself, with no further signature.
 							</li>
 						)}
 						{plan.opensAt !== null && (
 							<li>
 								The stake this takes from is locked. It can be proposed and
-								signed now, and submitted from <When at={plan.opensAt} /> (
+								signed now, and sent from <When at={plan.opensAt} /> (
 								{untilWords(plan.opensAt, now)}).
 							</li>
 						)}

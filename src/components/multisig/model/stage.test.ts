@@ -72,7 +72,7 @@ describe("deriveStage", () => {
 		expect(s.phase).toBe("collecting");
 		expect(s.headline).toBe("Collecting signatures · 1 of 2");
 		expect(s.detail).toContain(shortAddress(B));
-		expect(s.detail).toContain("submittable until");
+		expect(s.detail).toContain("can be sent until");
 		expect(s.role).toBe("disconnected");
 		expect(s.signReason).toBe("Connect a wallet to sign.");
 		expect(s.executeReason).toBe("1 of 2 signatures so far.");
@@ -95,7 +95,7 @@ describe("deriveStage", () => {
 		]);
 		// C's signature would complete the threshold, but C is not the finaliser
 		expect(asC.executeReason).toBe(
-			`Only the finaliser ${shortAddress(B)} can submit.`,
+			`Only the finaliser ${shortAddress(B)} can send it.`,
 		);
 		expect(asC.executeAddsSignature).toBe(false);
 
@@ -110,7 +110,7 @@ describe("deriveStage", () => {
 		const out = await stage(p, { wallet: OUTSIDER });
 		expect(out.role).toBe("outsider");
 		expect(out.signReason).toBe(
-			`${shortAddress(OUTSIDER)} is not in the signer set.`,
+			`${shortAddress(OUTSIDER)} is not one of this treasury's signers.`,
 		);
 	});
 
@@ -121,7 +121,7 @@ describe("deriveStage", () => {
 		expect(asB.canExecute).toBe(false);
 		expect(asB.executeReason).toBe("0 of 2 signatures so far.");
 		expect((await stage(p)).detail).toMatch(
-			/can still sign · submittable until/,
+			/can still sign · can be sent until/,
 		);
 	});
 
@@ -139,10 +139,10 @@ describe("deriveStage", () => {
 		]);
 		const asA = await stage(p, { wallet: A });
 		expect(asA.executeReason).toBe(
-			`Only the finaliser ${shortAddress(B)} can submit.`,
+			`Only the finaliser ${shortAddress(B)} can send it.`,
 		);
 		expect((await stage(p)).executeReason).toBe(
-			"Connect the finaliser's wallet to submit.",
+			"Connect the finaliser's wallet to send it.",
 		);
 	});
 
@@ -195,7 +195,7 @@ describe("deriveStage", () => {
 
 		const early = await stage(p, { wallet: B, now: NONCE - 2 * DAY });
 		expect(early.phase).toBe("not-yet-valid");
-		expect(early.headline).toBe("Not submittable yet · 1 of 2");
+		expect(early.headline).toBe("Cannot be sent yet · 1 of 2");
 		expect(early.canSign).toBe(true);
 		expect(early.canExecute).toBe(false);
 
@@ -204,7 +204,7 @@ describe("deriveStage", () => {
 			policy: { authorizedUsers: [], threshold: 0, observedAt: NOW },
 		});
 		expect(none.phase).toBe("not-multisig");
-		expect(none.headline).toBe("Not a multi-sig on testnet");
+		expect(none.headline).toBe("Not a treasury on testnet");
 		expect(none.detail).toContain(shortAddress(TREASURY));
 		expect(none.role).toBe("finaliser");
 		expect([none.canSign, none.canExecute]).toEqual([false, false]);
@@ -221,7 +221,7 @@ describe("deriveStage", () => {
 		expect(done.phase).toBe("submitted");
 		expect(done.failedAttempt).toBeNull();
 		expect([done.canSign, done.canExecute]).toEqual([false, false]);
-		expect(done.executeReason).toBe("Submitted · accepted by Hyperliquid");
+		expect(done.executeReason).toBe("Sent · accepted by Hyperliquid");
 
 		// a refused envelope has used up its number: sending it again is answered
 		// "duplicate nonce" (measured on testnet), so no button offers it
@@ -336,7 +336,7 @@ describe("deriveStage", () => {
 			const t = await stage({ ...vault, payload }, { wallet: A, ...here });
 			expect([t.phase, t.headline, t.canSign]).toEqual([
 				"unsupported",
-				"An L1 action: inspect only",
+				"A trading action: read only here",
 				false,
 			]);
 		}
@@ -349,7 +349,7 @@ describe("deriveStage", () => {
 		const l1: Proposal = { ...base, meta: { ...base.meta, kind: "l1" } };
 		const s = await stage(l1, { wallet: B });
 		expect(s.phase).toBe("unsupported");
-		expect(s.headline).toBe("An L1 action: inspect only");
+		expect(s.headline).toBe("A trading action: read only here");
 		expect([s.canSign, s.canExecute]).toEqual([false, false]);
 		expect(s.requiredChain).not.toBeNull();
 		// an accepted L1 document still reads as submitted
@@ -426,10 +426,10 @@ describe("deriveStage", () => {
 	it("tells the finaliser the ready proposal is theirs to submit", async () => {
 		const p = await signAs(await signAs(makeProposal(), 1), 3); // A and C signed, B leads
 		expect((await stage(p, { wallet: B })).detail).toMatch(
-			/^You are the finaliser: submit it when you are ready · submittable until/,
+			/^You are the finaliser: send it when you are ready · can be sent until/,
 		);
 		expect((await stage(p, { wallet: A })).detail).toContain(
-			`The finaliser ${shortAddress(B)} signs the envelope and submits`,
+			`The finaliser ${shortAddress(B)} sends it`,
 		);
 	});
 
@@ -440,10 +440,12 @@ describe("deriveStage", () => {
 			ended: { kind: "withdrawn", by: A },
 		});
 		expect(s.phase).toBe("withdrawn");
-		expect(s.headline).toBe(`Withdrawn by the proposer, ${shortAddress(A)}`);
-		expect(s.detail).toContain("remain valid on chain until the window closes");
+		expect(s.headline).toBe(`Cancelled by the proposer, ${shortAddress(A)}`);
 		expect(s.detail).toContain(
-			`only the finaliser ${shortAddress(B)} could still submit it`,
+			"stay valid on Hyperliquid until the window closes",
+		);
+		expect(s.detail).toContain(
+			`only the finaliser ${shortAddress(B)} could still send it`,
 		);
 		expect([s.canSign, s.canExecute]).toEqual([false, false]);
 		expect(s.signReason).toBe(s.headline);
@@ -456,8 +458,10 @@ describe("deriveStage", () => {
 		const p = await signAs(makeProposal(), 1);
 		const s = await stage(p, { wallet: A, ended: { kind: "declined", by: B } });
 		expect(s.phase).toBe("declined");
-		expect(s.headline).toBe(`Declined by the finaliser, ${shortAddress(B)}`);
-		expect(s.detail).toMatch(/Re-propose it with a different finaliser/);
+		expect(s.headline).toBe(
+			`The finaliser, ${shortAddress(B)}, will not send it`,
+		);
+		expect(s.detail).toMatch(/Propose it again with a different finaliser/);
 		expect([s.canSign, s.canExecute]).toEqual([false, false]);
 	});
 
@@ -504,7 +508,7 @@ describe("deriveStage", () => {
 		});
 		expect(s.phase).toBe("carried-out");
 		expect(s.headline).toBe("Carried out, not reported here");
-		expect(s.detail).toContain("The relay checked the transaction itself");
+		expect(s.detail).toContain("Its transaction was found on Hyperliquid");
 		// ready on paper, but there is nothing left to do
 		expect(s.canSign).toBe(false);
 		expect(s.canExecute).toBe(false);
@@ -691,13 +695,13 @@ describe("deriveStage", () => {
 		expect((await stage(p, { wallet: B })).phase).toBe("ready");
 		const s = await stage(p, { wallet: B, overtaken: true });
 		expect(s.phase).toBe("overtaken");
-		expect(s.headline).toBe("Cannot be submitted any more");
+		expect(s.headline).toBe("Cannot be sent any more");
 		expect(s.detail).toMatch(/in the order they were proposed/);
 		expect(s.detail).toMatch(/Propose it again/);
 		// nobody is asked for anything any more
 		expect(s.canExecute).toBe(false);
 		expect(s.canSign).toBe(false);
-		expect(s.executeReason).toBe("Cannot be submitted any more");
+		expect(s.executeReason).toBe("Cannot be sent any more");
 		expect(
 			(await stage(makeProposal(), { wallet: A, overtaken: true })).canSign,
 		).toBe(false);
@@ -780,7 +784,7 @@ describe("deriveStage", () => {
 			ended: { kind: "withdrawn", by: A },
 		});
 		expect(withdrawn.headlineParts).toEqual([
-			{ text: "Withdrawn by the proposer, " },
+			{ text: "Cancelled by the proposer, " },
 			{ text: shortAddress(A), who: A },
 		]);
 		expect(withdrawn.detailParts.filter((p) => p.who)).toEqual([
@@ -857,14 +861,14 @@ describe("an action Hyperliquid would refuse before a certain moment", () => {
 		);
 		expect(asB.opensAt).toBe(until);
 		expect(asB.detail).toMatch(
-			/^You are the finaliser\. It can be submitted from \d{4}-\d\d-\d\d \d\d:\d\d UTC: the stake it takes from is locked until then · submittable until/,
+			/^You are the finaliser\. It can be sent from \d{4}-\d\d-\d\d \d\d:\d\d UTC: the stake it takes from is locked until then · can be sent until/,
 		);
 		expect(asB.detailParts.some((part) => part.when === until)).toBe(true);
 		// a co-signer reads who will submit, and from when
 		const asA = await stage(ready, { wallet: A, heldUntil: until });
 		expect(asA.opensAt).toBeNull();
 		expect(asA.detail).toContain(
-			`The finaliser ${shortAddress(B)} submits it. It can be submitted from`,
+			`The finaliser ${shortAddress(B)} sends it. It can be sent from`,
 		);
 	});
 
@@ -883,7 +887,7 @@ describe("an action Hyperliquid would refuse before a certain moment", () => {
 			const asB = await stage(ready, { wallet: B, heldUntil });
 			expect(asB.canExecute).toBe(true);
 			expect(asB.opensAt).toBeNull();
-			expect(asB.detail).toMatch(/^You are the finaliser: submit it when/);
+			expect(asB.detail).toMatch(/^You are the finaliser: send it when/);
 		}
 	});
 
@@ -913,7 +917,7 @@ describe("an action Hyperliquid would refuse before a certain moment", () => {
 		const closes = (await stage(p, { wallet: A })).window.validUntil;
 		const late = closes + HOUR;
 		const sentence =
-			/^The stake this takes from is locked until \d{4}-\d\d-\d\d \d\d:\d\d UTC, and this proposal closes before that, on \d{4}-\d\d-\d\d \d\d:\d\d UTC\. It cannot be submitted in time: its proposer can withdraw it and make it again later\.$/;
+			/^The stake this takes from is locked until \d{4}-\d\d-\d\d \d\d:\d\d UTC, and this proposal closes before that, on \d{4}-\d\d-\d\d \d\d:\d\d UTC\. It cannot be sent in time: its proposer can cancel it and make it again later\.$/;
 		for (const wallet of [A, B, C]) {
 			const collecting = await stage(p, { wallet, heldUntil: late });
 			expect(collecting.phase).toBe("collecting");
@@ -1022,7 +1026,7 @@ describe("what a receipt reports, against Hyperliquid's own record", () => {
 			},
 		);
 		expect(s.phase).toBe("refused");
-		expect(s.detail).toContain("it may be carried out all the same");
+		expect(s.detail).toContain("a new proposal would run a second time");
 		expect(s.detail).toContain("before proposing it again");
 		expect(s.detail).not.toContain("Propose it again:");
 	});
@@ -1049,7 +1053,7 @@ describe("a staking step found in Hyperliquid's staking history", () => {
 		);
 		// the relay's own check reads as before
 		expect((await stage(p, { carriedOut: { txHash: null } })).detail).toContain(
-			"The relay checked the transaction itself.",
+			"Its transaction was found on Hyperliquid.",
 		);
 	});
 });
@@ -1067,7 +1071,7 @@ describe("a submission answered “duplicate nonce”", () => {
 		expect(s.phase).toBe("refused");
 		expect(s.canExecute).toBe(false);
 		expect(s.detail).toBe(
-			"Hyperliquid answered \"duplicate nonce\": this proposal's number had already been used by an earlier submission. If that one went through, the action is carried out already. Look at the treasury's record on Hyperliquid before proposing it again.",
+			"Hyperliquid answered that this proposal's number was already used (\"duplicate nonce\"). If the earlier attempt went through, the action has already happened. Look at the treasury's record on Hyperliquid before proposing it again.",
 		);
 	});
 });
@@ -1128,10 +1132,8 @@ describe("a proposal somebody said no to", () => {
 		const p = await signAs(await signAs(makeProposal(), 1), 3); // A and C signed: enough
 		const others = await stage(p, { wallet: A, objections: [no(B)] });
 		expect(others.phase).toBe("finaliser-no");
-		expect(others.headline).toBe("Cannot be submitted as things stand");
-		expect(others.detail).toContain(
-			"is the one who has to submit this proposal",
-		);
+		expect(others.headline).toBe("Cannot be sent as things stand");
+		expect(others.detail).toContain("is the one who sends this proposal");
 		expect(others.detail).toContain(
 			"propose it again with a different finaliser",
 		);
@@ -1143,7 +1145,7 @@ describe("a proposal somebody said no to", () => {
 		expect(b.canSign).toBe(false);
 		expect(b.signReason).toBe("You said no to this.");
 		expect(b.detail).toMatch(
-			/^You said no, and you are the one who has to submit this proposal\./,
+			/^You said no, and you are the one who sends this proposal\./,
 		);
 		// taken back: ready again, and theirs to submit
 		const again = await stage(p, { wallet: B, objections: [] });

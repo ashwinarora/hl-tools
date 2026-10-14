@@ -175,7 +175,7 @@ async function readRemote(client: RelayClient, digest: Hex): Promise<Remote> {
 			issue(
 				"relay.rows_dropped",
 				"warning",
-				"The relay returned a malformed row for this proposal; it was ignored.",
+				"The sharing service returned something for this proposal that could not be read; it was ignored.",
 			),
 		);
 	}

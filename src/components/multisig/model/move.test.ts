@@ -177,13 +177,13 @@ describe("what two steps mean together", () => {
 			"Step 1 may be carried out already · look before proposing again",
 		);
 		expect(one.detail).toBe(
-			`Step 1: Hyperliquid answered "duplicate nonce" to it, so its number had been used by an earlier submission. If that one went through, the step is carried out already. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was. Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.`,
+			`Step 1: Hyperliquid answered that its number was already used ("duplicate nonce"). If the earlier attempt went through, the step has already happened. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was. Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.`,
 		);
 		const two = deriveMoveStage([done(), refusedWith("nonce-duplicate")]);
 		expect([two.phase, two.unsure]).toEqual(["broken", 1]);
 		expect(two.headline).toBe("Step 1 was carried out · step 2 may be too");
 		expect(two.detail).toMatch(
-			/^Step 2: Hyperliquid answered "duplicate nonce"/,
+			/^Step 2: Hyperliquid answered that its number was already used/,
 		);
 		for (const m of [one, two])
 			expect(`${m.headline} ${m.detail} ${m.executeReason}`).not.toContain(
@@ -294,26 +294,26 @@ describe("what two steps mean together", () => {
 		const who = { text: "0xaaaa…aaaa", who: "0xaaaa" };
 		const when = { text: "2026-10-14 17:24 UTC", when: 1_792_000_000_000 };
 		const withdrawn = step("withdrawn", {
-			headlineParts: [part("Withdrawn by the proposer, "), who],
+			headlineParts: [part("Cancelled by the proposer, "), who],
 		} as Partial<Stage>);
 		const m = deriveMoveStage([withdrawn, withdrawn]);
 		expect(m.headlineParts).toContainEqual(who);
 		const waiting = collecting({
-			detailParts: [part("you can still sign · submittable until "), when],
+			detailParts: [part("you can still sign · can be sent until "), when],
 		} as Partial<Stage>);
 		const c = deriveMoveStage([waiting, collecting()]);
 		expect(c.detailParts).toContainEqual(when);
 		expect(c.detail).toBe(
-			"you can still sign · submittable until 2026-10-14 17:24 UTC",
+			"you can still sign · can be sent until 2026-10-14 17:24 UTC",
 		);
 	});
 
 	it("a move that is over but still open on the relay says who can clear it", () => {
 		expect(leftOpenNote(true)).toBe(
-			"What is left of this move cannot be submitted, so nothing here needs a signature. Withdraw it, then propose it again.",
+			"What is left of this move cannot be sent, so nothing here needs a signature. Cancel it, then propose it again.",
 		);
 		expect(leftOpenNote(false)).toBe(
-			"What is left of this move cannot be submitted, so nothing here needs your signature. Its proposer can withdraw it and propose it again.",
+			"What is left of this move cannot be sent, so nothing here needs your signature. Its proposer can cancel it and propose it again.",
 		);
 	});
 

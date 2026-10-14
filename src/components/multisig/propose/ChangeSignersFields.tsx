@@ -1,10 +1,4 @@
-import {
-	type Address,
-	type AgentInfo,
-	isZeroAddress,
-	type Policy,
-	type SignerSet,
-} from "@hl-tools/core";
+import type { Address, AgentInfo, Policy, SignerSet } from "@hl-tools/core";
 import { Check, Loader2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "#/lib/utils";
@@ -13,6 +7,7 @@ import { CREATE } from "../model/create";
 import {
 	addEntries,
 	changeSummary,
+	isKeyless,
 	judgeSet,
 	type OnRecord,
 	parsePasted,
@@ -184,7 +179,7 @@ export function ChangeSignersFields({
 	const meaning =
 		k === null
 			? null
-			: thresholdLines(n, k, wanted.entries.filter(isZeroAddress).length);
+			: thresholdLines(n, k, wanted.entries.filter(isKeyless).length);
 
 	const write = (list: readonly string[], number: number | null) => {
 		const lower = [...new Set(list.map((a) => a.toLowerCase() as Address))];
@@ -204,7 +199,12 @@ export function ChangeSignersFields({
 			...Object.fromEntries(pasted.addresses.map((a) => [a.toLowerCase(), a])),
 		}));
 		setPasteNote(
-			CREATE.pasted(added.duplicates, added.overMax, pasted.rejected),
+			CREATE.pasted(
+				pasted.repeated,
+				added.duplicates,
+				added.overMax,
+				pasted.rejected,
+			),
 		);
 		write(added.entries, k);
 	};

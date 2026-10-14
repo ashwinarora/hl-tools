@@ -361,7 +361,7 @@ function RelaySession({
 		setSigningIn(true);
 		setIssue(null);
 		const waiting = toast.loading(
-			"Waiting for your wallet: sign in to hl-tools",
+			"Waiting for your wallet: approve the sign-in message (it cannot move funds)",
 		);
 		try {
 			// this wallet's own client: no other wallet's session is touched

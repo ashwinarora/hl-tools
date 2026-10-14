@@ -294,7 +294,7 @@ export function TreasuryScreen({
 			>
 				<Callout
 					tone="warning"
-					title="The relay cannot be reached"
+					title="Can't reach the sharing service"
 					className="mb-4"
 					action={
 						<Button size="sm" variant="outline" onClick={relay.retry}>
@@ -404,8 +404,8 @@ export function TreasuryScreen({
 						<div className="flex flex-col gap-3">
 							<p className="text-sm text-muted-foreground">
 								This treasury is not in your list. Either nobody has added it
-								yet, or your wallet is not one of its signers in the relay's
-								copy of the signer list.
+								yet, or your wallet is not one of its signers in the sharing
+								service's copy of the signer list.
 							</p>
 							<div>
 								<Link to="/multisig/add" className={linkButton}>
@@ -475,7 +475,7 @@ export function TreasuryScreen({
 						title="This account is no longer a multi-sig"
 						className="mb-4"
 					>
-						Hyperliquid reports no signer set for it. Its history stays readable
+						Hyperliquid reports no signers for it. Its history stays readable
 						for its last known signers, and nothing new can be proposed. If it
 						becomes a multi-sig again, it is picked up here by itself.
 					</Callout>
@@ -487,18 +487,18 @@ export function TreasuryScreen({
 						className="mb-4"
 					>
 						{diff.noLongerMultisig
-							? "Hyperliquid no longer reports a signer set for this account. "
+							? "Hyperliquid no longer reports signers for this account. "
 							: diff.multisigAgain
-								? "Hyperliquid reports a signer set for this account again. "
+								? "Hyperliquid reports signers for this account again. "
 								: [
 										diff.added.length
-											? `Added on chain: ${diff.added.map(shortAddress).join(", ")}. `
+											? `Added on Hyperliquid: ${diff.added.map(shortAddress).join(", ")}. `
 											: "",
 										diff.removed.length
-											? `Removed on chain: ${diff.removed.map(shortAddress).join(", ")}. `
+											? `Removed on Hyperliquid: ${diff.removed.map(shortAddress).join(", ")}. `
 											: "",
 										diff.thresholdChanged && live.policy
-											? `Threshold on chain: ${live.policy.threshold}. `
+											? `Number that must sign, on Hyperliquid: ${live.policy.threshold}. `
 											: "",
 									].join("")}
 						{recheckLine(recheck)} {COUNTED_MEANWHILE}

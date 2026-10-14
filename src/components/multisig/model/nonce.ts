@@ -71,7 +71,7 @@ export function describeWindow(nonce: number, now: number): WindowInfo {
 			? say`closed ${at(validUntil)}`
 			: now <= validFrom
 				? say`opens ${at(validFrom)}, closes ${at(validUntil)}`
-				: say`submittable until ${at(validUntil)} (${String(hoursLeft)} h left)`;
+				: say`can be sent until ${at(validUntil)} (${String(hoursLeft)} h left)`;
 	return {
 		validFrom,
 		validUntil,

@@ -2381,7 +2381,7 @@ describe("what a signer has read", () => {
 		);
 		// the proposer is told its proposal went through
 		expect(((await told(a)) ?? [])[0]).toMatch(
-			/, which you proposed, was carried out\. Submitted by 0x.+\.$/,
+			/, which you proposed, was carried out\. Sent by 0x.+\.$/,
 		);
 
 		// "Got it": the marker moves to the newest entry shown, with the API wallets now known
@@ -2417,7 +2417,7 @@ describe("what a signer has read", () => {
 		const forA = (await told(a)) ?? [];
 		expect(forA.filter((t) => /“integration: lapsed”/.test(t))).toEqual([
 			expect.stringMatching(
-				/, which you proposed, expired before it was submitted\.$/,
+				/, which you proposed, expired before it was sent\.$/,
 			),
 		]);
 		// c had no part in it

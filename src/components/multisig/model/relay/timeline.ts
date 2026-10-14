@@ -226,14 +226,14 @@ export function buildTimeline(
 			case "proposal_withdrawn":
 				out.push(
 					entry(
-						say`${action(e.digest, true)} was withdrawn by the proposer, ${object(e.actor)}.`,
+						say`${action(e.digest, true)} was cancelled by the proposer, ${object(e.actor)}.`,
 					),
 				);
 				break;
 			case "proposal_declined":
 				out.push(
 					entry(
-						say`${action(e.digest, true)} was declined by the finaliser, ${object(e.actor)}.`,
+						say`${action(e.digest, true)} will not be sent: ${object(e.actor)}, its finaliser, said no.`,
 					),
 				);
 				break;
@@ -242,7 +242,7 @@ export function buildTimeline(
 				const noticed = addressList([e.data.reported_by])[0] ?? null;
 				out.push(
 					entry(
-						say`${action(e.digest, true)} was carried out without being reported here. The relay checked the transaction on Hyperliquid${
+						say`${action(e.digest, true)} was carried out without being reported here. Its transaction was found on Hyperliquid${
 							noticed ? say`; ${object(noticed)} noticed it` : ""
 						}.`,
 					),
@@ -261,12 +261,12 @@ export function buildTimeline(
 					e.data.accepted === true
 						? {
 								...entry(
-									say`${action(e.digest, true)} was accepted by Hyperliquid. Submitted by ${object(e.actor)}.`,
+									say`${action(e.digest, true)} was accepted by Hyperliquid. Sent by ${object(e.actor)}.`,
 								),
 								...(e.digest ? { accepted: [e.digest] } : {}),
 							}
 						: entry(
-								say`Hyperliquid rejected ${action(e.digest, false)}. Submitted by ${object(e.actor)}. ${afterRejection(e.data.http_status)}`,
+								say`Hyperliquid rejected ${action(e.digest, false)}. Sent by ${object(e.actor)}. ${afterRejection(e.data.http_status)}`,
 							),
 				);
 				break;

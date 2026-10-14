@@ -78,8 +78,8 @@ export function SignaturesPanel({
 			{signers.length === 0 ? (
 				<span className="text-sm text-muted-foreground">
 					{policy
-						? `This account has no signer set on ${proposal.payload.network}.`
-						: "Reading the signer set from Hyperliquid…"}
+						? `Hyperliquid reports no signers for this account on ${proposal.payload.network}.`
+						: "Reading the signers from Hyperliquid…"}
 				</span>
 			) : (
 				signers.map((a) => {
@@ -145,14 +145,14 @@ export function SignaturesPanel({
 							<Who address={a} />
 						</span>
 					))}
-					, not in the current signer set:{" "}
+					, not among the current signers:{" "}
 					{former.length === 1 ? "it does" : "they do"} not count.
 				</p>
 			)}
 			{policy && signers.length > 0 && !signers.includes(finaliser) && (
 				<p className="mt-2.5 text-xs text-warning">
-					The finaliser <Who address={finaliser} /> is not in the current signer
-					set.
+					The finaliser <Who address={finaliser} /> is not among the current
+					signers.
 				</p>
 			)}
 		</Card>
