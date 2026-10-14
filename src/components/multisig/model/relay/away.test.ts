@@ -10,6 +10,7 @@ import {
 	OUTSIDER,
 	RECIPIENT,
 	signAs,
+	TREASURY,
 } from "#/test/keys";
 import { eventRow, rowFor } from "#/test/relayRows";
 import type { RowProposal } from "../chain/match";
@@ -119,6 +120,31 @@ const ledger = (
 	}));
 
 describe("awayItems: an action carried out", () => {
+	it("checks a report of acceptance against Hyperliquid's record, and nothing else", () => {
+		const question = {
+			account: TREASURY,
+			action: { type: "usdSend" },
+			nonce: 1,
+			sentAt: 5,
+		};
+		const [done] = items({
+			events: [accepted(11, C)],
+			proposals: [theirs({ record: question })],
+		});
+		expect(done?.records).toEqual([{ digest: D1, question }]);
+		// no document here: nothing to look for
+		expect(
+			items({ events: [accepted(11, C)], proposals: [] })[0]?.records,
+		).toBe(undefined);
+		// a refusal is not checked
+		expect(
+			items({
+				events: [rejected(11, C)],
+				proposals: [theirs({ createdBy: A, record: question })],
+			})[0]?.records,
+		).toBe(undefined);
+	});
+
 	it("tells a signer who did not sign, and names who did", () => {
 		const got = items({ events: [accepted(11, C)], proposals: [theirs()] });
 		expect(got.map((x) => partsText(x.parts))).toEqual([
@@ -965,6 +991,26 @@ describe("a move of two steps in the notice", () => {
 		});
 		expect(item?.go).toEqual({ kind: "proposal", digest: D1 });
 		expect(item?.key).toBe(`end:${D1}`);
+	});
+	it("the one line checks both steps against Hyperliquid's record", () => {
+		const question = (d: Hex) => ({
+			account: TREASURY,
+			action: { type: "usdSend", d },
+			nonce: 1,
+			sentAt: null,
+		});
+		const [item] = items({
+			events: [accepted(11, C, D1), accepted(12, C, D2)],
+			proposals: [
+				step(1, { record: question(D1) }),
+				step(2, { record: question(D2) }),
+			],
+		});
+		// a report without a time of its own is taken at its history entry's
+		expect(item?.records?.map((x) => [x.digest, x.question.sentAt])).toEqual([
+			[D1, NOW + 11 * 1000],
+			[D2, NOW + 12 * 1000],
+		]);
 	});
 	it("one step carried out and the other refused are two lines, each naming its step", () => {
 		expect(

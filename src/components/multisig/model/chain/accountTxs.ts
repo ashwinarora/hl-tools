@@ -18,7 +18,7 @@
  * Pure: the screen hands in how each read stands and when each transaction
  * was first wanted, both by the same clock.
  */
-import type { ExplorerTx } from "@hl-tools/core";
+import type { ExplorerHistory, ExplorerTx } from "@hl-tools/core";
 
 /** A transaction a screen wants to see, and the account it acted for. */
 export interface WantedTx {
@@ -76,6 +76,30 @@ export function listState(i: {
 export type TxRoute = "listed" | "wait" | "single";
 
 const idOf = (hash: string) => hash.toLowerCase();
+
+/**
+ * One read of an account's list, as it is kept: the entries by id, and what
+ * the list can prove by its absences. `oldest` is the time of its oldest
+ * entry (null for an empty list); `truncated` says the explorer may have cut
+ * older ones off, so that before `oldest` nothing is known.
+ */
+export interface AccountTxs {
+	readonly byHash: ReadonlyMap<string, ExplorerTx>;
+	readonly truncated: boolean;
+	readonly oldest: number | null;
+}
+
+/** What one `userDetails` answer is kept as. */
+export function accountTxs(history: ExplorerHistory): AccountTxs {
+	let oldest: number | null = null;
+	for (const tx of history.txs)
+		if (oldest === null || tx.time < oldest) oldest = tx.time;
+	return {
+		byHash: indexTxs(history.txs),
+		truncated: history.truncated,
+		oldest,
+	};
+}
 
 /** An account's list by transaction id. An entry without one is left out. */
 export function indexTxs(

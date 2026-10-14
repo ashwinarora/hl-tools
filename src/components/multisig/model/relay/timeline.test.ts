@@ -44,6 +44,31 @@ describe("buildTimeline", () => {
 			`${short(C)} signed Send 120 USDC to 0x9a01…77c2.`,
 			`You proposed Send 120 USDC to 0x9a01…77c2 and signed. Finaliser: ${short(C)}.`,
 		]);
+		// only the report of acceptance is checked against Hyperliquid's record
+		expect(buildTimeline(events, ctx()).map((e) => e.accepted ?? null)).toEqual(
+			[[D1], null, null],
+		);
+	});
+
+	it("marks no rejected submission, and none without a proposal, for the record check", () => {
+		const entries = buildTimeline(
+			[
+				eventRow("submission_recorded", {
+					id: 1,
+					digest: D1,
+					actor: C,
+					data: { accepted: false, http_status: 200 },
+				}),
+				eventRow("submission_recorded", {
+					id: 2,
+					digest: null,
+					actor: C,
+					data: { accepted: true },
+				}),
+			],
+			ctx(),
+		);
+		expect(entries.map((e) => e.accepted ?? null)).toEqual([null, null]);
 	});
 
 	it("marks the action line as the strong part, and names whose address a part is", () => {
@@ -564,6 +589,8 @@ describe("a move of two steps in the Signing log", () => {
 			`${short(C)} signed ${MOVE} (both steps).`,
 			`You proposed ${MOVE} (both steps) and signed. Finaliser: ${short(C)}.`,
 		]);
+		// one entry for both steps checks both against Hyperliquid's record
+		expect(moved(events)[0]?.accepted).toEqual([D1, D2]);
 	});
 
 	it("an entry for both steps opens the move, and sorts by its later event", () => {

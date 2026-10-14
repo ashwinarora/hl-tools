@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { Callout } from "#/components/hub/status";
 import {
@@ -7,10 +8,13 @@ import {
 	type ChainState,
 	useAway,
 } from "../away/useAway";
+import { useRecords } from "../live/useRecord";
+import type { RecordQuestion } from "../model/chain/record";
 import type { AwayItem } from "../model/relay/away";
 import { RELAY_COPY } from "../model/relay/copy";
 import { NamesFor } from "../names/Names";
 import { Sentence } from "../names/Sentence";
+import { RecordTag } from "../proposal/RecordNote";
 import { Help } from "../shell/Help";
 import { Btn } from "../shell/kit";
 import { When } from "../shell/live";
@@ -48,6 +52,45 @@ function View({ group, item }: { group: AwayGroup; item: AwayItem }) {
 		>
 			View
 		</Link>
+	);
+}
+
+/**
+ * A group's lines, each report of acceptance with what Hyperliquid's record
+ * says of it. Only the lines on screen are checked: one read of the
+ * treasury's newest transactions, the one "On Hyperliquid" makes.
+ */
+function Lines({ group }: { group: AwayGroup }) {
+	const shown = useMemo(() => group.items.slice(0, SHOWN), [group.items]);
+	const questions = useMemo(() => {
+		const out = new Map<string, RecordQuestion>();
+		for (const item of shown)
+			for (const r of item.records ?? []) out.set(r.digest, r.question);
+		return out;
+	}, [shown]);
+	const records = useRecords(group.network, questions);
+	return (
+		<>
+			{shown.map((item) => (
+				<li
+					key={item.key}
+					className="flex flex-col gap-0.5 text-[13px] min-[601px]:flex-row min-[601px]:items-baseline min-[601px]:justify-between min-[601px]:gap-3"
+				>
+					<span className="min-w-0 [overflow-wrap:anywhere]">
+						<Sentence parts={item.parts} />
+						{item.records && (
+							<>
+								{" "}
+								<RecordTag
+									verdicts={item.records.map((r) => records.get(r.digest))}
+								/>
+							</>
+						)}
+					</span>
+					<View group={group} item={item} />
+				</li>
+			))}
+		</>
 	);
 }
 
@@ -149,17 +192,7 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 					)}
 					<NamesFor network={g.network} treasury={g.treasury}>
 						<ul className="flex flex-col gap-1.5">
-							{g.items.slice(0, SHOWN).map((item) => (
-								<li
-									key={item.key}
-									className="flex flex-col gap-0.5 text-[13px] min-[601px]:flex-row min-[601px]:items-baseline min-[601px]:justify-between min-[601px]:gap-3"
-								>
-									<span className="min-w-0 [overflow-wrap:anywhere]">
-										<Sentence parts={item.parts} />
-									</span>
-									<View group={g} item={item} />
-								</li>
-							))}
+							<Lines group={g} />
 							{g.items.length > SHOWN && (
 								<li className="text-xs text-muted-foreground">
 									and {g.items.length - SHOWN} more, in the{" "}

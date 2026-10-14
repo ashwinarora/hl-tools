@@ -34,6 +34,7 @@ import {
 	visibleText,
 } from "@hl-tools/core";
 import type { RowProposal } from "../chain/match";
+import { type RecordQuestion, recordQuestion } from "../chain/record";
 import { type MoveRef, sayOncePerMove, stepMark } from "../move";
 import { joinParts, type Part, part, say } from "../parts";
 import { shortAddress } from "../stage";
@@ -75,6 +76,8 @@ export interface AwayProposal {
 	readonly expiresAt: number;
 	/** Set when it is one step of a move this browser verified (model/move.ts). */
 	readonly move?: MoveRef | null;
+	/** What to look for on Hyperliquid's record, should it read as accepted. */
+	readonly record?: RecordQuestion;
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
@@ -106,6 +109,7 @@ export function awayProposal(row: ProposalRow, p: Proposal): AwayProposal {
 		signers: p.signatures.map((s) => s.signer),
 		status: row.status,
 		expiresAt: row.expiresAt,
+		record: recordQuestion(p),
 	};
 }
 
@@ -162,6 +166,11 @@ export interface AwayItem {
 	readonly parts: readonly Part[];
 	/** Where "View" leads. */
 	readonly go: AwayGo;
+	/** Reports of acceptance (one, or both steps of a move): checked against Hyperliquid's record. */
+	readonly records?: readonly {
+		readonly digest: Hex;
+		readonly question: RecordQuestion;
+	}[];
 }
 
 /** Transfers named one by one before the rest are counted. */
@@ -265,7 +274,18 @@ export function awayItems(i: {
 				// what you submitted yourself is not news to you
 				if (e.actor === me) break;
 				const others = (p?.signers ?? []).filter((a) => a !== me);
-				item(
+				const question = p?.record
+					? { ...p.record, sentAt: p.record.sentAt ?? e.at }
+					: null;
+				const accepted = (parts: Part[]) =>
+					out.push({
+						key: `end:${digest}`,
+						at: e.at,
+						parts,
+						go,
+						...(question ? { records: [{ digest, question }] } : {}),
+					});
+				accepted(
 					rel
 						? say`${action(p, true)}, which you ${rel}, was carried out. Submitted by ${who(e.actor)}.`
 						: !p
@@ -484,7 +504,10 @@ export function awayItems(i: {
 			at: (item) => item.at ?? i.now,
 		},
 		(digest) => proposals.get(digest)?.move ?? null,
-		(first, parts) => ({ ...first, parts }),
+		(first, parts, second) => {
+			const records = [...(first.records ?? []), ...(second.records ?? [])];
+			return { ...first, parts, ...(records.length ? { records } : {}) };
+		},
 	);
 	return once.sort(
 		(a, b) =>

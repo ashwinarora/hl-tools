@@ -71,6 +71,7 @@ import { useKnownProposals } from "../treasury/useKnownProposals";
 import { useTreasuryNames } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
+import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
 import { StageCallout } from "./StageCallout";
@@ -594,6 +595,10 @@ export function ProposalView({
 						<p className="-mt-2 px-0.5 text-xs text-subtle-foreground">
 							{RELAY_COPY.reportedReceipt}
 						</p>
+					)}
+					{/* the report against Hyperliquid's record, from this browser */}
+					{stage.phase === "submitted" && (
+						<RecordNote network={target.network} proposal={proposal} />
 					)}
 					{stage.failedAttempt && stage.phase === "carried-out" && (
 						// the copy's answer against Hyperliquid's record: the record is above

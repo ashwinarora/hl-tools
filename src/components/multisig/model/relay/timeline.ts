@@ -26,6 +26,8 @@ export interface TimelineEntry {
 	readonly at: number;
 	readonly digest: Hex | null;
 	readonly parts: readonly Part[];
+	/** The proposals whose accepted submission this entry reports: checked against Hyperliquid's record. */
+	readonly accepted?: readonly Hex[];
 }
 
 export interface TimelineContext {
@@ -256,11 +258,16 @@ export function buildTimeline(
 				break;
 			case "submission_recorded":
 				out.push(
-					entry(
-						e.data.accepted === true
-							? say`${action(e.digest, true)} was accepted by Hyperliquid. Submitted by ${object(e.actor)}.`
-							: say`Hyperliquid rejected ${action(e.digest, false)}. Submitted by ${object(e.actor)}. ${afterRejection(e.data.http_status)}`,
-					),
+					e.data.accepted === true
+						? {
+								...entry(
+									say`${action(e.digest, true)} was accepted by Hyperliquid. Submitted by ${object(e.actor)}.`,
+								),
+								...(e.digest ? { accepted: [e.digest] } : {}),
+							}
+						: entry(
+								say`Hyperliquid rejected ${action(e.digest, false)}. Submitted by ${object(e.actor)}. ${afterRejection(e.data.http_status)}`,
+							),
 				);
 				break;
 		}
@@ -271,12 +278,19 @@ export function buildTimeline(
 				out,
 				{ digest: (e) => e.digest, parts: (e) => e.parts, at: (e) => e.at },
 				ctx.move,
-				(first, parts, second) => ({
-					...first,
-					id: Math.max(first.id, second.id),
-					at: Math.max(first.at, second.at),
-					parts,
-				}),
+				(first, parts, second) => {
+					const accepted = [
+						...(first.accepted ?? []),
+						...(second.accepted ?? []),
+					];
+					return {
+						...first,
+						id: Math.max(first.id, second.id),
+						at: Math.max(first.at, second.at),
+						parts,
+						...(accepted.length ? { accepted } : {}),
+					};
+				},
 			)
 		: out;
 	return once.sort((a, b) => b.id - a.id);

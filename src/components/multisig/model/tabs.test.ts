@@ -22,10 +22,15 @@ describe("treasuryTab", () => {
 });
 
 describe("tabWants: what a treasury page follows for the section on screen", () => {
-	const none = { history: false, ledger: false, lookUps: false };
+	const none = { history: false, ledger: false, lookUps: false, record: false };
 	it("follows nothing but the holdings where nothing else is shown and nothing waits", () => {
-		for (const tab of ["overview", "pending", "staking", "log"] as const)
+		for (const tab of ["overview", "pending", "staking"] as const)
 			expect(tabWants(tab, 0)).toEqual(none);
+	});
+	it("checks the Signing log's accepted submissions against Hyperliquid's record, and only there", () => {
+		expect(tabWants("log", 0)).toEqual({ ...none, record: true });
+		for (const tab of TREASURY_TABS)
+			expect(tabWants(tab, 3).record).toBe(tab === "log");
 	});
 	it("follows the ledger while a proposal waits, on every section, and looks its rows up", () => {
 		// that is how the page notices a proposal carried out without the tool
@@ -40,6 +45,7 @@ describe("tabWants: what a treasury page follows for the section on screen", () 
 			history: true,
 			ledger: true,
 			lookUps: true,
+			record: false,
 		});
 	});
 	it("follows the ledger on the Vaults tab for its history, and looks nothing up for it", () => {
@@ -49,6 +55,7 @@ describe("tabWants: what a treasury page follows for the section on screen", () 
 			history: false,
 			ledger: true,
 			lookUps: false,
+			record: false,
 		});
 	});
 });

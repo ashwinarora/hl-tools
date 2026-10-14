@@ -39,6 +39,8 @@ export interface TabWants {
 	readonly ledger: boolean;
 	/** Whether ledger rows are looked up on Hyperliquid's explorer. */
 	readonly lookUps: boolean;
+	/** Whether accepted proposals are checked against Hyperliquid's record (the explorer's list of the treasury's newest transactions). */
+	readonly record: boolean;
 }
 
 /**
@@ -53,6 +55,9 @@ export interface TabWants {
  *            Hyperliquid" and while a proposal waits. A vault row needs no
  *            look-up, so the Vaults tab by itself spends nothing of the
  *            explorer's daily allowance.
+ *   record   on the Signing log, whose entries report submissions accepted:
+ *            one read of the treasury's newest transactions, the one "On
+ *            Hyperliquid" makes, and nothing from the daily allowance.
  */
 export function tabWants(tab: TreasuryTab, pending: number): TabWants {
 	const chain = tab === "chain";
@@ -61,5 +66,6 @@ export function tabWants(tab: TreasuryTab, pending: number): TabWants {
 		history: chain,
 		ledger: chain || waiting || tab === "vaults",
 		lookUps: chain || waiting,
+		record: tab === "log",
 	};
 }

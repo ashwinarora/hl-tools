@@ -13,7 +13,6 @@ import {
 	ExplorerAllowanceError,
 	type ExplorerTx,
 	explorerTxDetails,
-	explorerUserDetails,
 	type LedgerRow,
 	type Network,
 } from "@hl-tools/core";
@@ -22,7 +21,6 @@ import { useCallback, useEffect, useMemo } from "react";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import {
 	accountsOf,
-	indexTxs,
 	listedTx,
 	listState,
 	rereadDue,
@@ -36,40 +34,7 @@ import {
 	type RowProposal,
 	rowProposal,
 } from "../model/chain/match";
-import { Pacer, Rest } from "../model/chain/pace";
-
-/**
- * One explorer request weighs 40 of the 1200 a network address may spend in a
- * minute, shared with everything else the page asks: five at once, then one
- * every three seconds (at most 800 a minute).
- */
-const pacers = new Map<Network, Pacer>();
-function pacer(network: Network): Pacer {
-	let p = pacers.get(network);
-	if (!p) {
-		p = new Pacer({ burst: 5, everyMs: 3_000 });
-		pacers.set(network, p);
-	}
-	return p;
-}
-
-/**
- * Once the explorer says a network address has used up its allowance for the
- * day, it says so to every look-up. Nothing more is asked for ten minutes.
- * Nothing asks again by itself after that either: what could not be checked
- * says so, and is asked once more when the reader presses "Check again" beside it
- * or opens the page again. That one look-up finds out whether it is still so.
- */
-const EXPLORER_REST_MS = 10 * 60_000;
-const rests = new Map<Network, Rest>();
-function rest(network: Network): Rest {
-	let r = rests.get(network);
-	if (!r) {
-		r = new Rest(EXPLORER_REST_MS);
-		rests.set(network, r);
-	}
-	return r;
-}
+import { listQuery, pacer, rest, SESSION } from "./explorerList";
 
 /** The explorer answered, and does not know the hash (it can lag the ledger by a moment). */
 class UnknownHash extends Error {}
@@ -79,8 +44,6 @@ class Resting extends Error {}
 const ZERO_HASH = /^0x0+$/;
 const key = (network: Network, hash: string) =>
 	["explorer-tx", network, hash.toLowerCase()] as const;
-const listKey = (network: Network, account: string) =>
-	["explorer-account", network, account.toLowerCase()] as const;
 
 /**
  * When each transaction was first wanted in this session, by this device's
@@ -105,14 +68,6 @@ export function lookupOf(
 	const hash = row.hash.toLowerCase();
 	return ZERO_HASH.test(hash) ? { state: "unknown-hash" } : lookups.get(hash);
 }
-
-const SESSION = {
-	// a transaction never changes; an answer is kept for the session
-	staleTime: Number.POSITIVE_INFINITY,
-	gcTime: 60 * 60_000,
-	refetchOnWindowFocus: false,
-	refetchOnReconnect: false,
-} as const;
 
 /**
  * The transactions a screen wants, from Hyperliquid's explorer: each
@@ -147,30 +102,7 @@ export function useTxLookups(
 
 	// ---- one request per account: its newest transactions
 	const lists = useQueries({
-		queries: accounts.map((account) => ({
-			queryKey: listKey(network, account),
-			queryFn: async ({
-				signal,
-			}: {
-				signal: AbortSignal;
-			}): Promise<ReadonlyMap<string, ExplorerTx>> => {
-				await pacer(network).turn();
-				// the screen that asked may be gone by the time its turn comes
-				signal.throwIfAborted();
-				try {
-					const r = await explorerUserDetails(network, account, { signal });
-					return indexTxs(r.data.txs);
-				} catch (e) {
-					if (e instanceof ExplorerAllowanceError) rest(network).start();
-					throw e;
-				}
-			},
-			...SESSION,
-			// a refusal for the day is not tried again: it would be refused again
-			retry: (failures: number, error: Error) =>
-				failures < 1 && !(error instanceof ExplorerAllowanceError),
-			retryDelay: 2_000,
-		})),
+		queries: accounts.map((account) => listQuery(network, account)),
 	});
 	const listOf = useMemo(() => {
 		const out = new Map<string, ReturnType<typeof listState>>();
@@ -179,7 +111,7 @@ export function useTxLookups(
 			out.set(
 				account.toLowerCase(),
 				listState({
-					txs: q?.data,
+					txs: q?.data?.byHash,
 					reading: q?.isFetching ?? false,
 					readAt: q?.dataUpdatedAt ?? 0,
 					failedAt: q?.errorUpdatedAt ?? 0,

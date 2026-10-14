@@ -8,7 +8,9 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { download } from "#/lib/download";
+import { useRecords } from "../live/useRecord";
 import { useValidators } from "../live/useStaking";
+import { type RecordQuestion, recordQuestion } from "../model/chain/record";
 import { type Listed, moveRefs } from "../model/move";
 import { assembleProposal } from "../model/relay/assemble";
 import type { EventRow, TreasuryRow } from "../model/relay/rows";
@@ -19,6 +21,7 @@ import {
 } from "../model/relay/timeline";
 import { actionLine } from "../model/staking";
 import { Sentence } from "../names/Sentence";
+import { RecordTag } from "../proposal/RecordNote";
 import { HISTORY_PAGE, listEvents, listProposalsByDigest } from "../relay/api";
 import { unwrap } from "../relay/queries";
 import { queryIssue, useRelay } from "../relay/useRelay";
@@ -35,9 +38,12 @@ import { When } from "../shell/live";
 export function SigningLogTab({
 	treasury,
 	me,
+	checkRecord,
 }: {
 	treasury: TreasuryRow;
 	me: Address | null;
+	/** Check each accepted submission against Hyperliquid's record (`tabWants`). */
+	checkRecord: boolean;
 }) {
 	const relay = useRelay();
 	const client = relay.client;
@@ -133,6 +139,20 @@ export function SigningLogTab({
 	}, [events, docs.data, listed, validators, me]);
 	const issue = queryIssue(pages.error);
 
+	// every accepted submission in the log, against Hyperliquid's record
+	const questions = useMemo(() => {
+		const out = new Map<string, RecordQuestion>();
+		if (!checkRecord) return out;
+		for (const e of entries)
+			for (const digest of e.accepted ?? []) {
+				const p = docs.data?.proposals.get(digest);
+				if (p)
+					out.set(digest, recordQuestion(p, p.receipt?.submittedAt ?? e.at));
+			}
+		return out;
+	}, [checkRecord, entries, docs.data]);
+	const records = useRecords(network, questions);
+
 	const save = () =>
 		download(
 			historyFilename(network, address),
@@ -185,6 +205,14 @@ export function SigningLogTab({
 								/>
 								<span className="text-sm [overflow-wrap:anywhere]">
 									<Sentence parts={e.parts} />
+									{e.accepted && (
+										<>
+											{" "}
+											<RecordTag
+												verdicts={e.accepted.map((d) => records.get(d))}
+											/>
+										</>
+									)}
 									{e.digest && (
 										<>
 											{" "}

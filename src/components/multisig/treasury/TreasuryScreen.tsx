@@ -577,7 +577,13 @@ export function TreasuryScreen({
 						match={match}
 					/>
 				)}
-				{tab === "log" && <SigningLogTab treasury={treasury} me={me} />}
+				{tab === "log" && (
+					<SigningLogTab
+						treasury={treasury}
+						me={me}
+						checkRecord={wants.record}
+					/>
+				)}
 				{tab === "chain" && (
 					<ChainTab
 						network={network}

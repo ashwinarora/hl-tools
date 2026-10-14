@@ -2,6 +2,7 @@ import type { ExplorerTx } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import {
 	accountsOf,
+	accountTxs,
 	indexTxs,
 	type ListState,
 	listedTx,
@@ -25,6 +26,20 @@ const read = (at: number, ...ns: number[]): ListState => ({
 	kind: "read",
 	at,
 	txs: indexTxs(ns.map((n) => tx(n))),
+});
+
+describe("accountTxs", () => {
+	it("keeps how far back the list reaches and whether it may be cut", () => {
+		const kept = accountTxs({ txs: [tx(3), tx(1), tx(2)], truncated: true });
+		expect(kept.byHash.size).toBe(3);
+		expect(kept.oldest).toBe(tx(1).time);
+		expect(kept.truncated).toBe(true);
+		expect(accountTxs({ txs: [], truncated: false })).toEqual({
+			byHash: new Map(),
+			truncated: false,
+			oldest: null,
+		});
+	});
 });
 
 describe("indexTxs", () => {

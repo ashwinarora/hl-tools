@@ -59,6 +59,7 @@ import {
 	signMove,
 } from "./actions";
 import { CodePanel } from "./CodePanel";
+import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
 import { TellCoSigners } from "./TellCoSigners";
@@ -506,6 +507,11 @@ function StepCard({
 						)}
 				</p>
 			))}
+			{stage.phase === "submitted" && (
+				<div className="mt-2">
+					<RecordNote network={network} proposal={proposal} />
+				</div>
+			)}
 			{open && staking.noPay && <Amber>{staking.noPay}</Amber>}
 			{open && step.vault.relocks && <Amber>{step.vault.relocks}</Amber>}
 			{ask &&
