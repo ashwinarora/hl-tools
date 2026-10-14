@@ -139,19 +139,20 @@ export function VaultFields({
 						aria-invalid={!!error("vault")}
 					/>
 					<div className="mt-2 flex flex-wrap items-center gap-1.5">
+						{/* a button that reads as one: shown as a chip, it was taken for a label */}
 						<button
 							type="button"
 							onClick={() => set("vault", hlp)}
 							aria-pressed={typed === hlp}
 							title={hlp}
 							className={cn(
-								"inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors",
+								"inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
 								typed === hlp
 									? "border-brand bg-brand-soft"
-									: "border-border bg-surface hover:bg-surface-2",
+									: "border-border-strong bg-surface hover:bg-surface-2",
 							)}
 						>
-							<span className="font-medium">{VAULT.hlp}</span>
+							<span>{typed === hlp ? VAULT.hlp : VAULT.useHlp}</span>
 							<span className="font-mono text-subtle-foreground">
 								{shortAddress(hlp)}
 							</span>

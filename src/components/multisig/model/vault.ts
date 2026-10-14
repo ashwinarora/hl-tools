@@ -163,6 +163,8 @@ export const VAULT = {
 	addressHint:
 		"The vault's address on Hyperliquid, as its own page there shows it.",
 	hlp: "HLP, Hyperliquid's own vault",
+	/** The button that puts HLP's address in the field. */
+	useHlp: "Use HLP",
 	oneStep: "This makes one proposal:",
 	twoSteps:
 		"This makes two proposals. Signers sign both in one visit, and the finaliser sends the second only once Hyperliquid has accepted the first:",

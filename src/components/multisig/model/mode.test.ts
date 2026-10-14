@@ -86,6 +86,20 @@ describe("balanceView: the figures a treasury's screens show", () => {
 			balanceView(unified, null, [{ coin: "USDC", total: "5" }]),
 		).toMatchObject({ movable: "5", inUse: "0" });
 	});
+	it("writes every figure alike, without trailing zeros", () => {
+		expect(
+			balanceView(
+				accountMode("default"),
+				{ accountValue: "0.0", withdrawable: "2.50" },
+				[{ coin: "USDC", total: "8" }],
+			),
+		).toEqual({
+			kind: "two",
+			perpsValue: "0",
+			perpsMovable: "2.5",
+			spotUsdc: "8",
+		});
+	});
 	it("falls back to two balances when the mode is not known", () => {
 		expect(balanceView(null, perp, spot).kind).toBe("two");
 		expect(balanceView(accountMode("somethingNew"), perp, spot).kind).toBe(

@@ -3,7 +3,7 @@
  * core's (`accountMode`, rules/transfers): manual and unified were measured,
  * the other two are taken from Hyperliquid's documentation and said to be so.
  */
-import type { AccountMode } from "@hl-tools/core";
+import { type AccountMode, Decimal } from "@hl-tools/core";
 import { spotAvailable } from "./send";
 
 export interface ModeLabel {
@@ -69,6 +69,10 @@ export type BalanceView =
 			readonly spotUsdc: string | null;
 	  };
 
+/** A figure as Hyperliquid wrote it, without trailing zeros: "0.0" and "8" read alike. */
+const plain = (v: string | null): string | null =>
+	v === null ? null : (Decimal.tryParse(v)?.toString() ?? v);
+
 export function balanceView(
 	mode: AccountMode | null,
 	perp: {
@@ -90,14 +94,14 @@ export function balanceView(
 	if (mode?.kind !== "unified")
 		return {
 			kind: "two",
-			perpsValue: perp?.accountValue ?? null,
-			perpsMovable: perp?.withdrawable ?? null,
-			spotUsdc: total,
+			perpsValue: plain(perp?.accountValue ?? null),
+			perpsMovable: plain(perp?.withdrawable ?? null),
+			spotUsdc: plain(total),
 		};
 	return {
 		kind: "one",
-		balance: total,
-		movable: spotAvailable(spot, "USDC"),
-		inUse: spot ? (usdc?.hold ?? "0") : null,
+		balance: plain(total),
+		movable: plain(spotAvailable(spot, "USDC")),
+		inUse: plain(spot ? (usdc?.hold ?? "0") : null),
 	};
 }

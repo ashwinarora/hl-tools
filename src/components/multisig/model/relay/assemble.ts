@@ -121,15 +121,23 @@ export async function assembleProposal(
 	}
 	const dropped = merged.issues.filter(
 		(i) => i.code === "merge.signature_dropped",
-	).length;
-	if (dropped > 0) {
+	);
+	// whose they were filed under: the claimed copy is the merge's first side
+	const named = dropped.flatMap((i) => {
+		const at = /^a\.signatures\[(\d+)\]$/.exec(i.path ?? "");
+		const signer = at ? claimed[Number(at[1])]?.signer : undefined;
+		return signer ? [`${signer.slice(0, 6)}…${signer.slice(-4)}`] : [];
+	});
+	const under =
+		named.length === dropped.length ? ` (filed under ${named.join(", ")})` : "";
+	if (dropped.length > 0) {
 		issues.push(
 			issue(
 				"relay.signature_dropped",
 				"warning",
-				dropped === 1
-					? "1 stored signature does not verify and was ignored."
-					: `${dropped} stored signatures do not verify and were ignored.`,
+				dropped.length === 1
+					? `1 stored signature${under} does not verify and was ignored.`
+					: `${dropped.length} stored signatures${under} do not verify and were ignored.`,
 				{
 					fix: "Nothing to do: a signature that does not recover to its signer never counts. Its signer can sign again.",
 				},

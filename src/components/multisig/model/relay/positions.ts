@@ -98,9 +98,12 @@ function names(
 	];
 }
 
-/** "on 14 Oct 2026, 16:20, in 1 day 6 hours" (the moment is shown in the reader's zone). */
+/**
+ * "on 14 Oct 2026, 16:20, in 1 day 6 hours": a screen shows the moment in
+ * the reader's zone; the plain text says it in UTC, and says so.
+ */
 function lapses(at: number, now: number): Part[] {
-	return say`Otherwise it lapses on ${{ text: new Date(at).toISOString().slice(0, 16).replace("T", " "), when: at }}, ${untilWords(at, now)}.`;
+	return say`Otherwise it lapses on ${{ text: `${new Date(at).toISOString().slice(0, 16).replace("T", " ")} UTC`, when: at }}, ${untilWords(at, now)}.`;
 }
 
 export interface PositionText {

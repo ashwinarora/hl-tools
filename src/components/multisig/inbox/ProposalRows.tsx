@@ -4,7 +4,7 @@ import { FLAG_TEXT } from "#/components/tools/multisig/EnvelopeView";
 import { useValidators } from "../live/useStaking";
 import { LONE_STEP_HINT, moveSentence } from "../model/move";
 import { closes } from "../model/nonce";
-import { finishLabel, inboxGroup } from "../model/relay/inbox";
+import { finishLabel, inboxGroup, STUCK_WORDS } from "../model/relay/inbox";
 import { blockedTag, saidNoTag } from "../model/relay/positions";
 import { actionLine } from "../model/staking";
 import { localDateTime, utcDateTime } from "../model/time";
@@ -131,7 +131,11 @@ export function ProposalRows({
 							) : p.frozen ? (
 								<Tag tone="warn">no longer a multi-sig</Tag>
 							) : p.stuck ? (
-								<Tag tone="warn">cannot be finished</Tag>
+								<Tag tone="warn">
+									{p.stuckBy
+										? `cannot be finished: ${STUCK_WORDS[p.stuckBy]}`
+										: "cannot be finished"}
+								</Tag>
 							) : p.blocked ? (
 								<Tag tone="warn">{blockedTag(p.blocked)}</Tag>
 							) : against ? (

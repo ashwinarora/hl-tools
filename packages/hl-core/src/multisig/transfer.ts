@@ -275,6 +275,17 @@ export interface WithdrawalOutcome {
 const WITHDRAWAL_FEE = Decimal.parse(WITHDRAWAL_FEE_USDC);
 
 /**
+ * Which balance a bridge withdrawal is taken from: a manual account's perps
+ * balance, as the docs say; a unified account's one balance, which
+ * Hyperliquid reports as spot USDC (measured on mainnet through a multi-sig:
+ * fixtures/multisig/unified-withdrawal.json). A mode with no rule is taken as
+ * manual, the way Hyperliquid reports any account.
+ */
+export function withdrawalFrom(mode: AccountMode | null): "perps" | "balance" {
+	return mode?.kind === "unified" ? "balance" : "perps";
+}
+
+/**
  * What a bridge withdrawal delivers. The bridge keeps its fee out of the
  * amount, so the action names more than arrives, and an amount that is not
  * more than the fee is refused. Null for anything that is not a `withdraw3`

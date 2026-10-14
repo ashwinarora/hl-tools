@@ -51,6 +51,11 @@ function ProposalScreen() {
 	>({ state: "checking" });
 	/** The further steps a link carried, kept for where this browser cannot store them. */
 	const [arrived, setArrived] = useState<readonly Proposal[]>([]);
+	/** What saving the link's copy left out of it, for the proposal it opened. */
+	const [notes, setNotes] = useState<{
+		readonly digest: string;
+		readonly issues: readonly Issue[];
+	} | null>(null);
 
 	// the latest `store`: a link opened later is shared as the wallet signed in then
 	const storeNow = useRef(store);
@@ -93,6 +98,7 @@ function ProposalScreen() {
 				for (const other of rest) await saveProposal(other).catch(() => null);
 				const saved = await storeNow.current(first, { pushLater: true });
 				if (gone || mine !== run) return;
+				setNotes({ digest: saved.proposal.digest, issues: saved.issues });
 				setLink({ state: "none" });
 				void navigate({
 					to: "/multisig/proposal",
@@ -113,6 +119,8 @@ function ProposalScreen() {
 	// A proposal that says it is one step of a move: the other step is opened
 	// too, and the two are shown as one page when they bear the claim out.
 	const otherDigest = doc.proposal ? otherStep(doc.proposal) : null;
+	const copyNotes =
+		notes && notes.digest === doc.proposal?.digest ? notes.issues : undefined;
 	const other = useProposalDoc(
 		otherDigest ?? undefined,
 		arrived.find((p) => p.digest === otherDigest) ?? null,
@@ -148,6 +156,7 @@ function ProposalScreen() {
 			return (
 				<MoveView
 					move={judged.move}
+					notes={copyNotes}
 					docs={firstIsThis ? [doc, other] : [other, doc]}
 					issues={
 						firstIsThis
@@ -162,12 +171,13 @@ function ProposalScreen() {
 				proposal={doc.proposal}
 				issues={doc.issues}
 				doc={doc}
+				notes={copyNotes}
 				aside={
 					otherDigest
 						? {
 								title: `This says it is step ${stepNumber(doc.proposal)} of a move of two steps`,
 								body: other.proposal
-									? "The other step is here too, but the two do not bear that out (they differ in treasury, finaliser or proposer, or are not the two steps of one staking move), so each is shown by itself."
+									? "The other step is here too, but the two do not bear that out (they differ in treasury, finaliser or proposer, or are not two steps of one move), so each is shown by itself."
 									: "The other step is not in this browser, so this one is shown by itself. Open the other step's link or file to see the move as one.",
 							}
 						: undefined

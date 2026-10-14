@@ -279,7 +279,7 @@ describe("the sentences, as approved", () => {
 		});
 		expect(read(t?.headline ?? null)).toBe("Cannot pass as things stand");
 		expect(read(t?.detail ?? null)).toBe(
-			"Carol and Dave said no, so only 2 signers are left and 3 must sign. It goes ahead only if one of them changes their mind. Otherwise it lapses on 2026-10-14 16:20, in 1 day 6 hours.",
+			"Carol and Dave said no, so only 2 signers are left and 3 must sign. It goes ahead only if one of them changes their mind. Otherwise it lapses on 2026-10-14 16:20 UTC, in 1 day 6 hours.",
 		);
 		// the moment is a part of its own, so a screen shows it in the reader's zone
 		expect(t?.detail.find((p) => p.when !== undefined)?.when).toBe(LAPSES);
@@ -299,7 +299,7 @@ describe("the sentences, as approved", () => {
 			now: NOW,
 		});
 		expect(read(one?.detail ?? null)).toBe(
-			"Alice said no, so only 1 signer is left and 2 must sign. It goes ahead only if Alice changes their mind. Otherwise it lapses on 2026-10-14 16:20, in 1 day 6 hours.",
+			"Alice said no, so only 1 signer is left and 2 must sign. It goes ahead only if Alice changes their mind. Otherwise it lapses on 2026-10-14 16:20 UTC, in 1 day 6 hours.",
 		);
 		const all = blockedText({
 			standing: standing({
@@ -314,7 +314,7 @@ describe("the sentences, as approved", () => {
 			now: NOW,
 		});
 		expect(read(all?.detail ?? null)).toBe(
-			"Alice, Bob and you said no, so no signer is left and 3 must sign. It goes ahead only if 3 of you change your minds. Otherwise it lapses on 2026-10-14 16:20, in 1 day 6 hours.",
+			"Alice, Bob and you said no, so no signer is left and 3 must sign. It goes ahead only if 3 of you change your minds. Otherwise it lapses on 2026-10-14 16:20 UTC, in 1 day 6 hours.",
 		);
 		const mine = blockedText({
 			standing: standing({
@@ -425,7 +425,7 @@ describe("the sentences, as approved", () => {
 		);
 		// no "he" or "she": the page knows an address, not a person
 		expect(read(others?.detail ?? null)).toBe(
-			"Bob said no, and Bob is the one who has to submit this proposal. It goes ahead only if Bob changes their mind. To have someone else submit it, propose it again with a different finaliser. Otherwise it lapses on 2026-10-14 16:20, in 1 day 6 hours.",
+			"Bob said no, and Bob is the one who has to submit this proposal. It goes ahead only if Bob changes their mind. To have someone else submit it, propose it again with a different finaliser. Otherwise it lapses on 2026-10-14 16:20 UTC, in 1 day 6 hours.",
 		);
 		expect(
 			read(ownPosition({ standing: s, me: BOB, finaliser: BOB, now: NOW })),

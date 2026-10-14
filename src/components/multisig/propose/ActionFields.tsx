@@ -4,6 +4,7 @@ import {
 	MULTISIG_FACTS,
 	type Network,
 	visibleText,
+	withdrawalFrom,
 } from "@hl-tools/core";
 import type { ReactNode } from "react";
 import {
@@ -301,7 +302,7 @@ export function ActionFields({
 					)}
 					{amount(
 						"USDC",
-						"Leaves the perps balance through the bridge. The bridge keeps 1 USDC of this amount as its fee, so the destination receives 1 USDC less.",
+						`${withdrawalFrom(mode) === "balance" ? "Leaves the treasury's one USDC balance" : "Leaves the perps balance"} through the bridge. The bridge keeps 1 USDC of this amount as its fee, so the destination receives 1 USDC less.`,
 					)}
 				</>
 			);

@@ -148,6 +148,13 @@ export interface StageInput {
 	 * action, which is signed as a code under it, can be signed here.
 	 */
 	readonly codeSigning?: boolean;
+	/**
+	 * Why Hyperliquid would refuse the action as things stand, in a few words
+	 * (the treasury's mode, a send to itself, a HyperEVM system address:
+	 * `modeRefusal`). Then nothing is signed or sent here until that changes;
+	 * the page says why beside where the buttons would be.
+	 */
+	readonly refusal?: string | null;
 }
 
 /**
@@ -271,12 +278,21 @@ export function changeInEffect(p: Proposal, live: Policy | null): boolean {
 	);
 }
 
-/** A moment as a part: shown in the reader's own zone. */
+/** A moment as a part: shown in the reader's own zone; as plain text, in UTC, said so. */
 const heldWhen = (at: number): Part => ({
 	// a lockup's end comes from Hyperliquid's feed as it is: never a throw
-	text: isoTime(at).slice(0, 16).replace("T", " "),
+	text: `${isoTime(at).slice(0, 16).replace("T", " ")} UTC`,
 	when: at,
 });
+
+/** Phases in which nothing can send the proposal any more: only ending it is left. */
+export const CANNOT_BE_SENT: ReadonlySet<Phase> = new Set<Phase>([
+	"refused",
+	"overtaken",
+	"expired",
+	"stuck",
+	"not-multisig",
+]);
 
 export function deriveStage(input: StageInput): Stage {
 	const { proposal: p, readiness: r, policy } = input;
@@ -507,25 +523,28 @@ export function deriveStage(input: StageInput): Stage {
 		phase === "not-yet-valid" ||
 		phase === "cannot-pass" ||
 		phase === "finaliser-no";
+	const refused = input.refusal ? `${input.refusal}.` : null;
 	const signReason =
 		phase === "judging"
 			? "Checking signatures…"
 			: !signable
 				? headline
-				: networkMismatch
-					? wrongNetwork
-					: role === "disconnected"
-						? "Connect a wallet to sign."
-						: role === "treasury"
-							? partsText(switchSentence(policy?.authorizedUsers ?? []))
-							: !isSigner
-								? `${shortAddress(wallet ?? "")} is not in the signer set.`
-								: hasSigned
-									? "You signed this."
-									: // the finaliser takes the no back first; submitting is its own step
-										isLeader && iSaidNo
-										? "You said no to this."
-										: null;
+				: refused
+					? refused
+					: networkMismatch
+						? wrongNetwork
+						: role === "disconnected"
+							? "Connect a wallet to sign."
+							: role === "treasury"
+								? partsText(switchSentence(policy?.authorizedUsers ?? []))
+								: !isSigner
+									? `${shortAddress(wallet ?? "")} is not in the signer set.`
+									: hasSigned
+										? "You signed this."
+										: // the finaliser takes the no back first; submitting is its own step
+											isLeader && iSaidNo
+											? "You said no to this."
+											: null;
 	const canSign = signReason === null;
 
 	const need = r?.need ?? null;
@@ -543,15 +562,17 @@ export function deriveStage(input: StageInput): Stage {
 				? `${r?.have ?? 0} of ${need ?? "?"} signatures so far.`
 				: !executable
 					? headline
-					: networkMismatch
-						? wrongNetwork
-						: role === "disconnected"
-							? "Connect the finaliser's wallet to submit."
-							: !isLeader
-								? `Only the finaliser ${shortAddress(leader)} can submit.`
-								: lockedUntil
-									? `The ${heldWhat(p.payload.action)} this takes from is still locked, and Hyperliquid would refuse it until the lockup has ended.`
-									: null;
+					: refused
+						? refused
+						: networkMismatch
+							? wrongNetwork
+							: role === "disconnected"
+								? "Connect the finaliser's wallet to submit."
+								: !isLeader
+									? `Only the finaliser ${shortAddress(leader)} can submit.`
+									: lockedUntil
+										? `The ${heldWhat(p.payload.action)} this takes from is still locked, and Hyperliquid would refuse it until the lockup has ended.`
+										: null;
 	const canExecute = executeReason === null;
 	// time is all that is in the way: the page shows Submit, switched off, with the moment
 	const opensAt =

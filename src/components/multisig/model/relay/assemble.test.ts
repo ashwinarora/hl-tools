@@ -164,7 +164,7 @@ describe("assembleProposal", () => {
 		expect(issues).toHaveLength(1);
 		expect(issues[0]?.code).toBe("relay.signature_dropped");
 		expect(issues[0]?.message).toBe(
-			"1 stored signature does not verify and was ignored.",
+			`1 stored signature (filed under ${C.slice(0, 6)}…${C.slice(-4)}) does not verify and was ignored.`,
 		);
 	});
 
@@ -178,7 +178,7 @@ describe("assembleProposal", () => {
 		);
 		expect(signers(assembled?.proposal)).toEqual([A]);
 		expect(issues[0]?.message).toBe(
-			"2 stored signatures do not verify and were ignored.",
+			`2 stored signatures (filed under ${B.slice(0, 6)}…${B.slice(-4)}, ${C.slice(0, 6)}…${C.slice(-4)}) do not verify and were ignored.`,
 		);
 	});
 

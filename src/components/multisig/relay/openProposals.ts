@@ -16,7 +16,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { loneStep, moveSentence, pairMoves } from "../model/move";
 import { assembleProposal, countedSigners } from "../model/relay/assemble";
-import { type InboxEntry, moveEntry } from "../model/relay/inbox";
+import { type InboxEntry, moveEntry, stuckReason } from "../model/relay/inbox";
 import { standing } from "../model/relay/positions";
 import type { ProposalRow } from "../model/relay/rows";
 import { finaliserLeft, refusedForGood } from "../model/stage";
@@ -119,6 +119,25 @@ export function useOpenProposals() {
 						at: o.createdAt,
 					})),
 				});
+				const stuckBy = stuckReason({
+					// refused once: its number is used up, whoever signs now
+					refused: refusedForGood(p),
+					finaliserLeft: finaliserLeft(p, {
+						authorizedUsers: stored.signers,
+						threshold: stored.threshold,
+						observedAt: stored.checkedAt,
+					}),
+					overtaken:
+						overtakenBy(
+							p.payload.action,
+							done.filter(
+								(d) =>
+									d.row.network === row.network &&
+									d.row.treasury === row.treasury &&
+									d.row.digest !== row.digest,
+							),
+						) !== null,
+				});
 				items.push({
 					row,
 					proposal: p,
@@ -133,23 +152,8 @@ export function useOpenProposals() {
 					frozen: stored.frozenAt !== null,
 					objected: position.objected.map((o) => o.signer),
 					blocked: position.blocked,
-					stuck:
-						// refused once: its number is used up, whoever signs now
-						refusedForGood(p) ||
-						finaliserLeft(p, {
-							authorizedUsers: stored.signers,
-							threshold: stored.threshold,
-							observedAt: stored.checkedAt,
-						}) ||
-						overtakenBy(
-							p.payload.action,
-							done.filter(
-								(d) =>
-									d.row.network === row.network &&
-									d.row.treasury === row.treasury &&
-									d.row.digest !== row.digest,
-							),
-						) !== null,
+					stuck: stuckBy !== null,
+					stuckBy,
 					// a staking step in the words of its own page, anything else as the core says it
 					line: actionLine(p.payload.action, null, p.payload.network),
 					title: p.meta.title,

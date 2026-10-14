@@ -17,7 +17,10 @@ import {
 	receiverOf,
 	receiverRecheckMs,
 	type SendFacts,
+	sendsBefore,
+	sendsFirstLine,
 	spotAvailable,
+	standingRefusals,
 	TO_HYPEREVM,
 } from "./send";
 
@@ -467,6 +470,68 @@ const recorded = (name: string): Recorded[] =>
 	).sends;
 const answered = (r: Recorded): string | null =>
 	r.answer.status === "err" ? explainExchangeError(r.answer, 200).id : null;
+
+describe("what a proposal's page says against it before anyone signs", () => {
+	it("is the balances and a withdrawal at the fee, never the mode or the receiver", () => {
+		expect(
+			standingRefusals(usdSend("1000"), facts()).map((r) => r.code),
+		).toEqual(["transfer-balance"]);
+		expect(
+			standingRefusals(
+				{ type: "withdraw3", destination: RECIPIENT, amount: "1", time: 1 },
+				facts(),
+			).map((r) => r.code),
+		).toEqual(["withdrawal-below-fee"]);
+		// the mode is said apart, and a new receiver is the cost line's
+		expect(standingRefusals(usdSend(), facts({ mode: UNIFIED }))).toEqual([]);
+		expect(
+			standingRefusals(usdSend("100"), facts({ receiver: FRESH })),
+		).toEqual([]);
+		// a balance not read stops nothing
+		expect(
+			standingRefusals(usdSend("1000"), facts({ perpsUsdc: null })),
+		).toEqual([]);
+	});
+});
+
+describe("older USDC sends a withdrawal should let go first", () => {
+	const withdraw = (time?: number): PlainObject => ({
+		type: "withdraw3",
+		destination: RECIPIENT,
+		amount: "5",
+		...(time === undefined ? {} : { time }),
+	});
+	const waiting = [
+		{ action: usdSend("1", 300), title: "c" },
+		{ action: usdSend("1", 100), title: "a" },
+		{ action: asset("", ""), title: "not ordered" },
+		{ action: withdraw(150), title: "another withdrawal" },
+		{ action: usdSend("1", 500), title: "newer" },
+	];
+	it("names the older sends, oldest first, and nothing else", () => {
+		expect(sendsBefore(withdraw(400), waiting).map((w) => w.title)).toEqual([
+			"a",
+			"c",
+		]);
+		// one not made yet is numbered after every one on record
+		expect(sendsBefore(withdraw(), waiting).map((w) => w.title)).toEqual([
+			"a",
+			"c",
+			"newer",
+		]);
+		// only a withdrawal asks
+		expect(sendsBefore(usdSend("1", 900), waiting)).toEqual([]);
+		expect(sendsBefore(null, waiting)).toEqual([]);
+	});
+	it("says to send them first, and that the rest was not measured", () => {
+		expect(sendsFirstLine(["Rent"])).toBe(
+			"A USDC send of this treasury proposed before this withdrawal is still waiting: “Rent”. Send it first: whether a withdrawal carried out first stops an older send from going through has not been measured.",
+		);
+		const two = sendsFirstLine(["Rent", "Pay"]);
+		expect(two).toMatch(/^2 USDC sends .*“Rent”, “Pay”\. Send them first/);
+		for (const p of FORBIDDEN_CLAIMS) expect(two).not.toMatch(p);
+	});
+});
 
 describe("preflight against what testnet answered", () => {
 	it("stops exactly the sends a sender's mode was refused, and no other", () => {

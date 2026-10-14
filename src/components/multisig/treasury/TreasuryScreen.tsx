@@ -420,6 +420,9 @@ export function TreasuryScreen({
 	}
 
 	const frozen = treasury.frozenAt !== null;
+	// Hyperliquid's own answer counts at once: the relay freezes a treasury
+	// only after its next look-up, and until then nothing can be proposed for it
+	const noSignerSet = frozen || live.isMultiSig === false;
 	const pending = openHere;
 	const setTab = (next: TreasuryTab) =>
 		void navigate({
@@ -455,7 +458,7 @@ export function TreasuryScreen({
 					</>
 				}
 				actions={
-					frozen ? null : (
+					noSignerSet ? null : (
 						<Link
 							to="/multisig/propose"
 							search={{ treasury: address, network }}

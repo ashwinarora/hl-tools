@@ -31,6 +31,8 @@ export interface InboxEntry {
 	 * or Hyperliquid refused it once, which used up its number.
 	 */
 	readonly stuck: boolean;
+	/** Which of the three makes it `stuck`, for the list to say. */
+	readonly stuckBy?: StuckReason | null;
 	/** The current signers who said no (a no is an objection, not an ending). */
 	readonly objected: readonly Address[];
 	/**
@@ -38,6 +40,32 @@ export interface InboxEntry {
 	 * reached, or its finaliser said no. A change of mind makes it live again.
 	 */
 	readonly blocked: Blocked | null;
+}
+
+/**
+ * refused         Hyperliquid refused it once, which used up its number
+ * finaliser-left  its finaliser is no longer a signer
+ * overtaken       a USDC send, and a newer send of the treasury went first
+ */
+export type StuckReason = "refused" | "finaliser-left" | "overtaken";
+
+/** The reason a list row gives, after "cannot be finished: ". */
+export const STUCK_WORDS: Record<StuckReason, string> = {
+	refused: "refused",
+	"finaliser-left": "its finaliser left",
+	overtaken: "a later send went first",
+};
+
+/** The first reason that holds, in the order a reader can act on. */
+export function stuckReason(i: {
+	readonly refused: boolean;
+	readonly finaliserLeft: boolean;
+	readonly overtaken: boolean;
+}): StuckReason | null {
+	if (i.refused) return "refused";
+	if (i.finaliserLeft) return "finaliser-left";
+	if (i.overtaken) return "overtaken";
+	return null;
 }
 
 /**
@@ -52,13 +80,14 @@ export function moveEntry(
 	second: InboxEntry,
 ): Pick<
 	InboxEntry,
-	"counted" | "open" | "frozen" | "stuck" | "objected" | "blocked"
+	"counted" | "open" | "frozen" | "stuck" | "stuckBy" | "objected" | "blocked"
 > {
 	return {
 		counted: first.counted.filter((a) => second.counted.includes(a)),
 		open: first.open && second.open,
 		frozen: first.frozen || second.frozen,
 		stuck: first.stuck || second.stuck,
+		stuckBy: first.stuckBy ?? second.stuckBy ?? null,
 		objected: [...new Set([...first.objected, ...second.objected])],
 		blocked: first.blocked ?? second.blocked,
 	};

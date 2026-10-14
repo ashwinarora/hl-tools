@@ -58,7 +58,7 @@ import {
 } from "./modeSwitch";
 import type { NonceMode } from "./nonce";
 import { selfRefusal } from "./selfSend";
-import { largerOf, TO_HYPEREVM } from "./send";
+import { largerOf, sendsBefore, sendsFirstLine, TO_HYPEREVM } from "./send";
 import {
 	judgeSet,
 	type SignerCheck,
@@ -321,7 +321,10 @@ export interface BuildContext {
 		readonly positions: number | null;
 		readonly orders: number | null;
 	} | null;
-	/** The proposals of the treasury still waiting, for what a mode switch does to them. */
+	/**
+	 * The proposals of the treasury still waiting: for what a mode switch does
+	 * to them, and the older sends a withdrawal should let go first.
+	 */
 	readonly waiting?: SwitchFacts["waiting"];
 	/** What Hyperliquid said about the addresses that would be new signers. */
 	readonly signerChecks?: ReadonlyMap<string, SignerCheck>;
@@ -669,6 +672,16 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 					),
 				);
 			}
+			// numbered after every send on record: the waiting ones should go first
+			const before = sendsBefore({ type: "withdraw3" }, ctx.waiting ?? []);
+			if (before.length > 0)
+				issues.push(
+					issue(
+						"withdraw.after_send",
+						"warning",
+						sendsFirstLine(before.map((w) => w.title)),
+					),
+				);
 			return done({
 				type: "withdraw3",
 				...head,

@@ -127,7 +127,26 @@ export function CreateScreen({
 	});
 	const mounted = useMounted();
 	const ready = mounted && hydrated;
+	// Once converted, the page stays with that account until the reader closes
+	// it: its next step is switching the wallet to a signer, which must not
+	// take the success screen away.
+	const [finished, setFinished] = useState<{
+		readonly network: Network;
+		readonly account: Address;
+	} | null>(null);
 
+	if (finished) {
+		return (
+			<Page network={finished.network}>
+				<Wizard
+					key={`${finished.network}:${finished.account}`}
+					network={finished.network}
+					account={finished.account}
+					onClose={() => setFinished(null)}
+				/>
+			</Page>
+		);
+	}
 	if (!ready) {
 		return (
 			<Page network={network}>
@@ -173,6 +192,7 @@ export function CreateScreen({
 				key={`${network}:${account}`}
 				network={network}
 				account={account}
+				onDone={() => setFinished({ network, account })}
 			/>
 		</Page>
 	);
@@ -180,7 +200,19 @@ export function CreateScreen({
 
 type Step = "wallet" | "sending" | "reading";
 
-function Wizard({ network, account }: { network: Network; account: Address }) {
+function Wizard({
+	network,
+	account,
+	onDone,
+	onClose,
+}: {
+	network: Network;
+	account: Address;
+	/** The account is a treasury now. */
+	onDone?: () => void;
+	/** The reader closed the success screen. */
+	onClose?: () => void;
+}) {
 	const relay = useRelay();
 	const wallet = useWalletSigner();
 	const queries = useQueryClient();
@@ -331,8 +363,9 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 			setDone(policy);
 			// it is a treasury now: nothing half-entered is left to keep
 			clearKept();
+			onDone?.();
 		},
-		[queries, network, account, clearKept],
+		[queries, network, account, clearKept, onDone],
 	);
 
 	const convert = () => {
@@ -398,7 +431,8 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 		readonly requestId: string | null;
 	}>({ state: "idle", attempt: 0, requestId: null });
 	const { request } = useRequest(reg.requestId);
-	const client = relay.client;
+	// only as the account itself: after a switch to a signer, nothing is asked as anyone else
+	const client = relay.wallet === account ? relay.client : null;
 	const register = useCallback(
 		async (attempt: number) => {
 			if (!client) return;
@@ -506,6 +540,11 @@ function Wizard({ network, account }: { network: Network; account: Address }) {
 								>
 									{CREATE.firstProposal}
 								</Link>
+							)}
+							{onClose && (
+								<Btn variant="ghost" onClick={onClose}>
+									Close
+								</Btn>
 							)}
 						</div>
 					</div>

@@ -1,4 +1,5 @@
 import {
+	type AccountMode,
 	type ActionDescription,
 	type Address,
 	describeAction,
@@ -17,6 +18,7 @@ import { CONTROL_REFRESH_MS } from "../live/useControl";
 import { receiptOk } from "../model/history";
 import type { StepView } from "../model/move";
 import type { TreasuryRow } from "../model/relay/rows";
+import { modeRefusal } from "../model/send";
 import { signingNetwork } from "../model/signingNetwork";
 import { deriveStage, type Stage } from "../model/stage";
 import { useExecutionReporter } from "../relay/useExecutionReporter";
@@ -66,6 +68,8 @@ export function useMoveStep(
 		readonly relayWallet: Address | null;
 		/** The treasury's ledger, where the page follows it (a vault move): null otherwise. */
 		readonly ledger?: readonly LedgerRow[] | null;
+		/** The treasury's account mode, as read; null while it is not. */
+		readonly mode?: AccountMode | null;
 	},
 ): MoveStepState {
 	const parsed = useMemo(
@@ -116,6 +120,12 @@ export function useMoveStep(
 		heldUntil: staking.heldUntil,
 		codeSigning: signingNetwork() !== null,
 		now: shared.clock,
+		refusal:
+			modeRefusal(
+				shared.mode ?? null,
+				proposal.payload.action,
+				proposal.payload.multiSigUser,
+			)?.title ?? null,
 	});
 
 	const { network, multiSigUser } = proposal.payload;

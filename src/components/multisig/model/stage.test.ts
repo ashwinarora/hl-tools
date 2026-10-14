@@ -810,6 +810,39 @@ describe("deriveStage", () => {
 	});
 });
 
+describe("an action Hyperliquid would refuse as things stand", () => {
+	const WHY = "Cannot be sent while the treasury is a unified account";
+
+	it("can be neither signed nor sent, and says why where the buttons would be", async () => {
+		const ready = await signAs(await signAs(makeProposal(), 1), 3); // A and C signed, B leads
+		const asB = await stage(ready, { wallet: B, refusal: WHY });
+		expect(asB.phase).toBe("ready");
+		expect([asB.canSign, asB.canExecute]).toEqual([false, false]);
+		expect(asB.executeReason).toBe(`${WHY}.`);
+		expect(asB.executeAddsSignature).toBe(false);
+		// a signer who has not signed reads the same reason, not "sign"
+		const open = await signAs(makeProposal(), 1);
+		const asC = await stage(open, { wallet: C, refusal: WHY });
+		expect(asC.canSign).toBe(false);
+		expect(asC.signReason).toBe(`${WHY}.`);
+	});
+
+	it("leaves a closed proposal's own reason in place", async () => {
+		const sent = { ...(await signAs(makeProposal(), 1)), receipt: OK };
+		const s = await stage(sent, { wallet: C, refusal: WHY });
+		expect(s.phase).toBe("submitted");
+		expect(s.signReason).toBe(s.headline);
+	});
+
+	it("is open again once nothing stands in the way", async () => {
+		const ready = await signAs(await signAs(makeProposal(), 1), 3);
+		for (const refusal of [null, undefined, ""])
+			expect((await stage(ready, { wallet: B, refusal })).canExecute).toBe(
+				true,
+			);
+	});
+});
+
 describe("an action Hyperliquid would refuse before a certain moment", () => {
 	const HOUR = 3_600_000;
 	const until = NOW + 5 * HOUR;
@@ -824,7 +857,7 @@ describe("an action Hyperliquid would refuse before a certain moment", () => {
 		);
 		expect(asB.opensAt).toBe(until);
 		expect(asB.detail).toMatch(
-			/^You are the finaliser\. It can be submitted from \d{4}-\d\d-\d\d \d\d:\d\d: the stake it takes from is locked until then · submittable until/,
+			/^You are the finaliser\. It can be submitted from \d{4}-\d\d-\d\d \d\d:\d\d UTC: the stake it takes from is locked until then · submittable until/,
 		);
 		expect(asB.detailParts.some((part) => part.when === until)).toBe(true);
 		// a co-signer reads who will submit, and from when
@@ -880,7 +913,7 @@ describe("an action Hyperliquid would refuse before a certain moment", () => {
 		const closes = (await stage(p, { wallet: A })).window.validUntil;
 		const late = closes + HOUR;
 		const sentence =
-			/^The stake this takes from is locked until \d{4}-\d\d-\d\d \d\d:\d\d, and this proposal closes before that, on \d{4}-\d\d-\d\d \d\d:\d\d\. It cannot be submitted in time: its proposer can withdraw it and make it again later\.$/;
+			/^The stake this takes from is locked until \d{4}-\d\d-\d\d \d\d:\d\d UTC, and this proposal closes before that, on \d{4}-\d\d-\d\d \d\d:\d\d UTC\. It cannot be submitted in time: its proposer can withdraw it and make it again later\.$/;
 		for (const wallet of [A, B, C]) {
 			const collecting = await stage(p, { wallet, heldUntil: late });
 			expect(collecting.phase).toBe("collecting");

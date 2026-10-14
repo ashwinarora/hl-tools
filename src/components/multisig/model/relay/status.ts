@@ -20,6 +20,12 @@ export interface RelayActionsInput {
 	readonly isSigner: boolean;
 	/** Signers with a no on the relay. */
 	readonly objected: readonly Address[];
+	/**
+	 * Nothing can send it any more (refused, a later send went first, its
+	 * finaliser left, its window closed): a signature or a no would change
+	 * nothing, so only its proposer's withdrawal is offered.
+	 */
+	readonly final?: boolean;
 }
 
 export interface RelayActions {
@@ -43,9 +49,11 @@ const NONE: RelayActions = {
 export function relayActions(i: RelayActionsInput): RelayActions {
 	if (!i.known || !i.me || i.status !== "open" || i.expired) return NONE;
 	const mine = i.objected.includes(i.me);
+	const withdraw = i.me === i.createdBy;
+	if (i.final) return { ...NONE, withdraw };
 	return {
 		takeBack: i.relaySigners.includes(i.me),
-		withdraw: i.me === i.createdBy,
+		withdraw,
 		// one position at a time: a no that stands is taken back, not said again
 		sayNo: i.isSigner && !mine,
 		takeBackNo: mine,

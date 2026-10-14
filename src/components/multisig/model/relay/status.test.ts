@@ -22,6 +22,18 @@ const NONE = {
 };
 
 describe("relayActions", () => {
+	it("offers only the proposer's withdrawal once nothing can send it", () => {
+		const final = { final: true, relaySigners: [A, C], objected: [C] };
+		expect(relayActions(input(final))).toEqual({ ...NONE, withdraw: true });
+		expect(relayActions(input({ ...final, me: C }))).toEqual(NONE);
+		expect(relayActions(input({ ...final, final: false, me: C }))).toEqual({
+			takeBack: true,
+			withdraw: false,
+			sayNo: false,
+			takeBackNo: true,
+		});
+	});
+
 	it("lets the proposer withdraw, and say no like anyone", () => {
 		expect(relayActions(input())).toEqual({
 			takeBack: false,

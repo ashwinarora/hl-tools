@@ -1,8 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { describeWalletError } from "./walletErrors";
+import { describeWalletError, signerFailure } from "./walletErrors";
 
 const named = (name: string, extra: object = {}) =>
 	Object.assign(new Error(name), { name, ...extra });
+
+describe("signerFailure: a signature the wallet did not give", () => {
+	const failed = (message: string) => ({
+		code: "signer.failed",
+		severity: "error" as const,
+		message,
+	});
+	it("says a refusal or a closed window once, and what it means here", () => {
+		for (const said of [
+			"The signer refused or failed: You declined in the wallet.",
+			"The signer refused or failed: User rejected the request.",
+		])
+			expect(signerFailure([failed(said)], "Nothing was created.")).toEqual([
+				failed(
+					"Your wallet did not sign (declined or closed). Nothing was created.",
+				),
+			]);
+	});
+	it("passes anything else on in the wallet's words, and other notes untouched", () => {
+		const other = { code: "x", severity: "warning" as const, message: "kept" };
+		expect(
+			signerFailure(
+				[failed("The signer refused or failed: Ledger device locked"), other],
+				"Nothing was created.",
+			),
+		).toEqual([
+			failed("Your wallet did not sign: Ledger device locked"),
+			other,
+		]);
+	});
+});
 
 describe("describeWalletError", () => {
 	it("recognises a rejection by code, name, message and nested cause", () => {

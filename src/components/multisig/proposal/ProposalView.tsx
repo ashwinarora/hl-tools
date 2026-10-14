@@ -38,7 +38,7 @@ import { receiptOk } from "../model/history";
 import { labelledLine } from "../model/parts";
 import { refusalNote } from "../model/refusal";
 import { RELAY_COPY } from "../model/relay/copy";
-import { costLine, modeRefusal } from "../model/send";
+import { costLine, modeRefusal, standingRefusals } from "../model/send";
 import { changeSummary } from "../model/signerSet";
 import { signingNetwork } from "../model/signingNetwork";
 import {
@@ -71,6 +71,8 @@ import { useKnownProposals } from "../treasury/useKnownProposals";
 import { useTreasuryNames } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
+import { CopyNotes } from "./CopyNotes";
+import { OlderSends } from "./OlderSends";
 import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
@@ -161,12 +163,15 @@ export function ProposalView({
 	issues,
 	doc,
 	aside,
+	notes,
 }: {
 	proposal: Proposal;
 	issues: readonly Issue[];
 	doc: ProposalDoc;
 	/** Something the page that opened this has to say about it: said once, above the action. */
 	aside?: { readonly title: string; readonly body: string };
+	/** What opening the copy that brought this here left out (a link or a file). */
+	notes?: readonly Issue[];
 }) {
 	const header = useNetwork();
 	const relay = useRelay();
@@ -329,6 +334,13 @@ export function ProposalView({
 		state.policyQuery.isPending ||
 		(state.judgement?.policy === null && state.policy !== null);
 	const judged = waitingForPolicy ? null : (state.judgement?.ready ?? null);
+	// The treasury's mode can rule the action out whatever else holds: said
+	// before anyone signs, with the way out, and nothing is signed or sent.
+	const refusal = modeRefusal(
+		treasury.mode,
+		proposal.payload.action,
+		target.address,
+	);
 	const stage = deriveStage({
 		proposal,
 		readiness: judged,
@@ -356,6 +368,7 @@ export function ProposalView({
 		objections: doc.relay.objections,
 		// one clock for the page: the same event reads the same age wherever it is said
 		now: clock,
+		refusal: refusal?.title ?? null,
 	});
 	const role = ROLE[stage.role];
 	const description = useMemo(
@@ -393,11 +406,18 @@ export function ProposalView({
 		COSTED.has(stage.phase) ? payee : null,
 		{ settleMs: 0, recheckMs: CONTROL_REFRESH_MS },
 	);
-	// The treasury's mode can rule the action out whatever else holds: said
-	// here, before anyone signs, with the way out.
-	const blocked = COSTED.has(stage.phase)
-		? modeRefusal(treasury.mode, proposal.payload.action, target.address)
-		: null;
+	const blocked = COSTED.has(stage.phase) ? refusal : null;
+	// what the balances say against it now, as the form said when it was made
+	const shortfall =
+		COSTED.has(stage.phase) && !blocked
+			? standingRefusals(proposal.payload.action, {
+					mode: treasury.mode,
+					perpsUsdc: treasury.perp?.withdrawable ?? null,
+					spot: treasury.spot,
+					receiver: null,
+					self: target.address,
+				})
+			: [];
 	const cost =
 		blocked || lookup.state === "idle"
 			? null
@@ -455,7 +475,8 @@ export function ProposalView({
 	const treasuryName = listed
 		? nameOf(target.network, target.address as Address)
 		: shortAddress(target.address);
-	const proposer = row?.createdBy ?? proposal.meta.createdBy;
+	// the relay's word, never the copy's: who proposed it is not signed
+	const proposer = row?.createdBy ?? null;
 	const ready = judged;
 	const repropose = (
 		<Link
@@ -635,11 +656,22 @@ export function ProposalView({
 							{aside.body}
 						</Callout>
 					)}
+					<CopyNotes notes={notes} />
 					{blocked && (
 						<Callout tone="warning" title={blocked.title} action={repropose}>
 							{blocked.message}
 						</Callout>
 					)}
+					{shortfall.length > 0 && (
+						<Callout
+							tone="warning"
+							title="Hyperliquid would refuse this as things stand"
+						>
+							{shortfall.map((r) => r.message).join(" ")} It can still be
+							signed: the balances may change before it is sent.
+						</Callout>
+					)}
+					{COSTED.has(stage.phase) && <OlderSends proposal={proposal} />}
 					{/* once nobody signs any more, how signatures are counted is moot */}
 					{stage.policyChanged && !CLOSED.has(stage.phase) && (
 						<Callout

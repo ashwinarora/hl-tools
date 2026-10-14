@@ -16,6 +16,7 @@ import {
 	signProposal,
 } from "@hl-tools/core";
 import { errorMessage } from "#/hooks/useHyperliquid";
+import { askedFor, gotNoAnswer } from "../model/noAnswer";
 import {
 	checkBeforeSubmit,
 	checkMoveBeforeSubmit,
@@ -240,7 +241,7 @@ async function signToSubmit(i: {
 			"envelope",
 			problem(
 				"execute",
-				`The signer set could not be read: ${errorMessage(e)}`,
+				`${askedFor("the signer list", e)} Nothing was signed or sent; try again.`,
 			),
 		);
 	}
@@ -305,8 +306,8 @@ async function post(i: {
 				"execute",
 				// in a move, "nothing was submitted" would deny the step before it
 				i.acceptedBefore
-					? `The request for this step did not reach Hyperliquid: ${errorMessage(e)} The step before it was accepted and stands. This step was not submitted; it is safe to try again.`
-					: `The request did not reach Hyperliquid: ${errorMessage(e)} Nothing was submitted; it is safe to try again.`,
+					? `The request for this step did not reach Hyperliquid${gotNoAnswer(e) ? "" : `: ${errorMessage(e).replace(/\.$/, "")}`}. The step before it was accepted and stands. This step was not submitted; it is safe to try again.`
+					: `The request did not reach Hyperliquid${gotNoAnswer(e) ? "" : `: ${errorMessage(e).replace(/\.$/, "")}`}. Nothing was submitted; it is safe to try again.`,
 			),
 		};
 	}

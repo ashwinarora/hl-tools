@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const TRANSFER_RULES = defineRuleSet({
 	id: "transfers",
 	title: "Account modes, transfers and the activation fee",
-	version: "1.3.0",
-	verifiedAt: "2026-10-13",
+	version: "1.4.0",
+	verifiedAt: "2026-10-14",
 	summary:
 		"An account is in one mode (`userAbstraction`): `default` and `disabled` keep a perps and a spot balance apart, `unifiedAccount` has one balance, reported as spot. A manual account can send with `usdSend` (perps to perps), `spotSend` (spot to spot) and `sendAsset` (any pocket to any pocket). A unified account can send only with `sendAsset` from the spot balance. The receiver's mode never refuses a send: a manual receiver gets it in the pocket named, a unified one in its single balance. Sending to an address never used costs 1 USDC once: `usdSend` takes it out of the amount, `spotSend` and `sendAsset` charge it on top. Sending to an address in use costs nothing.",
 	sources: [
@@ -35,6 +35,11 @@ export const TRANSFER_RULES = defineRuleSet({
 			version: "1.3.0",
 			date: "2026-10-13",
 			note: 'A multi-sig account cannot move a token to HyperEVM (fixtures/multisig/evm-transfer.json, testnet): a spotSend or sendAsset to the token\'s own system address (0x2222…2222 for HYPE, 0x20 followed by the token index for the others) is refused with "Multi-sig user cannot transfer token to EVM", and one to another token\'s system address with "EVM transfer not configured". A plain account\'s spotSend of HYPE to 0x2222…2222 was accepted the same day. Not measured: usdSend to a system address, taken to be refused the same way.',
+		},
+		{
+			version: "1.4.0",
+			date: "2026-10-14",
+			note: "A bridge withdrawal from a unified account comes out of its one balance, which Hyperliquid reports as spot USDC: 2 USDC withdrawn through a multi-sig on mainnet took spot USDC from 3 to 1 and left perps at 0 (fixtures/multisig/unified-withdrawal.json). Its ledger row names what arrives (`usdc`, 1) and the bridge's fee (`fee`, 1): what was requested is their sum.",
 		},
 	],
 });

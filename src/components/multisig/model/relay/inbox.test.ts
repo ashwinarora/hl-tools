@@ -12,6 +12,8 @@ import {
 	needsMe,
 	orderMatters,
 	SECTION_TITLE,
+	STUCK_WORDS,
+	stuckReason,
 	tabTitle,
 } from "./inbox";
 
@@ -255,6 +257,14 @@ describe("the two steps of a move as one entry", () => {
 		return { ...a, ...moveEntry(a, entry({ finaliser: B, ...second })) };
 	};
 
+	it("gives a move the reason of whichever step cannot be finished", () => {
+		const m = move({}, { stuck: true, stuckBy: "overtaken" });
+		expect([m.stuck, m.stuckBy]).toEqual([true, "overtaken"]);
+		const first = move({ stuck: true, stuckBy: "refused" }, {});
+		expect(first.stuckBy).toBe("refused");
+		expect(move({}, {}).stuckBy).toBeNull();
+	});
+
 	it("counts as signed by those who signed both steps", () => {
 		const m = move({ counted: [A, C] }, { counted: [A] });
 		expect(m.counted).toEqual([A]);
@@ -288,5 +298,24 @@ describe("the two steps of a move as one entry", () => {
 		const m = move({ objected: [C] }, { objected: [C, A] });
 		expect(m.objected).toEqual([C, A]);
 		expect(inboxGroup(m, C)).toBe("waiting");
+	});
+});
+
+describe("why a proposal cannot be finished", () => {
+	it("gives the first reason that holds, in words a list row can carry", () => {
+		const none = { refused: false, finaliserLeft: false, overtaken: false };
+		expect(stuckReason(none)).toBeNull();
+		expect(stuckReason({ ...none, overtaken: true })).toBe("overtaken");
+		expect(stuckReason({ ...none, finaliserLeft: true, overtaken: true })).toBe(
+			"finaliser-left",
+		);
+		expect(
+			stuckReason({ refused: true, finaliserLeft: true, overtaken: true }),
+		).toBe("refused");
+		expect(Object.values(STUCK_WORDS)).toEqual([
+			"refused",
+			"its finaliser left",
+			"a later send went first",
+		]);
 	});
 });

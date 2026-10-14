@@ -100,6 +100,7 @@ import {
 	VAULT,
 	type VaultRead,
 } from "../model/vault";
+import { signerFailure } from "../model/walletErrors";
 import { TreasuryNames, useNames } from "../names/Names";
 import { Sentence } from "../names/Sentence";
 import { CodePanel } from "../proposal/CodePanel";
@@ -134,6 +135,20 @@ const FIELD_NOTES: ReadonlySet<string> = new Set([
 
 /** Shown only once the user has tried to create: an untouched form is not an error. */
 const REQUIRED = new Set(["field.required", "finaliser.required"]);
+
+/** The field behind an input's id, for "required" said once the field was left. */
+const FIELD_OF_ID: Readonly<Record<string, keyof ActionForm>> = {
+	"ms-destination": "destination",
+	"ms-amount": "amount",
+	"ms-vault-amount": "amount",
+	"ms-stake-amount": "amount",
+	"ms-token": "token",
+	"ms-agent": "agentAddress",
+	"ms-agent-name": "agentName",
+	"ms-finaliser": "finaliser",
+	"ms-raw": "raw",
+	"ms-vault": "vault",
+};
 
 const backLink =
 	"inline-flex h-8 items-center rounded-md border border-border-strong bg-surface px-3 text-sm hover:bg-surface-2";
@@ -232,6 +247,14 @@ function ProposeForm({
 		formForLink(kind, agent, vault),
 	);
 	const [attempted, setAttempted] = useState(false);
+	/** Fields the reader has been in and left: "required" is said for those only. */
+	const [left, setLeft] = useState<ReadonlySet<keyof ActionForm>>(
+		() => new Set(),
+	);
+	const leave = (e: React.FocusEvent) => {
+		const field = FIELD_OF_ID[(e.target as HTMLElement).id];
+		if (field && !left.has(field)) setLeft(new Set([...left, field]));
+	};
 	const [failure, setFailure] = useState<{
 		title: string;
 		issues: readonly Issue[];
@@ -284,6 +307,11 @@ function ProposeForm({
 
 	const set = <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => {
 		touched.current = true;
+		// another kind of action is another form: nothing in it was left empty yet
+		if (key === "kind" && value !== latest.current.kind) {
+			setAttempted(false);
+			setLeft(new Set());
+		}
 		const next = { ...latest.current, [key]: value };
 		latest.current = next;
 		setForm((f) => ({ ...f, [key]: value }));
@@ -509,7 +537,7 @@ function ProposeForm({
 			orders: state.live.openOrders?.length ?? null,
 		},
 		waiting:
-			form.kind === "accountMode"
+			form.kind === "accountMode" || form.kind === "withdraw3"
 				? waitingProposals(known.proposals, now).map((k) => ({
 						action: k.action,
 						title: k.title,
@@ -559,7 +587,7 @@ function ProposeForm({
 			(i) =>
 				i.severity === "error" &&
 				fieldOf(i) === field &&
-				(attempted || !REQUIRED.has(i.code)),
+				(attempted || left.has(field) || !REQUIRED.has(i.code)),
 		)?.message;
 	// warnings about an address as it was typed stand under its field, where the typo is
 	const notes = (field: keyof ActionForm) =>
@@ -733,7 +761,7 @@ function ProposeForm({
 				if (!signed.signature) {
 					setFailure({
 						title: "The wallet did not sign",
-						issues: signed.issues,
+						issues: signerFailure(signed.issues, "Nothing was created."),
 					});
 					return;
 				}
@@ -835,290 +863,277 @@ function ProposeForm({
 					</>
 				}
 			>
-				<Workspace
-					input={
-						<>
-							<TreasuryStrip state={state} wallet={wallet.address} />
-							{notCopied && (
-								<Callout tone="warning" title="Not re-proposing">
-									{notCopied}
-								</Callout>
-							)}
-							{superseded && (
-								<Callout tone="info" title="Re-proposing">
-									Started from the proposal {short(superseded.digest)}. This is
-									a new proposal with a new nonce: signatures do not carry over.
-								</Callout>
-							)}
-							<Panel
-								title="Action"
-								description={
-									stakingOn
-										? "HYPE between spot, the staking balance and a validator."
-										: vaultOn
-											? "USDC into a vault, or back out of one."
-											: ACTION_KINDS.find((k) => k.kind === form.kind)
-													?.description
-								}
-							>
-								<div className="space-y-4">
-									{restoredAt !== null && (
-										<p
-											data-draft
-											className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-surface-2 px-2.5 py-2 text-xs text-muted-foreground"
-										>
-											<span>{DRAFT_COPY.restored(restoredAt, now)}</span>
-											<button
-												type="button"
-												onClick={clearDraft}
-												className="font-medium text-foreground underline underline-offset-2"
-											>
-												{DRAFT_COPY.clear}
-											</button>
-										</p>
-									)}
-									<Segmented<string>
-										label="Action"
-										value={
-											stakingOn ? "staking" : vaultOn ? "vault" : form.kind
-										}
-										onChange={(v) =>
-											set(
-												"kind",
-												v === "staking"
-													? "stake"
-													: v === "vault"
-														? "vaultDeposit"
-														: (v as ActionKind),
-											)
-										}
-										options={choices}
-									/>
-									{vaultOn && vaultPlan ? (
-										<VaultFields
-											form={form}
-											set={set}
-											error={error}
-											network={network}
-											vaults={vaults}
-											lookup={vaultLookup.lookup}
-											lookupLoading={vaultLookup.loading}
-											names={vaultNames}
-											movable={movable}
-											unified={unified}
-											plan={vaultPlan}
-											now={now}
-										/>
-									) : stakingPlan ? (
-										<StakingFields
-											form={form}
-											set={set}
-											error={error}
-											network={network}
-											staking={staking}
-											spotAvailable={spotHype}
-											plan={stakingPlan}
-											now={now}
-										/>
-									) : form.kind === "changeSigners" ? (
-										<ChangeSignersFields
-											signers={form.signers}
-											onChange={(v) => set("signers", v)}
-											current={state.policy}
-											treasury={address as Address}
-											checks={signerLookups.checks}
-											recheck={signerLookups.recheck}
-											me={me}
-											finaliser={form.finaliser}
-											known={known.proposals}
-											knownState={known.state}
-											relayInUse={relay.mode === "on"}
-											agents={state.agents}
-										/>
-									) : (
-										<ActionFields
-											form={form}
-											set={set}
-											error={error}
-											notes={notes}
-											network={network}
-											tokens={universe.data?.tokens ?? null}
-											held={
-												state.spot
-													?.filter((b) => Number(b.total) !== 0)
-													.map((b) => b.token)
-													.filter((t): t is number => t !== null) ?? []
-											}
-											tokensLoading={universe.isFetching}
-											mode={state.mode}
-											receiver={lookup.receiver}
-											cost={cost}
-											from={sourcePocket(form, context(previewNonce))}
-											movable={movable}
-											agents={state.agents}
-											agentsFailed={!!state.agentsError}
-											now={now}
-										/>
-									)}
-								</div>
-							</Panel>
-							<Panel
-								title="Signing"
-								description="Fixed when the proposal is created: every signer signs exactly this."
-							>
-								<div className="space-y-4">
-									<Field
-										label="Who finalises this?"
-										trailing={<Help k="finaliser" />}
-										htmlFor="ms-finaliser"
-										error={error("finaliser")}
-										hint="The signer who will be there at the end: only this wallet can sign the envelope and submit. If they sign last, they finish in one sitting."
-									>
-										<Select
-											id="ms-finaliser"
-											value={form.finaliser}
-											onChange={(e) => set("finaliser", e.target.value)}
-											aria-invalid={!!error("finaliser")}
-											disabled={!state.policy}
-										>
-											<option value="">Choose a signer…</option>
-											<SignerOptions
-												signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
-												me={me}
-											/>
-										</Select>
-									</Field>
-									<Field
-										// a vault action is signed as a code: the choice is for what the finaliser signs
-										label={
-											vaultOn ? CODE_COPY.chainLabel : "Signers sign under"
-										}
-										trailing={<Help k="signingChain" />}
-										hint={
-											vaultOn
-												? `EIP-712 chain ${chain.hex} (${chain.id}). ${CODE_COPY.chainHint(chain.label, vaultPlan?.steps?.length === 2)}`
-												: `EIP-712 chain ${chain.hex} (${chain.id}). Every signer's wallet switches to ${chain.label} to sign; nothing is sent to that chain.`
-										}
-									>
-										<Segmented<InnerChain>
-											label="Signing chain"
-											value={form.chain}
-											onChange={(v) => set("chain", v)}
-											options={[
-												{
-													value: "hyperevm",
-													label: innerChain(network, "hyperevm").label,
-												},
-												{
-													value: "arbitrum",
-													label: innerChain(network, "arbitrum").label,
-												},
-											]}
-										/>
-									</Field>
-									<Field
-										label="Signing window"
-										trailing={<Help k="signingWindow" />}
-										// The moment in the reader's own time, like everywhere in the
-										// section, and so only once the page runs in the browser: the
-										// server has another clock and another way of writing a date,
-										// and React would have to throw its copy of the form away.
-										hint={
-											<>
-												If created now:{" "}
-												{hydrated ? <Sentence parts={window.parts} /> : "…"}.
-												After that the chain rejects it and it must be
-												re-proposed.
-												{numbered.raised ? ` ${NUMBERED_AFTER}` : ""}
-												{actionType === "usdSend" &&
-												form.nonceMode === "extended"
-													? ` ${DATED_AHEAD}`
-													: ""}
-											</>
-										}
-									>
-										<Segmented<NonceMode>
-											label="Signing window"
-											value={form.nonceMode}
-											onChange={(v) => set("nonceMode", v)}
-											options={[
-												{ value: "now", label: "2 days" },
-												{ value: "extended", label: "Give signers 3 days" },
-											]}
-										/>
-									</Field>
-								</div>
-							</Panel>
-							<Panel
-								title="Label"
-								description="Unsigned: it travels with the document so signers know what this is, and anyone holding the document can change it."
-							>
-								<div className="space-y-4">
-									<Field label="Title" htmlFor="ms-title">
-										<TextInput
-											id="ms-title"
-											value={form.title}
-											onChange={(e) => set("title", e.target.value)}
-											placeholder="October contributor payout"
-										/>
-									</Field>
-									<Field label="Note" htmlFor="ms-note">
-										<TextArea
-											id="ms-note"
-											mono={false}
-											className="min-h-16"
-											rows={2}
-											value={form.note}
-											onChange={(e) => set("note", e.target.value)}
-										/>
-									</Field>
-								</div>
-							</Panel>
-						</>
-					}
-					output={
-						<>
-							<Panel
-								title={
-									<span className="flex items-center gap-2">
-										Preview <NetworkBadge network={network} />
-									</span>
-								}
-								description="What signers will be asked to sign. The nonce and the digest are fixed when you create."
-							>
-								{action && described ? (
+				{/* biome-ignore lint/a11y/noStaticElementInteractions: it only notes which field was left, for its messages */}
+				<div className="contents" onBlur={leave}>
+					<Workspace
+						input={
+							<>
+								<TreasuryStrip state={state} wallet={wallet.address} />
+								{notCopied && (
+									<Callout tone="warning" title="Not re-proposing">
+										{notCopied}
+									</Callout>
+								)}
+								{superseded && (
+									<Callout tone="info" title="Re-proposing">
+										Started from the proposal {short(superseded.digest)}. This
+										is a new proposal with a new nonce: signatures do not carry
+										over.
+									</Callout>
+								)}
+								<Panel
+									title="Action"
+									description={
+										stakingOn
+											? "HYPE between spot, the staking balance and a validator."
+											: vaultOn
+												? "USDC into a vault, or back out of one."
+												: ACTION_KINDS.find((k) => k.kind === form.kind)
+														?.description
+									}
+								>
 									<div className="space-y-4">
-										<div>
-											{secondDescribed && (
-												<p className="mb-1 text-xs text-muted-foreground">
-													Two proposals, signed together and sent one after the
-													other. Step 1:
-												</p>
-											)}
-											<p className="text-base font-medium [overflow-wrap:anywhere]">
-												{described.headline}
+										{restoredAt !== null && (
+											<p
+												data-draft
+												className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-surface-2 px-2.5 py-2 text-xs text-muted-foreground"
+											>
+												<span>{DRAFT_COPY.restored(restoredAt, now)}</span>
+												<button
+													type="button"
+													onClick={clearDraft}
+													className="font-medium text-foreground underline underline-offset-2"
+												>
+													{DRAFT_COPY.clear}
+												</button>
 											</p>
-											{described.lines.length > 0 && (
-												// what the proposal's page will say under the headline:
-												// which balance it leaves, where it arrives
-												<ul className="mt-1.5 space-y-0.5 text-sm text-muted-foreground">
-													{described.lines.map((line) => (
-														<li key={line} className="[overflow-wrap:anywhere]">
-															{line}
-														</li>
-													))}
-												</ul>
-											)}
-											{secondDescribed && (
+										)}
+										<Segmented<string>
+											label="Action"
+											value={
+												stakingOn ? "staking" : vaultOn ? "vault" : form.kind
+											}
+											onChange={(v) =>
+												set(
+													"kind",
+													v === "staking"
+														? "stake"
+														: v === "vault"
+															? "vaultDeposit"
+															: (v as ActionKind),
+												)
+											}
+											options={choices}
+										/>
+										{vaultOn && vaultPlan ? (
+											<VaultFields
+												form={form}
+												set={set}
+												error={error}
+												network={network}
+												vaults={vaults}
+												lookup={vaultLookup.lookup}
+												lookupLoading={vaultLookup.loading}
+												names={vaultNames}
+												movable={movable}
+												unified={unified}
+												plan={vaultPlan}
+												now={now}
+											/>
+										) : stakingPlan ? (
+											<StakingFields
+												form={form}
+												set={set}
+												error={error}
+												network={network}
+												staking={staking}
+												spotAvailable={spotHype}
+												plan={stakingPlan}
+												now={now}
+											/>
+										) : form.kind === "changeSigners" ? (
+											<ChangeSignersFields
+												signers={form.signers}
+												onChange={(v) => set("signers", v)}
+												current={state.policy}
+												treasury={address as Address}
+												checks={signerLookups.checks}
+												recheck={signerLookups.recheck}
+												me={me}
+												finaliser={form.finaliser}
+												known={known.proposals}
+												knownState={known.state}
+												relayInUse={relay.mode === "on"}
+												agents={state.agents}
+											/>
+										) : (
+											<ActionFields
+												form={form}
+												set={set}
+												error={error}
+												notes={notes}
+												network={network}
+												tokens={universe.data?.tokens ?? null}
+												held={
+													state.spot
+														?.filter((b) => Number(b.total) !== 0)
+														.map((b) => b.token)
+														.filter((t): t is number => t !== null) ?? []
+												}
+												tokensLoading={universe.isFetching}
+												mode={state.mode}
+												receiver={lookup.receiver}
+												cost={cost}
+												from={sourcePocket(form, context(previewNonce))}
+												movable={movable}
+												agents={state.agents}
+												agentsFailed={!!state.agentsError}
+												now={now}
+											/>
+										)}
+									</div>
+								</Panel>
+								<Panel
+									title="Signing"
+									description="Fixed when the proposal is created: every signer signs exactly this."
+								>
+									<div className="space-y-4">
+										<Field
+											label="Who finalises this?"
+											trailing={<Help k="finaliser" />}
+											htmlFor="ms-finaliser"
+											error={error("finaliser")}
+											hint="The signer who will be there at the end: only this wallet can sign the envelope and submit. If they sign last, they finish in one sitting."
+										>
+											<Select
+												id="ms-finaliser"
+												value={form.finaliser}
+												onChange={(e) => set("finaliser", e.target.value)}
+												aria-invalid={!!error("finaliser")}
+												disabled={!state.policy}
+											>
+												<option value="">Choose a signer…</option>
+												<SignerOptions
+													signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
+													me={me}
+												/>
+											</Select>
+										</Field>
+										<Field
+											// a vault action is signed as a code: the choice is for what the finaliser signs
+											label={
+												vaultOn ? CODE_COPY.chainLabel : "Signers sign under"
+											}
+											trailing={<Help k="signingChain" />}
+											hint={
+												vaultOn
+													? `EIP-712 chain ${chain.hex} (${chain.id}). ${CODE_COPY.chainHint(chain.label, vaultPlan?.steps?.length === 2)}`
+													: `EIP-712 chain ${chain.hex} (${chain.id}). Every signer's wallet switches to ${chain.label} to sign; nothing is sent to that chain.`
+											}
+										>
+											<Segmented<InnerChain>
+												label="Signing chain"
+												value={form.chain}
+												onChange={(v) => set("chain", v)}
+												options={[
+													{
+														value: "hyperevm",
+														label: innerChain(network, "hyperevm").label,
+													},
+													{
+														value: "arbitrum",
+														label: innerChain(network, "arbitrum").label,
+													},
+												]}
+											/>
+										</Field>
+										<Field
+											label="Signing window"
+											trailing={<Help k="signingWindow" />}
+											// The moment in the reader's own time, like everywhere in the
+											// section, and so only once the page runs in the browser: the
+											// server has another clock and another way of writing a date,
+											// and React would have to throw its copy of the form away.
+											hint={
 												<>
-													<p className="mt-3 mb-1 text-xs text-muted-foreground">
-														Step 2:
+													If created now:{" "}
+													{hydrated ? <Sentence parts={window.parts} /> : "…"}.
+													After that the chain rejects it and it must be
+													re-proposed.
+													{numbered.raised ? ` ${NUMBERED_AFTER}` : ""}
+													{actionType === "usdSend" &&
+													form.nonceMode === "extended"
+														? ` ${DATED_AHEAD}`
+														: ""}
+												</>
+											}
+										>
+											<Segmented<NonceMode>
+												label="Signing window"
+												value={form.nonceMode}
+												onChange={(v) => set("nonceMode", v)}
+												options={[
+													{ value: "now", label: "2 days" },
+													{ value: "extended", label: "Give signers 3 days" },
+												]}
+											/>
+										</Field>
+									</div>
+								</Panel>
+								<Panel
+									title="Label"
+									description="Unsigned: it travels with the document so signers know what this is, and anyone holding the document can change it."
+								>
+									<div className="space-y-4">
+										<Field label="Title" htmlFor="ms-title">
+											<TextInput
+												id="ms-title"
+												value={form.title}
+												onChange={(e) => set("title", e.target.value)}
+												placeholder="October contributor payout"
+											/>
+										</Field>
+										<Field label="Note" htmlFor="ms-note">
+											<TextArea
+												id="ms-note"
+												mono={false}
+												className="min-h-16"
+												rows={2}
+												value={form.note}
+												onChange={(e) => set("note", e.target.value)}
+											/>
+										</Field>
+									</div>
+								</Panel>
+							</>
+						}
+						output={
+							<>
+								<Panel
+									title={
+										<span className="flex items-center gap-2">
+											Preview <NetworkBadge network={network} />
+										</span>
+									}
+									description="What signers will be asked to sign. The nonce and the digest are fixed when you create."
+								>
+									{action && described ? (
+										<div className="space-y-4">
+											<div>
+												{secondDescribed && (
+													<p className="mb-1 text-xs text-muted-foreground">
+														Two proposals, signed together and sent one after
+														the other. Step 1:
 													</p>
-													<p className="text-base font-medium [overflow-wrap:anywhere]">
-														{secondDescribed.headline}
-													</p>
+												)}
+												<p className="text-base font-medium [overflow-wrap:anywhere]">
+													{described.headline}
+												</p>
+												{described.lines.length > 0 && (
+													// what the proposal's page will say under the headline:
+													// which balance it leaves, where it arrives
 													<ul className="mt-1.5 space-y-0.5 text-sm text-muted-foreground">
-														{secondDescribed.lines.map((line) => (
+														{described.lines.map((line) => (
 															<li
 																key={line}
 																className="[overflow-wrap:anywhere]"
@@ -1127,222 +1142,252 @@ function ProposeForm({
 															</li>
 														))}
 													</ul>
-												</>
-											)}
-											<div className="mt-2 flex flex-wrap gap-2">
-												{flags.map((f) => (
-													<Pill key={f} tone={FLAG_TEXT[f]?.tone ?? "info"}>
-														{FLAG_TEXT[f]?.label ?? f}
-													</Pill>
-												))}
+												)}
+												{secondDescribed && (
+													<>
+														<p className="mt-3 mb-1 text-xs text-muted-foreground">
+															Step 2:
+														</p>
+														<p className="text-base font-medium [overflow-wrap:anywhere]">
+															{secondDescribed.headline}
+														</p>
+														<ul className="mt-1.5 space-y-0.5 text-sm text-muted-foreground">
+															{secondDescribed.lines.map((line) => (
+																<li
+																	key={line}
+																	className="[overflow-wrap:anywhere]"
+																>
+																	{line}
+																</li>
+															))}
+														</ul>
+													</>
+												)}
+												<div className="mt-2 flex flex-wrap gap-2">
+													{flags.map((f) => (
+														<Pill key={f} tone={FLAG_TEXT[f]?.tone ?? "info"}>
+															{FLAG_TEXT[f]?.label ?? f}
+														</Pill>
+													))}
+												</div>
 											</div>
-										</div>
-										<KeyValueGrid
-											columns={2}
-											items={[
-												{
-													label: "From (multi-sig user)",
-													value: (
-														<AddressLine address={address} network={network} />
-													),
-												},
-												{
-													label: "Finaliser (leader)",
-													value: ADDRESS_RE.test(form.finaliser) ? (
-														<AddressLine
-															address={form.finaliser}
-															network={network}
-														/>
-													) : (
-														"not chosen"
-													),
-												},
-												{
-													label: vaultOn
-														? CODE_COPY.chainLabel
-														: "Signers sign under",
-													value: `${chain.label} · ${chain.hex}`,
-													mono: true,
-												},
-												{
-													label: "Signing window",
-													value: <Sentence parts={window.parts} />,
-												},
-											]}
-										/>
-									</div>
-								) : (
-									<p className="text-sm text-muted-foreground">
-										Fill in the action to see what will be signed.
-									</p>
-								)}
-								{otherIssues.length > 0 && (
-									<div className="mt-4">
-										<IssueList plain issues={otherIssues} />
-									</div>
-								)}
-							</Panel>
-							{action && (
-								<Panel
-									title="Inner action"
-									description="The canonical action, as it will be hashed. Its time or nonce field is replaced when you create."
-								>
-									<CodeBlock
-										content={stringifyJson(fromPlain(action), 2)}
-										lang="json"
-										maxHeight="18rem"
-									/>
-									{secondAction && (
-										<div className="mt-3">
-											<p className="mb-1.5 text-xs text-muted-foreground">
-												Step 2, a proposal of its own:
-											</p>
-											<CodeBlock
-												content={stringifyJson(fromPlain(secondAction), 2)}
-												lang="json"
-												maxHeight="18rem"
+											<KeyValueGrid
+												columns={2}
+												items={[
+													{
+														label: "From (multi-sig user)",
+														value: (
+															<AddressLine
+																address={address}
+																network={network}
+															/>
+														),
+													},
+													{
+														label: "Finaliser (leader)",
+														value: ADDRESS_RE.test(form.finaliser) ? (
+															<AddressLine
+																address={form.finaliser}
+																network={network}
+															/>
+														) : (
+															"not chosen"
+														),
+													},
+													{
+														label: vaultOn
+															? CODE_COPY.chainLabel
+															: "Signers sign under",
+														value: `${chain.label} · ${chain.hex}`,
+														mono: true,
+													},
+													{
+														label: "Signing window",
+														value: <Sentence parts={window.parts} />,
+													},
+												]}
 											/>
+										</div>
+									) : (
+										<p className="text-sm text-muted-foreground">
+											Fill in the action to see what will be signed.
+										</p>
+									)}
+									{otherIssues.length > 0 && (
+										<div className="mt-4">
+											<IssueList plain issues={otherIssues} />
 										</div>
 									)}
 								</Panel>
-							)}
-							<Panel title="Create">
-								<div className="space-y-3">
-									{!hydrated || state.loading ? (
-										<p
-											className="flex items-center gap-2 text-sm text-muted-foreground"
-											aria-busy="true"
-										>
-											<Loader2 className="size-4 animate-spin" aria-hidden />{" "}
-											Reading the treasury…
-										</p>
-									) : !ready ? (
-										<p className="text-sm text-muted-foreground">
-											A proposal needs a multi-sig account on {network}. See the
-											treasury panel.
-										</p>
-									) : (
-										<p className="text-sm text-muted-foreground">
-											Creating fixes the nonce and the digest and saves the
-											proposal in this browser. Nothing is sent to Hyperliquid
-											until the finaliser submits.{" "}
-											{sharing
-												? RELAY_COPY.createdShared
-												: relay.mode === "on"
-													? "The relay does not list your wallet as a signer of this treasury, so it stays in this browser until you share it."
-													: relay.mode === "signed-out"
-														? RELAY_COPY.notSignedInLocal
-														: relay.mode === "unreachable"
-															? RELAY_COPY.unreachableLocal
-															: ""}
-										</p>
-									)}
-									<div className="flex flex-wrap items-center gap-2">
-										<Button
-											variant="brand"
-											disabled={
-												!ready ||
-												!iAmSigner ||
-												wallet.busy ||
-												orderUnknown ||
-												busyCreating
-											}
-											onClick={() =>
-												void wallet.run("Waiting for the wallet…", () =>
-													create(true),
-												)
-											}
-										>
-											{wallet.address
-												? `Create ${twoSteps ? "both " : ""}and sign as ${short(wallet.address)}`
-												: `Create ${twoSteps ? "both " : ""}and sign`}
-										</Button>
-										<Button
-											variant="outline"
-											disabled={
-												!ready || wallet.busy || orderUnknown || busyCreating
-											}
-											onClick={() => void create(false)}
-										>
-											{twoSteps
-												? "Create both without signing"
-												: "Create without signing"}
-										</Button>
-									</div>
-									{twoSteps && (
-										<p className="text-xs text-muted-foreground">
-											Signing asks your wallet twice, once for each step.
-										</p>
-									)}
-									{signingCodes.map((payload) => (
-										<CodePanel key={payload.nonce} payload={payload} />
-									))}
-									{needsNetwork && (
-										<div
-											data-needs-network
-											className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[13px]"
-										>
-											<p className="flex flex-wrap items-center gap-1 text-warning">
-												<span>{CODE_COPY.missing}</span>
-												<Help k="signingNetwork" />
-											</p>
-											<p className="mt-1 text-muted-foreground">
-												Nothing was created. Add the network, then create and
-												sign again.
-											</p>
-											<div className="mt-2 flex flex-wrap items-center gap-2">
-												<Button
-													variant="brand"
-													disabled={wallet.busy}
-													onClick={() =>
-														void wallet.run(
-															"Waiting for the wallet…",
-															async () => {
-																setAddFailed(null);
-																const added = await wallet.addSigningNetwork();
-																if (added.ok) setNeedsNetwork(false);
-																else setAddFailed(added.error);
-															},
-														)
-													}
-												>
-													{wallet.busy ? CODE_COPY.adding : CODE_COPY.add}
-												</Button>
-											</div>
-											{addFailed && (
-												<p className="mt-2 text-danger">{addFailed}</p>
-											)}
-										</div>
-									)}
-									{itself ? (
-										<SwitchToSigner
-											signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
-											className="text-xs"
+								{action && (
+									<Panel
+										title="Inner action"
+										description="The canonical action, as it will be hashed. Its time or nonce field is replaced when you create."
+									>
+										<CodeBlock
+											content={stringifyJson(fromPlain(action), 2)}
+											lang="json"
+											maxHeight="18rem"
 										/>
-									) : ready && !iAmSigner ? (
-										<p className="text-xs text-muted-foreground">
-											{wallet.address
-												? `${short(wallet.address)} is not in the signer set, so it can draft a proposal but not sign it.`
-												: "Connect a signer's wallet to sign on the spot, or create the proposal unsigned and pass it on."}
-										</p>
-									) : null}
-									{attempted && !draft.input && (
-										<Callout tone="danger" title="Not created yet">
-											{blockers.length === 1
-												? blockers[0]
-												: "Fix the marked fields first."}
-										</Callout>
-									)}
-									{failure && (
-										<Callout tone="danger" title={failure.title}>
-											<IssueList plain issues={failure.issues} />
-										</Callout>
-									)}
-								</div>
-							</Panel>
-						</>
-					}
-				/>
+										{secondAction && (
+											<div className="mt-3">
+												<p className="mb-1.5 text-xs text-muted-foreground">
+													Step 2, a proposal of its own:
+												</p>
+												<CodeBlock
+													content={stringifyJson(fromPlain(secondAction), 2)}
+													lang="json"
+													maxHeight="18rem"
+												/>
+											</div>
+										)}
+									</Panel>
+								)}
+								<Panel title="Create">
+									<div className="space-y-3">
+										{!hydrated || state.loading ? (
+											<p
+												className="flex items-center gap-2 text-sm text-muted-foreground"
+												aria-busy="true"
+											>
+												<Loader2 className="size-4 animate-spin" aria-hidden />{" "}
+												Reading the treasury…
+											</p>
+										) : !ready ? (
+											<p className="text-sm text-muted-foreground">
+												A proposal needs a multi-sig account on {network}. See
+												the treasury panel.
+											</p>
+										) : (
+											<p className="text-sm text-muted-foreground">
+												Creating fixes the nonce and the digest and saves the
+												proposal in this browser. Nothing is sent to Hyperliquid
+												until the finaliser submits.{" "}
+												{sharing
+													? RELAY_COPY.createdShared
+													: relay.mode === "on"
+														? "The relay does not list your wallet as a signer of this treasury, so it stays in this browser until you share it."
+														: relay.mode === "signed-out"
+															? RELAY_COPY.notSignedInLocal
+															: relay.mode === "unreachable"
+																? RELAY_COPY.unreachableLocal
+																: ""}
+											</p>
+										)}
+										<div className="flex flex-wrap items-center gap-2">
+											<Button
+												variant="brand"
+												disabled={
+													!ready ||
+													!iAmSigner ||
+													!draft.input ||
+													wallet.busy ||
+													orderUnknown ||
+													busyCreating
+												}
+												onClick={() =>
+													void wallet.run("Waiting for the wallet…", () =>
+														create(true),
+													)
+												}
+											>
+												{wallet.address
+													? `Create ${twoSteps ? "both " : ""}and sign as ${short(wallet.address)}`
+													: `Create ${twoSteps ? "both " : ""}and sign`}
+											</Button>
+											<Button
+												variant="outline"
+												disabled={
+													!ready ||
+													!draft.input ||
+													wallet.busy ||
+													orderUnknown ||
+													busyCreating
+												}
+												onClick={() => void create(false)}
+											>
+												{twoSteps
+													? "Create both without signing"
+													: "Create without signing"}
+											</Button>
+										</div>
+										{twoSteps && (
+											<p className="text-xs text-muted-foreground">
+												Signing asks your wallet twice, once for each step.
+											</p>
+										)}
+										{signingCodes.map((payload) => (
+											<CodePanel key={payload.nonce} payload={payload} />
+										))}
+										{needsNetwork && (
+											<div
+												data-needs-network
+												className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[13px]"
+											>
+												<p className="flex flex-wrap items-center gap-1 text-warning">
+													<span>{CODE_COPY.missing}</span>
+													<Help k="signingNetwork" />
+												</p>
+												<p className="mt-1 text-muted-foreground">
+													Nothing was created. Add the network, then create and
+													sign again.
+												</p>
+												<div className="mt-2 flex flex-wrap items-center gap-2">
+													<Button
+														variant="brand"
+														disabled={wallet.busy}
+														onClick={() =>
+															void wallet.run(
+																"Waiting for the wallet…",
+																async () => {
+																	setAddFailed(null);
+																	const added =
+																		await wallet.addSigningNetwork();
+																	if (added.ok) setNeedsNetwork(false);
+																	else setAddFailed(added.error);
+																},
+															)
+														}
+													>
+														{wallet.busy ? CODE_COPY.adding : CODE_COPY.add}
+													</Button>
+												</div>
+												{addFailed && (
+													<p className="mt-2 text-danger">{addFailed}</p>
+												)}
+											</div>
+										)}
+										{itself ? (
+											<SwitchToSigner
+												signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
+												className="text-xs"
+											/>
+										) : ready && !iAmSigner ? (
+											<p className="text-xs text-muted-foreground">
+												{wallet.address
+													? `${short(wallet.address)} is not in the signer set, so it can draft a proposal but not sign it.`
+													: "Connect a signer's wallet to sign on the spot, or create the proposal unsigned and pass it on."}
+											</p>
+										) : null}
+										{/* what stops Create, beside it: the button is off until it is settled */}
+										{ready && !draft.input && blockers.length > 0 && (
+											<p className="text-xs text-muted-foreground" data-blocked>
+												{blockers.length === 1
+													? blockers[0]
+													: `${blockers.length} things to settle first. ${blockers[0]}`}
+											</p>
+										)}
+										{failure && (
+											<Callout tone="danger" title={failure.title}>
+												<IssueList plain issues={failure.issues} />
+											</Callout>
+										)}
+									</div>
+								</Panel>
+							</>
+						}
+					/>
+				</div>
 			</ShellPage>
 		</TreasuryNames>
 	);

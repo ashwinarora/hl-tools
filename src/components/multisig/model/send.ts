@@ -14,6 +14,7 @@ import {
 	Decimal,
 	landsIn,
 	multiSigEvmRefusal,
+	orderMark,
 	overtakenBy,
 	type PlainObject,
 	sendRefusal,
@@ -259,6 +260,61 @@ export function preflight(action: PlainObject, facts: SendFacts): Refusal[] {
 				"The destination has never been used on Hyperliquid, so this costs 1 USDC on top of the amount, and the treasury cannot pay both right now.",
 		});
 	return out;
+}
+
+/** Refusals a proposal's page says before anyone signs: the balances, and a withdrawal at or below the bridge's fee. */
+const STANDING: ReadonlySet<string> = new Set([
+	"transfer-balance",
+	"token-balance",
+	"withdrawal-below-fee",
+]);
+
+/**
+ * What a proposal's page says against it from the balances as they are now:
+ * the treasury cannot cover the amount, or a withdrawal is at or below the
+ * bridge's fee. The mode's refusal (`modeRefusal`) and the receiver's cost
+ * (`costLine`) are said apart. Signing stays open: balances change.
+ */
+export function standingRefusals(
+	action: PlainObject,
+	facts: SendFacts,
+): Refusal[] {
+	return preflight(action, facts).filter((r) => STANDING.has(r.code));
+}
+
+/**
+ * For a bridge withdrawal: the treasury's USDC sends proposed before it and
+ * still waiting, oldest first. A send carried out shuts out an older
+ * withdrawal (measured: the core's `multisig/order.ts`); what a withdrawal
+ * carried out does to an older send was not measured, so the pages ask for
+ * the sends to go first. With `mine` null (a withdrawal not made yet, which
+ * is numbered after every one on record) every waiting send is older.
+ */
+export function sendsBefore<T extends { readonly action: unknown }>(
+	action: unknown,
+	waiting: readonly T[],
+): T[] {
+	const a = action as { type?: unknown } | null;
+	if (!a || a.type !== "withdraw3") return [];
+	const mine = orderMark(action);
+	return waiting
+		.map((w) => ({ w, m: orderMark(w.action) }))
+		.filter(
+			(x) =>
+				x.m !== null &&
+				x.m.kind === "usdSend" &&
+				(mine === null || x.m.time < mine.time),
+		)
+		.sort((x, y) => (x.m?.time ?? 0) - (y.m?.time ?? 0))
+		.map((x) => x.w);
+}
+
+/** What a withdrawal's form and page say when older USDC sends still wait. */
+export function sendsFirstLine(titles: readonly string[]): string {
+	const named = titles.map((t) => `“${t}”`).join(", ");
+	return titles.length === 1
+		? `A USDC send of this treasury proposed before this withdrawal is still waiting: ${named}. Send it first: whether a withdrawal carried out first stops an older send from going through has not been measured.`
+		: `${titles.length} USDC sends of this treasury proposed before this withdrawal are still waiting: ${named}. Send them first: whether a withdrawal carried out first stops an older send from going through has not been measured.`;
 }
 
 export interface CostLine {

@@ -1064,6 +1064,30 @@ describe("what the audit found the form letting through", () => {
 		expect(withdraw("2").action).not.toBeNull();
 	});
 
+	it("asks a withdrawal to let the USDC sends still waiting go first, without blocking", () => {
+		const waiting: { action: PlainObject; title: string }[] = [
+			{
+				action: {
+					type: "usdSend",
+					destination: RECIPIENT,
+					amount: "1",
+					time: 5,
+				},
+				title: "Rent",
+			},
+			{ action: { type: "spotSend", time: 6 }, title: "Not ordered" },
+		];
+		const r = buildAction(
+			form({ kind: "withdraw3", destination: RECIPIENT, amount: "5" }),
+			ctx({ waiting }),
+		);
+		expect(r.issues.map((i) => [i.severity, i.code])).toEqual([
+			["warning", "withdraw.after_send"],
+		]);
+		expect(r.issues[0]?.message).toContain("“Rent”");
+		expect(r.action).not.toBeNull();
+	});
+
 	it("notes a destination whose capitals do not match its checksum, without blocking", () => {
 		const typo = CHECKSUMMED.replace("5aA", "5Aa");
 		const r = buildAction(

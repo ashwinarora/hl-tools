@@ -66,3 +66,27 @@ export function describeWalletError(
 		message: typeof short === "string" && short ? short : messageOf(e),
 	};
 }
+
+const DECLINED = /user (rejected|denied)|rejected the request|declined|denied/i;
+const SIGNER_PREFIX = /^The signer refused or failed: /;
+
+/**
+ * A signature the wallet did not give, as the core reports it ("The signer
+ * refused or failed: …"), said once and plainly: a refusal or a closed
+ * window as that, with what it means for the page (`after`); anything else
+ * with the wallet's own words.
+ */
+export function signerFailure<
+	T extends { readonly code: string; readonly message: string },
+>(issues: readonly T[], after: string): T[] {
+	return issues.map((i) =>
+		i.code !== "signer.failed"
+			? i
+			: {
+					...i,
+					message: DECLINED.test(i.message)
+						? `Your wallet did not sign (declined or closed). ${after}`
+						: `Your wallet did not sign: ${i.message.replace(SIGNER_PREFIX, "")}`,
+				},
+	);
+}

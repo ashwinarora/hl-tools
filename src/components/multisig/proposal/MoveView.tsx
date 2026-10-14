@@ -59,6 +59,7 @@ import {
 	signMove,
 } from "./actions";
 import { CodePanel } from "./CodePanel";
+import { CopyNotes } from "./CopyNotes";
 import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
@@ -93,6 +94,15 @@ const keyOf = (p: Proposal): ProposalKey => ({
 	digest: p.digest,
 });
 
+/** What each prompt shows: said once when the steps alike, else step by step. */
+function signHints(
+	steps: readonly { proposal: Proposal; number: number }[],
+): string {
+	const hints = steps.map((s) => signHint(s.proposal.payload.action));
+	if (hints.every((h) => h === hints[0])) return hints[0] ?? "";
+	return steps.map((s, i) => `Step ${s.number}: ${hints[i]}`).join(" ");
+}
+
 /** "once", "twice", "4 times". */
 const times = (n: number): string =>
 	n === 1 ? "once" : n === 2 ? "twice" : `${n} times`;
@@ -120,11 +130,14 @@ export function MoveView({
 	move,
 	docs,
 	issues,
+	notes,
 }: {
 	move: Move;
 	/** The documents of the two steps, in the move's order. */
 	docs: readonly [ProposalDoc, ProposalDoc];
 	issues: readonly [readonly Issue[], readonly Issue[]];
+	/** What opening the copy that brought this here left out (a link or a file). */
+	notes?: readonly Issue[];
 }) {
 	const [first, second] = move.steps;
 	const header = useNetwork();
@@ -157,6 +170,7 @@ export function MoveView({
 		listed,
 		relayWallet: relay.wallet as Address | null,
 		ledger: move.kind === "vault" ? treasury.live.ledger : null,
+		mode: treasury.mode,
 	};
 	const one = useMoveStep(first, issues[0], docs[0], shared);
 	const two = useMoveStep(second, issues[1], docs[1], shared);
@@ -167,7 +181,8 @@ export function MoveView({
 		one.staking.staking.validators ?? two.staking.staking.validators;
 	const sentence = moveSentence(move, validators);
 	const finaliser = first.payload.outerSigner;
-	const proposer = docs[0].relay.row?.createdBy ?? first.meta.createdBy;
+	// the relay's word, never the copy's: who proposed it is not signed
+	const proposer = docs[0].relay.row?.createdBy ?? null;
 	const treasuryName = listed
 		? nameOf(target.network, target.address as Address)
 		: shortAddress(target.address);
@@ -281,6 +296,7 @@ export function MoveView({
 					>
 						<Sentence parts={stage.detailParts} />
 					</Callout>
+					<CopyNotes notes={notes} />
 					{docs.map(
 						(d, i) =>
 							d.relay.issue && (
@@ -859,10 +875,12 @@ function MovePart({
 		: stage.canExecute
 			? `Your wallet is asked ${times(stage.prompts)}. Then step ${(stage.toSend[0] ?? 0) + 1} is sent${toSend.length > 1 ? ", and step 2 once Hyperliquid has accepted it" : ""}.`
 			: stage.canSign
-				? `${toSign.length > 1 ? "One wallet prompt for each step. " : ""}${toSign
-						.map((s) => signHint(s.proposal.payload.action))
-						.filter((t, i, all) => all.indexOf(t) === i)
-						.join(" ")}`
+				? `${toSign.length > 1 ? "One wallet prompt for each step. " : ""}${signHints(
+						stage.toSign.map((i) => ({
+							proposal: (steps[i] as MoveStepState).proposal,
+							number: i + 1,
+						})),
+					)}`
 				: stage.signed > 0 && stage.toSign.length === 0
 					? `You signed ${stage.signed === 2 ? "both steps" : "what is left to sign"}. ${isFinaliser ? "" : `The finaliser ${shortAddress(finaliser)} submits.`}`
 					: (stage.executeReason ?? "");

@@ -8,6 +8,7 @@ import {
 	multiSigEvmRefusal,
 	sendRefusal,
 	sendShape,
+	withdrawalFrom,
 	withdrawalOutcome,
 } from "../../src/multisig/index.ts";
 import {
@@ -616,6 +617,44 @@ describe("activationCharge", () => {
 				paidFrom: "unknown",
 				refusal: null,
 			});
+	});
+});
+
+describe("withdrawalFrom: the balance a bridge withdrawal is taken from", () => {
+	const recorded = fixture<{
+		mode: string;
+		action: { amount: string };
+		answer: { status: string };
+		before: { perpsWithdrawable: string; spotUsdc: string };
+		after: { perpsWithdrawable: string; spotUsdc: string };
+		ledger: { usdc: string; fee: string; nonce: number };
+	}>("unified-withdrawal");
+
+	it("takes a unified account's out of its one balance, as measured on mainnet", () => {
+		expect(withdrawalFrom(accountMode(recorded.mode))).toBe("balance");
+		expect(recorded.answer.status).toBe("ok");
+		const left = (k: "perpsWithdrawable" | "spotUsdc") =>
+			Number(recorded.before[k]) - Number(recorded.after[k]);
+		// the whole amount, the fee within it, left spot; nothing left perps
+		expect(left("spotUsdc")).toBe(Number(recorded.action.amount));
+		expect(left("perpsWithdrawable")).toBe(0);
+	});
+
+	it("takes a manual account's out of perps, and so any mode with no rule", () => {
+		for (const raw of ["default", "disabled", "somethingNew"])
+			expect(withdrawalFrom(accountMode(raw))).toBe("perps");
+		expect(withdrawalFrom(null)).toBe("perps");
+	});
+
+	it("records what arrives and the fee, which add up to what was asked", () => {
+		const { usdc, fee } = recorded.ledger;
+		expect(Number(usdc) + Number(fee)).toBe(Number(recorded.action.amount));
+		expect(
+			withdrawalOutcome({
+				type: "withdraw3",
+				amount: "2",
+			})?.arrives?.toString(),
+		).toBe(String(Number(usdc)));
 	});
 });
 

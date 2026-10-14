@@ -4,10 +4,8 @@ import {
 	type Proposal,
 	stakingActionOf,
 	vaultActionOf,
-	wouldShutOut,
 } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { Callout, IssueList } from "#/components/hub/status";
@@ -23,10 +21,14 @@ import { finishHint, RELAY_COPY, signHint } from "../model/relay/copy";
 import { objectionNote, ownPosition } from "../model/relay/positions";
 import { relayActions } from "../model/relay/status";
 import { CODE_COPY } from "../model/signingNetwork";
-import { heldWhat, type Stage, shortAddress } from "../model/stage";
+import {
+	CANNOT_BE_SENT,
+	heldWhat,
+	type Stage,
+	shortAddress,
+} from "../model/stage";
 import { untilWords } from "../model/time";
 import { Sentence } from "../names/Sentence";
-import { useOpenProposals } from "../relay/openProposals";
 import { Help } from "../shell/Help";
 import { Btn, Card, Tag } from "../shell/kit";
 import { When } from "../shell/live";
@@ -85,7 +87,6 @@ export function YourPart({
 	// the wallet answered that it lacks the signing network: the code panel offers to add it
 	const [needsNetwork, setNeedsNetwork] = useState(false);
 	const [addFailed, setAddFailed] = useState<string | null>(null);
-	const open = useOpenProposals();
 	const queries = useQueryClient();
 
 	const { network, outerSigner } = proposal.payload;
@@ -102,6 +103,7 @@ export function YourPart({
 		relaySigners: row?.signatures.map((s) => s.signer) ?? [],
 		isSigner: !!me && signers.includes(me),
 		objected: doc.relay.objections.map((o) => o.signer),
+		final: CANNOT_BE_SENT.has(stage.phase),
 	});
 	// What the reader is told about a no: their own, in their own words; the
 	// others', as one amber line above the buttons. A fact, with no click.
@@ -121,9 +123,10 @@ export function YourPart({
 	const chain = stage.requiredChain;
 	// what a submission that waits for a lockup takes from: a stake, or a vault deposit
 	const held = heldWhat(proposal.payload.action);
-	// this click asks the wallet for a code: a finaliser who only submits signs none
+	// this click asks the wallet for a code: a finaliser who only submits signs
+	// none, even one who could still sign (the click on offer is Submit)
 	const signsCodeNow =
-		stage.signsCode && (stage.canSign || (stage.canExecute && adds));
+		stage.signsCode && (stage.canExecute ? adds : stage.canSign);
 
 	const doSign = async () => {
 		setOutcome(null);
@@ -275,7 +278,7 @@ export function YourPart({
 				: stage.canExecute
 					? adds
 						? "Your signature completes the threshold. Two wallet prompts, then it is sent."
-						: "One wallet prompt, then it is sent."
+						: `One wallet prompt, then it is sent. ${finishHint(proposal.payload.action, false)}`
 					: stage.canSign
 						? `${signHint(proposal.payload.action)}${stage.signsCode ? ` ${CODE_COPY.signedUnder}` : chain ? ` Signed under ${chain.label}; nothing is sent to that chain.` : ""}`
 						: stage.hasSigned
@@ -287,25 +290,6 @@ export function YourPart({
 							: (stage.signReason ?? stage.executeReason ?? "");
 	// the wallet is the treasury account: the same sentence as on its own page
 	const itself = stage.role === "treasury" && note === stage.signReason;
-
-	// Older sends of this treasury still waiting: submitting this one first
-	// would shut them out (Hyperliquid takes USDC sends only in order).
-	const olderSends = stage.canExecute
-		? wouldShutOut(
-				proposal.payload.action,
-				open.items
-					.filter(
-						(p) =>
-							p.open &&
-							!p.stuck &&
-							!p.frozen &&
-							p.network === network &&
-							p.treasury === proposal.payload.multiSigUser &&
-							p.digest !== proposal.digest,
-					)
-					.map((p) => ({ action: p.proposal.payload.action, item: p })),
-			).map((x) => x.item)
-		: [];
 
 	// Submit is shown switched off while only time stands in its way
 	const waits = stage.opensAt !== null && !stage.canExecute;
@@ -331,35 +315,6 @@ export function YourPart({
 			}
 			actions={isFinaliser ? <Tag tone="you">you are the finaliser</Tag> : null}
 		>
-			{olderSends.length > 0 && (
-				<Callout
-					tone="warning"
-					className="mb-3"
-					title={
-						olderSends.length === 1
-							? "Submitting this first shuts out an older USDC send"
-							: `Submitting this first shuts out ${olderSends.length} older USDC sends`
-					}
-				>
-					Hyperliquid takes a treasury's USDC sends in the order they were
-					proposed. Still waiting from before this one:{" "}
-					{olderSends.map((p, i) => (
-						<span key={p.digest}>
-							{i > 0 && ", "}
-							<Link
-								to="/multisig/proposal"
-								search={{ digest: p.digest }}
-								className="underline underline-offset-2"
-							>
-								{p.title ?? p.line}
-							</Link>
-						</span>
-					))}
-					. Submit {olderSends.length === 1 ? "it" : "them"} first, or{" "}
-					{olderSends.length === 1 ? "it" : "they"} will have to be proposed
-					again.
-				</Callout>
-			)}
 			{theirs && (
 				<p className="mb-2.5 flex items-start gap-1.5 text-[13px] text-warning">
 					<span

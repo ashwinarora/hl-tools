@@ -110,7 +110,12 @@ function LinkDialog({
 							<code className="min-w-0 flex-1 truncate font-mono text-xs">
 								{published.url}
 							</code>
-							<CopyButton value={published.url} label="Copy link" />
+							{/* drawn as a button: borderless, it went unnoticed */}
+							<CopyButton
+								value={published.url}
+								label="Copy link"
+								className="shrink-0 border-border-strong bg-surface text-foreground"
+							/>
 						</div>
 						<p className="text-xs text-muted-foreground">
 							{published.bytes} characters.

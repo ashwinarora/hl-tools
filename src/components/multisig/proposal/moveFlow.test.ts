@@ -321,7 +321,7 @@ describe("the finaliser's click on a move of two steps", () => {
 		expect(result).toMatchObject({ ok: false, index: 1, sent: 1 });
 		const said = result.ok ? "" : (result.issues[0]?.message ?? "");
 		expect(said).toBe(
-			"The request for this step did not reach Hyperliquid: The request did not reach the API (network error, blocked request or CORS). The step before it was accepted and stands. This step was not submitted; it is safe to try again.",
+			"The request for this step did not reach Hyperliquid. The step before it was accepted and stands. This step was not submitted; it is safe to try again.",
 		);
 		expect(said).not.toContain("Nothing was submitted");
 		expect((await stored(one)).receipt?.response).toMatchObject({
