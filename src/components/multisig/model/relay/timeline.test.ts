@@ -6,6 +6,7 @@ import type { EventRow } from "./rows";
 import {
 	buildTimeline,
 	entryText,
+	historyCsv,
 	historyExport,
 	historyFilename,
 } from "./timeline";
@@ -551,6 +552,59 @@ describe("historyExport", () => {
 		expect(historyFilename("testnet", TREASURY)).toBe(
 			`multisig-history-testnet-${TREASURY.slice(0, 10)}.json`,
 		);
+		expect(historyFilename("testnet", TREASURY, "csv")).toBe(
+			`multisig-history-testnet-${TREASURY.slice(0, 10)}.csv`,
+		);
+	});
+});
+
+describe("historyCsv", () => {
+	it("lists the log oldest first, in UTC, every address whole, and the record only beside an accepted send", () => {
+		const events = [
+			eventRow("proposal_created", {
+				id: 1,
+				digest: D1,
+				actor: A,
+				data: { finaliser: C },
+			}),
+			eventRow("signature_added", { id: 2, digest: D1, actor: A }),
+			eventRow("signature_added", { id: 3, digest: D1, actor: C }),
+			eventRow("submission_recorded", {
+				id: 4,
+				digest: D1,
+				actor: C,
+				data: { accepted: true, http_status: 200 },
+			}),
+		];
+		const entries = buildTimeline(events, ctx(null));
+		const asked: Hex[][] = [];
+		const csv = historyCsv(entries, (e) => {
+			asked.push([...(e.accepted ?? [])]);
+			return "on Hyperliquid's record";
+		});
+		expect(csv.columns).toEqual([
+			"Time (UTC)",
+			"What happened",
+			"Proposal",
+			"Hyperliquid's record",
+		]);
+		expect(csv.rows.map((r) => r[1])).toEqual([
+			`${A} proposed Send 120 USDC to 0x9a01…77c2 and signed. Finaliser: ${C}.`,
+			`${C} signed Send 120 USDC to 0x9a01…77c2.`,
+			`Send 120 USDC to 0x9a01…77c2 was accepted by Hyperliquid. Sent by ${C}.`,
+		]);
+		expect(csv.rows.map((r) => r[0])).toEqual(
+			entries
+				.map((e) => new Date(e.at).toISOString().slice(0, 19).replace("T", " "))
+				.reverse(),
+		);
+		expect(csv.rows.map((r) => r[2])).toEqual([D1, D1, D1]);
+		expect(csv.rows.map((r) => r[3])).toEqual([
+			null,
+			null,
+			"on Hyperliquid's record",
+		]);
+		expect(asked).toEqual([[D1]]);
 	});
 });
 

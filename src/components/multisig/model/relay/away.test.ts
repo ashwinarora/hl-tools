@@ -103,6 +103,7 @@ const row = (over: Partial<LedgerRow> = {}): LedgerRow => ({
 	toVenue: null,
 	fee: null,
 	feeToken: null,
+	requested: null,
 	delta: {},
 	...over,
 });

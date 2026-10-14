@@ -418,6 +418,13 @@ export interface LedgerRow {
 	readonly toVenue: string | null;
 	readonly fee: string | null;
 	readonly feeToken: string | null;
+	/**
+	 * A bridge withdrawal: what was asked for. `amount` is what arrives and
+	 * `fee` the bridge's fee, both taken from the account, so it is their sum
+	 * (measured, fixtures/multisig/unified-withdrawal.json). Null on every
+	 * other row, and on a withdrawal whose fee is not stated.
+	 */
+	readonly requested: string | null;
 	/** The delta as sent, for details. */
 	readonly delta: Rec;
 }
@@ -435,6 +442,7 @@ type LedgerShape = Pick<
 	| "toVenue"
 	| "fee"
 	| "feeToken"
+	| "requested"
 >;
 
 const BLANK: LedgerShape = {
@@ -446,6 +454,7 @@ const BLANK: LedgerShape = {
 	toVenue: null,
 	fee: null,
 	feeToken: null,
+	requested: null,
 };
 
 /** Between two accounts: which way, seen from `account`. */
@@ -472,16 +481,23 @@ function shapeOf(account: string, type: string, d: Rec): LedgerShape {
 				amount: amt(d.usdc),
 				toVenue: "perp",
 			};
-		case "withdraw":
+		case "withdraw": {
+			const amount = amt(d.usdc);
+			const fee = amt(d.fee);
 			return {
 				...BLANK,
 				direction: "out",
 				token: "USDC",
-				amount: amt(d.usdc),
+				amount,
 				fromVenue: "perp",
-				fee: amt(d.fee),
+				fee,
 				feeToken: "USDC",
+				requested:
+					amount !== null && fee !== null
+						? Decimal.parse(amount).add(Decimal.parse(fee)).toString()
+						: null,
 			};
+		}
 		case "internalTransfer":
 		case "subAccountTransfer":
 			return {

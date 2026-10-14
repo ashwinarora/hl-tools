@@ -7,15 +7,17 @@ import {
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { download } from "#/lib/download";
+import { download, downloadCsv, toCsv } from "#/lib/download";
 import { useRecords } from "../live/useRecord";
 import { useValidators } from "../live/useStaking";
 import { type RecordQuestion, recordQuestion } from "../model/chain/record";
+import { recordTagOf } from "../model/chain/recordCopy";
 import { type Listed, moveRefs } from "../model/move";
 import { assembleProposal } from "../model/relay/assemble";
 import type { EventRow, TreasuryRow } from "../model/relay/rows";
 import {
 	buildTimeline,
+	historyCsv,
 	historyExport,
 	historyFilename,
 } from "../model/relay/timeline";
@@ -166,6 +168,22 @@ export function SigningLogTab({
 			"application/json",
 		);
 
+	// the same entries as a spreadsheet: times in UTC, addresses whole
+	const saveCsv = () => {
+		const csv = historyCsv(entries, (e) => {
+			const known = (e.accepted ?? [])
+				.map((d) => records.get(d))
+				.filter((v): v is NonNullable<typeof v> => !!v);
+			return known.length === (e.accepted ?? []).length
+				? (recordTagOf(known)?.text ?? null)
+				: null;
+		});
+		downloadCsv(
+			historyFilename(network, address, "csv"),
+			toCsv(csv.columns, csv.rows),
+		);
+	};
+
 	return (
 		<>
 			<Card
@@ -176,14 +194,24 @@ export function SigningLogTab({
 				}
 				flush
 				actions={
-					<Btn
-						size="sm"
-						variant="outline"
-						disabled={events.length === 0}
-						onClick={save}
-					>
-						Export as a file
-					</Btn>
+					<>
+						<Btn
+							size="sm"
+							variant="outline"
+							disabled={entries.length === 0}
+							onClick={saveCsv}
+						>
+							Download CSV
+						</Btn>
+						<Btn
+							size="sm"
+							variant="outline"
+							disabled={events.length === 0}
+							onClick={save}
+						>
+							Export as a file
+						</Btn>
+					</>
 				}
 			>
 				{pages.isPending ? (
@@ -247,7 +275,8 @@ export function SigningLogTab({
 				Kept by this tool: who proposed, who signed and who sent it. What
 				Hyperliquid itself recorded (transfers, trades) is under “On
 				Hyperliquid”. The export holds every entry loaded above and the
-				proposals they refer to.
+				proposals they refer to; the CSV holds the same entries, with times in
+				UTC.
 			</p>
 		</>
 	);

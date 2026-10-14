@@ -175,6 +175,7 @@ describe("ledger wording", () => {
 		toVenue: "perp",
 		fee: "1.0",
 		feeToken: "USDC",
+		requested: null,
 		delta: {},
 		...over,
 	});

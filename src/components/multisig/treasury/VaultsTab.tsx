@@ -13,7 +13,6 @@ import { shortAddress } from "../model/parts";
 import { signingNetwork } from "../model/signingNetwork";
 import { untilWords } from "../model/time";
 import {
-	usdcShown,
 	VAULT,
 	VAULT_EVENT,
 	VAULT_HISTORY,
@@ -27,12 +26,10 @@ import { Checked } from "../shell/Checked";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
 import { Card, linkButton, linkButtonSm, Tag } from "../shell/kit";
-import { Figure, useNow, When } from "../shell/live";
+import { Figure, Usdc, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
 import { ProposalCell, TimeCell } from "./ledgerCells";
 import type { KnownProposal, KnownState } from "./useKnownProposals";
-
-const usdc = (v: string | null) => (v === null ? "…" : usdcShown(v));
 
 /**
  * The treasury's money in vaults: what Hyperliquid reports, asked for once a
@@ -122,13 +119,24 @@ export function VaultsTab({
 				numeric: true,
 				sort: (a, b) => compareAmount(a.equity, b.equity),
 				descFirst: true,
-				cell: (r) => `${usdc(r.equity)} USDC`,
+				cell: (r) => (
+					<>
+						<Usdc value={r.equity} /> USDC
+					</>
+				),
 			},
 			{
 				id: "pnl",
 				header: "Profit so far",
 				numeric: true,
-				cell: (r) => (r.pnl === null ? "…" : `${usdc(r.pnl)} USDC`),
+				cell: (r) =>
+					r.pnl === null ? (
+						"…"
+					) : (
+						<>
+							<Usdc value={r.pnl} /> USDC
+						</>
+					),
 			},
 			{
 				id: "since",
@@ -317,7 +325,11 @@ export function VaultsTab({
 				}
 			>
 				<dl className="grid grid-cols-1 divide-y divide-border border-b border-border min-[641px]:grid-cols-2 min-[641px]:divide-x min-[641px]:divide-y-0">
-					<Figure label="In vaults" value={usdc(view.total)} unit="USDC" />
+					<Figure
+						label="In vaults"
+						value={<Usdc value={view.total} />}
+						unit="USDC"
+					/>
 					<Figure
 						label="Vaults"
 						value={view.rows === null ? "…" : String(view.rows.length)}

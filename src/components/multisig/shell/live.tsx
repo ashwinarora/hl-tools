@@ -1,9 +1,11 @@
 /** Small pieces shared by the screens that show live figures and local times. */
+import { Decimal } from "@hl-tools/core";
 import { type ReactNode, useEffect, useState } from "react";
 import { cn } from "#/lib/utils";
 import { signOf } from "../model/chain/columns";
 import type { LiveStatus } from "../model/live/account";
 import { isoDateTime, localDateTime, utcDateTime } from "../model/time";
+import { usdcShown } from "../model/vault";
 
 /** The current time, re-read every `everyMs` so "… ago" texts stay true. */
 export function useNow(everyMs = 15_000): number {
@@ -143,6 +145,20 @@ export function SourceLine({
 }
 
 /** One figure with its label, for a short row of totals. */
+/**
+ * A USDC figure cut to the cent, never rounded up (`usdcShown`), with the
+ * whole figure on hover where the cut left something out.
+ */
+export function Usdc({ value }: { value: string | null | undefined }) {
+	if (value === null || value === undefined) return <>…</>;
+	const shown = usdcShown(value);
+	const exact = Decimal.tryParse(value);
+	const cut = Decimal.tryParse(shown.replace(/,/g, ""));
+	// only where the cut left digits out: "0.00" is the whole of "0"
+	const lost = !!exact && !!cut && !exact.eq(cut);
+	return <span title={lost ? exact.toDisplay() : undefined}>{shown}</span>;
+}
+
 export function Figure({
 	label,
 	value,

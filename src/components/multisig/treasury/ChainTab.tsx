@@ -8,6 +8,7 @@ import type {
 } from "@hl-tools/core";
 import { ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
+import { downloadCsv, toCsv } from "#/lib/download";
 import { cn } from "#/lib/utils";
 import type { ChainMatch } from "../live/useChainMatch";
 import {
@@ -17,6 +18,7 @@ import {
 	compareText,
 	fillValue,
 	ledgerAmount,
+	ledgerFeePaid,
 	ledgerWhat,
 	type MoreKind,
 	orderSide,
@@ -26,6 +28,13 @@ import {
 	sizeOf,
 	viewMoreUrl,
 } from "../model/chain/columns";
+import {
+	csvFilename,
+	fundingCsv,
+	ordersCsv,
+	tradesCsv,
+	transfersCsv,
+} from "../model/chain/csv";
 import type { HistoryPart } from "../model/live/account";
 import { Who } from "../names/Names";
 import { type DataColumn, DataTable } from "../shell/DataTable";
@@ -83,10 +92,6 @@ const LISTS: readonly {
 
 const key = (r: { readonly key: string }) => r.key;
 const sideClass = (buy: boolean) => (buy ? "text-success" : "text-danger");
-
-/** The fee this account paid on a ledger entry; null when it paid none. */
-const paidFee = (r: LedgerRow): string | null =>
-	r.direction === "in" ? null : r.fee;
 
 /**
  * Hyperliquid's own record of the account: what moved, what was traded. Not
@@ -161,6 +166,12 @@ export function ChainTab({
 								{r.token}
 							</span>
 						)}
+						{r.requested && (
+							// a bridge withdrawal: the fee came out of what was asked for
+							<span className="block font-sans text-xs text-muted-foreground">
+								arrives · {amountText(r.requested)} requested
+							</span>
+						)}
 					</>
 				),
 				cellClass: (r) =>
@@ -173,9 +184,9 @@ export function ChainTab({
 				header: "Fee",
 				numeric: true,
 				// the sender pays the fee: on money that arrived it is not this account's
-				sort: (a, b) => compareAmount(paidFee(a), paidFee(b)),
+				sort: (a, b) => compareAmount(ledgerFeePaid(a), ledgerFeePaid(b)),
 				cell: (r) =>
-					paidFee(r) === null ? (
+					ledgerFeePaid(r) === null ? (
 						"—"
 					) : (
 						<>
@@ -376,6 +387,23 @@ export function ChainTab({
 				: current.empty;
 	const sorted = { id: "time", desc: true } as const;
 
+	// the list on screen as a spreadsheet: every figure to its last decimal, times in UTC
+	const table =
+		list === "transfers"
+			? live.ledger && transfersCsv(live.ledger, (r) => match.of(r))
+			: list === "trades"
+				? live.fills && tradesCsv(live.fills)
+				: list === "orders"
+					? live.orderHistory && ordersCsv(live.orderHistory)
+					: live.fundings && fundingCsv(live.fundings);
+	const saveCsv = () => {
+		if (!table) return;
+		downloadCsv(
+			csvFilename(list, network, address, Date.now()),
+			toCsv(table.columns, table.rows),
+		);
+	};
+
 	return (
 		<div className="flex flex-col gap-4">
 			<SourceLine status={live.status} asOf={live.asOf} onRetry={live.retry}>
@@ -417,15 +445,25 @@ export function ChainTab({
 							{live.gaps.includes(current.part) &&
 								" Rows from while this page was disconnected may be missing."}
 						</span>
-						<a
-							href={viewMoreUrl(network, current.more, address)}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="inline-flex items-center gap-1 whitespace-nowrap text-brand underline underline-offset-2"
-						>
-							View more on Hyperliquid
-							<ExternalLink className="size-3" aria-hidden />
-						</a>
+						<span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+							<button
+								type="button"
+								onClick={saveCsv}
+								disabled={!table || table.rows.length === 0}
+								className="inline-flex min-h-11 items-center whitespace-nowrap text-brand underline underline-offset-2 disabled:text-subtle-foreground disabled:no-underline sm:min-h-0"
+							>
+								Download CSV
+							</button>
+							<a
+								href={viewMoreUrl(network, current.more, address)}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="inline-flex items-center gap-1 whitespace-nowrap text-brand underline underline-offset-2"
+							>
+								View more on Hyperliquid
+								<ExternalLink className="size-3" aria-hidden />
+							</a>
+						</span>
 					</>
 				}
 			>

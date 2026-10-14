@@ -12,6 +12,7 @@ import {
 	type Network,
 	type Proposal,
 } from "@hl-tools/core";
+import { type CsvCell, csvTime } from "#/lib/download";
 import { type MoveRef, sayOncePerMove, stepMark } from "../move";
 import { joinParts, type Part, part, partsText, say } from "../parts";
 import { shortAddress } from "../stage";
@@ -300,8 +301,39 @@ export function entryText(e: TimelineEntry): string {
 	return partsText(e.parts);
 }
 
-export function historyFilename(network: Network, treasury: Address): string {
-	return `multisig-history-${network}-${treasury.slice(0, 10)}.json`;
+export function historyFilename(
+	network: Network,
+	treasury: Address,
+	ext: "json" | "csv" = "json",
+): string {
+	return `multisig-history-${network}-${treasury.slice(0, 10)}.${ext}`;
+}
+
+/**
+ * The Signing log as CSV, oldest first: when (UTC), what happened with every
+ * address whole, the proposal it is about, and, for an accepted send, what
+ * Hyperliquid's record said when it was exported (`record`).
+ */
+export function historyCsv(
+	entries: readonly TimelineEntry[],
+	record: (e: TimelineEntry) => string | null,
+): { readonly columns: readonly string[]; readonly rows: CsvCell[][] } {
+	return {
+		columns: [
+			"Time (UTC)",
+			"What happened",
+			"Proposal",
+			"Hyperliquid's record",
+		],
+		rows: [...entries]
+			.sort((a, b) => a.at - b.at || a.id - b.id)
+			.map((e) => [
+				csvTime(e.at),
+				e.parts.map((p) => p.who ?? p.text).join(""),
+				e.digest,
+				e.accepted ? record(e) : null,
+			]),
+	};
 }
 
 /**

@@ -29,6 +29,7 @@ const row = (time: number, over: Partial<LedgerRow> = {}): LedgerRow => ({
 	toVenue: "perp",
 	fee: null,
 	feeToken: null,
+	requested: null,
 	delta: {},
 	...over,
 });

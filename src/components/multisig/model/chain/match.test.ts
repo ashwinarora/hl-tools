@@ -54,6 +54,7 @@ const row = (over: Partial<LedgerRow> = {}): LedgerRow => ({
 	toVenue: "perp",
 	fee: "1.0",
 	feeToken: "USDC",
+	requested: null,
 	delta: {
 		type: "internalTransfer",
 		usdc: "110.0",

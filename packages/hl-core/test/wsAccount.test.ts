@@ -459,6 +459,25 @@ describe("history, replayed from testnet", () => {
 		expect(new Set(rows.map((r) => r.key)).size).toBe(25);
 		expect(rows.at(-1)?.delta.nonce).toBe(1791399248245);
 	});
+	it("ledger: a withdrawal measured on mainnet reads 2 requested, 1 arriving, 1 fee", () => {
+		const f = JSON.parse(
+			readFileSync(
+				join(here, "..", "fixtures", "multisig", "unified-withdrawal.json"),
+				"utf8",
+			),
+		) as { action: { amount: string }; ledger: Record<string, unknown> };
+		const row = parseLedger(
+			{
+				nonFundingLedgerUpdates: [
+					{ time: 1, hash: `0x${"cd".repeat(32)}`, delta: f.ledger },
+				],
+			},
+			ME,
+		)?.rows[0];
+		expect(row).toMatchObject({ amount: "1.0", fee: "1.0", requested: "2" });
+		// what the proposal asked for
+		expect(row?.requested).toBe(f.action.amount);
+	});
 	it("ledger: every documented kind, and kinds nobody has documented yet", () => {
 		const hash = `0x${"ab".repeat(32)}`;
 		const one = (delta: Record<string, unknown>): LedgerRow | undefined =>
@@ -493,7 +512,14 @@ describe("history, replayed from testnet", () => {
 			fromVenue: "perp",
 			fee: "1",
 			feeToken: "USDC",
+			requested: "21",
 		});
+		// no fee stated: what was asked for is not known
+		expect(one({ type: "withdraw", usdc: "20", nonce: 5 })?.requested).toBe(
+			null,
+		);
+		// only a withdrawal says what was asked for
+		expect(one({ type: "deposit", usdc: "50" })?.requested).toBe(null);
 		expect(
 			shape({
 				type: "subAccountTransfer",

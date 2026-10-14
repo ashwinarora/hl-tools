@@ -45,7 +45,7 @@ import { Checked } from "../shell/Checked";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
 import { Btn, Card, linkButtonSm, PersonRow, Tag } from "../shell/kit";
-import { Figure, SourceLine, toneOf, useNow, When } from "../shell/live";
+import { Figure, SourceLine, toneOf, Usdc, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
 import type { KnownProposal } from "./useKnownProposals";
 import { useLastSigned } from "./useLastSigned";
@@ -237,8 +237,6 @@ export function OverviewTab({
 	const view = state.modePending
 		? null
 		: balanceView(state.mode, live.perp, live.spot);
-	const usdc = (v: string | null) =>
-		v === null ? "…" : amountText(v, { maxDecimals: 2, minDecimals: 2 });
 	// one read a minute: what is staked does not show in the spot balances
 	const staked = stakingSummaryLine(useStaking(state.target).summary);
 	// and so is what sits in a vault
@@ -330,19 +328,19 @@ export function OverviewTab({
 							<>
 								<Figure
 									label="Balance"
-									value={usdc(view.balance)}
+									value={<Usdc value={view.balance} />}
 									unit="USDC"
 								/>
 								<Figure
 									label="Can be moved now"
 									extra={<Help k="movable" />}
-									value={usdc(view.movable)}
+									value={<Usdc value={view.movable} />}
 									unit="USDC"
 								/>
 								<Figure
 									label="In use"
 									extra={<Help k="inUse" />}
-									value={usdc(view.inUse)}
+									value={<Usdc value={view.inUse} />}
 									unit="USDC"
 								/>
 							</>
@@ -350,18 +348,18 @@ export function OverviewTab({
 							<>
 								<Figure
 									label="Perps account value"
-									value={usdc(view.perpsValue)}
+									value={<Usdc value={view.perpsValue} />}
 									unit="USDC"
 								/>
 								<Figure
 									label="Can be moved now"
 									extra={<Help k="movable" />}
-									value={usdc(view.perpsMovable)}
+									value={<Usdc value={view.perpsMovable} />}
 									unit="USDC"
 								/>
 								<Figure
 									label="Spot USDC"
-									value={usdc(view.spotUsdc)}
+									value={<Usdc value={view.spotUsdc} />}
 									unit="USDC"
 								/>
 							</>
