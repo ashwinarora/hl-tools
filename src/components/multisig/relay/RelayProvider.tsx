@@ -65,6 +65,9 @@ import {
  * in, or offered a sign-in if it is not. The rule itself is
  * `model/relay/identity.ts`; this component is its hands.
  */
+/** The least time between two checks of the session when the tab is looked at again. */
+const SESSION_RECHECK_MS = 60_000;
+
 export function RelayProvider({ children }: { children: ReactNode }) {
 	const config = useMemo(() => relayConfig(), []);
 	if (!config) {
@@ -320,6 +323,33 @@ function RelaySession({
 			void active.auth.stopAutoRefresh();
 		};
 	}, [active, wallet, queries]);
+
+	// While the wallet's channel is joined, its pings say when something on the
+	// relay changed: a tab looked at again asks for nothing more. Without the
+	// channel, looking at the tab again is the next best moment to re-read.
+	useEffect(() => {
+		queries.setQueryDefaults(["relay"], {
+			refetchOnWindowFocus: channel !== "joined",
+		});
+	}, [channel, queries]);
+
+	// A session can end while the tab sits unseen: signed out elsewhere, or run
+	// out. Looked at again, the page asks the relay once (at most once a
+	// minute), so it never says "live" for a session that is over; an answer
+	// saying so arrives through `watchFetch` like any other.
+	useEffect(() => {
+		if (!active) return;
+		let asked = 0;
+		const seen = () => {
+			if (document.visibilityState !== "visible") return;
+			const now = Date.now();
+			if (now - asked < SESSION_RECHECK_MS) return;
+			asked = now;
+			void active.rpc("whoami");
+		};
+		document.addEventListener("visibilitychange", seen);
+		return () => document.removeEventListener("visibilitychange", seen);
+	}, [active]);
 
 	const doSignIn = useCallback(async () => {
 		if (!address || !slots) return;

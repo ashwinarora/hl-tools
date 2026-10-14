@@ -18,6 +18,7 @@ import { selfTag } from "../model/selfTreasury";
 import { useRelay } from "../relay/useRelay";
 import { Help } from "./Help";
 import { Btn, Tag } from "./kit";
+import { Slow } from "./Slow";
 
 /** True after the first client render: the server cannot know the wallet. */
 export function useMounted(): boolean {
@@ -283,9 +284,11 @@ export function WalletBox() {
 						action={disconnect}
 					/>
 				) : null}
-				<p className="text-[13px] text-muted-foreground" aria-busy="true">
-					Checking your session…
-				</p>
+				<Slow small>
+					<p className="text-[13px] text-muted-foreground" aria-busy="true">
+						Checking your session…
+					</p>
+				</Slow>
 			</div>
 		);
 	}

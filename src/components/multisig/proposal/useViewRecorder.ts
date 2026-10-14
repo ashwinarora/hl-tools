@@ -5,7 +5,6 @@
  * the tab has been in front for a moment, not flicked past and not loaded in
  * the background.
  */
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { shouldRecordView, type ViewRow } from "../model/relay/views";
 import { type ProposalKey, recordView } from "../relay/api";
@@ -52,7 +51,6 @@ export function useViewRecorder(i: {
 	readonly proposer: ProposalKey["treasury"] | null;
 }): void {
 	const relay = useRelay();
-	const queries = useQueryClient();
 	const client = relay.client;
 	// set only while the connected wallet is the one signed in
 	const me = relay.wallet;
@@ -73,13 +71,11 @@ export function useViewRecorder(i: {
 		const id = `${me}:${network}:${treasury}:${digest}`;
 		if (sent.current === id) return;
 		sent.current = id;
+		// the relay pings every signer about a first view, this wallet included,
+		// and that ping re-reads the proposal
 		void recordView(client, me, { network, treasury, digest }).then((r) => {
 			// not the reader's problem: the next change on the page tries again
 			if (r.issue) sent.current = null;
-			else
-				void queries.invalidateQueries({
-					queryKey: ["relay", me, "proposal", digest],
-				});
 		});
-	}, [due, client, me, network, treasury, digest, queries]);
+	}, [due, client, me, network, treasury, digest]);
 }

@@ -5,6 +5,7 @@ import { useRelay } from "../relay/useRelay";
 import { Help } from "../shell/Help";
 import { Btn, Card, linkButton, SignsTag } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
+import { Slow } from "../shell/Slow";
 import { SmallPrint } from "../shell/WalletBox";
 
 /**
@@ -44,6 +45,7 @@ export function Landing() {
 										: RELAY_COPY.signInButton}
 							</Btn>
 						</div>
+						{waiting && !relay.signingIn && <Slow>{null}</Slow>}
 						{relay.issue && (
 							<p
 								role="alert"

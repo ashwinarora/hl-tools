@@ -7,7 +7,7 @@ import {
 } from "@hl-tools/core";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { FileQuestion, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EmptyState } from "#/components/hub/layout";
 import { Callout, IssueList } from "#/components/hub/status";
 import { saveProposal } from "#/components/multisig/model/history";
@@ -22,6 +22,7 @@ import { useProposalDoc } from "#/components/multisig/proposal/useProposalDoc";
 import { useRelay } from "#/components/multisig/relay/useRelay";
 import { Btn, SignsTag } from "#/components/multisig/shell/kit";
 import { ShellPage } from "#/components/multisig/shell/ShellPage";
+import { Slow } from "#/components/multisig/shell/Slow";
 import { useShellWallet } from "#/components/multisig/shell/WalletBox";
 import { clearShared } from "#/lib/share";
 import { useWalletBusy } from "#/store/walletBusyStore";
@@ -51,45 +52,61 @@ function ProposalScreen() {
 	/** The further steps a link carried, kept for where this browser cannot store them. */
 	const [arrived, setArrived] = useState<readonly Proposal[]>([]);
 
-	// A link's fragment carries the whole document. Read it once, merge it into the history,
-	// strip it from the address bar and continue under the digest.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: the fragment is read once, on arrival
+	// the latest `store`: a link opened later is shared as the wallet signed in then
+	const storeNow = useRef(store);
+	storeNow.current = store;
+
+	// A link's fragment carries the whole document. Read it on arrival, and again
+	// when another link is opened in this tab (only the fragment changes, so the
+	// page stays): merge it into the history, strip it from the address bar and
+	// continue under the digest as soon as it is saved; the relay hears of it after.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `navigate` is stable and `store` is read through its ref
 	useEffect(() => {
-		const texts = documentsFromFragment(window.location.hash);
-		if (texts === null) {
-			setLink({ state: "none" });
-			return;
-		}
-		clearShared();
-		// one proposal, or the two steps of a move: every one has to open
-		const decoded = texts.map((text) => openText(text));
-		const [first, ...rest] = decoded.flatMap((d) =>
-			d.proposal ? [d.proposal] : [],
-		);
-		if (!first || rest.length + 1 !== decoded.length) {
-			setLink({
-				state: "failed",
-				issues: decoded.flatMap((d) => (d.proposal ? [] : d.issues)),
-			});
-			return;
-		}
-		let cancelled = false;
-		setArrived(rest);
-		void (async () => {
-			// the other step first, so the page finds the move whole when it opens;
-			// where nothing can be stored, `arrived` is the copy the page shows
-			for (const other of rest) await saveProposal(other).catch(() => null);
-			const saved = await store(first);
-			if (cancelled) return;
-			setLink({ state: "none" });
-			void navigate({
-				to: "/multisig/proposal",
-				search: { digest: saved.proposal.digest },
-				replace: true,
-			});
-		})();
+		let run = 0;
+		let gone = false;
+		const open = (arriving: boolean) => {
+			const texts = documentsFromFragment(window.location.hash);
+			if (texts === null) {
+				// another fragment (a "skip to content" link) is not a proposal
+				if (arriving) setLink({ state: "none" });
+				return;
+			}
+			const mine = ++run;
+			clearShared();
+			// one proposal, or the two steps of a move: every one has to open
+			const decoded = texts.map((text) => openText(text));
+			const [first, ...rest] = decoded.flatMap((d) =>
+				d.proposal ? [d.proposal] : [],
+			);
+			if (!first || rest.length + 1 !== decoded.length) {
+				setLink({
+					state: "failed",
+					issues: decoded.flatMap((d) => (d.proposal ? [] : d.issues)),
+				});
+				return;
+			}
+			setLink({ state: "checking" });
+			setArrived(rest);
+			void (async () => {
+				// the other step first, so the page finds the move whole when it opens;
+				// where nothing can be stored, `arrived` is the copy the page shows
+				for (const other of rest) await saveProposal(other).catch(() => null);
+				const saved = await storeNow.current(first, { pushLater: true });
+				if (gone || mine !== run) return;
+				setLink({ state: "none" });
+				void navigate({
+					to: "/multisig/proposal",
+					search: { digest: saved.proposal.digest },
+					replace: true,
+				});
+			})();
+		};
+		open(true);
+		const again = () => open(false);
+		window.addEventListener("hashchange", again);
 		return () => {
-			cancelled = true;
+			gone = true;
+			window.removeEventListener("hashchange", again);
 		};
 	}, []);
 
@@ -104,13 +121,15 @@ function ProposalScreen() {
 		if (otherDigest && other.loading && !other.proposal)
 			return (
 				<ShellPage title="Proposal" meta={<SignsTag />}>
-					<div
-						className="flex items-center gap-2 text-sm text-muted-foreground"
-						aria-busy="true"
-					>
-						<Loader2 className="size-4 animate-spin" aria-hidden /> Opening both
-						steps…
-					</div>
+					<Slow>
+						<div
+							className="flex items-center gap-2 text-sm text-muted-foreground"
+							aria-busy="true"
+						>
+							<Loader2 className="size-4 animate-spin" aria-hidden /> Opening
+							both steps…
+						</div>
+					</Slow>
 				</ShellPage>
 			);
 		// who proposed each is the relay's word where it has both, never the documents'
@@ -172,13 +191,30 @@ function ProposalScreen() {
 					<IssueList plain issues={link.issues} />
 				</Callout>
 			) : link.state === "checking" || doc.loading ? (
-				<div
-					className="flex items-center gap-2 text-sm text-muted-foreground"
-					aria-busy="true"
+				<Slow
+					wayOut={
+						<>
+							<Btn
+								size="sm"
+								variant="outline"
+								onClick={() => window.location.reload()}
+							>
+								Reload the page
+							</Btn>
+							<Link to="/multisig/open" className={backLink}>
+								Open from a link or file
+							</Link>
+						</>
+					}
 				>
-					<Loader2 className="size-4 animate-spin" aria-hidden /> Opening the
-					proposal…
-				</div>
+					<div
+						className="flex items-center gap-2 text-sm text-muted-foreground"
+						aria-busy="true"
+					>
+						<Loader2 className="size-4 animate-spin" aria-hidden /> Opening the
+						proposal…
+					</div>
+				</Slow>
 			) : (
 				<Missing
 					digest={digest}
@@ -296,7 +332,9 @@ function Missing({
 								? "Waiting for your wallet…"
 								: RELAY_COPY.signInButton}
 						</Btn>
-					) : null}
+					) : (
+						<Slow>{null}</Slow>
+					)}
 					{open}
 				</div>
 			}

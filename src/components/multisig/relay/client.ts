@@ -33,15 +33,46 @@ export function onSessionEnded(listener: Ended): () => void {
 }
 
 /**
+ * How long one request to the relay may take. One that has not answered by
+ * then fails as a request that got no answer (the data client asks a read
+ * again a few times by itself), so no page waits on the relay for ever.
+ */
+export const RELAY_TIMEOUT_MS = 10_000;
+
+/** The caller's signal, if any, ended also by the time limit. */
+function limited(init: RequestInit | undefined, ms: number): AbortSignal {
+	const limit = AbortSignal.timeout(ms);
+	const own = init?.signal;
+	if (!own) return limit;
+	return typeof AbortSignal.any === "function"
+		? AbortSignal.any([own, limit])
+		: own;
+}
+
+/**
  * `fetch` for one wallet's client: the answer is handed on untouched, and when
- * it is the relay's "this session has ended" the listeners are told whose.
+ * it is the relay's "this session has ended" the listeners are told whose. A
+ * request over the time limit fails like one the network dropped, which is
+ * how the page knows the relay as unreachable.
  */
 export function watchFetch(
 	wallet: Address,
 	base: typeof fetch = (input, init) => fetch(input, init),
+	timeoutMs = RELAY_TIMEOUT_MS,
 ): typeof fetch {
 	return async (input, init) => {
-		const res = await base(input, init);
+		const signal = limited(init, timeoutMs);
+		let res: Response;
+		try {
+			res = await base(input, { ...init, signal });
+		} catch (e) {
+			// the limit, not the caller: said the way a dropped connection is said
+			if (signal.aborted && !init?.signal?.aborted)
+				throw new TypeError(
+					`Failed to fetch: the relay did not answer within ${timeoutMs / 1000} s`,
+				);
+			throw e;
+		}
 		if (res.status === 401) {
 			try {
 				const body: unknown = await res.clone().json();

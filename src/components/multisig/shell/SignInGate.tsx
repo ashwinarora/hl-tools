@@ -4,6 +4,7 @@ import { useWalletBusy } from "#/store/walletBusyStore";
 import { gateOthers, RELAY_COPY } from "../model/relay/copy";
 import { useRelay } from "../relay/useRelay";
 import { Btn, Card, linkButton } from "./kit";
+import { Slow } from "./Slow";
 import { SmallPrint, useShellWallet } from "./WalletBox";
 
 /**
@@ -39,9 +40,11 @@ export function SignInGate({
 	if (relay.mode === "restoring") {
 		return (
 			<Card>
-				<p className="text-sm text-muted-foreground" aria-busy="true">
-					Checking your session…
-				</p>
+				<Slow>
+					<p className="text-sm text-muted-foreground" aria-busy="true">
+						Checking your session…
+					</p>
+				</Slow>
 			</Card>
 		);
 	}

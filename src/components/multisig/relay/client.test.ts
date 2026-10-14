@@ -1,5 +1,6 @@
 import type { Address } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
+import { isUnreachable } from "../model/relay/errors";
 import { onSessionEnded, watchFetch } from "./client";
 
 const A = "0x00000000000000000000000000000000000000a1" as Address;
@@ -66,5 +67,52 @@ describe("hearing that the relay has ended a wallet's session", () => {
 		await expect(watchFetch(A, down)("http://relay/rest/v1/x")).rejects.toThrow(
 			"Failed to fetch",
 		);
+	});
+});
+
+describe("a relay that does not answer", () => {
+	// a fetch that waits until its signal ends it, as the browser's does
+	const never = ((_: unknown, init?: RequestInit) =>
+		new Promise((_, reject) => {
+			init?.signal?.addEventListener("abort", () =>
+				reject(init.signal?.reason),
+			);
+		})) as unknown as typeof fetch;
+
+	it("gives up after the time limit, as a request that got no answer", async () => {
+		const failed = await watchFetch(
+			A,
+			never,
+			20,
+		)("http://relay/rest/v1/x").then(
+			() => null,
+			(e: unknown) => e,
+		);
+		expect(failed).toBeInstanceOf(TypeError);
+		expect(isUnreachable(failed)).toBe(true);
+	});
+
+	it("leaves a request the caller stopped as the caller stopped it", async () => {
+		const stop = new AbortController();
+		const asked = watchFetch(
+			A,
+			never,
+			10_000,
+		)("http://relay/rest/v1/x", {
+			signal: stop.signal,
+		});
+		stop.abort(new DOMException("stopped", "AbortError"));
+		await expect(asked).rejects.toMatchObject({ name: "AbortError" });
+	});
+
+	it("hands on an answer that came in time, with the limit on its signal", async () => {
+		let seen: AbortSignal | null | undefined;
+		const quick = (async (_: unknown, init?: RequestInit) => {
+			seen = init?.signal;
+			return new Response("[]", { status: 200 });
+		}) as unknown as typeof fetch;
+		const res = await watchFetch(A, quick, 50)("http://relay/rest/v1/x");
+		expect(res.status).toBe(200);
+		expect(seen).toBeInstanceOf(AbortSignal);
 	});
 });
