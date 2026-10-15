@@ -742,7 +742,10 @@ export function ProposalView({
 									close it; download the file to keep it.
 								</Callout>
 							),
-							sharing: doc.relay.issue && (
+							// a refused write is a stop: co-signers may not see what was done here
+							[doc.relay.issue?.severity === "error"
+								? "sharing-refused"
+								: "sharing"]: doc.relay.issue && (
 								<Callout
 									tone={
 										doc.relay.issue.severity === "error" ? "danger" : "warning"

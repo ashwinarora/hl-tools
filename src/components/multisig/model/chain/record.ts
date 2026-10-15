@@ -149,8 +149,11 @@ export function onRecord(
 			time: refused.time,
 			error: refused.error ?? "",
 		};
+	// with no moment of sending, the explorer's lag cannot be ruled out:
+	// never "missing" on that
+	if (q.sentAt === null) return { kind: "unchecked" };
 	// a list read before the explorer could have listed it proves nothing yet
-	if (q.sentAt !== null && list.readAt < q.sentAt + RECORD_LAG_MS)
+	if (list.readAt < q.sentAt + RECORD_LAG_MS)
 		return now < q.sentAt + RECORD_LAG_MS
 			? { kind: "just-sent" }
 			: { kind: "checking" };

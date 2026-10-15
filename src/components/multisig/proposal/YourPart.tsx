@@ -509,10 +509,7 @@ export function YourPart({
 					<Sentence parts={cancelNote(stage.window.validUntil)} />
 				</Callout>
 			)}
-			<Heard
-				when={outcome ?? failure ?? sent}
-				urgent={outcome?.ok === false || !!failure || sent === false}
-			>
+			<Heard when={outcome ?? failure ?? sent}>
 				{outcome?.ok === true && (
 					<Callout tone="success" title="Signature added" className="mt-3">
 						{doc.relay.known

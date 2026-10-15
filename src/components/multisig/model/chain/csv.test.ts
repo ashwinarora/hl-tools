@@ -80,7 +80,7 @@ describe("On Hyperliquid as CSV", () => {
 				"USDC",
 				"2",
 				H(2),
-				"",
+				"none on record",
 			],
 			[
 				"2026-10-14 02:00:02",
@@ -92,7 +92,7 @@ describe("On Hyperliquid as CSV", () => {
 				null,
 				null,
 				H(3),
-				"",
+				"none on record",
 			],
 		]);
 	});
@@ -103,14 +103,12 @@ describe("On Hyperliquid as CSV", () => {
 		expect(proposalCell({ kind: "ambiguous", digests: [D, D] })).toBe(
 			`one of ${D} ${D}`,
 		);
-		for (const kind of [
-			"none",
-			"checking",
-			"unchecked",
-			"own-step",
-			"not-applicable",
-		] as const)
-			expect(proposalCell({ kind })).toBe("");
+		expect(proposalCell({ kind: "none" })).toBe("none on record");
+		// not looked up yet, or the explorer did not answer: never "no proposal"
+		expect(proposalCell({ kind: "checking" })).toBe("not checked");
+		expect(proposalCell({ kind: "unchecked" })).toBe("not checked");
+		expect(proposalCell({ kind: "own-step" })).toBe("Hyperliquid's own step");
+		expect(proposalCell({ kind: "not-applicable" })).toBe("");
 	});
 
 	it("writes trades, orders and funding with their exact figures", () => {

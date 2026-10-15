@@ -26,6 +26,7 @@ export function RailLink({
 	trailing,
 	to,
 	params,
+	search,
 	exact = false,
 }: {
 	children: ReactNode;
@@ -33,10 +34,11 @@ export function RailLink({
 	trailing?: ReactNode;
 	to: string;
 	params?: Record<string, string>;
+	search?: Record<string, string>;
 	/** Current only on exactly this path, not on the pages under it. */
 	exact?: boolean;
 }) {
-	const target = { to, params } as unknown as Pick<
+	const target = { to, params, search } as unknown as Pick<
 		ComponentProps<typeof Link>,
 		"to"
 	>;

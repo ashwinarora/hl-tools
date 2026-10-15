@@ -1026,7 +1026,9 @@ describe("what a receipt reports, against Hyperliquid's own record", () => {
 			},
 		);
 		expect(s.phase).toBe("refused");
-		expect(s.detail).toContain("a new proposal would run a second time");
+		expect(s.detail).toContain(
+			"if this one went through, a new proposal would do it a second time",
+		);
 		expect(s.detail).toContain("before proposing it again");
 		expect(s.detail).not.toContain("Propose it again:");
 	});

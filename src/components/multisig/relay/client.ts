@@ -44,9 +44,19 @@ function limited(init: RequestInit | undefined, ms: number): AbortSignal {
 	const limit = AbortSignal.timeout(ms);
 	const own = init?.signal;
 	if (!own) return limit;
-	return typeof AbortSignal.any === "function"
-		? AbortSignal.any([own, limit])
-		: own;
+	if (typeof AbortSignal.any === "function")
+		return AbortSignal.any([own, limit]);
+	// a browser without `AbortSignal.any` (Safari before 17.4, Firefox before
+	// 124): one signal that whichever ends first ends, never the caller's alone
+	const both = new AbortController();
+	for (const s of [own, limit]) {
+		if (s.aborted) {
+			both.abort(s.reason);
+			break;
+		}
+		s.addEventListener("abort", () => both.abort(s.reason), { once: true });
+	}
+	return both.signal;
 }
 
 /**

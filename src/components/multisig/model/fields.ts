@@ -33,7 +33,7 @@ export function addressField(
 			issue(
 				"address.invalid",
 				"error",
-				`${what} must be a 20-byte hex address: 0x followed by 40 hex digits.`,
+				`${what} is not an address: an address is 0x followed by 40 characters, the digits 0 to 9 and the letters a to f.`,
 				{ path },
 			),
 		);

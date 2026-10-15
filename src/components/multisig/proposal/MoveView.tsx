@@ -309,16 +309,26 @@ export function MoveView({
 							"copy-notes": copyNotesShown(notes).length > 0 && (
 								<CopyNotes notes={notes} />
 							),
-							sharing: docs.map(
+							// a refused write is a stop: co-signers may not see what was done here
+							"sharing-refused": docs.map(
 								(d, i) =>
-									d.relay.issue && (
+									d.relay.issue?.severity === "error" && (
 										<Callout
 											key={steps[i]?.proposal.digest}
-											tone={
-												d.relay.issue.severity === "error"
-													? "danger"
-													: "warning"
-											}
+											tone="danger"
+											title={d.relay.issue.message}
+										>
+											{d.relay.issue.fix}
+										</Callout>
+									),
+							),
+							sharing: docs.map(
+								(d, i) =>
+									d.relay.issue &&
+									d.relay.issue.severity !== "error" && (
+										<Callout
+											key={steps[i]?.proposal.digest}
+											tone="warning"
 											title={d.relay.issue.message}
 										>
 											{d.relay.issue.fix}
@@ -1094,10 +1104,7 @@ function MovePart({
 					/>
 				</Callout>
 			)}
-			<Heard
-				when={outcome ?? failure}
-				urgent={outcome?.ok === false || !!failure}
-			>
+			<Heard when={outcome ?? failure}>
 				{outcome?.ok === true && (
 					<Callout tone="success" title="Signed" className="mt-3">
 						{steps[0].doc.relay.known

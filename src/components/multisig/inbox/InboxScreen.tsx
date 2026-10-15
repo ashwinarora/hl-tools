@@ -182,7 +182,11 @@ export function InboxScreen() {
 										<Link to="/multisig/add" className={linkButton}>
 											{RELAY_COPY.addExisting}
 										</Link>
-										<Link to="/multisig/create" className={linkButton}>
+										<Link
+											to="/multisig/create"
+											search={{ network }}
+											className={linkButton}
+										>
 											{CREATE.title}
 										</Link>
 									</span>

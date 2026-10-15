@@ -492,6 +492,26 @@ describe("what a proposal's page says against it before anyone signs", () => {
 			standingRefusals(usdSend("1000"), facts({ perpsUsdc: null })),
 		).toEqual([]);
 	});
+
+	it("holds no balance against a treasury whose mode is not read yet", () => {
+		// a unified treasury reports 0 in perps beside its one balance: with the
+		// mode unread, a withdrawal would look refused for the perps figure
+		const unread = facts({ mode: null, perpsUsdc: "0" });
+		expect(
+			standingRefusals(
+				{ type: "withdraw3", destination: RECIPIENT, amount: "5", time: 1 },
+				unread,
+			),
+		).toEqual([]);
+		expect(standingRefusals(usdSend("1000"), unread)).toEqual([]);
+		// what does not depend on the mode is still said
+		expect(
+			standingRefusals(
+				{ type: "withdraw3", destination: RECIPIENT, amount: "1", time: 1 },
+				unread,
+			).map((r) => r.code),
+		).toEqual(["withdrawal-below-fee"]);
+	});
 });
 
 describe("older USDC sends a withdrawal should let go first", () => {

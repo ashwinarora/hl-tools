@@ -156,7 +156,14 @@ export function Usdc({ value }: { value: string | null | undefined }) {
 	const cut = Decimal.tryParse(shown.replace(/,/g, ""));
 	// only where the cut left digits out: "0.00" is the whole of "0"
 	const lost = !!exact && !!cut && !exact.eq(cut);
-	return <span title={lost ? exact.toDisplay() : undefined}>{shown}</span>;
+	if (!lost || !exact) return <span>{shown}</span>;
+	// the whole figure for the mouse, and for a screen reader
+	return (
+		<span title={exact.toDisplay()}>
+			{shown}
+			<span className="sr-only"> (exactly {exact.toDisplay()})</span>
+		</span>
+	);
 }
 
 export function Figure({

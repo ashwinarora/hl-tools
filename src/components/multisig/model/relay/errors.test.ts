@@ -98,7 +98,7 @@ describe("relayIssue", () => {
 			const i = relayIssue(e);
 			expect(i.code).toBe("relay.unreachable");
 			expect(i.message).toBe(
-				"The sharing service could not be reached. Links and files still work.",
+				"Can't reach the sharing service. Your co-signers' updates will not show until it is back; you can still share by link or file.",
 			);
 		}
 		expect(isUnreachable(pg("42501", "permission denied"))).toBe(false);

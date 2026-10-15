@@ -20,6 +20,7 @@ import {
 	sendRefusal,
 	sendShape,
 	WITHDRAWAL_FEE_USDC,
+	withdrawalFrom,
 	withdrawalOutcome,
 } from "@hl-tools/core";
 import type { Receiver } from "./actions";
@@ -224,8 +225,11 @@ export function preflight(action: PlainObject, facts: SendFacts): Refusal[] {
 			: null);
 	if (!shape?.amount || refusal) return out;
 	const unified = facts.mode?.kind === "unified";
+	// the core's rule says which balance (`withdrawalFrom`); held to the larger
+	// figure Hyperliquid reports beside it, since stopping a withdrawal it
+	// would take is worse than letting it answer
 	const source =
-		action.type === "withdraw3" && unified
+		action.type === "withdraw3" && withdrawalFrom(facts.mode) === "balance"
 			? largerOf(facts.perpsUsdc, spotAvailable(facts.spot, "USDC"))
 			: shape.from === "perps"
 				? facts.perpsUsdc
@@ -279,8 +283,19 @@ export function standingRefusals(
 	action: PlainObject,
 	facts: SendFacts,
 ): Refusal[] {
-	return preflight(action, facts).filter((r) => STANDING.has(r.code));
+	return preflight(action, facts).filter(
+		(r) =>
+			STANDING.has(r.code) &&
+			// the mode unread, which balance it leaves is not known: no balance
+			// is held against it (unread means warn, never guess)
+			(facts.mode !== null || !BALANCE_REFUSALS.has(r.code)),
+	);
 }
+
+const BALANCE_REFUSALS: ReadonlySet<string> = new Set([
+	"transfer-balance",
+	"token-balance",
+]);
 
 /**
  * For a bridge withdrawal: the treasury's USDC sends proposed before it and

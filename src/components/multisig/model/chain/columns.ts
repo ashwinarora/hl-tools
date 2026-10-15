@@ -181,11 +181,11 @@ export function ledgerWhat(r: LedgerRow): LedgerWhat {
 	return { text: r.type, party: null };
 }
 
-/** The amount with the direction as its sign: out is negative, in positive, a move has none. */
 /** The fee this account paid on a ledger entry; null when it paid none (the sender pays). */
 export const ledgerFeePaid = (r: LedgerRow): string | null =>
 	r.direction === "in" ? null : r.fee;
 
+/** The amount with the direction as its sign: out is negative, in positive, a move has none. */
 export function ledgerAmount(r: LedgerRow): string | null {
 	const d = dec(r.amount);
 	if (!d) return null;

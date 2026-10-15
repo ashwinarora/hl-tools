@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useNetwork } from "#/store/networkStore";
 import { useWalletBusy } from "#/store/walletBusyStore";
 import { CREATE } from "../model/create";
 import { FIRST_RUN, START } from "../model/guide";
@@ -18,6 +19,7 @@ import { FirstRun } from "./FirstRun";
  */
 export function Landing() {
 	const relay = useRelay();
+	const network = useNetwork();
 	const busy = useWalletBusy((b) => b.busy);
 	const waiting = relay.mode === "restoring";
 	return (
@@ -90,7 +92,11 @@ export function Landing() {
 							{START.createBody}
 						</span>
 						<div className="flex flex-wrap items-center gap-2">
-							<Link to="/multisig/create" className={linkButton}>
+							<Link
+								to="/multisig/create"
+								search={{ network }}
+								className={linkButton}
+							>
 								{CREATE.title}
 							</Link>
 						</div>

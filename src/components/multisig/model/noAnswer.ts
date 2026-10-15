@@ -7,7 +7,7 @@
  */
 
 const NO_ANSWER =
-	/failed to fetch|fetch failed|networkerror|load failed|network request failed|unknown http request error|timed? ?out|aborted/i;
+	/failed to fetch|fetch failed|networkerror|load failed|network request failed|unknown http request error|timed? ?out/i;
 
 /** Whether `e` is a request that got no answer, rather than an answer. */
 export function gotNoAnswer(e: unknown): boolean {

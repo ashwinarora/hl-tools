@@ -443,7 +443,8 @@ export function ChainTab({
 						<span>
 							{current.about}
 							{live.gaps.includes(current.part) &&
-								" Rows from while this page was disconnected may be missing."}
+								" Rows from while this page was disconnected may be missing."}{" "}
+							The CSV holds the rows listed here, with times in UTC.
 						</span>
 						<span className="flex flex-wrap items-center gap-x-4 gap-y-1">
 							<button

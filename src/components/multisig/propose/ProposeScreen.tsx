@@ -1253,23 +1253,39 @@ function ProposeForm({
 										title="The exact action (for experts)"
 										description="As every signer will sign it. Its time field is set when you create it."
 									>
-										<CodeBlock
-											content={stringifyJson(fromPlain(action), 2)}
-											lang="json"
-											maxHeight="18rem"
-										/>
-										{secondAction && (
+										{/* opt-in: what a newcomer does not need on the way to Create */}
+										<details className="group">
+											<summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-[13px] font-medium text-muted-foreground hover:text-foreground sm:min-h-0 [&::-webkit-details-marker]:hidden">
+												<span className="group-open:hidden">
+													▸ Show the exact action
+												</span>
+												<span className="hidden group-open:inline">
+													▾ Hide the exact action
+												</span>
+											</summary>
 											<div className="mt-3">
-												<p className="mb-1.5 text-xs text-muted-foreground">
-													Step 2, a proposal of its own:
-												</p>
 												<CodeBlock
-													content={stringifyJson(fromPlain(secondAction), 2)}
+													content={stringifyJson(fromPlain(action), 2)}
 													lang="json"
 													maxHeight="18rem"
 												/>
+												{secondAction && (
+													<div className="mt-3">
+														<p className="mb-1.5 text-xs text-muted-foreground">
+															Step 2, a proposal of its own:
+														</p>
+														<CodeBlock
+															content={stringifyJson(
+																fromPlain(secondAction),
+																2,
+															)}
+															lang="json"
+															maxHeight="18rem"
+														/>
+													</div>
+												)}
 											</div>
-										)}
+										</details>
 									</Panel>
 								)}
 								<Panel title="Create">

@@ -1819,6 +1819,38 @@ All test proposals of these checks were cancelled afterwards; none was sent.
 | Download CSV, Signing log | first bytes EF BB BF; header `Time (UTC),What happened,Proposal,Hyperliquid's record`; oldest first; addresses whole |
 | The whole figure on hover | "1.99 USDC" → 1.996729; table cells 1.99 → 1.996762 and -0.003237 → -0.0032378497; a figure that lost nothing to the cut has no title |
 
+### After a code review of the round (2026-10-15)
+
+Another session read the nine commits (`labs/qa-mainnet-readiness/CODE_REVIEW.md`, 23 findings plus nits). Each was checked against the code before anything changed.
+
+| Finding | Verdict | What changed |
+|---|---|---|
+| 1. The session re-check when a tab is looked at again never fired | real: Supabase's request builder sends only when its answer is asked for, and `void` never asks | it asks; in the browser one `rpc/whoami` goes out on the event, and none on a second within the minute |
+| 2. Without `AbortSignal.any` the 10 s limit was dropped | real (Safari before 17.4, Firefox before 124) | one combined signal by hand; tested with `AbortSignal.any` removed |
+| 4. A push sent later relied on `push` never throwing | true, harmless today | caught |
+| 6. "Not on Hyperliquid's record" with no moment of sending | latent (every caller passes one) | never "missing" without it: "unchecked" |
+| 7. Explorer reads from "While you were away" | the record check read even while the notice was folded | read only while it is open: inbox with nine treasuries, 5 explorer requests open, 3 folded (the 3 are the notice's own transfer matching, as before) |
+| 8. CLAUDE.md said the explorer is read only through `useTxLookups` | contradiction | one rule: `live/explorerList.ts`, shared by `useTxLookups` and `useRecords` |
+| 9. The refused sentence | "whatever the report of its sending says" read oddly | "It was not carried out, even though it was reported as accepted." The "missing" sentence is the owner's and stays |
+| 11. CSV rows not checked read as "no proposal" | real | "not checked", "none on record", "Hyperliquid's own step", as on screen |
+| 12. The whole figure only on hover | real for screen readers | also in visually hidden text |
+| 13. Results could be announced twice | real: the region turned assertive around a callout that is already an alert | the region stays polite; the danger callout carries the urgency |
+| 14. A write the sharing service refused folded into "N notes" | real: co-signers may not see what was done | a stop notice |
+| 15, 16. "The relay refused the request." on screen; the jargon test skipped any string beside `??`, `||`, `&&` or `+` | real | the test skips only comparisons, and caught a second sentence; both say "sharing service" |
+| 17. "a new proposal would run a second time" | asserted what is not known | "if this one went through, a new proposal would do it a second time" |
+| 18. No first-run card or "Look at a treasury" in a build without the sharing service | real | both on its start page |
+| 19. `cancelNote` not checked for forbidden claims | real | checked |
+| 20. A false "Hyperliquid would refuse this" while the account mode is unread | real for a unified treasury (perps reads 0) | no balance is held against an unread mode; tested |
+| 21. The page's older-sends warning had nothing when signed out | real | signed out, it reads this browser's proposals, as the form does (no new request to the sharing service) |
+| 22. The plain wallet sentence missing on Sign and Send | real | "Your wallet did not sign (declined or closed). Nothing was added to it." / "… Nothing was sent." |
+| 23. "did not answer" matched "aborted" anywhere | loose | names decide; "timed out" stays (a gateway timeout is no answer) |
+| Copy audit #13, #15 | still open | "Can't reach the sharing service. Your co-signers' updates will not show until it is back; you can still share by link or file."; the propose form's exact action behind "Show the exact action" |
+| Nits | | links into the wizard pass `network`; the address error in plain words; a doc comment moved; "While you were away" no longer opens for a frame before folding; a unified withdrawal's source goes through the core's `withdrawalFrom` |
+
+Left, with the reason: 5 (a copy's "accepted" replacing a stored refusal) is the merge behaviour the owner chose to keep, with Hyperliquid's record shown instead; 3 is a comment made exact, not a change; 10 (a month picker on the CSVs) is not built, because the rows loaded do not always cover a month, and the page now says the file holds the rows listed; the treasury and multi-sig wording, the legacy "said no", "Threshold" against "Number that must sign" and the other nits are wording or polish with no effect on what is signed or sent.
+
+3,333 unit tests pass; types and lint clean.
+
 ### Limits
 
 - Phone wallets and WalletConnect are out of this round; the section offers only the wallets in the browser.

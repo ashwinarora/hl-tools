@@ -68,6 +68,14 @@ const CODE_ATTRIBUTES = new Set([
 	"target",
 ]);
 
+const COMPARISONS = new Set<ts.SyntaxKind>([
+	ts.SyntaxKind.EqualsEqualsEqualsToken,
+	ts.SyntaxKind.ExclamationEqualsEqualsToken,
+	ts.SyntaxKind.EqualsEqualsToken,
+	ts.SyntaxKind.ExclamationEqualsToken,
+	ts.SyntaxKind.InKeyword,
+]);
+
 interface Found {
 	readonly where: string;
 	readonly text: string;
@@ -107,8 +115,13 @@ function sentences(path: string): Found[] {
 			const name = attribute?.name.getText(file) ?? "";
 			if (CODE_ATTRIBUTES.has(name) || name.startsWith("data-")) return true;
 		}
-		// a comparison or a call that takes the text as a key: `x === "…"`, `.includes("…")`
-		if (ts.isBinaryExpression(parent)) return true;
+		// a comparison: `x === "…"`. A string beside `??`, `||`, `&&` or `+` is
+		// still text a reader may see, and is checked
+		if (
+			ts.isBinaryExpression(parent) &&
+			COMPARISONS.has(parent.operatorToken.kind)
+		)
+			return true;
 		return false;
 	};
 	const visit = (node: ts.Node) => {

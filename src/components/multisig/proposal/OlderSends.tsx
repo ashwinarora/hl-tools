@@ -1,14 +1,24 @@
-import { type Proposal, wouldShutOut } from "@hl-tools/core";
+import type { Address, Proposal } from "@hl-tools/core";
+import { wouldShutOut } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { Callout } from "#/components/hub/status";
 import { sendsBefore } from "../model/send";
-import { type OpenProposal, useOpenProposals } from "../relay/openProposals";
+import { waitingProposals } from "../model/signerSet";
+import { useOpenProposals } from "../relay/openProposals";
+import { useRelay } from "../relay/useRelay";
+import { useNow } from "../shell/live";
+import { useKnownProposals } from "../treasury/useKnownProposals";
+
+/** A proposal still waiting, as this warning names it. */
+interface Waiting {
+	readonly digest: string;
+	readonly label: string;
+	readonly action: { readonly type?: unknown };
+}
 
 /** "an older USDC send", "2 older withdrawals", "3 older USDC sends and withdrawals". */
-function older(items: readonly OpenProposal[]): string {
-	const withdrawals = items.filter(
-		(p) => p.proposal.payload.action.type === "withdraw3",
-	).length;
+function older(items: readonly Waiting[]): string {
+	const withdrawals = items.filter((p) => p.action.type === "withdraw3").length;
 	const noun =
 		withdrawals === 0
 			? "USDC send"
@@ -22,7 +32,7 @@ function older(items: readonly OpenProposal[]): string {
 }
 
 /** The proposals named, each a link to its page. */
-function Named({ items }: { items: readonly OpenProposal[] }) {
+function Named({ items }: { items: readonly Waiting[] }) {
 	return (
 		<>
 			{items.map((p, i) => (
@@ -33,7 +43,7 @@ function Named({ items }: { items: readonly OpenProposal[] }) {
 						search={{ digest: p.digest }}
 						className="underline underline-offset-2"
 					>
-						{p.title ?? p.line}
+						{p.label}
 					</Link>
 				</span>
 			))}
@@ -48,19 +58,37 @@ function Named({ items }: { items: readonly OpenProposal[] }) {
  * (what it does to them was not measured). Never folded away.
  */
 export function OlderSends({ proposal }: { proposal: Proposal }) {
-	const open = useOpenProposals();
+	const relay = useRelay();
+	const now = useNow();
 	const { network, multiSigUser, action } = proposal.payload;
-	const waiting = open.items
-		.filter(
-			(p) =>
-				p.open &&
-				!p.stuck &&
-				!p.frozen &&
-				p.network === network &&
-				p.treasury === multiSigUser &&
-				p.digest !== proposal.digest,
-		)
-		.map((p) => ({ action: p.proposal.payload.action, item: p }));
+	// signed in, the sharing service's list holds what the co-signers shared;
+	// otherwise this browser's own proposals, as the propose form reads them
+	const signedIn = relay.mode === "on";
+	const open = useOpenProposals();
+	const known = useKnownProposals(network, multiSigUser as Address, !signedIn);
+	const items: Waiting[] = signedIn
+		? open.items
+				.filter(
+					(p) =>
+						p.open &&
+						!p.stuck &&
+						!p.frozen &&
+						p.network === network &&
+						p.treasury === multiSigUser,
+				)
+				.map((p) => ({
+					digest: p.digest,
+					label: p.title ?? p.line,
+					action: p.proposal.payload.action,
+				}))
+		: waitingProposals(known.proposals, now).map((k) => ({
+				digest: k.digest,
+				label: k.title,
+				action: k.action as Waiting["action"],
+			}));
+	const waiting = items
+		.filter((p) => p.digest !== proposal.digest)
+		.map((item) => ({ action: item.action, item }));
 	const shutOut = wouldShutOut(action, waiting).map((x) => x.item);
 	const before = sendsBefore(action, waiting).map((x) => x.item);
 	if (shutOut.length > 0) {

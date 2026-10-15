@@ -448,7 +448,7 @@ export function deriveStage(input: StageInput): Stage {
 				: input.likeOnRecord
 					? // the answer in a receipt is what its finaliser wrote down, and
 						// the record holds something like this action: never "propose again"
-						say`This copy says Hyperliquid refused it, but Hyperliquid's record shows a similar action. Check the record before proposing it again: a new proposal would run a second time.`
+						say`This copy says Hyperliquid refused it, but Hyperliquid's record shows a similar action. Check the record before proposing it again: if this one went through, a new proposal would do it a second time.`
 					: say`Hyperliquid refused this. A refused proposal cannot be sent again: its number is used up. Propose it again: it gets a new number, and every signer signs once more. The refusal is what the finaliser's page recorded: if in doubt, look at the treasury's record on Hyperliquid first.`;
 	} else if (!r) {
 		phase = "judging";

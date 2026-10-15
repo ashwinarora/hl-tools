@@ -116,7 +116,7 @@ describe("finding a proposal on Hyperliquid's record", () => {
 				account: multiSigUser,
 				action,
 				nonce: posted.request.nonce,
-				sentAt: null,
+				sentAt: posted.request.nonce,
 			},
 			listOf(i),
 			NOW,
@@ -129,7 +129,7 @@ describe("finding a proposal on Hyperliquid's record", () => {
 					account: multiSigUser,
 					action: { ...action, abstraction: "UNIFIED" },
 					nonce: posted.request.nonce,
-					sentAt: null,
+					sentAt: posted.request.nonce,
 				},
 				listOf(i),
 				NOW,
@@ -247,10 +247,10 @@ describe("how far Hyperliquid's record can answer", () => {
 				later,
 			).kind,
 		).toBe("missing");
-		// a report with no time gets no grace
+		// a report with no time could be a moment old: never "missing" on it
 		expect(
 			onRecord({ ...mine, sentAt: null }, list([NOW - 10], false), NOW).kind,
-		).toBe("missing");
+		).toBe("unchecked");
 	});
 
 	it("says it is checking while the list is read, and unchecked when it could not be", () => {

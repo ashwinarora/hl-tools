@@ -193,7 +193,7 @@ describe("what the notice says is being done about a difference", () => {
 			"The sharing service could not reach Hyperliquid for this look-up. Try again in a minute.",
 		);
 		expect(requestRefusal({ status: "rejected", reason: null })).toBe(
-			"The relay refused the request.",
+			"The sharing service refused the request.",
 		);
 	});
 });

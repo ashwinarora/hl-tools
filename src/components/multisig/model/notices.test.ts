@@ -20,6 +20,7 @@ const ALL_IDS: readonly NoticeId[] = [
 	"copy-refusal",
 	"rejected",
 	"signers-changed",
+	"sharing-refused",
 ];
 const ALL = Object.fromEntries(ALL_IDS.map((id) => [id, 1]));
 
@@ -34,6 +35,7 @@ describe("the notices above a proposal's action", () => {
 				"rejected",
 				"signers-changed",
 				"not-saved",
+				"sharing-refused",
 			],
 			notes: [
 				"copy-refusal",

@@ -157,7 +157,7 @@ export function relayIssue(e: unknown): Issue {
 		return issue(
 			"relay.unreachable",
 			"warning",
-			"The sharing service could not be reached. Links and files still work.",
+			"Can't reach the sharing service. Your co-signers' updates will not show until it is back; you can still share by link or file.",
 		);
 	}
 	const o = (e && typeof e === "object" ? e : {}) as {

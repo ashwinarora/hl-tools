@@ -326,7 +326,10 @@ function RelaySession({
 
 	// While the wallet's channel is joined, its pings say when something on the
 	// relay changed: a tab looked at again asks for nothing more. Without the
-	// channel, looking at the tab again is the next best moment to re-read.
+	// channel, looking at the tab again is the next best moment to re-read. A
+	// query takes the default when its screen next renders; the channel's
+	// change re-renders every screen that reads the relay, which is where
+	// these queries live.
 	useEffect(() => {
 		queries.setQueryDefaults(["relay"], {
 			refetchOnWindowFocus: channel !== "joined",
@@ -345,7 +348,11 @@ function RelaySession({
 			const now = Date.now();
 			if (now - asked < SESSION_RECHECK_MS) return;
 			asked = now;
-			void active.rpc("whoami");
+			// the request is sent only once its answer is asked for (`then`)
+			active.rpc("whoami").then(
+				() => undefined,
+				() => undefined,
+			);
 		};
 		document.addEventListener("visibilitychange", seen);
 		return () => document.removeEventListener("visibilitychange", seen);

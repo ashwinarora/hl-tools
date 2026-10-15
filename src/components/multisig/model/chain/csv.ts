@@ -28,7 +28,11 @@ export interface CsvTable {
 const oldestFirst = <T>(rows: readonly T[], time: (r: T) => number): T[] =>
 	[...rows].sort((a, b) => time(a) - time(b));
 
-/** The proposal a row is tied to, as far as the page could tell; empty when none. */
+/**
+ * The proposal a row is tied to, as far as the page could tell, in the
+ * words of its "Proposal" cell: a row not checked yet never reads as one
+ * with no proposal.
+ */
 export function proposalCell(p: RowProposal): string {
 	switch (p.kind) {
 		case "matched":
@@ -38,6 +42,13 @@ export function proposalCell(p: RowProposal): string {
 			return `likely ${p.digest}`;
 		case "ambiguous":
 			return `one of ${p.digests.join(" ")}`;
+		case "none":
+			return "none on record";
+		case "checking":
+		case "unchecked":
+			return "not checked";
+		case "own-step":
+			return "Hyperliquid's own step";
 		default:
 			return "";
 	}

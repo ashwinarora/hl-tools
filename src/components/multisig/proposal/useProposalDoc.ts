@@ -373,7 +373,7 @@ export function useProposalDoc(
 						"relay.not_shared",
 						"warning",
 						blocked ??
-							"Not shared: the relay does not list your wallet as a signer of this treasury. Add the treasury first.",
+							"Not shared: the sharing service does not list your wallet as a signer of this treasury. Add the treasury first.",
 					);
 				}
 				return null;
@@ -494,7 +494,9 @@ export function useProposalDoc(
 					setBusy(false);
 				}
 			})();
+			// `push` never throws; should that change, a push sent later fails quietly
 			if (!opts.pushLater) await sending;
+			else sending.catch(() => undefined);
 			return result;
 		},
 		[client, me, held, invalidateLocal, push],

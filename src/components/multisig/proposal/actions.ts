@@ -25,6 +25,7 @@ import {
 import { envelopeChainOf } from "../model/signingNetwork";
 import { type Stage, shortAddress } from "../model/stage";
 import { submitEnvelope, withReceipt } from "../model/submit";
+import { signerFailure } from "../model/walletErrors";
 import type { WalletSigner } from "../useWalletSigner";
 import type { ProposalDoc } from "./useProposalDoc";
 
@@ -70,7 +71,13 @@ export async function signInner(
 		expectedSigner: wallet.address ?? undefined,
 	});
 	if (!signed.signature)
-		return { outcome: { ok: false, issues: signed.issues }, proposal };
+		return {
+			outcome: {
+				ok: false,
+				issues: signerFailure(signed.issues, "Nothing was added to it."),
+			},
+			proposal,
+		};
 	// stored through a merge: one signature per signer, this one first
 	const stored = await store({ ...proposal, signatures: [signed.signature] });
 	return { outcome: { ok: true }, proposal: stored.proposal };
@@ -265,7 +272,8 @@ async function signToSubmit(i: {
 	const got = await wallet.signerFor(chain.hex);
 	if (!got.ok) return stop("envelope", problem("wallet", got.error));
 	const outer = await signEnvelope(request, network, got.signer);
-	if (!outer.signature) return stop("envelope", outer.issues);
+	if (!outer.signature)
+		return stop("envelope", signerFailure(outer.issues, "Nothing was sent."));
 	mark("envelope", "done");
 	return { ok: true, signed: { current, request, signature: outer.signature } };
 }

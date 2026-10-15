@@ -183,7 +183,8 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 					</Btn>
 				)}
 			</header>
-			<div id={bodyId} hidden={folded}>
+			{/* not before the stored choice is known: open and then folded is a flash */}
+			<div id={bodyId} hidden={folded || !hydrated}>
 				{away.issue && (
 					<p className="border-b border-border px-4 py-2 text-xs text-warning">
 						{away.issue.message} {away.issue.fix}
@@ -215,7 +216,8 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 						)}
 						<NamesFor network={g.network} treasury={g.treasury}>
 							<ul className="flex flex-col gap-1.5">
-								<Lines group={g} />
+								{/* folded, nothing is asked of the explorer for lines nobody sees */}
+								{!folded && hydrated && <Lines group={g} />}
 								{g.items.length > SHOWN && (
 									<li className="text-xs text-muted-foreground">
 										and {g.items.length - SHOWN} more, in the{" "}

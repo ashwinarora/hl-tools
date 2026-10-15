@@ -4,7 +4,9 @@ import { useAccount } from "wagmi";
 import { useHandoffStore } from "#/store/handoffStore";
 import { useNetwork } from "#/store/networkStore";
 import { HistoryList } from "./HistoryList";
+import { FirstRun } from "./inbox/FirstRun";
 import { CREATE } from "./model/create";
+import { START } from "./model/guide";
 import { OpenProposal } from "./OpenProposal";
 import { useRelay } from "./relay/useRelay";
 import { StartProposal } from "./StartProposal";
@@ -44,12 +46,31 @@ export function OpenScreen() {
 			}
 			actions={
 				noRelay ? (
-					<Link to="/multisig/create" className={linkButton}>
-						{CREATE.title}
-					</Link>
+					<>
+						<Link
+							to="/tools/multisig"
+							search={{ view: "account" }}
+							className={linkButton}
+						>
+							{START.lookTitle}
+						</Link>
+						<Link
+							to="/multisig/create"
+							search={{ network }}
+							className={linkButton}
+						>
+							{CREATE.title}
+						</Link>
+					</>
 				) : undefined
 			}
 		>
+			{/* a build with no sign-in: this is the start page, so it says how this works */}
+			{noRelay && (
+				<div className="mb-4">
+					<FirstRun sharing={false} />
+				</div>
+			)}
 			<div className="grid gap-4 lg:grid-cols-2">
 				<StartProposal wallet={address} />
 				<div className="space-y-4">

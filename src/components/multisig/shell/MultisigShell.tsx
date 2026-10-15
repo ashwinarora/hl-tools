@@ -41,6 +41,8 @@ import { WalletBox, WalletSummary } from "./WalletBox";
  */
 export function MultisigShell({ children }: { children: ReactNode }) {
 	const relay = useRelay();
+	// every way into the wizard names the network it is for
+	const network = useNetwork();
 	return (
 		<div className="page-wrap">
 			<div className="grid grid-cols-1 items-start gap-4 pb-12 pt-4 min-[861px]:grid-cols-[252px_minmax(0,1fr)] min-[861px]:gap-7 min-[861px]:pb-16 min-[861px]:pt-6">
@@ -66,7 +68,9 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 								</RailLink>
 								{/* with a relay the wizard is reached from the signed-in list */}
 								{relay.mode === "off" && (
-									<RailLink to="/multisig/create">{CREATE.title}</RailLink>
+									<RailLink to="/multisig/create" search={{ network }}>
+										{CREATE.title}
+									</RailLink>
 								)}
 							</>
 						}
@@ -209,7 +213,9 @@ function RailNav() {
 									: `None on ${nav.network} yet.`}
 						</span>
 					)}
-					<RailLink to="/multisig/create">+ {CREATE.title}</RailLink>
+					<RailLink to="/multisig/create" search={{ network: nav.network }}>
+						+ {CREATE.title}
+					</RailLink>
 					<RailLink to="/multisig/add">+ {RELAY_COPY.addExisting}</RailLink>
 				</nav>
 			</div>
@@ -240,7 +246,11 @@ function MobileSwitcher() {
 			onChange={(e) => {
 				const v = e.target.value;
 				if (v === "__add") void navigate({ to: "/multisig/add" });
-				else if (v === "__create") void navigate({ to: "/multisig/create" });
+				else if (v === "__create")
+					void navigate({
+						to: "/multisig/create",
+						search: { network: nav.network },
+					});
 				else if (v === "") void navigate({ to: "/multisig" });
 				else if (v !== "__other")
 					void navigate({
@@ -313,6 +323,7 @@ function TitleCount() {
  */
 function MobileBar() {
 	const relay = useRelay();
+	const network = useNetwork();
 	const path = useRouterState({ select: (s) => s.location.pathname });
 	return (
 		<details
@@ -336,6 +347,7 @@ function MobileBar() {
 					{relay.mode === "off" && (
 						<Link
 							to="/multisig/create"
+							search={{ network }}
 							className="inline-flex min-h-11 items-center text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
 						>
 							{CREATE.title}

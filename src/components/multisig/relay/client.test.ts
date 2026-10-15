@@ -105,6 +105,42 @@ describe("a relay that does not answer", () => {
 		await expect(asked).rejects.toMatchObject({ name: "AbortError" });
 	});
 
+	it("keeps the limit on a caller's request where the browser has no AbortSignal.any", async () => {
+		const any = AbortSignal.any;
+		Object.defineProperty(AbortSignal, "any", {
+			value: undefined,
+			configurable: true,
+		});
+		try {
+			const failed = await watchFetch(
+				A,
+				never,
+				20,
+			)("http://relay/rest/v1/x", {
+				signal: new AbortController().signal,
+			}).then(
+				() => null,
+				(e: unknown) => e,
+			);
+			expect(failed).toBeInstanceOf(TypeError);
+			expect(isUnreachable(failed)).toBe(true);
+			// and the caller's own stop still stops it
+			const stop = new AbortController();
+			const asked = watchFetch(
+				A,
+				never,
+				10_000,
+			)("http://relay/rest/v1/x", { signal: stop.signal });
+			stop.abort(new DOMException("stopped", "AbortError"));
+			await expect(asked).rejects.toMatchObject({ name: "AbortError" });
+		} finally {
+			Object.defineProperty(AbortSignal, "any", {
+				value: any,
+				configurable: true,
+			});
+		}
+	});
+
 	it("hands on an answer that came in time, with the limit on its signal", async () => {
 		let seen: AbortSignal | null | undefined;
 		const quick = (async (_: unknown, init?: RequestInit) => {

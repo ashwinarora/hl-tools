@@ -159,6 +159,7 @@ export function requestRefusal(
 	if (!request) return null;
 	if (request.status !== "rejected" && request.status !== "failed") return null;
 	return (
-		REQUEST_REASONS[request.reason ?? ""] ?? "The relay refused the request."
+		REQUEST_REASONS[request.reason ?? ""] ??
+		"The sharing service refused the request."
 	);
 }

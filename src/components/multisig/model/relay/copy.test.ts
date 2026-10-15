@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { partsText } from "../parts";
 import {
 	afterRejection,
+	cancelNote,
 	FORBIDDEN_CLAIMS,
 	finishHint,
 	gateOthers,
@@ -58,6 +60,8 @@ describe("relay copy", () => {
 			recheckLine(state),
 		]),
 		...SIGN_HINT_TEXTS.map((t, i): [string, string] => [`sign hint ${i}`, t]),
+		// a function of its date, so it is not among the plain entries
+		["cancel note", partsText(cancelNote(Date.UTC(2026, 9, 16, 2, 48)))],
 		...REFUSAL_TEXTS.map((t, i): [string, string] => [`refusal ${i}`, t]),
 		// what the page says when it refuses a nickname before asking the relay
 		...["", "0xabc", "You", "x".repeat(41), `a${String.fromCodePoint(0x200b)}b`]
