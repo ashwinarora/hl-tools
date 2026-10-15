@@ -62,15 +62,25 @@ export function Logo() {
 
 const REPO = "https://github.com/ashwinarora/hl-tools";
 
+/**
+ * The Multisig section is laid out wider than the rest of the site; on its
+ * pages the header and the footer line up with it. Every other page keeps
+ * the site's `page-wrap`.
+ */
+export const MULTISIG_WRAP = "mx-auto w-full max-w-[1440px] px-4 sm:px-6";
+export const isMultisigPath = (pathname: string) =>
+	pathname === "/multisig" || pathname.startsWith("/multisig/");
+
 export default function Header() {
 	const [open, setOpen] = useState(false);
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const wrap = isMultisigPath(pathname) ? MULTISIG_WRAP : "page-wrap";
 	// biome-ignore lint/correctness/useExhaustiveDependencies: close the mobile menu on navigation
 	useEffect(() => setOpen(false), [pathname]);
 
 	return (
 		<header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-			<nav className="page-wrap flex h-14 items-center gap-3">
+			<nav className={cn(wrap, "flex h-14 items-center gap-3")}>
 				<Logo />
 				<div className="ml-4 hidden items-center gap-1 md:flex">
 					<DropdownMenu>
@@ -161,7 +171,7 @@ export default function Header() {
 				hidden={!open}
 				className={cn("border-t border-border bg-background md:hidden")}
 			>
-				<div className="page-wrap grid gap-1 py-3">
+				<div className={cn(wrap, "grid gap-1 py-3")}>
 					{TOOLS.map((t) => (
 						<Link
 							key={t.id}

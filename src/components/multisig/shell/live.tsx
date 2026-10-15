@@ -183,7 +183,7 @@ export function Figure({
 				{label}
 				{extra}
 			</dt>
-			<dd className="mt-0.5 font-mono text-lg tabular-nums [overflow-wrap:anywhere]">
+			<dd className="mt-0.5 font-mono text-lg tabular-nums [overflow-wrap:anywhere] min-[861px]:text-xl">
 				{value}
 				{unit && (
 					<span className="ml-1.5 font-sans text-xs text-muted-foreground">

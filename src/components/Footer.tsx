@@ -1,12 +1,21 @@
-import { Link } from "@tanstack/react-router";
-import { GithubMark } from "./Header";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { cn } from "#/lib/utils";
+import { GithubMark, isMultisigPath, MULTISIG_WRAP } from "./Header";
 
 export default function Footer() {
 	const year = new Date().getFullYear();
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	// lines up with the Multisig section's wider layout on its pages
+	const wrap = isMultisigPath(pathname) ? MULTISIG_WRAP : "page-wrap";
 
 	return (
 		<footer className="border-t border-border text-muted-foreground">
-			<div className="page-wrap flex flex-col gap-4 py-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+			<div
+				className={cn(
+					wrap,
+					"flex flex-col gap-4 py-8 text-sm sm:flex-row sm:items-center sm:justify-between",
+				)}
+			>
 				<div className="space-y-1">
 					<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
 						<span className="font-mono font-semibold text-foreground">

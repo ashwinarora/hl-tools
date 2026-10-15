@@ -23,7 +23,7 @@ export function FirstRun({ sharing }: { sharing: boolean }) {
 				</Btn>
 			}
 		>
-			<ol className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+			<ol className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-x-8">
 				{FIRST_RUN.steps(sharing).map((step, i) => (
 					<li key={step.title} className="flex gap-3">
 						<span

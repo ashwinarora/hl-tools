@@ -157,7 +157,7 @@ function WalletLine({
 				<Avatar />
 				<span className="min-w-0">
 					<span
-						className="block font-mono text-[13px]"
+						className="block whitespace-nowrap font-mono text-[13px]"
 						title={title ?? address}
 					>
 						{short(address)}
@@ -235,8 +235,9 @@ export function WalletBox() {
 	const w = useShellWallet();
 	const relay = useRelay();
 	const busy = useWalletBusy((b) => b.busy);
+	// the section's own mark: a thin line in the avatar's colours across the top
 	const box =
-		"flex flex-col gap-2 rounded-[10px] border border-border bg-surface p-3 shadow-[var(--shadow-card)]";
+		"relative flex flex-col gap-2 rounded-[10px] border border-border bg-surface p-3 shadow-[var(--shadow-card)] before:pointer-events-none before:absolute before:inset-x-3 before:-top-px before:h-0.5 before:rounded-full before:bg-gradient-to-r before:from-brand before:to-info before:opacity-80";
 	if (!w.mounted) {
 		return (
 			<div className={box}>

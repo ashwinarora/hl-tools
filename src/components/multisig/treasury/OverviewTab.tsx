@@ -264,190 +264,193 @@ export function OverviewTab({
 	const setHidden = useMultisigPrefs((s) => s.setHidden);
 
 	return (
-		<div className="flex flex-col gap-4">
-			<SourceLine status={live.status} asOf={live.asOf} onRetry={live.retry}>
-				Balances, positions and orders arrive live from Hyperliquid. Nothing
-				here is stored by this tool. <Help k="live" />
-			</SourceLine>
+		// From 1280 px: what it holds on the left, who controls it beside it.
+		<div className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start xl:gap-5">
+			<div className="flex min-w-0 flex-col gap-4">
+				<SourceLine status={live.status} asOf={live.asOf} onRetry={live.retry}>
+					Balances, positions and orders arrive live from Hyperliquid. Nothing
+					here is stored by this tool. <Help k="live" />
+				</SourceLine>
 
-			{live.otherDexes && live.otherDexes.length > 0 && (
-				<div className="rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-xs text-muted-foreground">
-					This treasury also holds something in{" "}
-					{live.otherDexes.length === 1
-						? "another perps market"
-						: `${live.otherDexes.length} other perps markets`}{" "}
-					run by builders ({live.otherDexes.join(", ")}). Those are not shown
-					here.{" "}
-					<a
-						href={explorerAccountUrl(network, address)}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="inline-flex items-center gap-1 whitespace-nowrap text-brand underline underline-offset-2"
-					>
-						View the account on Hyperliquid
-						<ExternalLink className="size-3" aria-hidden />
-					</a>
-				</div>
-			)}
+				{live.otherDexes && live.otherDexes.length > 0 && (
+					<div className="rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-xs text-muted-foreground">
+						This treasury also holds something in{" "}
+						{live.otherDexes.length === 1
+							? "another perps market"
+							: `${live.otherDexes.length} other perps markets`}{" "}
+						run by builders ({live.otherDexes.join(", ")}). Those are not shown
+						here.{" "}
+						<a
+							href={explorerAccountUrl(network, address)}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="inline-flex items-center gap-1 whitespace-nowrap text-brand underline underline-offset-2"
+						>
+							View the account on Hyperliquid
+							<ExternalLink className="size-3" aria-hidden />
+						</a>
+					</div>
+				)}
 
-			<Card
-				title={
-					<span className="inline-flex items-center gap-1.5">
-						Balances {view?.kind === "two" && <Help k="perpsSpot" />}
-					</span>
-				}
-				actions={
-					mode ? (
+				<Card
+					title={
 						<span className="inline-flex items-center gap-1.5">
-							<Tag tone={mode.caution ? "warn" : "gray"} title={mode.text}>
-								{mode.tag}
-							</Tag>
-							<Help k="accountMode" />
-							{canPropose && (
+							Balances {view?.kind === "two" && <Help k="perpsSpot" />}
+						</span>
+					}
+					actions={
+						mode ? (
+							<span className="inline-flex items-center gap-1.5">
+								<Tag tone={mode.caution ? "warn" : "gray"} title={mode.text}>
+									{mode.tag}
+								</Tag>
+								<Help k="accountMode" />
+								{canPropose && (
+									<Link
+										to="/multisig/propose"
+										search={{ treasury: address, kind: "accountMode", network }}
+										className={linkButtonSm}
+										aria-label="Change the account mode"
+									>
+										Change
+									</Link>
+								)}
+							</span>
+						) : null
+					}
+					flush
+				>
+					{view === null ? (
+						<p className="flex min-h-[70px] items-center border-b border-border px-4 text-sm text-muted-foreground">
+							{reading}
+						</p>
+					) : (
+						<dl className="grid grid-cols-1 divide-y divide-border border-b border-border min-[641px]:grid-cols-3 min-[641px]:divide-x min-[641px]:divide-y-0">
+							{view.kind === "one" ? (
+								<>
+									<Figure
+										label="Balance"
+										value={<Usdc value={view.balance} />}
+										unit="USDC"
+									/>
+									<Figure
+										label="Can be moved now"
+										extra={<Help k="movable" />}
+										value={<Usdc value={view.movable} />}
+										unit="USDC"
+									/>
+									<Figure
+										label="In use"
+										extra={<Help k="inUse" />}
+										value={<Usdc value={view.inUse} />}
+										unit="USDC"
+									/>
+								</>
+							) : (
+								<>
+									<Figure
+										label="Perps account value"
+										value={<Usdc value={view.perpsValue} />}
+										unit="USDC"
+									/>
+									<Figure
+										label="Can be moved now"
+										extra={<Help k="movable" />}
+										value={<Usdc value={view.perpsMovable} />}
+										unit="USDC"
+									/>
+									<Figure
+										label="Spot USDC"
+										value={<Usdc value={view.spotUsdc} />}
+										unit="USDC"
+									/>
+								</>
+							)}
+						</dl>
+					)}
+					<DataTable
+						label="Spot balances"
+						columns={SPOT}
+						rows={spot}
+						rowKey={key}
+						initialSort={{ id: "total", desc: true }}
+						empty={live.spot === null ? reading : "No spot balances."}
+					/>
+					{staked && (
+						// HYPE that left spot for staking is still the treasury's
+						<p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border px-4 py-2.5 text-[13px]">
+							<span className="text-muted-foreground">In staking:</span>
+							<span>{staked}</span>
+							{treasury && (
 								<Link
-									to="/multisig/propose"
-									search={{ treasury: address, kind: "accountMode", network }}
-									className={linkButtonSm}
-									aria-label="Change the account mode"
+									to="/multisig/t/$network/$address"
+									params={{ network, address }}
+									search={{ tab: "staking" }}
+									className="text-xs underline underline-offset-2"
 								>
-									Change
+									Staking
 								</Link>
 							)}
-						</span>
-					) : null
-				}
-				flush
-			>
-				{view === null ? (
-					<p className="flex min-h-[70px] items-center border-b border-border px-4 text-sm text-muted-foreground">
-						{reading}
+						</p>
+					)}
+					{inVaults && (
+						// USDC that went into a vault is still the treasury's
+						<p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border px-4 py-2.5 text-[13px]">
+							<span className="text-muted-foreground">In vaults:</span>
+							<span>{inVaults}</span>
+							{treasury && (
+								<Link
+									to="/multisig/t/$network/$address"
+									params={{ network, address }}
+									search={{ tab: "vaults" }}
+									className="text-xs underline underline-offset-2"
+								>
+									Vaults
+								</Link>
+							)}
+						</p>
+					)}
+				</Card>
+
+				{positions.length > 0 && (
+					<Card title="Positions" actions={<Tag>{positions.length}</Tag>} flush>
+						<DataTable
+							label="Open positions"
+							columns={POSITIONS}
+							rows={positions}
+							rowKey={key}
+							initialSort={{ id: "value", desc: true }}
+							empty="No positions."
+						/>
+					</Card>
+				)}
+				{orders.length > 0 && (
+					<Card title="Open orders" actions={<Tag>{orders.length}</Tag>} flush>
+						<DataTable
+							label="Open orders"
+							columns={ORDERS}
+							rows={orders}
+							rowKey={key}
+							initialSort={{ id: "placed", desc: true }}
+							empty="No open orders."
+						/>
+					</Card>
+				)}
+				{positions.length > 0 || orders.length > 0 ? (
+					<p className="mx-0.5 -mt-2 text-xs text-subtle-foreground">
+						Positions and orders are placed by an API wallet, not through
+						proposals. They can only be read here.
 					</p>
 				) : (
-					<dl className="grid grid-cols-1 divide-y divide-border border-b border-border min-[641px]:grid-cols-3 min-[641px]:divide-x min-[641px]:divide-y-0">
-						{view.kind === "one" ? (
-							<>
-								<Figure
-									label="Balance"
-									value={<Usdc value={view.balance} />}
-									unit="USDC"
-								/>
-								<Figure
-									label="Can be moved now"
-									extra={<Help k="movable" />}
-									value={<Usdc value={view.movable} />}
-									unit="USDC"
-								/>
-								<Figure
-									label="In use"
-									extra={<Help k="inUse" />}
-									value={<Usdc value={view.inUse} />}
-									unit="USDC"
-								/>
-							</>
-						) : (
-							<>
-								<Figure
-									label="Perps account value"
-									value={<Usdc value={view.perpsValue} />}
-									unit="USDC"
-								/>
-								<Figure
-									label="Can be moved now"
-									extra={<Help k="movable" />}
-									value={<Usdc value={view.perpsMovable} />}
-									unit="USDC"
-								/>
-								<Figure
-									label="Spot USDC"
-									value={<Usdc value={view.spotUsdc} />}
-									unit="USDC"
-								/>
-							</>
-						)}
-					</dl>
+					<div className="rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm text-muted-foreground">
+						{live.perp === null || live.openOrders === null
+							? reading
+							: "No positions and no open orders."}
+					</div>
 				)}
-				<DataTable
-					label="Spot balances"
-					columns={SPOT}
-					rows={spot}
-					rowKey={key}
-					initialSort={{ id: "total", desc: true }}
-					empty={live.spot === null ? reading : "No spot balances."}
-				/>
-				{staked && (
-					// HYPE that left spot for staking is still the treasury's
-					<p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border px-4 py-2.5 text-[13px]">
-						<span className="text-muted-foreground">In staking:</span>
-						<span>{staked}</span>
-						{treasury && (
-							<Link
-								to="/multisig/t/$network/$address"
-								params={{ network, address }}
-								search={{ tab: "staking" }}
-								className="text-xs underline underline-offset-2"
-							>
-								Staking
-							</Link>
-						)}
-					</p>
-				)}
-				{inVaults && (
-					// USDC that went into a vault is still the treasury's
-					<p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border px-4 py-2.5 text-[13px]">
-						<span className="text-muted-foreground">In vaults:</span>
-						<span>{inVaults}</span>
-						{treasury && (
-							<Link
-								to="/multisig/t/$network/$address"
-								params={{ network, address }}
-								search={{ tab: "vaults" }}
-								className="text-xs underline underline-offset-2"
-							>
-								Vaults
-							</Link>
-						)}
-					</p>
-				)}
-			</Card>
+			</div>
 
-			{positions.length > 0 && (
-				<Card title="Positions" actions={<Tag>{positions.length}</Tag>} flush>
-					<DataTable
-						label="Open positions"
-						columns={POSITIONS}
-						rows={positions}
-						rowKey={key}
-						initialSort={{ id: "value", desc: true }}
-						empty="No positions."
-					/>
-				</Card>
-			)}
-			{orders.length > 0 && (
-				<Card title="Open orders" actions={<Tag>{orders.length}</Tag>} flush>
-					<DataTable
-						label="Open orders"
-						columns={ORDERS}
-						rows={orders}
-						rowKey={key}
-						initialSort={{ id: "placed", desc: true }}
-						empty="No open orders."
-					/>
-				</Card>
-			)}
-			{positions.length > 0 || orders.length > 0 ? (
-				<p className="mx-0.5 -mt-2 text-xs text-subtle-foreground">
-					Positions and orders are placed by an API wallet, not through
-					proposals. They can only be read here.
-				</p>
-			) : (
-				<div className="rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm text-muted-foreground">
-					{live.perp === null || live.openOrders === null
-						? reading
-						: "No positions and no open orders."}
-				</div>
-			)}
-
-			<div className="grid grid-cols-1 items-start gap-4 min-[861px]:grid-cols-2">
+			<div className="grid min-w-0 grid-cols-1 items-start gap-4 min-[861px]:grid-cols-2 xl:grid-cols-1">
 				<Card
 					title={
 						<span className="inline-flex items-center gap-1.5">
@@ -640,7 +643,7 @@ export function OverviewTab({
 			</div>
 
 			{treasury && (
-				<div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3 text-xs text-muted-foreground">
+				<div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3 text-xs text-muted-foreground xl:col-span-2">
 					<span>
 						{treasury.addedBy === address ? (
 							`${RELAY_COPY.registeredByAccount}, `

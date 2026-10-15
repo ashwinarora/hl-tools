@@ -6,8 +6,9 @@ import { ShellPage } from "./shell/ShellPage";
 export function GlossaryScreen() {
 	return (
 		<ShellPage title={GLOSSARY_TITLE} meta={<span>{GLOSSARY_META}</span>}>
-			<Card>
-				<dl className="grid max-w-3xl grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-[minmax(9rem,max-content)_minmax(0,1fr)]">
+			{/* a reading width: the card ends where the definitions do */}
+			<Card className="max-w-3xl">
+				<dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-[minmax(9rem,max-content)_minmax(0,1fr)]">
 					{GLOSSARY.map((t) => (
 						<div key={t.term} className="contents">
 							<dt className="text-sm font-semibold">{t.term}</dt>

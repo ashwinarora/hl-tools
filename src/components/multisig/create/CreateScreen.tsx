@@ -63,6 +63,7 @@ import { Btn, Card, linkButton, NetTag, SignsTag } from "../shell/kit";
 import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
+import { Split } from "../shell/Split";
 import { useDraft } from "../shell/useDraft";
 import { usePageNetwork } from "../shell/usePageNetwork";
 import { useMounted, useShellWallet } from "../shell/WalletBox";
@@ -79,9 +80,12 @@ import { useWalletSigner } from "../useWalletSigner";
 function Page({
 	network,
 	children,
+	wide = false,
 }: {
 	network: Network;
 	children: ReactNode;
+	/** The wizard itself lays out its own two columns; a message stays at reading width. */
+	wide?: boolean;
 }) {
 	return (
 		<ShellPage
@@ -96,7 +100,9 @@ function Page({
 			<p className="-mt-2 mb-4 max-w-[70ch] text-sm text-muted-foreground">
 				{CREATE.meta}
 			</p>
-			<div className="flex max-w-[780px] flex-col gap-4">{children}</div>
+			<div className={cn("flex flex-col gap-4", !wide && "max-w-[780px]")}>
+				{children}
+			</div>
 		</ShellPage>
 	);
 }
@@ -137,7 +143,7 @@ export function CreateScreen({
 
 	if (finished) {
 		return (
-			<Page network={finished.network}>
+			<Page network={finished.network} wide>
 				<Wizard
 					key={`${finished.network}:${finished.account}`}
 					network={finished.network}
@@ -186,7 +192,7 @@ export function CreateScreen({
 		);
 	}
 	return (
-		<Page network={network}>
+		<Page network={network} wide>
 			{/* another account or network is another conversion: nothing carries over */}
 			<Wizard
 				key={`${network}:${account}`}
@@ -477,7 +483,7 @@ function Wizard({
 	if (done) {
 		const signers = done.authorizedUsers;
 		return (
-			<>
+			<div className="flex max-w-[780px] flex-col gap-4">
 				<Callout tone="success" title={CREATE.doneTitle}>
 					{CREATE.done(account, done.threshold, signers.length)}{" "}
 					{CREATE.readBack}
@@ -554,7 +560,7 @@ function Wizard({
 						</div>
 					</div>
 				</Card>
-			</>
+			</div>
 		);
 	}
 
@@ -572,266 +578,280 @@ function Wizard({
 	const busy = step !== null || wallet.busy;
 
 	return (
-		<>
-			<Card title={`1 · ${CREATE.accountTitle}`}>
-				<div className="flex flex-col gap-3">
-					<div>
-						<p className="text-sm font-medium">{CREATE.headline(account)}</p>
-						<p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-							<span className="font-mono text-[13px] [overflow-wrap:anywhere]">
-								{account}
-							</span>
-							<CopyButton value={account} size="xs" />
-						</p>
-					</div>
-					{read.isPending ? (
-						<p
-							className="flex items-center gap-2 text-[13px] text-muted-foreground"
-							aria-busy="true"
-						>
-							<Loader2 className="size-3.5 animate-spin" aria-hidden />
-							Reading the account on {network}…
-						</p>
-					) : accountUnread ? (
-						<p className="flex flex-wrap items-center gap-2 text-[13px] text-warning">
-							{CREATE.unread}
-							<Btn
-								size="sm"
-								variant="outline"
-								onClick={() => void read.refetch()}
-							>
-								Try again
-							</Btn>
-						</p>
-					) : (
-						<>
-							<dl className="flex flex-wrap gap-x-6 gap-y-1.5 text-[13px]">
-								{modeText && (
-									<div className="flex items-center gap-1.5">
-										<dt className="text-muted-foreground">Mode</dt>
-										<dd>{modeText.tag}</dd>
-									</div>
-								)}
-								{perp && (
-									<div className="flex items-center gap-1.5">
-										<dt className="text-muted-foreground">
-											Perps account value
-										</dt>
-										<dd className="font-mono tabular-nums">
-											{perp.marginSummary.accountValue} USDC
-										</dd>
-									</div>
-								)}
-								{spot && (
-									<div className="flex items-center gap-1.5">
-										<dt className="text-muted-foreground">Spot</dt>
-										<dd className="font-mono tabular-nums">
-											{usdc ? usdc.total : "0"} USDC
-											{others > 0 && (
-												<span className="font-sans text-muted-foreground">
-													{" "}
-													and {others} other {others === 1 ? "token" : "tokens"}
-												</span>
-											)}
-										</dd>
-									</div>
-								)}
-							</dl>
-							{aboutAccount && <Lines lines={aboutAccount.lines} />}
-							{withRelay && facts?.multiSig && (
-								// converted earlier (the tab was closed too soon, or another tool was used)
-								<p
-									className={cn(
-										"flex flex-wrap items-center gap-2 text-[13px]",
-										reg.state === "failed"
-											? "text-warning"
-											: "text-muted-foreground",
-									)}
-								>
-									{reg.state === "done"
-										? RELAY_COPY.registered
-										: reg.state === "failed"
-											? RELAY_COPY.registerFailed
-											: reg.state === "asking"
-												? RELAY_COPY.registering
-												: RELAY_COPY.registerSelfBody}
-									{(reg.state === "idle" || reg.state === "failed") && (
-										<Btn
-											size="sm"
-											variant="outline"
-											onClick={() => {
-												retried.current = 0;
-												void register(1);
-											}}
-										>
-											{RELAY_COPY.registerSelfButton}
-										</Btn>
-									)}
+		// the three steps on the left; what it will do and the button beside them, in view
+		<Split
+			from="xl"
+			main={
+				<>
+					<Card title={`1 · ${CREATE.accountTitle}`}>
+						<div className="flex flex-col gap-3">
+							<div>
+								<p className="text-sm font-medium">
+									{CREATE.headline(account)}
 								</p>
-							)}
-						</>
-					)}
-					<p className="flex flex-wrap items-center gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
-						{withRelay ? CREATE.otherAccount : CREATE.otherAccountNoRelay}
-					</p>
-				</div>
-			</Card>
-
-			<Card
-				title={`2 · ${CREATE.signersTitle}`}
-				actions={
-					<span className="text-xs tabular-nums text-muted-foreground">
-						{n} of at most {SIGNERS_MAX}
-					</span>
-				}
-			>
-				<div className="flex flex-col gap-3">
-					{restoredAt !== null && !done && (
-						<p
-							data-draft
-							className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-surface-2 px-2.5 py-2 text-xs text-muted-foreground"
-						>
-							<span>{DRAFT_COPY.restored(restoredAt, now)}</span>
-							<button
-								type="button"
-								disabled={busy}
-								onClick={clearDraft}
-								className="font-medium text-foreground underline underline-offset-2 disabled:opacity-60"
-							>
-								{DRAFT_COPY.clear}
-							</button>
-						</p>
-					)}
-					<PasteBox disabled={busy} note={pasteNote} onAdd={add} />
-					{rows.length === 0 ? (
-						<p className="text-[13px] text-muted-foreground">
-							{CREATE.noSigners}
-						</p>
-					) : (
-						<ul className="flex flex-col">
-							{rows.map((r) => (
-								<SignerLine
-									key={r.address}
-									row={r}
-									disabled={busy}
-									onRemove={() => remove(r.address)}
-									onRecheck={() => recheck(r.address)}
-								/>
-							))}
-						</ul>
-					)}
-					<p className="text-xs text-subtle-foreground">{CREATE.signersNote}</p>
-				</div>
-			</Card>
-
-			<Card
-				title={
-					<span className="inline-flex items-center gap-1.5">
-						3 · {CREATE.howManyTitle}
-						<Help k="stolenLost" />
-					</span>
-				}
-			>
-				<div className="flex flex-col gap-3">
-					{n === 0 ? (
-						<p className="text-[13px] text-muted-foreground">
-							{CREATE.pickFirst}
-						</p>
-					) : (
-						<HowMany n={n} value={k} disabled={busy} onChange={choose} />
-					)}
-					{lines && <ThresholdMeaning lines={lines} />}
-					<p className="text-xs text-subtle-foreground">{CREATE.later}</p>
-				</div>
-			</Card>
-
-			<section className="rounded-[10px] border border-border bg-surface-2 px-4 py-3.5">
-				<h2 className="text-[13px] font-semibold">{CREATE.infoTitle}</h2>
-				<ul className="mt-2 flex list-disc flex-col gap-1.5 pl-4 text-[13px] text-muted-foreground">
-					{CREATE.info.map((t) => (
-						<li key={t}>{t}</li>
-					))}
-				</ul>
-			</section>
-
-			<Card>
-				<div className="flex flex-col gap-3">
-					{set && !blockedBy && (
-						<p className="text-sm">
-							{CREATE.before(
-								account,
-								set.threshold,
-								n,
-								entries.filter(isKeyless).length,
-							)}
-						</p>
-					)}
-					<div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-						<Btn
-							variant="brand"
-							disabled={!!blockedBy || !set || busy}
-							onClick={convert}
-						>
-							{set && n > 0
-								? CREATE.button(account, set.threshold, n)
-								: CREATE.buttonIdle}
-						</Btn>
-						{blockedBy && !step && (
-							<span
-								className={cn(
-									"text-[13px]",
-									judged.pending &&
-										!aboutAccount?.blockedBy &&
-										!judged.blockedBy
-										? "text-muted-foreground"
-										: "text-danger",
-								)}
-							>
-								{blockedBy}
-							</span>
-						)}
-					</div>
-					{step && (
-						<p
-							className="flex items-start gap-2 text-[13px] text-muted-foreground"
-							aria-live="polite"
-						>
-							<Loader2
-								className="mt-0.5 size-3.5 shrink-0 animate-spin"
-								aria-hidden
-							/>
-							{step === "wallet" && set
-								? CREATE.inWallet(set.threshold, n)
-								: step === "sending"
-									? CREATE.sending
-									: CREATE.reading}
-						</p>
-					)}
-					{said && !step && (
-						<Callout
-							tone={said.tone}
-							title={said.title}
-							action={
-								outcome?.kind === "unconfirmed" ||
-								(outcome?.kind === "unanswered" &&
-									outcome.converted !== true) ? (
+								<p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+									<span className="font-mono text-[13px] [overflow-wrap:anywhere]">
+										{account}
+									</span>
+									<CopyButton value={account} size="xs" />
+								</p>
+							</div>
+							{read.isPending ? (
+								<p
+									className="flex items-center gap-2 text-[13px] text-muted-foreground"
+									aria-busy="true"
+								>
+									<Loader2 className="size-3.5 animate-spin" aria-hidden />
+									Reading the account on {network}…
+								</p>
+							) : accountUnread ? (
+								<p className="flex flex-wrap items-center gap-2 text-[13px] text-warning">
+									{CREATE.unread}
 									<Btn
 										size="sm"
 										variant="outline"
-										disabled={rechecking}
-										onClick={() => void lookAgain()}
+										onClick={() => void read.refetch()}
 									>
-										{rechecking ? "Reading…" : CREATE.checkAgain}
+										Try again
 									</Btn>
-								) : undefined
-							}
-						>
-							{said.body}
-						</Callout>
-					)}
-				</div>
-			</Card>
-		</>
+								</p>
+							) : (
+								<>
+									<dl className="flex flex-wrap gap-x-6 gap-y-1.5 text-[13px]">
+										{modeText && (
+											<div className="flex items-center gap-1.5">
+												<dt className="text-muted-foreground">Mode</dt>
+												<dd>{modeText.tag}</dd>
+											</div>
+										)}
+										{perp && (
+											<div className="flex items-center gap-1.5">
+												<dt className="text-muted-foreground">
+													Perps account value
+												</dt>
+												<dd className="font-mono tabular-nums">
+													{perp.marginSummary.accountValue} USDC
+												</dd>
+											</div>
+										)}
+										{spot && (
+											<div className="flex items-center gap-1.5">
+												<dt className="text-muted-foreground">Spot</dt>
+												<dd className="font-mono tabular-nums">
+													{usdc ? usdc.total : "0"} USDC
+													{others > 0 && (
+														<span className="font-sans text-muted-foreground">
+															{" "}
+															and {others} other{" "}
+															{others === 1 ? "token" : "tokens"}
+														</span>
+													)}
+												</dd>
+											</div>
+										)}
+									</dl>
+									{aboutAccount && <Lines lines={aboutAccount.lines} />}
+									{withRelay && facts?.multiSig && (
+										// converted earlier (the tab was closed too soon, or another tool was used)
+										<p
+											className={cn(
+												"flex flex-wrap items-center gap-2 text-[13px]",
+												reg.state === "failed"
+													? "text-warning"
+													: "text-muted-foreground",
+											)}
+										>
+											{reg.state === "done"
+												? RELAY_COPY.registered
+												: reg.state === "failed"
+													? RELAY_COPY.registerFailed
+													: reg.state === "asking"
+														? RELAY_COPY.registering
+														: RELAY_COPY.registerSelfBody}
+											{(reg.state === "idle" || reg.state === "failed") && (
+												<Btn
+													size="sm"
+													variant="outline"
+													onClick={() => {
+														retried.current = 0;
+														void register(1);
+													}}
+												>
+													{RELAY_COPY.registerSelfButton}
+												</Btn>
+											)}
+										</p>
+									)}
+								</>
+							)}
+							<p className="flex flex-wrap items-center gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
+								{withRelay ? CREATE.otherAccount : CREATE.otherAccountNoRelay}
+							</p>
+						</div>
+					</Card>
+
+					<Card
+						title={`2 · ${CREATE.signersTitle}`}
+						actions={
+							<span className="text-xs tabular-nums text-muted-foreground">
+								{n} of at most {SIGNERS_MAX}
+							</span>
+						}
+					>
+						<div className="flex flex-col gap-3">
+							{restoredAt !== null && !done && (
+								<p
+									data-draft
+									className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-surface-2 px-2.5 py-2 text-xs text-muted-foreground"
+								>
+									<span>{DRAFT_COPY.restored(restoredAt, now)}</span>
+									<button
+										type="button"
+										disabled={busy}
+										onClick={clearDraft}
+										className="font-medium text-foreground underline underline-offset-2 disabled:opacity-60"
+									>
+										{DRAFT_COPY.clear}
+									</button>
+								</p>
+							)}
+							<PasteBox disabled={busy} note={pasteNote} onAdd={add} />
+							{rows.length === 0 ? (
+								<p className="text-[13px] text-muted-foreground">
+									{CREATE.noSigners}
+								</p>
+							) : (
+								<ul className="flex flex-col">
+									{rows.map((r) => (
+										<SignerLine
+											key={r.address}
+											row={r}
+											disabled={busy}
+											onRemove={() => remove(r.address)}
+											onRecheck={() => recheck(r.address)}
+										/>
+									))}
+								</ul>
+							)}
+							<p className="text-xs text-subtle-foreground">
+								{CREATE.signersNote}
+							</p>
+						</div>
+					</Card>
+
+					<Card
+						title={
+							<span className="inline-flex items-center gap-1.5">
+								3 · {CREATE.howManyTitle}
+								<Help k="stolenLost" />
+							</span>
+						}
+					>
+						<div className="flex flex-col gap-3">
+							{n === 0 ? (
+								<p className="text-[13px] text-muted-foreground">
+									{CREATE.pickFirst}
+								</p>
+							) : (
+								<HowMany n={n} value={k} disabled={busy} onChange={choose} />
+							)}
+							{lines && <ThresholdMeaning lines={lines} />}
+							<p className="text-xs text-subtle-foreground">{CREATE.later}</p>
+						</div>
+					</Card>
+				</>
+			}
+			side={
+				<>
+					<section className="rounded-[10px] border border-border bg-surface-2 px-4 py-3.5">
+						<h2 className="text-[13px] font-semibold">{CREATE.infoTitle}</h2>
+						<ul className="mt-2 flex list-disc flex-col gap-1.5 pl-4 text-[13px] text-muted-foreground">
+							{CREATE.info.map((t) => (
+								<li key={t}>{t}</li>
+							))}
+						</ul>
+					</section>
+
+					<Card>
+						<div className="flex flex-col gap-3">
+							{set && !blockedBy && (
+								<p className="text-sm">
+									{CREATE.before(
+										account,
+										set.threshold,
+										n,
+										entries.filter(isKeyless).length,
+									)}
+								</p>
+							)}
+							<div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+								<Btn
+									variant="brand"
+									disabled={!!blockedBy || !set || busy}
+									onClick={convert}
+								>
+									{set && n > 0
+										? CREATE.button(account, set.threshold, n)
+										: CREATE.buttonIdle}
+								</Btn>
+								{blockedBy && !step && (
+									<span
+										className={cn(
+											"text-[13px]",
+											judged.pending &&
+												!aboutAccount?.blockedBy &&
+												!judged.blockedBy
+												? "text-muted-foreground"
+												: "text-danger",
+										)}
+									>
+										{blockedBy}
+									</span>
+								)}
+							</div>
+							{step && (
+								<p
+									className="flex items-start gap-2 text-[13px] text-muted-foreground"
+									aria-live="polite"
+								>
+									<Loader2
+										className="mt-0.5 size-3.5 shrink-0 animate-spin"
+										aria-hidden
+									/>
+									{step === "wallet" && set
+										? CREATE.inWallet(set.threshold, n)
+										: step === "sending"
+											? CREATE.sending
+											: CREATE.reading}
+								</p>
+							)}
+							{said && !step && (
+								<Callout
+									tone={said.tone}
+									title={said.title}
+									action={
+										outcome?.kind === "unconfirmed" ||
+										(outcome?.kind === "unanswered" &&
+											outcome.converted !== true) ? (
+											<Btn
+												size="sm"
+												variant="outline"
+												disabled={rechecking}
+												onClick={() => void lookAgain()}
+											>
+												{rechecking ? "Reading…" : CREATE.checkAgain}
+											</Btn>
+										) : undefined
+									}
+								>
+									{said.body}
+								</Callout>
+							)}
+						</div>
+					</Card>
+				</>
+			}
+		/>
 	);
 }
 

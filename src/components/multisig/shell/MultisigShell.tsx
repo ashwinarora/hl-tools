@@ -2,6 +2,7 @@ import type { Address, Network } from "@hl-tools/core";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronDown, ShieldCheck } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
+import { MULTISIG_WRAP } from "#/components/Header";
 import { Callout } from "#/components/hub/status";
 import { tool, toolRuleSets, toolVerifiedAt } from "#/lib/tools";
 import {
@@ -31,6 +32,7 @@ import { useTreasuryNames } from "../treasuryName";
 import { Btn, Count, Tag } from "./kit";
 import { Rail, RailHeading, RailLink } from "./Rail";
 import { BelowTitleProvider } from "./ShellPage";
+import { useStickyTop } from "./useStickyTop";
 import { WalletBox, WalletSummary } from "./WalletBox";
 
 /**
@@ -43,12 +45,17 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 	const relay = useRelay();
 	// every way into the wizard names the network it is for
 	const network = useNetwork();
+	const rail = useStickyTop<HTMLElement>();
 	return (
-		<div className="page-wrap">
-			<div className="grid grid-cols-1 items-start gap-4 pb-12 pt-4 min-[861px]:grid-cols-[252px_minmax(0,1fr)] min-[861px]:gap-7 min-[861px]:pb-16 min-[861px]:pt-6">
+		<div className={MULTISIG_WRAP}>
+			{/* Wider than the hub's pages: the rail stays slim, the screen takes the rest. */}
+			<div className="grid grid-cols-1 items-start gap-4 pb-12 pt-4 min-[861px]:grid-cols-[228px_minmax(0,1fr)] min-[861px]:gap-7 min-[861px]:pb-16 min-[861px]:pt-6 xl:gap-8">
+				{/* The rail stays in view; a long one sticks once its end is reached. */}
 				<aside
+					ref={rail.ref}
+					style={{ top: rail.top }}
 					aria-label="Multisig navigation"
-					className="sticky top-20 hidden flex-col gap-[18px] min-[861px]:flex"
+					className="sticky hidden flex-col gap-4 min-[861px]:flex"
 				>
 					{/* The site's "Skip to content" lands in front of this panel. A keyboard
 					    user then meets this first, and is past the panel in one more press. */}
