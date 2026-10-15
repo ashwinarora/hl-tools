@@ -1,16 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-	TREASURY_TABS,
-	TreasuryScreen,
+	DEFAULT_TREASURY_TAB,
 	type TreasuryTab,
-} from "#/components/multisig/treasury/TreasuryScreen";
+	treasuryTab,
+} from "#/components/multisig/model/tabs";
+import { TreasuryScreen } from "#/components/multisig/treasury/TreasuryScreen";
 
 export const Route = createFileRoute("/multisig/t/$network/$address")({
 	// a network and an account address: public identifiers
 	validateSearch: (s: Record<string, unknown>): { tab?: TreasuryTab } => ({
-		tab: TREASURY_TABS.includes(s.tab as TreasuryTab)
-			? (s.tab as TreasuryTab)
-			: undefined,
+		tab: treasuryTab(s.tab),
 	}),
 	component: TreasuryPage,
 });
@@ -22,7 +21,7 @@ function TreasuryPage() {
 		<TreasuryScreen
 			network={network}
 			address={address}
-			tab={tab ?? "pending"}
+			tab={tab ?? DEFAULT_TREASURY_TAB}
 		/>
 	);
 }

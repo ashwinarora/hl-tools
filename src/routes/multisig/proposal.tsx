@@ -1,19 +1,29 @@
-import type { Issue } from "@hl-tools/core";
+import {
+	type Issue,
+	judgeMove,
+	otherStep,
+	type Proposal,
+	stepNumber,
+} from "@hl-tools/core";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { FileQuestion, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EmptyState } from "#/components/hub/layout";
 import { Callout, IssueList } from "#/components/hub/status";
-import { RELAY_COPY } from "#/components/multisig/model/relay/copy";
+import { saveProposal } from "#/components/multisig/model/history";
+import { gateOthers, RELAY_COPY } from "#/components/multisig/model/relay/copy";
 import {
-	documentFromFragment,
+	documentsFromFragment,
 	openText,
 } from "#/components/multisig/model/transport";
+import { MoveView } from "#/components/multisig/proposal/MoveView";
 import { ProposalView } from "#/components/multisig/proposal/ProposalView";
 import { useProposalDoc } from "#/components/multisig/proposal/useProposalDoc";
 import { useRelay } from "#/components/multisig/relay/useRelay";
 import { Btn, SignsTag } from "#/components/multisig/shell/kit";
 import { ShellPage } from "#/components/multisig/shell/ShellPage";
+import { Slow } from "#/components/multisig/shell/Slow";
+import { useShellWallet } from "#/components/multisig/shell/WalletBox";
 import { clearShared } from "#/lib/share";
 import { useWalletBusy } from "#/store/walletBusyStore";
 
@@ -39,41 +49,142 @@ function ProposalScreen() {
 		| { state: "none" }
 		| { state: "failed"; issues: readonly Issue[] }
 	>({ state: "checking" });
+	/** The further steps a link carried, kept for where this browser cannot store them. */
+	const [arrived, setArrived] = useState<readonly Proposal[]>([]);
+	/** What saving the link's copy left out of it, for the proposal it opened. */
+	const [notes, setNotes] = useState<{
+		readonly digest: string;
+		readonly issues: readonly Issue[];
+	} | null>(null);
 
-	// A link's fragment carries the whole document. Read it once, merge it into the history,
-	// strip it from the address bar and continue under the digest.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: the fragment is read once, on arrival
+	// the latest `store`: a link opened later is shared as the wallet signed in then
+	const storeNow = useRef(store);
+	storeNow.current = store;
+
+	// A link's fragment carries the whole document. Read it on arrival, and again
+	// when another link is opened in this tab (only the fragment changes, so the
+	// page stays): merge it into the history, strip it from the address bar and
+	// continue under the digest as soon as it is saved; the relay hears of it after.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `navigate` is stable and `store` is read through its ref
 	useEffect(() => {
-		const text = documentFromFragment(window.location.hash);
-		if (text === null) {
-			setLink({ state: "none" });
-			return;
-		}
-		clearShared();
-		const decoded = openText(text);
-		if (!decoded.proposal) {
-			setLink({ state: "failed", issues: decoded.issues });
-			return;
-		}
-		let cancelled = false;
-		void store(decoded.proposal).then((saved) => {
-			if (cancelled) return;
-			setLink({ state: "none" });
-			void navigate({
-				to: "/multisig/proposal",
-				search: { digest: saved.proposal.digest },
-				replace: true,
-			});
-		});
+		let run = 0;
+		let gone = false;
+		const open = (arriving: boolean) => {
+			const texts = documentsFromFragment(window.location.hash);
+			if (texts === null) {
+				// another fragment (a "skip to content" link) is not a proposal
+				if (arriving) setLink({ state: "none" });
+				return;
+			}
+			const mine = ++run;
+			clearShared();
+			// one proposal, or the two steps of a move: every one has to open
+			const decoded = texts.map((text) => openText(text));
+			const [first, ...rest] = decoded.flatMap((d) =>
+				d.proposal ? [d.proposal] : [],
+			);
+			if (!first || rest.length + 1 !== decoded.length) {
+				setLink({
+					state: "failed",
+					issues: decoded.flatMap((d) => (d.proposal ? [] : d.issues)),
+				});
+				return;
+			}
+			setLink({ state: "checking" });
+			setArrived(rest);
+			void (async () => {
+				// the other step first, so the page finds the move whole when it opens;
+				// where nothing can be stored, `arrived` is the copy the page shows
+				for (const other of rest) await saveProposal(other).catch(() => null);
+				const saved = await storeNow.current(first, { pushLater: true });
+				if (gone || mine !== run) return;
+				setNotes({ digest: saved.proposal.digest, issues: saved.issues });
+				setLink({ state: "none" });
+				void navigate({
+					to: "/multisig/proposal",
+					search: { digest: saved.proposal.digest },
+					replace: true,
+				});
+			})();
+		};
+		open(true);
+		const again = () => open(false);
+		window.addEventListener("hashchange", again);
 		return () => {
-			cancelled = true;
+			gone = true;
+			window.removeEventListener("hashchange", again);
 		};
 	}, []);
 
-	if (doc.proposal && link.state !== "failed")
+	// A proposal that says it is one step of a move: the other step is opened
+	// too, and the two are shown as one page when they bear the claim out.
+	const otherDigest = doc.proposal ? otherStep(doc.proposal) : null;
+	const copyNotes =
+		notes && notes.digest === doc.proposal?.digest ? notes.issues : undefined;
+	const other = useProposalDoc(
+		otherDigest ?? undefined,
+		arrived.find((p) => p.digest === otherDigest) ?? null,
+	);
+	if (doc.proposal && link.state !== "failed") {
+		if (otherDigest && other.loading && !other.proposal)
+			return (
+				<ShellPage title="Proposal" meta={<SignsTag />}>
+					<Slow>
+						<div
+							className="flex items-center gap-2 text-sm text-muted-foreground"
+							aria-busy="true"
+						>
+							<Loader2 className="size-4 animate-spin" aria-hidden /> Opening
+							both steps…
+						</div>
+					</Slow>
+				</ShellPage>
+			);
+		// who proposed each is the relay's word where it has both, never the documents'
+		const rows = [doc.relay.row, other.relay.row] as const;
+		const judged = other.proposal
+			? judgeMove(
+					doc.proposal,
+					other.proposal,
+					rows[0] && rows[1]
+						? { a: rows[0].createdBy, b: rows[1].createdBy }
+						: undefined,
+				)
+			: null;
+		if (judged?.move) {
+			const firstIsThis = judged.move.steps[0].digest === doc.proposal.digest;
+			return (
+				<MoveView
+					move={judged.move}
+					notes={copyNotes}
+					docs={firstIsThis ? [doc, other] : [other, doc]}
+					issues={
+						firstIsThis
+							? [doc.issues, other.issues]
+							: [other.issues, doc.issues]
+					}
+				/>
+			);
+		}
 		return (
-			<ProposalView proposal={doc.proposal} issues={doc.issues} doc={doc} />
+			<ProposalView
+				proposal={doc.proposal}
+				issues={doc.issues}
+				doc={doc}
+				notes={copyNotes}
+				aside={
+					otherDigest
+						? {
+								title: `This says it is step ${stepNumber(doc.proposal)} of a move of two steps`,
+								body: other.proposal
+									? "The other step is here too, but the two do not bear that out (they differ in treasury, finaliser or proposer, or are not two steps of one move), so each is shown by itself."
+									: "The other step is not in this browser, so this one is shown by itself. Open the other step's link or file to see the move as one.",
+							}
+						: undefined
+				}
+			/>
 		);
+	}
 
 	return (
 		<ShellPage title="Proposal" meta={<SignsTag />}>
@@ -87,16 +198,33 @@ function ProposalScreen() {
 						</Link>
 					}
 				>
-					<IssueList issues={link.issues} />
+					<IssueList plain issues={link.issues} />
 				</Callout>
 			) : link.state === "checking" || doc.loading ? (
-				<div
-					className="flex items-center gap-2 text-sm text-muted-foreground"
-					aria-busy="true"
+				<Slow
+					wayOut={
+						<>
+							<Btn
+								size="sm"
+								variant="outline"
+								onClick={() => window.location.reload()}
+							>
+								Reload the page
+							</Btn>
+							<Link to="/multisig/open" className={backLink}>
+								Open from a link or file
+							</Link>
+						</>
+					}
 				>
-					<Loader2 className="size-4 animate-spin" aria-hidden /> Opening the
-					proposal…
-				</div>
+					<div
+						className="flex items-center gap-2 text-sm text-muted-foreground"
+						aria-busy="true"
+					>
+						<Loader2 className="size-4 animate-spin" aria-hidden /> Opening the
+						proposal…
+					</div>
+				</Slow>
 			) : (
 				<Missing
 					digest={digest}
@@ -125,6 +253,7 @@ function Missing({
 }) {
 	const relay = useRelay();
 	const busy = useWalletBusy((b) => b.busy);
+	const { connected } = useShellWallet();
 	const open = (
 		<Link to="/multisig/open" className={backLink}>
 			Open a proposal
@@ -150,16 +279,16 @@ function Missing({
 				{refused ? (
 					<EmptyState
 						icon={FileQuestion}
-						title="The relay's copy of this proposal does not verify"
-						description="This browser checks every document against its digest before showing it, and this one does not match, so it was ignored. Ask whoever proposed it for the link or the file, and paste it on the start page."
+						title="The shared copy of this proposal did not pass this browser's check"
+						description="This browser checks every proposal before showing it, and this copy does not match what it claims to be, so it was ignored. Ask whoever proposed it for the link or the file, and paste it on the start page."
 						sample={digest}
 						action={open}
 					/>
 				) : (
 					<EmptyState
 						icon={FileQuestion}
-						title="No proposal with that digest, here or on the relay"
-						description="This browser has not seen it, and the relay has none your wallet can open: it was never shared, or your wallet is not a signer of its treasury in the relay's copy of the signer list. If you were sent the document, paste it on the start page."
+						title="This proposal is not here"
+						description="This browser has not seen it, and none of your shared proposals matches. Ask whoever sent it for the link or the file, and paste it on the start page."
 						sample={digest}
 						action={open}
 					/>
@@ -172,7 +301,7 @@ function Missing({
 						{relayIssue.fix}
 					</Callout>
 				)}
-				{issues.length > 0 && <IssueList issues={issues} />}
+				{issues.length > 0 && <IssueList plain issues={issues} />}
 			</div>
 		);
 	}
@@ -180,8 +309,8 @@ function Missing({
 		return (
 			<EmptyState
 				icon={FileQuestion}
-				title="This browser has no proposal with that digest"
-				description="Proposals live in the link or file you were sent, and in the history of the browser that opened them. Open the link again, or paste the document on the start page."
+				title="This proposal is not here"
+				description="Proposals travel in the link or file you were sent, and stay in the browser that opened them. Open the link again, or paste the document on the start page."
 				sample={digest}
 				action={open}
 			/>
@@ -190,14 +319,14 @@ function Missing({
 	return (
 		<EmptyState
 			icon={FileQuestion}
-			title="This browser has no proposal with that digest"
+			title="This proposal is not here"
 			description={
 				relay.mode === "restoring"
 					? "Checking your session…"
 					: relay.mode === "unreachable"
 						? RELAY_COPY.unreachable
-						: relay.mode === "suspended"
-							? `${RELAY_COPY.suspended} Sign in with the connected wallet to open it, or paste the document.`
+						: relay.others.length > 0
+							? `${gateOthers(relay.others.length, connected)} Or paste the document you were sent.`
 							: "Sign in to open it, or paste the document you were sent."
 			}
 			sample={digest}
@@ -213,7 +342,9 @@ function Missing({
 								? "Waiting for your wallet…"
 								: RELAY_COPY.signInButton}
 						</Btn>
-					) : null}
+					) : (
+						<Slow>{null}</Slow>
+					)}
 					{open}
 				</div>
 			}

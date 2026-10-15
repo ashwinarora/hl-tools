@@ -8,7 +8,8 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 const config = defineConfig({
 	plugins: [
-		devtools(),
+		// the browser console stays in the browser: the pipe sent every log through the dev server
+		devtools({ consolePiping: { enabled: false } }),
 		nitro({ rollupConfig: { external: [/^@sentry\//] } }),
 		tsconfigPaths({ projects: ["./tsconfig.json"] }),
 		tailwindcss(),

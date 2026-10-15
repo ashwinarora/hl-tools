@@ -1,6 +1,6 @@
 import type { Address, Network } from "@hl-tools/core";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ArrowUpRight, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ShieldCheck } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { Callout } from "#/components/hub/status";
 import { tool, toolRuleSets, toolVerifiedAt } from "#/lib/tools";
@@ -11,8 +11,17 @@ import {
 } from "#/store/multisigPrefsStore";
 import { useNetworkHint } from "#/store/networkHintStore";
 import { useNetwork } from "#/store/networkStore";
+import { AwayKeeper } from "../away/AwayKeeper";
+import { useAway } from "../away/useAway";
+import { CREATE } from "../model/create";
+import { GLOSSARY_TITLE } from "../model/guide";
 import { RELAY_COPY } from "../model/relay/copy";
-import { countNeeds, countOpen } from "../model/relay/inbox";
+import {
+	countNeeds,
+	countOpen,
+	SECTION_TITLE,
+	tabTitle,
+} from "../model/relay/inbox";
 import { shortAddress } from "../model/stage";
 import { relayConfig } from "../relay/config";
 import { useOpenProposals } from "../relay/openProposals";
@@ -21,7 +30,8 @@ import { useRelay } from "../relay/useRelay";
 import { useTreasuryNames } from "../treasuryName";
 import { Btn, Count, Tag } from "./kit";
 import { Rail, RailHeading, RailLink } from "./Rail";
-import { WalletBox } from "./WalletBox";
+import { BelowTitleProvider } from "./ShellPage";
+import { WalletBox, WalletSummary } from "./WalletBox";
 
 /**
  * The Multisig section's own frame inside the hub: the hub's top bar stays,
@@ -31,6 +41,8 @@ import { WalletBox } from "./WalletBox";
  */
 export function MultisigShell({ children }: { children: ReactNode }) {
 	const relay = useRelay();
+	// every way into the wizard names the network it is for
+	const network = useNetwork();
 	return (
 		<div className="page-wrap">
 			<div className="grid grid-cols-1 items-start gap-4 pb-12 pt-4 min-[861px]:grid-cols-[252px_minmax(0,1fr)] min-[861px]:gap-7 min-[861px]:pb-16 min-[861px]:pt-6">
@@ -38,23 +50,48 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 					aria-label="Multisig navigation"
 					className="sticky top-20 hidden flex-col gap-[18px] min-[861px]:flex"
 				>
+					{/* The site's "Skip to content" lands in front of this panel. A keyboard
+					    user then meets this first, and is past the panel in one more press. */}
+					<a
+						href="#multisig-main"
+						className="sr-only focus:not-sr-only focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-brand"
+					>
+						Skip the Multisig navigation
+					</a>
 					<Rail
 						foot={
-							<RailLink to="/multisig/open">
-								{relay.mode === "on"
-									? "Open a file or link"
-									: "Open or start a proposal"}
-							</RailLink>
+							<>
+								<RailLink to="/multisig/open">
+									{relay.mode === "on"
+										? "Open a file or link"
+										: "Open or start a proposal"}
+								</RailLink>
+								{/* with a relay the wizard is reached from the signed-in list */}
+								{relay.mode === "off" && (
+									<RailLink to="/multisig/create" search={{ network }}>
+										{CREATE.title}
+									</RailLink>
+								)}
+							</>
 						}
 					>
 						{relay.mode === "on" && <RailNav />}
 					</Rail>
 				</aside>
-				<main className="min-w-0">
+				<main id="multisig-main" tabIndex={-1} className="min-w-0 outline-none">
 					{relay.mode === "on" && <NetworkHint />}
-					<MobileBar />
-					<FirstUse />
-					{children}
+					{relay.mode === "on" && <AwayKeeper />}
+					{relay.mode === "on" && <TitleCount />}
+					<BelowTitleProvider
+						value={
+							<>
+								<MobileBar />
+								<FirstUse />
+							</>
+						}
+					>
+						{children}
+					</BelowTitleProvider>
 					<ShellFoot />
 				</main>
 			</div>
@@ -73,6 +110,9 @@ function useNav() {
 	const hydrated = usePrefsHydrated();
 	const hidden = useMultisigPrefs((s) => s.hidden);
 	const seen = useMultisigPrefs((s) => s.seen);
+	const away = useAway("none");
+	const unread = (n: Network, a: Address) =>
+		away.groups.some((g) => g.network === n && g.treasury === a);
 	const isHidden = (n: Network, a: Address) =>
 		hydrated && hidden.includes(treasuryKey(n, a));
 	const visible = items.filter((p) => !isHidden(p.network, p.treasury));
@@ -83,6 +123,8 @@ function useNav() {
 			name: nameOf(t.network, t.address),
 			needs: me ? countNeeds(visible, me, t.network, t.address) : 0,
 			open: countOpen(visible, t.network, t.address),
+			// something finished or changed here since the signer's last "Got it"
+			unread: unread(t.network, t.address),
 			// added by someone else and never opened here: say so
 			fresh:
 				hydrated &&
@@ -96,9 +138,22 @@ function useNav() {
 		loading,
 		issue,
 		needs: me ? countNeeds(visible, me, network) : 0,
+		unread: away.groups.length > 0,
 		/** Something needs the wallet on the network that is not selected. */
 		elsewhere: me && countNeeds(visible, me, other) > 0 ? other : null,
 	};
+}
+
+/** The small mark next to a destination where something changed since the signer's last "Got it". */
+function UnreadDot() {
+	return (
+		<span
+			title={RELAY_COPY.awayDot}
+			className="size-2 shrink-0 rounded-full bg-info"
+		>
+			<span className="sr-only">{RELAY_COPY.awayDot}</span>
+		</span>
+	);
 }
 
 /** Signed in: the inbox, then the wallet's treasuries on the header's network. */
@@ -111,7 +166,10 @@ function RailNav() {
 					to="/multisig"
 					exact
 					trailing={
-						<Count n={nav.needs} quiet={nav.needs === 0} label="need you" />
+						<>
+							{nav.unread && <UnreadDot />}
+							<Count n={nav.needs} quiet={nav.needs === 0} label="need you" />
+						</>
 					}
 				>
 					Needs you
@@ -131,13 +189,16 @@ function RailNav() {
 									: "no longer a multi-sig"
 							}`}
 							trailing={
-								t.needs > 0 ? (
-									<Count n={t.needs} label="need you" />
-								) : t.fresh ? (
-									<Tag tone="info">new</Tag>
-								) : t.open > 0 ? (
-									<Count n={t.open} quiet label="pending" />
-								) : null
+								<>
+									{t.unread && <UnreadDot />}
+									{t.needs > 0 ? (
+										<Count n={t.needs} label="need you" />
+									) : t.fresh ? (
+										<Tag tone="info">new</Tag>
+									) : t.open > 0 ? (
+										<Count n={t.open} quiet label="pending" />
+									) : null}
+								</>
 							}
 						>
 							{t.name}
@@ -152,7 +213,10 @@ function RailNav() {
 									: `None on ${nav.network} yet.`}
 						</span>
 					)}
-					<RailLink to="/multisig/add">+ Add a treasury</RailLink>
+					<RailLink to="/multisig/create" search={{ network: nav.network }}>
+						+ {CREATE.title}
+					</RailLink>
+					<RailLink to="/multisig/add">+ {RELAY_COPY.addExisting}</RailLink>
 				</nav>
 			</div>
 		</>
@@ -169,9 +233,11 @@ function MobileSwitcher() {
 			?.address ??
 		(path === "/multisig/add"
 			? "__add"
-			: path === "/multisig"
-				? ""
-				: "__other");
+			: path === "/multisig/create"
+				? "__create"
+				: path === "/multisig"
+					? ""
+					: "__other");
 	return (
 		<select
 			name="multisig-go-to"
@@ -180,6 +246,11 @@ function MobileSwitcher() {
 			onChange={(e) => {
 				const v = e.target.value;
 				if (v === "__add") void navigate({ to: "/multisig/add" });
+				else if (v === "__create")
+					void navigate({
+						to: "/multisig/create",
+						search: { network: nav.network },
+					});
 				else if (v === "") void navigate({ to: "/multisig" });
 				else if (v !== "__other")
 					void navigate({
@@ -187,10 +258,12 @@ function MobileSwitcher() {
 						params: { network: nav.network, address: v },
 					});
 			}}
-			className="h-9 w-full min-w-0 rounded-md border border-border-strong bg-surface px-2.5 text-sm"
+			className="h-11 w-full min-w-0 rounded-md border border-border-strong bg-surface px-2.5 text-sm sm:h-9"
 		>
 			{here === "__other" && <option value="__other">Go to…</option>}
-			<option value="">Needs you ({nav.needs})</option>
+			<option value="">
+				Needs you ({nav.needs}){nav.unread ? " · something changed" : ""}
+			</option>
 			{nav.treasuries.map((t) => (
 				<option key={t.address} value={t.address}>
 					{t.name} ·{" "}
@@ -198,9 +271,11 @@ function MobileSwitcher() {
 						? `${t.threshold} of ${t.signers.length}`
 						: "no longer a multi-sig"}
 					{t.needs > 0 ? ` · ${t.needs} need you` : ""}
+					{t.unread ? " · something changed" : ""}
 				</option>
 			))}
-			<option value="__add">+ Add a treasury</option>
+			<option value="__create">+ {CREATE.title}</option>
+			<option value="__add">+ {RELAY_COPY.addExisting}</option>
 		</select>
 	);
 }
@@ -216,20 +291,77 @@ function NetworkHint() {
 	return null;
 }
 
-/** Below the rail's breakpoint the identity box sits above the screen, with the way to links and files. */
+/**
+ * Puts what needs the signer into the browser tab's title, "(3) Multisig —
+ * hl-tools", so a tab in the background says there is something to do. No
+ * notification is sent anywhere. The plain title returns when the count is
+ * zero, when the signer signs out, and (the router's doing) outside the section.
+ */
+function TitleCount() {
+	const nav = useNav();
+	const path = useRouterState({ select: (s) => s.location.pathname });
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `path` re-applies the title after the router rewrote it on navigation
+	useEffect(() => {
+		document.title = tabTitle(nav.needs);
+	}, [nav.needs, path]);
+	useEffect(
+		() => () => {
+			// still inside the section (signed out, wallet switched): back to the plain title
+			if (window.location.pathname.startsWith("/multisig"))
+				document.title = SECTION_TITLE;
+		},
+		[],
+	);
+	return null;
+}
+
+/**
+ * Below the rail's breakpoint, one line under the page's title: who is
+ * connected and in what state. The rail's contents (the wallet box, the way
+ * to every treasury, links and files) are behind "Menu", which closes again
+ * when the page changes.
+ */
 function MobileBar() {
 	const relay = useRelay();
+	const network = useNetwork();
+	const path = useRouterState({ select: (s) => s.location.pathname });
 	return (
-		<div className="mb-4 flex flex-col gap-2 min-[861px]:hidden">
-			<WalletBox />
-			{relay.mode === "on" && <MobileSwitcher />}
-			<Link
-				to="/multisig/open"
-				className="self-end text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
-			>
-				Open or start a proposal
-			</Link>
-		</div>
+		<details
+			key={path}
+			className="group mb-4 rounded-[10px] border border-border bg-surface min-[861px]:hidden"
+		>
+			<summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 [&::-webkit-details-marker]:hidden">
+				<WalletSummary />
+				<span className="flex shrink-0 items-center gap-1 text-[13px] font-medium text-muted-foreground">
+					Menu
+					<ChevronDown
+						className="size-4 transition-transform group-open:rotate-180"
+						aria-hidden
+					/>
+				</span>
+			</summary>
+			<div className="flex flex-col gap-2 border-t border-border p-3">
+				<WalletBox />
+				{relay.mode === "on" && <MobileSwitcher />}
+				<span className="flex flex-wrap gap-x-4 gap-y-1">
+					{relay.mode === "off" && (
+						<Link
+							to="/multisig/create"
+							search={{ network }}
+							className="inline-flex min-h-11 items-center text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+						>
+							{CREATE.title}
+						</Link>
+					)}
+					<Link
+						to="/multisig/open"
+						className="inline-flex min-h-11 items-center text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+					>
+						Open or start a proposal
+					</Link>
+				</span>
+			</div>
+		</details>
 	);
 }
 
@@ -254,9 +386,7 @@ function FirstUse() {
 				</Btn>
 			}
 		>
-			{relayConfig()
-				? RELAY_COPY.firstUseBody
-				: "Proposals are signed with your wallet and submitted to Hyperliquid from this browser. No server holds anything: a proposal travels as a link or a file, and every signature is verified locally before anything is sent. Rehearse on testnet first."}
+			{relayConfig() ? RELAY_COPY.firstUseBody : RELAY_COPY.firstUseBodySolo}
 		</Callout>
 	);
 }
@@ -290,6 +420,12 @@ function ShellFoot() {
 			<span className="font-mono text-2xs text-subtle-foreground">
 				rules: {rules.map((r) => `${r.id}@${r.version}`).join(" · ")}
 			</span>
+			<Link
+				to="/multisig/glossary"
+				className="hover:text-foreground hover:underline"
+			>
+				{GLOSSARY_TITLE}
+			</Link>
 			{relayConfig() && (
 				<Link to="/privacy" className="hover:text-foreground hover:underline">
 					{RELAY_COPY.smallPrintLink}

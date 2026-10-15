@@ -1,17 +1,25 @@
 import { Link } from "@tanstack/react-router";
+import { useNetwork } from "#/store/networkStore";
 import { useWalletBusy } from "#/store/walletBusyStore";
+import { CREATE } from "../model/create";
+import { FIRST_RUN, START } from "../model/guide";
 import { RELAY_COPY } from "../model/relay/copy";
 import { useRelay } from "../relay/useRelay";
+import { Help } from "../shell/Help";
 import { Btn, Card, linkButton, SignsTag } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
+import { Slow } from "../shell/Slow";
 import { SmallPrint } from "../shell/WalletBox";
+import { FirstRun } from "./FirstRun";
 
 /**
- * What the section says to someone who is not signed in: the two ways to use
- * it, side by side. Signing in is offered, never required.
+ * What the section says to someone who is not signed in: how it works (until
+ * hidden), the two ways to use it side by side, and the two ways in that need
+ * no wallet at all. Signing in is offered, never required.
  */
 export function Landing() {
 	const relay = useRelay();
+	const network = useNetwork();
 	const busy = useWalletBusy((b) => b.busy);
 	const waiting = relay.mode === "restoring";
 	return (
@@ -24,6 +32,9 @@ export function Landing() {
 				</>
 			}
 		>
+			<div className="mb-4">
+				<FirstRun sharing />
+			</div>
 			<div className="grid grid-cols-1 items-start gap-4 min-[861px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
 				<Card title={RELAY_COPY.teamTitle}>
 					<div className="flex flex-col gap-4">
@@ -43,6 +54,7 @@ export function Landing() {
 										: RELAY_COPY.signInButton}
 							</Btn>
 						</div>
+						{waiting && !relay.signingIn && <Slow>{null}</Slow>}
 						{relay.issue && (
 							<p
 								role="alert"
@@ -57,7 +69,8 @@ export function Landing() {
 							</p>
 						)}
 						<span className="text-xs text-subtle-foreground">
-							{RELAY_COPY.teamSmall} <SmallPrint className="text-xs" />
+							{RELAY_COPY.teamSmall} <Help k="signIn" />{" "}
+							<SmallPrint className="text-xs" />
 						</span>
 					</div>
 				</Card>
@@ -73,7 +86,47 @@ export function Landing() {
 						</div>
 					</div>
 				</Card>
+				<Card title={CREATE.title}>
+					<div className="flex flex-col gap-4">
+						<span className="text-sm text-muted-foreground">
+							{START.createBody}
+						</span>
+						<div className="flex flex-wrap items-center gap-2">
+							<Link
+								to="/multisig/create"
+								search={{ network }}
+								className={linkButton}
+							>
+								{CREATE.title}
+							</Link>
+						</div>
+					</div>
+				</Card>
+				<Card title={START.lookTitle}>
+					<div className="flex flex-col gap-4">
+						<span className="text-sm text-muted-foreground">
+							{START.lookBody}
+						</span>
+						<div className="flex flex-wrap items-center gap-2">
+							<Link
+								to="/tools/multisig"
+								search={{ view: "account" }}
+								className={linkButton}
+							>
+								{START.lookButton}
+							</Link>
+						</div>
+					</div>
+				</Card>
 			</div>
+			<p className="mt-4 text-[13px] text-muted-foreground">
+				<Link
+					to="/multisig/glossary"
+					className="underline underline-offset-2 hover:text-foreground"
+				>
+					{FIRST_RUN.glossary}
+				</Link>
+			</p>
 		</ShellPage>
 	);
 }

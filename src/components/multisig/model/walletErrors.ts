@@ -49,7 +49,7 @@ export function describeWalletError(
 	if (links.some((x) => nameOf(x) === "SwitchChainNotSupportedError"))
 		return {
 			kind: "switch-unsupported",
-			message: `This wallet cannot switch chains from a page. Switch${to} in the wallet, then retry.`,
+			message: `Your wallet cannot switch networks for this page. Open your wallet, switch${to || " to the network this page asks for"}, then press the button again.`,
 		};
 	if (
 		links.some(
@@ -58,11 +58,35 @@ export function describeWalletError(
 	)
 		return {
 			kind: "chain-unknown",
-			message: `The wallet does not know this chain and would not add it. Add it${to ? ` (${chainLabel})` : ""} in the wallet, then retry.`,
+			message: `Your wallet does not know this network and would not add it. Add it${to ? ` (${chainLabel})` : ""} in your wallet, then press the button again.`,
 		};
 	const short = (links[0] as { shortMessage?: unknown })?.shortMessage;
 	return {
 		kind: "other",
 		message: typeof short === "string" && short ? short : messageOf(e),
 	};
+}
+
+const DECLINED = /user (rejected|denied)|rejected the request|declined|denied/i;
+const SIGNER_PREFIX = /^The signer refused or failed: /;
+
+/**
+ * A signature the wallet did not give, as the core reports it ("The signer
+ * refused or failed: …"), said once and plainly: a refusal or a closed
+ * window as that, with what it means for the page (`after`); anything else
+ * with the wallet's own words.
+ */
+export function signerFailure<
+	T extends { readonly code: string; readonly message: string },
+>(issues: readonly T[], after: string): T[] {
+	return issues.map((i) =>
+		i.code !== "signer.failed"
+			? i
+			: {
+					...i,
+					message: DECLINED.test(i.message)
+						? `Your wallet did not sign (declined or closed). ${after}`
+						: `Your wallet did not sign: ${i.message.replace(SIGNER_PREFIX, "")}`,
+				},
+	);
 }

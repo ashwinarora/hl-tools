@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { prepareInnerAction, riskFlags } from "../../src/multisig/index.ts";
+import {
+	isAgentRemoval,
+	prepareInnerAction,
+	riskFlags,
+} from "../../src/multisig/index.ts";
 import { USER_SIGNED_SPECS } from "../../src/rules/signing.ts";
 import { A, B, codes, NONCE, ORDER, RECIPIENT, usdSend } from "./_helpers.ts";
 
@@ -422,6 +426,21 @@ describe("prepareInnerAction: user-signed strictness", () => {
 describe("risk flags", () => {
 	it("flag.per-action-type", () => {
 		expect(riskFlags({ type: "approveAgent" })).toEqual(["agent_bypass"]);
+		expect(riskFlags({ type: "approveAgent", agentAddress: B })).toEqual([
+			"agent_bypass",
+		]);
+		// the zero address approves nobody: it removes the wallet of that name
+		const removal = {
+			type: "approveAgent",
+			agentAddress: `0x${"0".repeat(40)}`,
+			agentName: "lab",
+		};
+		expect(isAgentRemoval(removal)).toBe(true);
+		expect(riskFlags(removal)).toEqual([]);
+		expect(isAgentRemoval({ ...removal, agentName: "" })).toBe(true);
+		expect(isAgentRemoval({ ...removal, agentAddress: B })).toBe(false);
+		expect(isAgentRemoval({ type: "approveAgent" })).toBe(false);
+		expect(isAgentRemoval({ ...removal, type: "usdSend" })).toBe(false);
 		expect(
 			riskFlags({ type: "convertToMultiSigUser", signers: "null" }),
 		).toEqual(["destructive"]);

@@ -1,11 +1,16 @@
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useHandoffStore } from "#/store/handoffStore";
 import { useNetwork } from "#/store/networkStore";
 import { HistoryList } from "./HistoryList";
+import { FirstRun } from "./inbox/FirstRun";
+import { CREATE } from "./model/create";
+import { START } from "./model/guide";
 import { OpenProposal } from "./OpenProposal";
+import { useRelay } from "./relay/useRelay";
 import { StartProposal } from "./StartProposal";
-import { NetTag, SignsTag } from "./shell/kit";
+import { linkButton, NetTag, SignsTag } from "./shell/kit";
 import { ShellPage } from "./shell/ShellPage";
 import { useMounted } from "./shell/WalletBox";
 
@@ -22,6 +27,8 @@ export function OpenScreen() {
 	// A proposal pasted on the home page or sent over from the inspector arrives in memory,
 	// never in the URL.
 	const [handed, setHanded] = useState<string | null>(null);
+	// with a relay the wizard is offered to a signed-in wallet, in its list
+	const noRelay = useRelay().mode === "off";
 	useEffect(() => {
 		const value = take("multisig-sign");
 		if (value) setHanded(value);
@@ -37,7 +44,33 @@ export function OpenScreen() {
 					<SignsTag />
 				</>
 			}
+			actions={
+				noRelay ? (
+					<>
+						<Link
+							to="/tools/multisig"
+							search={{ view: "account" }}
+							className={linkButton}
+						>
+							{START.lookTitle}
+						</Link>
+						<Link
+							to="/multisig/create"
+							search={{ network }}
+							className={linkButton}
+						>
+							{CREATE.title}
+						</Link>
+					</>
+				) : undefined
+			}
 		>
+			{/* a build with no sign-in: this is the start page, so it says how this works */}
+			{noRelay && (
+				<div className="mb-4">
+					<FirstRun sharing={false} />
+				</div>
+			)}
 			<div className="grid gap-4 lg:grid-cols-2">
 				<StartProposal wallet={address} />
 				<div className="space-y-4">

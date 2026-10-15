@@ -356,6 +356,37 @@ describe("trace replays (recorded from live networks)", () => {
 		expect(t.transfers[0]?.findings[0]?.tone).toBe("warn");
 		expect(t.transfers[0]?.findings[0]?.title).toBe("Not credited yet");
 	});
+	it("a transfer to the system address of a token with an index above 255 is seen, and flagged when it is not the token's own", async () => {
+		const { f, rpc, info } = replay("testnet-deposit-dropped");
+		// HYPE's system address by index on testnet (1105 = 0x451)
+		const other = "0x2000000000000000000000000000000000000451";
+		const t = await traceTransaction(f.network, f.tx, {
+			rpc: async (m, p) => {
+				const ex = await rpc(m, p);
+				if (m !== "eth_getTransactionReceipt") return ex;
+				const receipt = structuredClone(ex.result) as {
+					logs: { topics: string[] }[];
+				};
+				for (const l of receipt.logs)
+					if (l.topics[2]?.endsWith(`20${"0".repeat(38)}`))
+						l.topics[2] = `0x${"0".repeat(24)}${other.slice(2)}`;
+				return { ...ex, result: receipt };
+			},
+			info,
+			universe: universes.testnet,
+			now: () => Date.now(),
+		});
+		if (t.kind !== "ok") throw new Error(t.kind);
+		expect(t.transfers).toHaveLength(1);
+		expect(t.transfers[0]?.transfer.to).toBe(other);
+		expect(t.transfers[0]?.transfer.systemAddressMatches).toBe(false);
+		expect(t.transfers[0]?.observed.headline).toBe(
+			"Sent to another token's system address",
+		);
+		expect(t.transfers[0]?.findings[0]?.title).toBe(
+			"Wrong system address for this token",
+		);
+	});
 	it("two EVM → Core transfers in one transaction are reported separately", async () => {
 		const { f, rpc, info } = replay("testnet-deposit-multi");
 		const t = await traceTransaction(f.network, f.tx, {

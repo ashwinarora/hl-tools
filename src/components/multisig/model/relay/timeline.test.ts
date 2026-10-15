@@ -6,6 +6,7 @@ import type { EventRow } from "./rows";
 import {
 	buildTimeline,
 	entryText,
+	historyCsv,
 	historyExport,
 	historyFilename,
 } from "./timeline";
@@ -40,23 +41,86 @@ describe("buildTimeline", () => {
 			}),
 		];
 		expect(texts(events)).toEqual([
-			`Send 120 USDC to 0x9a01…77c2 was accepted by Hyperliquid. Submitted by ${short(C)}.`,
+			`Send 120 USDC to 0x9a01…77c2 was accepted by Hyperliquid. Sent by ${short(C)}.`,
 			`${short(C)} signed Send 120 USDC to 0x9a01…77c2.`,
 			`You proposed Send 120 USDC to 0x9a01…77c2 and signed. Finaliser: ${short(C)}.`,
 		]);
+		// only the report of acceptance is checked against Hyperliquid's record
+		expect(buildTimeline(events, ctx()).map((e) => e.accepted ?? null)).toEqual(
+			[[D1], null, null],
+		);
 	});
 
-	it("marks the action line, and only it, as the strong part", () => {
+	it("marks no rejected submission, and none without a proposal, for the record check", () => {
+		const entries = buildTimeline(
+			[
+				eventRow("submission_recorded", {
+					id: 1,
+					digest: D1,
+					actor: C,
+					data: { accepted: false, http_status: 200 },
+				}),
+				eventRow("submission_recorded", {
+					id: 2,
+					digest: null,
+					actor: C,
+					data: { accepted: true },
+				}),
+			],
+			ctx(),
+		);
+		expect(entries.map((e) => e.accepted ?? null)).toEqual([null, null]);
+	});
+
+	it("marks the action line as the strong part, and names whose address a part is", () => {
 		const [entry] = buildTimeline(
 			[eventRow("signature_added", { id: 1, digest: D1, actor: B })],
 			ctx(),
 		);
 		expect(entry?.parts).toEqual([
-			{ text: `${short(B)} signed ` },
+			// a screen may show B's nickname here; the text stays the plain address
+			{ text: short(B), who: B },
+			{ text: " signed " },
 			{ text: "Send 120 USDC to 0x9a01…77c2", strong: true },
 			{ text: "." },
 		]);
 		expect(entry?.digest).toBe(D1);
+		// the reader is named as "You", and still as an address a screen can recognise
+		const [mine] = buildTimeline(
+			[eventRow("signature_added", { id: 1, digest: D1, actor: A })],
+			ctx(),
+		);
+		expect(mine?.parts[0]).toEqual({ text: "You", who: A });
+		// nobody is nobody's address
+		const [nobody] = buildTimeline(
+			[eventRow("signature_added", { id: 1, digest: D1, actor: null })],
+			ctx(),
+		);
+		expect(nobody?.parts[0]).toEqual({ text: "Someone signed " });
+	});
+
+	it("names every address in a list as a part of its own", () => {
+		const [entry] = buildTimeline(
+			[
+				eventRow("treasury_added", {
+					id: 1,
+					actor: A,
+					data: { signers: [A, B, C], threshold: 2 },
+				}),
+			],
+			ctx(B),
+		);
+		expect(
+			entry?.parts.filter((p) => p.who).map((p) => [p.text, p.who]),
+		).toEqual([
+			[short(A), A],
+			[short(A), A],
+			["you", B],
+			[short(C), C],
+		]);
+		expect(entryText(entry as never)).toBe(
+			`Treasury added by ${short(A)}. Signers: ${short(A)}, you, ${short(C)}. Threshold 2.`,
+		);
 	});
 
 	it("adds the proposal's title after the action, quietly, to tell like actions apart", () => {
@@ -70,7 +134,8 @@ describe("buildTimeline", () => {
 			titled,
 		);
 		expect(entry?.parts).toEqual([
-			{ text: `${short(B)} signed ` },
+			{ text: short(B), who: B },
+			{ text: " signed " },
 			{ text: "Send 120 USDC to 0x9a01…77c2", strong: true },
 			{ text: " (“October payout”)", quiet: true },
 			{ text: "." },
@@ -140,12 +205,12 @@ describe("buildTimeline", () => {
 		expect(
 			texts([eventRow("proposal_withdrawn", { digest: D1, actor: B })]),
 		).toEqual([
-			`Send 120 USDC to 0x9a01…77c2 was withdrawn by the proposer, ${short(B)}.`,
+			`Send 120 USDC to 0x9a01…77c2 was cancelled by the proposer, ${short(B)}.`,
 		]);
 		expect(
 			texts([eventRow("proposal_declined", { digest: D1, actor: A })]),
 		).toEqual([
-			"Send 120 USDC to 0x9a01…77c2 was declined by the finaliser, you.",
+			"Send 120 USDC to 0x9a01…77c2 will not be sent: you, its finaliser, said no.",
 		]);
 	});
 
@@ -162,24 +227,99 @@ describe("buildTimeline", () => {
 		]);
 	});
 
-	it("reports a rejection as retryable", () => {
+	it("says who said no, and who took a no back", () => {
+		expect(
+			texts([eventRow("objection_added", { digest: D1, actor: B })]),
+		).toEqual([`${short(B)} said no to Send 120 USDC to 0x9a01…77c2.`]);
+		expect(
+			texts([eventRow("objection_added", { digest: D1, actor: A })]),
+		).toEqual(["You said no to Send 120 USDC to 0x9a01…77c2."]);
+		expect(
+			texts([eventRow("objection_removed", { digest: D1, actor: B })]),
+		).toEqual([
+			`${short(B)} took back their no to Send 120 USDC to 0x9a01…77c2.`,
+		]);
+		expect(
+			texts([eventRow("objection_removed", { digest: D1, actor: A })]),
+		).toEqual(["You took back your no to Send 120 USDC to 0x9a01…77c2."]);
+	});
+
+	it("tells a change of position as one step: a no that took a signature back, a signature in place of a no", () => {
+		// the relay writes two entries for each; the log says each once
+		const said = buildTimeline(
+			[
+				eventRow("signature_added", { id: 1, digest: D1, actor: B }),
+				eventRow("signature_removed", { id: 2, digest: D1, actor: B }),
+				eventRow("objection_added", { id: 3, digest: D1, actor: B }),
+			],
+			ctx(),
+		);
+		expect(said.map(entryText)).toEqual([
+			`${short(B)} said no to Send 120 USDC to 0x9a01…77c2, taking back their signature.`,
+			`${short(B)} signed Send 120 USDC to 0x9a01…77c2.`,
+		]);
+		expect(said[0]?.id).toBe(3);
+		const signed = buildTimeline(
+			[
+				eventRow("objection_added", { id: 1, digest: D1, actor: A }),
+				eventRow("objection_removed", { id: 2, digest: D1, actor: A }),
+				eventRow("signature_added", { id: 3, digest: D1, actor: A }),
+			],
+			ctx(),
+		);
+		expect(signed.map(entryText)).toEqual([
+			"You signed Send 120 USDC to 0x9a01…77c2, in place of your no.",
+			"You said no to Send 120 USDC to 0x9a01…77c2.",
+		]);
+		expect(signed[0]?.id).toBe(3);
+	});
+
+	it("does not fold a co-signer's step into one's own, or a step on another proposal", () => {
+		// B took a signature back; then C said no: two people, two entries
 		expect(
 			texts([
-				eventRow("submission_recorded", {
-					digest: D1,
-					actor: B,
-					data: { accepted: false },
-				}),
+				eventRow("signature_removed", { id: 1, digest: D1, actor: B }),
+				eventRow("objection_added", { id: 2, digest: D1, actor: C }),
 			]),
 		).toEqual([
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Submitted by ${short(B)}; it can be retried.`,
+			`${short(C)} said no to Send 120 USDC to 0x9a01…77c2.`,
+			`${short(B)} took back their signature on Send 120 USDC to 0x9a01…77c2.`,
 		]);
+		// B took back a no on one proposal and signed another
+		expect(
+			texts([
+				eventRow("objection_removed", { id: 1, digest: D1, actor: B }),
+				eventRow("signature_added", { id: 2, digest: D2, actor: B }),
+			]),
+		).toEqual([
+			`${short(B)} signed a proposal.`,
+			`${short(B)} took back their no to Send 120 USDC to 0x9a01…77c2.`,
+		]);
+	});
+
+	it("never calls a proposal Hyperliquid refused retryable", () => {
+		const rejected = (data: Record<string, unknown>) =>
+			texts([
+				eventRow("submission_recorded", { digest: D1, actor: B, data }),
+			])[0];
+		// answered by Hyperliquid: the proposal's number is used up
+		expect(rejected({ accepted: false, http_status: 200 })).toBe(
+			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+		);
+		// never reached Hyperliquid's books: that one can go again
+		expect(rejected({ accepted: false, http_status: 502 })).toBe(
+			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. The request did not get through (HTTP 502), so it can be sent again.`,
+		);
+		// an entry that does not say: nothing is claimed either way
+		expect(rejected({ accepted: false })).toBe(
+			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. Open it to see why.`,
+		);
 	});
 
 	it("falls back to 'a proposal' when the document is not at hand", () => {
 		expect(
 			texts([eventRow("proposal_withdrawn", { digest: D2, actor: B })]),
-		).toEqual([`A proposal was withdrawn by the proposer, ${short(B)}.`]);
+		).toEqual([`A proposal was cancelled by the proposer, ${short(B)}.`]);
 		expect(
 			texts([eventRow("signature_added", { digest: D2, actor: B })]),
 		).toEqual([`${short(B)} signed a proposal.`]);
@@ -199,6 +339,14 @@ describe("buildTimeline", () => {
 		expect(texts([eventRow("treasury_added", { actor: B, data: {} })])).toEqual(
 			[`Treasury added by ${short(B)}.`],
 		);
+		// the account that was converted registered itself: nobody added it
+		const self = eventRow("treasury_added", {
+			actor: C,
+			data: { signers: [A, B], threshold: 2 },
+		});
+		expect(texts([{ ...self, treasury: C }])).toEqual([
+			`Treasury registered by the account itself when it was converted. Signers: you, ${short(B)}. Threshold 2.`,
+		]);
 		expect(
 			texts([
 				eventRow("signers_changed", {
@@ -255,7 +403,80 @@ describe("buildTimeline", () => {
 				null,
 			),
 		).toEqual([
-			"Send 120 USDC to 0x9a01…77c2 was withdrawn by the proposer, someone.",
+			"Send 120 USDC to 0x9a01…77c2 was cancelled by the proposer, someone.",
+		]);
+	});
+
+	it("says when a proposal was carried out outside the tool, and who noticed", () => {
+		const TX = `0x${"72".repeat(32)}`;
+		expect(
+			texts([
+				eventRow("proposal_carried_out", {
+					id: 5,
+					digest: D1,
+					data: { tx_hash: TX, tx_time: NOW, reported_by: B },
+				}),
+			]),
+		).toEqual([
+			`Send 120 USDC to 0x9a01…77c2 was carried out without being reported here. Its transaction was found on Hyperliquid; ${short(B)} noticed it.`,
+		]);
+		// the one who noticed, reading it
+		expect(
+			texts(
+				[
+					eventRow("proposal_carried_out", {
+						id: 5,
+						digest: D1,
+						data: { tx_hash: TX, reported_by: B },
+					}),
+				],
+				B,
+			)[0],
+		).toContain("; you noticed it.");
+		expect(
+			texts([eventRow("proposal_carried_out", { id: 5, digest: D1 })]),
+		).toEqual([
+			"Send 120 USDC to 0x9a01…77c2 was carried out without being reported here. Its transaction was found on Hyperliquid.",
+		]);
+	});
+
+	it("says it once when the finaliser's own result arrives after all", () => {
+		const carried = eventRow("proposal_carried_out", {
+			id: 5,
+			digest: D1,
+			data: { reported_by: B },
+		});
+		const accepted = eventRow("submission_recorded", {
+			id: 6,
+			digest: D1,
+			actor: C,
+			data: { accepted: true, http_status: 200 },
+		});
+		expect(texts([carried, accepted])).toEqual([
+			`Send 120 USDC to 0x9a01…77c2 was accepted by Hyperliquid. Sent by ${short(C)}.`,
+		]);
+		// a rejected attempt afterwards does not unsay that it was carried out
+		const rejected = eventRow("submission_recorded", {
+			id: 6,
+			digest: D1,
+			actor: C,
+			data: { accepted: false, http_status: 200 },
+		});
+		expect(texts([carried, rejected])).toHaveLength(2);
+		// and another proposal's acceptance has nothing to do with it
+		expect(texts([carried, { ...accepted, digest: D2 }])).toHaveLength(2);
+	});
+
+	it("keeps an entry it cannot describe, and says so", () => {
+		expect(
+			texts([
+				{
+					...eventRow("unknown", { id: 9 }),
+					rawKind: "treasury_renamed",
+				},
+			]),
+		).toEqual([
+			"An entry this version of the page cannot describe (“treasury_renamed”).",
 		]);
 	});
 
@@ -331,5 +552,177 @@ describe("historyExport", () => {
 		expect(historyFilename("testnet", TREASURY)).toBe(
 			`multisig-history-testnet-${TREASURY.slice(0, 10)}.json`,
 		);
+		expect(historyFilename("testnet", TREASURY, "csv")).toBe(
+			`multisig-history-testnet-${TREASURY.slice(0, 10)}.csv`,
+		);
+	});
+});
+
+describe("historyCsv", () => {
+	it("lists the log oldest first, in UTC, every address whole, and the record only beside an accepted send", () => {
+		const events = [
+			eventRow("proposal_created", {
+				id: 1,
+				digest: D1,
+				actor: A,
+				data: { finaliser: C },
+			}),
+			eventRow("signature_added", { id: 2, digest: D1, actor: A }),
+			eventRow("signature_added", { id: 3, digest: D1, actor: C }),
+			eventRow("submission_recorded", {
+				id: 4,
+				digest: D1,
+				actor: C,
+				data: { accepted: true, http_status: 200 },
+			}),
+		];
+		const entries = buildTimeline(events, ctx(null));
+		const asked: Hex[][] = [];
+		const csv = historyCsv(entries, (e) => {
+			asked.push([...(e.accepted ?? [])]);
+			return "on Hyperliquid's record";
+		});
+		expect(csv.columns).toEqual([
+			"Time (UTC)",
+			"What happened",
+			"Proposal",
+			"Hyperliquid's record",
+		]);
+		expect(csv.rows.map((r) => r[1])).toEqual([
+			`${A} proposed Send 120 USDC to 0x9a01…77c2 and signed. Finaliser: ${C}.`,
+			`${C} signed Send 120 USDC to 0x9a01…77c2.`,
+			`Send 120 USDC to 0x9a01…77c2 was accepted by Hyperliquid. Sent by ${C}.`,
+		]);
+		expect(csv.rows.map((r) => r[0])).toEqual(
+			entries
+				.map((e) => new Date(e.at).toISOString().slice(0, 19).replace("T", " "))
+				.reverse(),
+		);
+		expect(csv.rows.map((r) => r[2])).toEqual([D1, D1, D1]);
+		expect(csv.rows.map((r) => r[3])).toEqual([
+			null,
+			null,
+			"on Hyperliquid's record",
+		]);
+		expect(asked).toEqual([[D1]]);
+	});
+});
+
+describe("a move of two steps in the Signing log", () => {
+	const MOVE = "Stake 100 HYPE with 0x946b…5b21";
+	const refs = {
+		[D1]: { step: 1 as const, other: D2, line: MOVE },
+		[D2]: { step: 2 as const, other: D1, line: MOVE },
+	};
+	const moved = (events: EventRow[], me: typeof A | null = A) =>
+		buildTimeline(events, {
+			...ctx(me),
+			move: (d: Hex) => refs[d] ?? null,
+		});
+	const said = (events: EventRow[], me: typeof A | null = A) =>
+		moved(events, me).map(entryText);
+	const both = (
+		kind: Parameters<typeof eventRow>[0],
+		id: number,
+		actor: typeof A,
+		data: Record<string, unknown> = {},
+	) => [
+		eventRow(kind, { id, digest: D1, actor, data }),
+		eventRow(kind, { id: id + 1, digest: D2, actor, data }),
+	];
+
+	it("says once what happened to both steps alike", () => {
+		const events = [
+			...both("proposal_created", 1, A, { finaliser: C }),
+			...both("signature_added", 3, A),
+			...both("signature_added", 5, C),
+			...both("submission_recorded", 7, C, { accepted: true }),
+		];
+		expect(said(events)).toEqual([
+			`${MOVE} (both steps) was accepted by Hyperliquid. Sent by ${short(C)}.`,
+			`${short(C)} signed ${MOVE} (both steps).`,
+			`You proposed ${MOVE} (both steps) and signed. Finaliser: ${short(C)}.`,
+		]);
+		// one entry for both steps checks both against Hyperliquid's record
+		expect(moved(events)[0]?.accepted).toEqual([D1, D2]);
+	});
+
+	it("an entry for both steps opens the move, and sorts by its later event", () => {
+		const [entry] = moved(both("signature_added", 5, C));
+		expect(entry).toMatchObject({ id: 6, digest: D1 });
+		expect(entry?.parts).toContainEqual({ text: MOVE, strong: true });
+		expect(entry?.parts).toContainEqual({ text: " (both steps)", quiet: true });
+	});
+
+	it("names the step where the two did not fare alike", () => {
+		// C signed step 1 only; Hyperliquid took step 1 and refused step 2
+		const events = [
+			eventRow("signature_added", { id: 1, digest: D1, actor: C }),
+			eventRow("submission_recorded", {
+				id: 2,
+				digest: D1,
+				actor: C,
+				data: { accepted: true },
+			}),
+			eventRow("submission_recorded", {
+				id: 3,
+				digest: D2,
+				actor: C,
+				data: { accepted: false, http_status: 200 },
+			}),
+		];
+		expect(said(events)).toEqual([
+			`Hyperliquid rejected ${MOVE} (step 2 of 2). Sent by ${short(C)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+			`${MOVE} (step 1 of 2) was accepted by Hyperliquid. Sent by ${short(C)}.`,
+			`${short(C)} signed ${MOVE} (step 1 of 2).`,
+		]);
+	});
+
+	it("a proposer who signed only one of the two: each step says its own", () => {
+		const events = [
+			...both("proposal_created", 1, A, { finaliser: C }),
+			eventRow("signature_added", { id: 3, digest: D1, actor: A }),
+		];
+		expect(said(events)).toEqual([
+			`You proposed ${MOVE} (step 1 of 2) and signed. Finaliser: ${short(C)}.`,
+			`You proposed ${MOVE} (step 2 of 2). Finaliser: ${short(C)}.`,
+		]);
+	});
+
+	it("a no to both, a withdrawal of both and a change of mind read as one step each", () => {
+		const noAfterSigning = [
+			eventRow("signature_removed", { id: 1, digest: D1, actor: C }),
+			eventRow("objection_added", { id: 2, digest: D1, actor: C }),
+			eventRow("signature_removed", { id: 3, digest: D2, actor: C }),
+			eventRow("objection_added", { id: 4, digest: D2, actor: C }),
+		];
+		expect(said(noAfterSigning)).toEqual([
+			`${short(C)} said no to ${MOVE} (both steps), taking back their signature.`,
+		]);
+		expect(said(both("objection_removed", 1, C))).toEqual([
+			`${short(C)} took back their no to ${MOVE} (both steps).`,
+		]);
+		expect(said(both("proposal_withdrawn", 1, A))).toEqual([
+			`${MOVE} (both steps) was cancelled by the proposer, you.`,
+		]);
+	});
+
+	it("does not take together what happened at different times", () => {
+		const events = [
+			eventRow("signature_added", { id: 1, digest: D1, actor: C }),
+			// ten minutes later
+			eventRow("signature_added", { id: 601, digest: D2, actor: C }),
+		];
+		expect(said(events)).toEqual([
+			`${short(C)} signed ${MOVE} (step 2 of 2).`,
+			`${short(C)} signed ${MOVE} (step 1 of 2).`,
+		]);
+	});
+
+	it("a proposal that stands alone reads as before", () => {
+		const alone = `0x${"d3".repeat(32)}` as Hex;
+		expect(
+			said([eventRow("signature_added", { id: 1, digest: alone, actor: C })]),
+		).toEqual([`${short(C)} signed a proposal.`]);
 	});
 });

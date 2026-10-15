@@ -1,0 +1,470 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-11 (UTC 2026-10-10 21:56 to 21:58). Pairs of multi-sig envelopes for one 2-of-3 lab treasury: `first` was sent with the newer nonce, `then` right after with an older nonce that had never been used. Only the inner action, the leader and the exchange's answer are kept. Recorded by labs/multisig/34 to 36.",
+	"network": "testnet",
+	"pairs": [
+		{
+			"label": "usdSend, then an older usdSend, same leader",
+			"first": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669362834
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669362834,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669360834
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669360834,
+				"answer": {
+					"status": "err",
+					"response": "Nonce already used."
+				}
+			}
+		},
+		{
+			"label": "usdSend, then an older usdSend led by another signer",
+			"first": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669362834
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669362834,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669360835
+				},
+				"leader": "0xb70c120cd3702225fbe3657ace137ed5889f36ee",
+				"nonce": 1791669360835,
+				"answer": {
+					"status": "err",
+					"response": "Nonce already used."
+				}
+			}
+		},
+		{
+			"label": "usdSend, then an older usdSend to another address",
+			"first": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669483117
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669483117,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0x41e84a2c224151b85ef53945d5d31adcfe8955b9",
+					"amount": "1",
+					"time": 1791669481117
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669481117,
+				"answer": {
+					"status": "err",
+					"response": "Nonce already used."
+				}
+			}
+		},
+		{
+			"label": "usdSend, then an older usdClassTransfer",
+			"first": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669487502
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669487502,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "usdClassTransfer",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"amount": "1",
+					"toPerp": false,
+					"nonce": 1791669485502
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669485502,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			}
+		},
+		{
+			"label": "usdClassTransfer, then an older usdClassTransfer",
+			"first": {
+				"action": {
+					"type": "usdClassTransfer",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"amount": "1",
+					"toPerp": true,
+					"nonce": 1791669492069
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669492069,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "usdClassTransfer",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"amount": "1",
+					"toPerp": false,
+					"nonce": 1791669490069
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669490069,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			}
+		},
+		{
+			"label": "usdClassTransfer, then an older usdSend",
+			"first": {
+				"action": {
+					"type": "usdClassTransfer",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"amount": "1",
+					"toPerp": true,
+					"nonce": 1791669496630
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669496630,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669494630
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669494630,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			}
+		},
+		{
+			"label": "spotSend, then an older spotSend",
+			"first": {
+				"action": {
+					"type": "spotSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+					"amount": "1",
+					"time": 1791669500921
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669500921,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "spotSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+					"amount": "1",
+					"time": 1791669498921
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669498921,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			}
+		},
+		{
+			"label": "spotSend, then an older usdSend",
+			"first": {
+				"action": {
+					"type": "spotSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+					"amount": "1",
+					"time": 1791669505505
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669505505,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669503505
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669503505,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			}
+		},
+		{
+			"label": "usdSend, then an older spotSend",
+			"first": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669509826
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669509826,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "spotSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+					"amount": "1",
+					"time": 1791669507826
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669507826,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			}
+		},
+		{
+			"label": "approveAgent, then an older approveAgent",
+			"first": {
+				"action": {
+					"type": "approveAgent",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"agentAddress": "0x30bc08bf9e35944844f7fdb91e32d2a4085f0c2c",
+					"agentName": "probe3",
+					"nonce": 1791669514183
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669514183,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "approveAgent",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"agentAddress": "0x4c3bf609c4fedecb4e21a5dacd081e4e1be3ffff",
+					"agentName": "probe4",
+					"nonce": 1791669512183
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669512183,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			}
+		},
+		{
+			"label": "approveAgent, then an older usdSend",
+			"first": {
+				"action": {
+					"type": "approveAgent",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"agentAddress": "0x0ca3e8388475652d71d81f95202b41be37142e45",
+					"agentName": "probe2",
+					"nonce": 1791669429324
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669429324,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			},
+			"then": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669427324
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669427324,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			}
+		},
+		{
+			"label": "a usdSend that FAILED (one signature of two), then an older valid usdSend",
+			"first": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669483219
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669483219,
+				"answer": {
+					"status": "err",
+					"response": "Multi-sig threshold not met"
+				}
+			},
+			"then": {
+				"action": {
+					"type": "usdSend",
+					"signatureChainId": "0x66eee",
+					"hyperliquidChain": "Testnet",
+					"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+					"amount": "1",
+					"time": 1791669424938
+				},
+				"leader": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+				"nonce": 1791669424938,
+				"answer": {
+					"status": "ok",
+					"response": {
+						"type": "default"
+					}
+				}
+			}
+		}
+	]
+}

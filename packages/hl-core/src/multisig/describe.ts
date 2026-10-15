@@ -5,13 +5,45 @@
  * decimals, integers for USD micro-units), never re-rounded.
  */
 
-import { riskFlags } from "./action.ts";
+import type { Network } from "../network.ts";
+import { RETURN_QUEUE, STAKE_LOCKUP } from "../rules/staking.ts";
+import { WITHDRAWAL_FEE_USDC } from "../rules/transfers.ts";
+import { VAULT_LOCKUP } from "../rules/vaults.ts";
+import { isAgentRemoval, riskFlags } from "./action.ts";
+import { isolated, visibleText } from "./shown.ts";
 import { parseSignersString } from "./signerSet.ts";
+import { waitWords, weiToHype } from "./staking.ts";
+import { withdrawalOutcome } from "./transfer.ts";
 import type { PlainObject, RiskFlag } from "./types.ts";
+import { hlpNetwork, vaultHeadline } from "./vault.ts";
+import { isoTime, written } from "./when.ts";
 
 export interface DescribeContext {
 	/** Perp asset index → coin name (from the resolver universe). */
 	readonly coin?: (asset: number) => string | undefined;
+	/**
+	 * The network the action is for, where the reader knows it. An L1 action
+	 * (a vault deposit) names none itself; with it a wait is given as that
+	 * network's own length.
+	 */
+	readonly network?: Network;
+}
+
+/** What an address named in an action is to that action. */
+export type ActionPartyRole =
+	| "destination"
+	| "agent"
+	| "signer"
+	| "vault"
+	| "subAccount"
+	| "builder"
+	| "validator"
+	| "user";
+
+export interface ActionParty {
+	readonly role: ActionPartyRole;
+	/** Lowercased; only well-formed 20-byte addresses are listed. */
+	readonly address: string;
 }
 
 export interface ActionDescription {
@@ -23,16 +55,138 @@ export interface ActionDescription {
 	readonly flags: readonly RiskFlag[];
 	/** False when the type is not modelled; the headline then says so. */
 	readonly known: boolean;
+	/**
+	 * Every account the action names, in the order the text mentions them, so
+	 * a screen can say who an address is without cutting the sentences apart.
+	 */
+	readonly parties: readonly ActionParty[];
 }
 
+const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
+
+/** The network a user-signed action names for itself; null when it names none this version knows. */
+const networkOf = (action: PlainObject): Network | null =>
+	action.hyperliquidChain === "Mainnet"
+		? "mainnet"
+		: action.hyperliquidChain === "Testnet"
+			? "testnet"
+			: null;
+
+/**
+ * The two waits of staking, in the lengths of rules/staking.ts: the
+ * network's own where the action names its network, both otherwise.
+ */
+export const stakeLockupLine = (network: Network | null): string =>
+	network
+		? `A stake cannot be unstaked for ${waitWords(STAKE_LOCKUP[network].ms)} after it is made or added to.`
+		: `A stake cannot be unstaked for ${waitWords(STAKE_LOCKUP.mainnet.ms)} after it is made or added to (${waitWords(STAKE_LOCKUP.testnet.ms)} on testnet).`;
+export const returnQueueLine = (network: Network | null): string =>
+	network
+		? `Hyperliquid releases a return to spot ${waitWords(RETURN_QUEUE[network].ms)} after it is carried out, with no further signature.`
+		: `Hyperliquid releases a return to spot ${waitWords(RETURN_QUEUE.mainnet.ms)} after it is carried out (${waitWords(RETURN_QUEUE.testnet.ms)} on testnet), with no further signature.`;
+
+/**
+ * How long a new deposit into a vault is held, in the lengths of
+ * rules/vaults.ts. HLP's address says which network it is on; for another
+ * vault the reader's network decides, and both lengths are given without it.
+ */
+export function vaultLockupLine(
+	vault: string,
+	network: Network | null,
+): string {
+	const hlp = hlpNetwork(vault);
+	const tail = "after it is made or added to.";
+	if (hlp)
+		return `It cannot be withdrawn for ${waitWords(VAULT_LOCKUP.hlp[hlp].ms)} ${tail}`;
+	return network
+		? `It cannot be withdrawn for ${waitWords(VAULT_LOCKUP.user[network].ms)} ${tail}`
+		: `It cannot be withdrawn for ${waitWords(VAULT_LOCKUP.user.mainnet.ms)} ${tail.replace(/\.$/, "")} (${waitWords(VAULT_LOCKUP.user.testnet.ms)} on testnet).`;
+}
+
+/** A staking action's integer as HYPE; as it stands when it is not a whole number. */
+const hype = (wei: unknown): string => {
+	const amount = weiToHype(wei);
+	return amount === null ? `${s(wei)} wei of HYPE` : `${amount} HYPE`;
+};
+
+function partiesOf(type: string, action: PlainObject): readonly ActionParty[] {
+	const out: ActionParty[] = [];
+	const add = (role: ActionPartyRole, v: unknown) => {
+		if (typeof v !== "string" || !ADDRESS.test(v)) return;
+		const address = v.toLowerCase();
+		if (!out.some((p) => p.role === role && p.address === address))
+			out.push({ role, address });
+	};
+	switch (type) {
+		case "usdSend":
+		case "spotSend":
+		case "withdraw3":
+			add("destination", action.destination);
+			break;
+		case "sendAsset":
+			add("destination", action.destination);
+			add("subAccount", action.fromSubAccount);
+			break;
+		case "sendToEvmWithData":
+			add("destination", action.destinationRecipient);
+			break;
+		case "approveAgent":
+			// a removal names nobody: the zero address is no party to it
+			if (!isAgentRemoval(action)) add("agent", action.agentAddress);
+			break;
+		case "approveBuilderFee":
+			add("builder", action.builder);
+			break;
+		case "order":
+			add("builder", (action.builder as PlainObject | undefined)?.b);
+			break;
+		case "tokenDelegate":
+			add("validator", action.validator);
+			break;
+		case "vaultTransfer":
+			add("vault", action.vaultAddress);
+			break;
+		case "subAccountTransfer":
+		case "subAccountSpotTransfer":
+			add("subAccount", action.subAccountUser);
+			break;
+		case "linkStakingUser":
+		case "userDexAbstraction":
+		case "userSetAbstraction":
+		case "userPortfolioMargin":
+			add("user", action.user);
+			break;
+		case "convertToMultiSigUser":
+			for (const a of parseSignersString(action.signers).set?.authorizedUsers ??
+				[])
+				add("signer", a);
+			break;
+	}
+	return out;
+}
+
+/**
+ * A value in a sentence. An integer too large for a number arrives as a
+ * bigint, also nested: never throws. A text of the action is what gets
+ * signed, so a character in it that does not show is written out, not dropped.
+ */
 const s = (v: unknown): string =>
 	typeof v === "string"
-		? v
+		? isolated(visibleText(v))
 		: typeof v === "bigint"
 			? v.toString()
 			: v === undefined
 				? "?"
-				: JSON.stringify(v);
+				: JSON.stringify(v, (_key, x) =>
+						typeof x === "bigint" ? x.toString() : x,
+					);
+/** A `sendAsset` dex name in words: "" is the first perp dex, "spot" the spot balance. */
+const balanceName = (dex: unknown): string =>
+	dex === ""
+		? "the perps balance"
+		: dex === "spot"
+			? "the spot balance"
+			: `the balance on perp dex ${written(dex ?? "?")}`;
 const usd = (v: unknown): string => {
 	if (typeof v === "number" || typeof v === "bigint") {
 		const n = BigInt(v);
@@ -82,6 +236,7 @@ export function describeAction(
 	const type =
 		typeof action.type === "string" ? action.type : String(action.type);
 	const flags = riskFlags(action);
+	const parties = partiesOf(type, action);
 	const done = (
 		headline: string,
 		lines: string[] = [],
@@ -92,6 +247,7 @@ export function describeAction(
 		lines,
 		flags,
 		known,
+		parties,
 	});
 	switch (type) {
 		case "order": {
@@ -146,12 +302,9 @@ export function describeAction(
 		case "scheduleCancel":
 			return action.time === undefined
 				? done("Remove the scheduled cancel (dead man's switch off)")
-				: done(
-						`Schedule cancel-all at ${new Date(Number(action.time)).toISOString()}`,
-						[
-							"Dead man's switch: every open order is cancelled at that time unless rescheduled.",
-						],
-					);
+				: done(`Schedule cancel-all at ${isoTime(Number(action.time))}`, [
+						"Dead man's switch: every open order is cancelled at that time unless rescheduled.",
+					]);
 		case "updateLeverage":
 			return done(
 				`Set ${coinOf(ctx, action.asset)} leverage to ${s(action.leverage)}x ${action.isCross ? "cross" : "isolated"}`,
@@ -171,10 +324,26 @@ export function describeAction(
 		}
 		case "twapCancel":
 			return done(`Cancel TWAP ${s(action.t)} on ${coinOf(ctx, action.a)}`);
-		case "vaultTransfer":
+		case "vaultTransfer": {
+			const vault = s(action.vaultAddress);
 			return done(
-				`${action.isDeposit ? "Deposit" : "Withdraw"} ${usd(action.usd)} ${action.isDeposit ? "into" : "from"} vault ${s(action.vaultAddress)}`,
+				vaultHeadline(
+					action.isDeposit ? "deposit" : "withdraw",
+					usd(action.usd),
+					vault,
+				),
+				action.isDeposit
+					? [
+							vaultLockupLine(vault, ctx.network ?? null),
+							"A vault deposit can lose value: the vault's leader trades with it.",
+							"It is taken from the perps balance, or from the one balance of a unified account.",
+						]
+					: [
+							"Hyperliquid refuses a withdrawal until the deposit's lockup has ended.",
+							"It arrives in the perps balance, or in the one balance of a unified account, less the leader's share of the profit.",
+						],
 			);
+		}
 		case "subAccountTransfer":
 			return done(
 				`${action.isDeposit ? "Deposit" : "Withdraw"} ${usd(action.usd)} ${action.isDeposit ? "into" : "from"} sub-account ${s(action.subAccountUser)}`,
@@ -207,30 +376,57 @@ export function describeAction(
 				`Send ${s(action.amount)} ${String(action.token ?? "?").split(":")[0]} (spot) to ${s(action.destination)}`,
 				[`token ${s(action.token)}`],
 			);
-		case "withdraw3":
+		case "withdraw3": {
+			// the testnet bridge leads to Arbitrum's test network
+			const where =
+				action.hyperliquidChain === "Testnet" ? "Arbitrum Sepolia" : "Arbitrum";
+			const out = withdrawalOutcome(action);
 			return done(
-				`Withdraw ${s(action.amount)} USDC to ${s(action.destination)} on Arbitrum`,
-				["Leaves Hyperliquid through the bridge."],
+				`Withdraw ${s(action.amount)} USDC to ${s(action.destination)} on ${where}`,
+				[
+					"Leaves Hyperliquid through the bridge.",
+					...(out?.arrives
+						? [
+								`The bridge keeps ${WITHDRAWAL_FEE_USDC} USDC of it as its fee: ${out.arrives.toString()} USDC arrives.`,
+							]
+						: out?.refusal
+							? [
+									`The bridge's fee is ${WITHDRAWAL_FEE_USDC} USDC, and Hyperliquid refuses a withdrawal that is not more than that.`,
+								]
+							: []),
+				],
 			);
+		}
 		case "usdClassTransfer":
 			return done(
 				`Move ${s(action.amount)} USDC ${action.toPerp ? "spot → perps" : "perps → spot"}`,
 			);
 		case "sendAsset":
 			return done(
-				`Send ${s(action.amount)} ${s(action.token)} to ${s(action.destination)}`,
+				`Send ${s(action.amount)} ${String(action.token ?? "?").split(":")[0]} to ${s(action.destination)}`,
 				[
-					`from dex "${s(action.sourceDex)}" to dex "${s(action.destinationDex)}"`,
+					`taken from ${balanceName(action.sourceDex)}`,
+					`arrives in the receiver's ${balanceName(action.destinationDex).replace(/^the /, "")}`,
+					`token ${s(action.token)}`,
 					action.fromSubAccount
 						? `from sub-account ${s(action.fromSubAccount)}`
 						: "",
 				].filter(Boolean),
 			);
 		case "approveAgent":
+			if (isAgentRemoval(action))
+				return done(
+					action.agentName
+						? `Remove the API wallet named "${s(action.agentName)}"`
+						: "Remove the API wallet without a name",
+					[
+						"That wallet stops acting for the account: from then on only the signers move anything it could. Hyperliquid refuses the removal when the account has no API wallet of that name.",
+					],
+				);
 			return done(
 				`Approve API wallet ${s(action.agentAddress)}${action.agentName ? ` named "${s(action.agentName)}"` : " as the main (unnamed) agent"}`,
 				[
-					"This wallet will trade for the account without multi-sig signatures until it expires or is replaced.",
+					"This wallet will act for the account without multi-sig signatures until it expires or is replaced: it can trade with everything the account holds and move it into vaults, but cannot send it to another account or withdraw it.",
 				],
 			);
 		case "approveBuilderFee":
@@ -238,15 +434,28 @@ export function describeAction(
 				`Approve builder ${s(action.builder)} up to ${s(action.maxFeeRate)}`,
 			);
 		case "tokenDelegate":
-			return done(
-				`${action.isUndelegate ? "Undelegate" : "Delegate"} ${s(action.wei)} wei of HYPE ${action.isUndelegate ? "from" : "to"} validator ${s(action.validator)}`,
-			);
+			return action.isUndelegate
+				? done(
+						`Unstake ${hype(action.wei)} from validator ${s(action.validator)}`,
+						[
+							"It goes to the staking balance. Returning it to spot is a separate step.",
+						],
+					)
+				: done(
+						`Stake ${hype(action.wei)} with validator ${s(action.validator)}`,
+						[stakeLockupLine(networkOf(action))],
+					);
 		case "cDeposit":
-			return done(`Move ${s(action.wei)} wei of HYPE from spot into staking`);
+			return done(
+				`Move ${hype(action.wei)} from the spot balance to the staking balance`,
+				[
+					"It is not staked yet. Staking it with a validator is a separate step.",
+				],
+			);
 		case "cWithdraw":
 			return done(
-				`Move ${s(action.wei)} wei of HYPE from staking back to spot`,
-				["Staking withdrawals take about 7 days to unlock."],
+				`Return ${hype(action.wei)} from the staking balance to the spot balance`,
+				[returnQueueLine(networkOf(action))],
 			);
 		case "linkStakingUser":
 			return done(
@@ -264,6 +473,20 @@ export function describeAction(
 				`${action.enabled ? "Enable" : "Disable"} HIP-3 dex abstraction for ${s(action.user)}`,
 			);
 		case "userSetAbstraction":
+			// the two switches measured through a multi-sig, in words; any other mode as it is named
+			if (action.abstraction === "unifiedAccount")
+				return done("Switch to a unified account: one balance", [
+					"The perps and spot USDC become one balance. Positions and open orders stay as they are.",
+					"Afterwards the account sends only from that one balance: a send made the older way, or a move between perps and spot, is refused.",
+				]);
+			if (action.abstraction === "disabled")
+				return done(
+					"Switch to a manual account: separate perps and spot balances",
+					[
+						"Hyperliquid refuses this while the account has an open position, an open order or a running TWAP order.",
+						"The USDC stays in the spot balance afterwards. Moving it to perps is a separate step.",
+					],
+				);
 			return done(
 				`Set abstraction mode "${s(action.abstraction)}" for ${s(action.user)}`,
 			);

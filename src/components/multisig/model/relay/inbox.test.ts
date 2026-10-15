@@ -4,10 +4,17 @@ import { A, B, C, TREASURY } from "#/test/keys";
 import {
 	countNeeds,
 	countOpen,
+	finishLabel,
 	groupInbox,
 	type InboxEntry,
 	inboxGroup,
+	moveEntry,
 	needsMe,
+	orderMatters,
+	SECTION_TITLE,
+	STUCK_WORDS,
+	stuckReason,
+	tabTitle,
 } from "./inbox";
 
 const OTHER = "0x00000000000000000000000000000000000000aa" as Address;
@@ -22,6 +29,9 @@ const entry = (over: Partial<InboxEntry> = {}): InboxEntry => ({
 	threshold: 2,
 	open: true,
 	frozen: false,
+	stuck: false,
+	objected: [],
+	blocked: null,
 	...over,
 });
 
@@ -43,11 +53,15 @@ describe("a treasury that is no longer a multi-sig", () => {
 			finish: [],
 			sign: [],
 			waiting: [],
+			dead: [],
 		});
 	});
 
-	it("still counts them as that treasury's pending proposals", () => {
-		expect(countOpen(stuck, "testnet", TREASURY)).toBe(3);
+	it("does not count them as pending: nobody can sign or submit them (audit F-023)", () => {
+		expect(countOpen(stuck, "testnet", TREASURY)).toBe(0);
+		expect(
+			countOpen([...stuck, entry({ finaliser: A })], "testnet", TREASURY),
+		).toBe(1);
 	});
 });
 
@@ -132,5 +146,176 @@ describe("groupInbox and counts", () => {
 		expect(countOpen(entries, "testnet", TREASURY)).toBe(3);
 		expect(countOpen(entries, "testnet", OTHER)).toBe(1);
 		expect(countOpen(entries, "mainnet", OTHER)).toBe(0);
+	});
+});
+
+describe("a proposal whose finaliser is no longer a signer", () => {
+	// only the finaliser can submit; when they have left the signer set, no signature finishes it
+	it("asks nobody to sign or to finish, and is listed apart from what merely waits", () => {
+		const unsigned = entry({ finaliser: C, stuck: true });
+		const ready = entry({ finaliser: A, counted: [B, C], stuck: true });
+		for (const e of [unsigned, ready]) {
+			expect(inboxGroup(e, A)).toBe("dead");
+			expect(inboxGroup(e, B)).toBe("dead");
+			expect(needsMe(e, A)).toBe(false);
+		}
+		expect(countNeeds([unsigned, ready], A, "testnet")).toBe(0);
+		const groups = groupInbox([unsigned, ready], A, "testnet");
+		expect(groups.dead).toHaveLength(2);
+		expect(groups.waiting).toHaveLength(0);
+		// it still counts as open on its treasury's page, where its proposer can withdraw it
+		expect(countOpen([unsigned, ready], "testnet", TREASURY)).toBe(2);
+	});
+	it("a closed or frozen one is still not listed at all", () => {
+		expect(inboxGroup(entry({ stuck: true, open: false }), A)).toBeNull();
+		expect(inboxGroup(entry({ stuck: true, frozen: true }), A)).toBeNull();
+	});
+});
+
+describe("tabTitle", () => {
+	it("puts the count of what needs the signer in front", () => {
+		expect(tabTitle(3)).toBe("(3) Multisig — hl-tools");
+		expect(tabTitle(1)).toBe("(1) Multisig — hl-tools");
+		expect(tabTitle(250)).toBe("(99+) Multisig — hl-tools");
+	});
+	it("is the plain title when nothing does, or when the count is not one", () => {
+		for (const n of [0, -1, Number.NaN, 0.4])
+			expect(tabTitle(n)).toBe(SECTION_TITLE);
+		expect(SECTION_TITLE).toBe("Multisig — hl-tools");
+	});
+});
+
+describe("what the finaliser's row offers (audit F-018)", () => {
+	it("asks for their signature only while it is still needed", () => {
+		// one short, and theirs would be the last: one press signs and submits
+		expect(finishLabel(entry({ finaliser: A, counted: [B] }), A)).toBe(
+			"Sign and send",
+		);
+		// the others already reached the number: submitting is one wallet prompt
+		expect(finishLabel(entry({ finaliser: A, counted: [B, C] }), A)).toBe(
+			"Send",
+		);
+		expect(finishLabel(entry({ finaliser: A, counted: [A, B] }), A)).toBe(
+			"Send",
+		);
+	});
+});
+
+describe("whether the order of the waiting actions matters (audit F-014)", () => {
+	const usdSend = (time: number) => ({ type: "usdSend", time });
+	const guided = { type: "sendAsset", nonce: 1 };
+
+	it("does for two actions Hyperliquid takes only in order", () => {
+		expect(orderMatters([usdSend(1), usdSend(2)])).toBe(true);
+		expect(orderMatters([usdSend(1), { type: "withdraw3", time: 2 }])).toBe(
+			true,
+		);
+	});
+
+	it("does not for guided sends, or for a single ordered action among others", () => {
+		expect(orderMatters([guided, guided, guided])).toBe(false);
+		expect(orderMatters([usdSend(1), guided])).toBe(false);
+		expect(orderMatters([])).toBe(false);
+	});
+});
+
+describe("a proposal somebody said no to", () => {
+	it("no longer asks the one who said no, and still asks the others", () => {
+		const e = entry({ finaliser: B, objected: [C] });
+		expect(inboxGroup(e, C)).toBe("waiting");
+		expect(needsMe(e, C)).toBe(false);
+		expect(inboxGroup(e, A)).toBe("sign");
+		// the finaliser can still finish it: a no is not a veto
+		const ready = entry({ finaliser: B, counted: [A, B], objected: [C] });
+		expect(inboxGroup(ready, B)).toBe("finish");
+		expect(finishLabel(ready, B)).toBe("Send");
+	});
+
+	it("asks nobody while it cannot go ahead as things stand", () => {
+		for (const blocked of ["cannot-pass", "finaliser-no"] as const) {
+			const e = entry({ finaliser: B, objected: [B, C], blocked });
+			for (const me of [A, B, C]) {
+				expect(inboxGroup(e, me)).toBe("dead");
+				expect(needsMe(e, me)).toBe(false);
+			}
+			expect(countNeeds([e], A, "testnet")).toBe(0);
+			// it is still one of the treasury's open proposals
+			expect(countOpen([e], "testnet", TREASURY)).toBe(1);
+		}
+	});
+
+	it("is live again once the no is taken back", () => {
+		const e = entry({ finaliser: B, counted: [A] });
+		expect(inboxGroup(e, B)).toBe("finish");
+		expect(inboxGroup(e, C)).toBe("sign");
+	});
+});
+
+describe("the two steps of a move as one entry", () => {
+	const move = (first: Partial<InboxEntry>, second: Partial<InboxEntry>) => {
+		const a = entry({ finaliser: B, ...first });
+		return { ...a, ...moveEntry(a, entry({ finaliser: B, ...second })) };
+	};
+
+	it("gives a move the reason of whichever step cannot be finished", () => {
+		const m = move({}, { stuck: true, stuckBy: "overtaken" });
+		expect([m.stuck, m.stuckBy]).toEqual([true, "overtaken"]);
+		const first = move({ stuck: true, stuckBy: "refused" }, {});
+		expect(first.stuckBy).toBe("refused");
+		expect(move({}, {}).stuckBy).toBeNull();
+	});
+
+	it("counts as signed by those who signed both steps", () => {
+		const m = move({ counted: [A, C] }, { counted: [A] });
+		expect(m.counted).toEqual([A]);
+		// C signed one of the two: the move still wants C's signature
+		expect(inboxGroup(m, C)).toBe("sign");
+		expect(inboxGroup(m, A)).toBe("waiting");
+		// the finaliser's signature on both would complete both: one click finishes
+		expect(inboxGroup(m, B)).toBe("finish");
+		expect(finishLabel(m, B)).toBe("Sign and send");
+	});
+	it("is ready when both steps are", () => {
+		const m = move({ counted: [A, C] }, { counted: [C, A] });
+		expect(inboxGroup(m, B)).toBe("finish");
+		expect(finishLabel(m, B)).toBe("Send");
+		expect(inboxGroup(m, A)).toBe("waiting");
+	});
+	it("is one thing to do, not two", () => {
+		const m = move({}, {});
+		expect(countNeeds([m], A, "testnet")).toBe(1);
+		expect(countOpen([m], "testnet", TREASURY)).toBe(1);
+	});
+	it("what holds up either step holds up the move", () => {
+		expect(inboxGroup(move({}, { stuck: true }), A)).toBe("dead");
+		expect(inboxGroup(move({ blocked: "cannot-pass" }, {}), A)).toBe("dead");
+		expect(move({}, { blocked: "finaliser-no" }).blocked).toBe("finaliser-no");
+		expect(inboxGroup(move({}, { frozen: true }), A)).toBeNull();
+		// one step closed: the move as a whole is no longer in the list
+		expect(inboxGroup(move({}, { open: false }), A)).toBeNull();
+	});
+	it("a no to either step is a no to the move, said once", () => {
+		const m = move({ objected: [C] }, { objected: [C, A] });
+		expect(m.objected).toEqual([C, A]);
+		expect(inboxGroup(m, C)).toBe("waiting");
+	});
+});
+
+describe("why a proposal cannot be finished", () => {
+	it("gives the first reason that holds, in words a list row can carry", () => {
+		const none = { refused: false, finaliserLeft: false, overtaken: false };
+		expect(stuckReason(none)).toBeNull();
+		expect(stuckReason({ ...none, overtaken: true })).toBe("overtaken");
+		expect(stuckReason({ ...none, finaliserLeft: true, overtaken: true })).toBe(
+			"finaliser-left",
+		);
+		expect(
+			stuckReason({ refused: true, finaliserLeft: true, overtaken: true }),
+		).toBe("refused");
+		expect(Object.values(STUCK_WORDS)).toEqual([
+			"refused",
+			"its finaliser left",
+			"a later send went first",
+		]);
 	});
 });

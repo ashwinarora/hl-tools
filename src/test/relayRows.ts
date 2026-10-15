@@ -40,6 +40,7 @@ export function rowFor(
 			v: s.v,
 			createdAt: s.at ?? NOW,
 		})),
+		objections: [],
 		ending: null,
 		receipts: p.receipt
 			? [
@@ -84,6 +85,10 @@ export function rawProposal(row: ProposalRow): Record<string, unknown> {
 			v: s.v,
 			created_at: iso(s.createdAt),
 		})),
+		objections: row.objections.map((o) => ({
+			signer: o.signer,
+			created_at: iso(o.createdAt),
+		})),
 		endings: row.ending
 			? {
 					kind: row.ending.kind,
@@ -119,6 +124,7 @@ export function eventRow(
 			"0x0000000000000000000000000000000000000abc" as EventRow["treasury"],
 		digest: null,
 		kind,
+		rawKind: kind,
 		actor: null,
 		data: {},
 		at: NOW + id * 1000,

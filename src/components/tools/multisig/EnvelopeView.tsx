@@ -5,9 +5,12 @@ import {
 	envelopeDigest,
 	explainExchangeError,
 	fromPlain,
+	hashedEnvelopeAction,
+	isoTime,
 	MULTISIG_SAMPLES,
 	type Network,
 	nonceWindow,
+	type PlainObject,
 	type Proposal,
 	proposalFlags,
 	stringifyJson,
@@ -49,7 +52,7 @@ export const FLAG_TEXT: Record<
 	{ label: string; tone: "warning" | "danger" | "info" }
 > = {
 	agent_bypass: {
-		label: "approves an API wallet (trading becomes single-key)",
+		label: "approves an API wallet (one key acts for the account)",
 		tone: "warning",
 	},
 	destructive: { label: "reverts to a normal user", tone: "danger" },
@@ -90,7 +93,7 @@ export function EnvelopeView({
 						<Field
 							label="JSON"
 							htmlFor="ms-envelope"
-							hint="Signatures are verified locally; nothing is sent anywhere except the signer-set lookup for the multi-sig user."
+							hint="Signatures are verified locally. What is pasted is sent nowhere: the page asks Hyperliquid only for the multi-sig user's signer set (on both networks, to say which one it belongs to) and for the list of markets, to name coins."
 						>
 							<TextArea
 								id="ms-envelope"
@@ -274,6 +277,14 @@ export function ProposalResult({
 	// a document that was never submitted does not say which chain its envelope will be signed under
 	const envelopeAssumed = !parsed.request && !chosenChainId;
 	const outer = envelopeDigest(request, network);
+	// a mode switch is hashed otherwise than it is sent (core: hashedEnvelopeAction)
+	const hashedInner = (
+		hashedEnvelopeAction(request).payload as { action: PlainObject }
+	).action;
+	const modeCode =
+		hashedInner.abstraction !== request.action.payload.action.abstraction
+			? String(hashedInner.abstraction)
+			: null;
 	const window = nonceWindow(proposal.payload.nonce);
 	const receipt = proposal.receipt;
 	const receiptExplained = receipt
@@ -385,12 +396,12 @@ export function ProposalResult({
 						},
 						{
 							label: "Nonce",
-							value: `${proposal.payload.nonce} · ${new Date(proposal.payload.nonce).toISOString()}`,
+							value: `${proposal.payload.nonce} · ${isoTime(proposal.payload.nonce)}`,
 							mono: true,
 						},
 						{
 							label: "Submittable",
-							value: `${new Date(window.validFrom).toISOString().slice(0, 16)} → ${new Date(window.validUntil).toISOString().slice(0, 16)} UTC`,
+							value: `${isoTime(window.validFrom).slice(0, 16)} → ${isoTime(window.validUntil).slice(0, 16)} UTC`,
 							mono: true,
 						},
 						{
@@ -407,7 +418,7 @@ export function ProposalResult({
 						{
 							label: "expiresAfter",
 							value: proposal.payload.expiresAfter
-								? new Date(proposal.payload.expiresAfter).toISOString()
+								? isoTime(proposal.payload.expiresAfter)
 								: "none",
 							mono: true,
 						},
@@ -564,6 +575,14 @@ export function ProposalResult({
 					lang="json"
 					maxHeight="24rem"
 				/>
+				{modeCode && (
+					<p className="mt-2 text-xs text-muted-foreground">
+						This is the body as it is sent. For the leader's signature
+						Hyperliquid hashes it with <code>abstraction</code> written as the
+						one-letter code <code>"{modeCode}"</code>: the digest above is
+						computed that way (measured on testnet, not documented).
+					</p>
+				)}
 			</Panel>
 		</div>
 	);
@@ -670,7 +689,7 @@ function ReadinessPanel({
 					{receipt ? (
 						<Callout
 							tone={receipt.id === "ok" ? "success" : "danger"}
-							title={`Submitted ${new Date(receipt.at).toISOString()} → ${receipt.id}`}
+							title={`Submitted ${isoTime(receipt.at)} → ${receipt.id}`}
 						>
 							{receipt.id === "ok"
 								? "The chain accepted this proposal."

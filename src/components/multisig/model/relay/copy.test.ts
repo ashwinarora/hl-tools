@@ -1,13 +1,73 @@
 import { describe, expect, it } from "vitest";
-import { FORBIDDEN_CLAIMS, RELAY_COPY } from "./copy";
+import { partsText } from "../parts";
+import {
+	afterRejection,
+	cancelNote,
+	FORBIDDEN_CLAIMS,
+	finishHint,
+	gateOthers,
+	othersSummary,
+	RELAY_COPY,
+	SIGN_HINT_TEXTS,
+	signHint,
+} from "./copy";
 import { REFUSAL_TEXTS } from "./errors";
+import { nicknameProblem } from "./nicknames";
+import {
+	COUNTED_MEANWHILE,
+	REQUEST_REASONS,
+	recheckLine,
+	requestRefusal,
+} from "./signers";
 import { SIGN_IN_STATEMENT } from "./siwe";
 
 describe("relay copy", () => {
 	const all: [string, string][] = [
 		...Object.entries(RELAY_COPY),
 		["sign-in statement", SIGN_IN_STATEMENT],
+		["after a rejection (200)", afterRejection(200)],
+		["after a rejection (502)", afterRejection(502)],
+		["after a rejection (unknown)", afterRejection(undefined)],
+		["others (1, connected)", othersSummary(1, true)],
+		["others (3, connected)", othersSummary(3, true)],
+		["others (1, none connected)", othersSummary(1, false)],
+		["others (2, none connected)", othersSummary(2, false)],
+		["gate (1 other)", gateOthers(1)],
+		["gate (4 others)", gateOthers(4)],
+		["gate (1, none connected)", gateOthers(1, false)],
+		["gate (2, none connected)", gateOthers(2, false)],
+		...Object.entries(REQUEST_REASONS).map(([k, t]): [string, string] => [
+			`request reason ${k}`,
+			t,
+		]),
+		[
+			"request reason unknown",
+			requestRefusal({ status: "rejected", reason: "somethingNew" }) ?? "",
+		],
+		// the notice of a signer list that differs from the copy
+		["signers differ: counted meanwhile", COUNTED_MEANWHILE],
+		...[
+			{ checking: true, refused: null, gaveUp: false },
+			{
+				checking: false,
+				refused: "The relay could not be reached.",
+				gaveUp: false,
+			},
+			{ checking: false, refused: null, gaveUp: true },
+			{ checking: false, refused: null, gaveUp: false },
+		].map((state, i): [string, string] => [
+			`signers differ: re-check ${i}`,
+			recheckLine(state),
+		]),
+		...SIGN_HINT_TEXTS.map((t, i): [string, string] => [`sign hint ${i}`, t]),
+		// a function of its date, so it is not among the plain entries
+		["cancel note", partsText(cancelNote(Date.UTC(2026, 9, 16, 2, 48)))],
 		...REFUSAL_TEXTS.map((t, i): [string, string] => [`refusal ${i}`, t]),
+		// what the page says when it refuses a nickname before asking the relay
+		...["", "0xabc", "You", "x".repeat(41), `a${String.fromCodePoint(0x200b)}b`]
+			.map((name) => nicknameProblem(name))
+			.filter((t): t is string => t !== null)
+			.map((t, i): [string, string] => [`nickname rule ${i}`, t]),
 	];
 
 	it.each(
@@ -16,6 +76,73 @@ describe("relay copy", () => {
 		for (const pattern of FORBIDDEN_CLAIMS) {
 			expect(text, `${pattern} in "${text}"`).not.toMatch(pattern);
 		}
+	});
+
+	it("says what the finaliser's own prompt shows, which is never the action", () => {
+		// only submitting: one prompt, and it is not the action's
+		const only = finishHint({ type: "vaultTransfer" }, false);
+		expect(only).toContain("multiSigActionHash");
+		expect(only).not.toContain("connectionId");
+		expect(finishHint({ type: "sendAsset" }, false)).toBe(only);
+		// signing too: the action's own prompt first, then the finaliser's
+		const both = finishHint({ type: "sendAsset" }, true);
+		expect(both.startsWith(RELAY_COPY.underSign)).toBe(true);
+		expect(both).toContain("The last prompt is your signature as finaliser");
+		expect(finishHint({ type: "vaultTransfer" }, true)).toContain(
+			"connectionId",
+		);
+		// the code has its own panel: the line under it speaks of the last prompt only
+		expect(finishHint({ type: "vaultTransfer" }, true, true)).toMatch(
+			/^The last prompt is your signature as finaliser/,
+		);
+		expect(finishHint({ type: "vaultTransfer" }, false, true)).toBe(only);
+	});
+
+	it("says what the wallet will show for the kind of action being signed", () => {
+		// a send: the destination and the amount
+		expect(signHint({ type: "sendAsset" })).toBe(RELAY_COPY.underSign);
+		expect(signHint({ type: "withdraw3" })).toContain(
+			"the destination and the amount",
+		);
+		// a change of signers has neither
+		const change = signHint({
+			type: "convertToMultiSigUser",
+			signers: '{"authorizedUsers":[],"threshold":2}',
+		});
+		expect(change).toContain(
+			"the new list of signers with the number that must sign",
+		);
+		expect(change).not.toContain("amount");
+		// the conversion back shows no list at all
+		expect(
+			signHint({ type: "convertToMultiSigUser", signers: "null" }),
+		).toContain("“signers” as “null”");
+		expect(signHint({ type: "approveAgent" })).toContain("the API wallet");
+		// a removal names nobody: the prompt shows zeros where the address would be
+		const removal = signHint({
+			type: "approveAgent",
+			agentAddress: `0x${"0".repeat(40)}`,
+		});
+		expect(removal).toContain("an address of all zeros");
+		expect(removal).toContain("the name of the API wallet being removed");
+		expect(
+			signHint({ type: "approveAgent", agentAddress: `0x${"1".repeat(40)}` }),
+		).toContain("the address of the API wallet");
+		// an action this page has no sentence for, or a document that names none:
+		// nothing is promised that the prompt may not show
+		expect(signHint({ type: "somethingNew" })).toContain(
+			"every field of the action",
+		);
+		expect(signHint({})).not.toContain("amount");
+	});
+
+	it("never calls a proposal that Hyperliquid itself refused retryable", () => {
+		// the proposal's number is used up by any answer from Hyperliquid (numberSpent)
+		expect(afterRejection(200)).not.toMatch(/retr|can be sent again/i);
+		expect(afterRejection(200)).toContain("cannot be sent again as it is");
+		// a request that never got there is another matter
+		expect(afterRejection(502)).toContain("can be sent again");
+		expect(afterRejection("200")).toBe("Open it to see why.");
 	});
 
 	it("still lets the checker see what it is meant to catch", () => {
@@ -44,5 +171,20 @@ describe("relay copy", () => {
 		expect(`${RELAY_COPY.smallPrintBefore}${RELAY_COPY.smallPrintLink}.`).toBe(
 			"By signing in you agree to the Privacy Policy.",
 		);
+	});
+
+	it("counts the wallets signed in here in plain words", () => {
+		expect(othersSummary(1, true)).toBe("1 more wallet is signed in here");
+		expect(othersSummary(2, true)).toBe("2 more wallets are signed in here");
+		expect(othersSummary(1, false)).toBe("1 wallet is signed in here");
+		expect(othersSummary(3, false)).toBe("3 wallets are signed in here");
+		expect(gateOthers(1)).toMatch(/^Another wallet is signed in here\./);
+		expect(gateOthers(2)).toMatch(/^2 other wallets are signed in here\./);
+		// with no wallet connected there is no "this one" and no "other"
+		for (const n of [1, 2])
+			expect(gateOthers(n, false)).not.toMatch(/this one|other wallet/);
+		expect(gateOthers(2, false)).toMatch(/^2 wallets are signed in here\./);
+		// a parked wallet is never said to be doing anything
+		expect(RELAY_COPY.othersHow).toMatch(/nothing is read or sent for these/);
 	});
 });

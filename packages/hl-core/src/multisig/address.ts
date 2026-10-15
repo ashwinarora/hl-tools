@@ -1,3 +1,4 @@
+import { getAddress } from "viem";
 import { type Address, isAddress } from "../identity.ts";
 import { type Issue, issue } from "../issues.ts";
 
@@ -45,4 +46,17 @@ export function normaliseAddress(value: unknown, path: string): AddressCheck {
 
 export function isZeroAddress(address: string): boolean {
 	return address.toLowerCase() === ZERO_ADDRESS;
+}
+
+/**
+ * True when an address was typed with capitals that do not match its EIP-55
+ * checksum: almost always a mistyped or half-copied address. An address in
+ * one case only carries no checksum, so nothing can be said about it.
+ */
+export function checksumMismatch(typed: string): boolean {
+	const value = typed.trim();
+	if (!isAddress(value)) return false;
+	const hex = value.slice(2);
+	if (hex === hex.toLowerCase() || hex === hex.toUpperCase()) return false;
+	return getAddress(value.toLowerCase() as Address) !== value;
 }

@@ -1,6 +1,16 @@
 import { encodeProposal, type Proposal, type Receipt } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
-import { A, B, C, makeProposal, NOW, OUTSIDER, signAs } from "#/test/keys";
+import {
+	A,
+	B,
+	C,
+	makeProposal,
+	NOW,
+	OUTSIDER,
+	receiptFor,
+	refusedReceiptFor,
+	signAs,
+} from "#/test/keys";
 import { eventRow, rowFor } from "#/test/relayRows";
 import {
 	assembleProposal,
@@ -154,7 +164,7 @@ describe("assembleProposal", () => {
 		expect(issues).toHaveLength(1);
 		expect(issues[0]?.code).toBe("relay.signature_dropped");
 		expect(issues[0]?.message).toBe(
-			"1 stored signature does not verify and was ignored.",
+			`1 stored signature (filed under ${C.slice(0, 6)}…${C.slice(-4)}) does not verify and was ignored.`,
 		);
 	});
 
@@ -168,7 +178,7 @@ describe("assembleProposal", () => {
 		);
 		expect(signers(assembled?.proposal)).toEqual([A]);
 		expect(issues[0]?.message).toBe(
-			"2 stored signatures do not verify and were ignored.",
+			`2 stored signatures (filed under ${B.slice(0, 6)}…${B.slice(-4)}, ${C.slice(0, 6)}…${C.slice(-4)}) do not verify and were ignored.`,
 		);
 	});
 
@@ -201,9 +211,9 @@ describe("assembleProposal", () => {
 	it("takes the accepted attempt over a later rejected one", async () => {
 		const p = makeProposal();
 		const rows = [
-			rejected(NOW + 1),
-			receipt({ submittedAt: NOW + 2 }),
-			rejected(NOW + 3),
+			await refusedReceiptFor(p, NOW + 1),
+			await receiptFor(p, { submittedAt: NOW + 2 }),
+			await refusedReceiptFor(p, NOW + 3),
 		].map((r) => rowFor({ ...p, receipt: r }).receipts[0] as ReceiptRow);
 		const { assembled } = await assembleProposal(
 			rowFor(p, { receipts: rows }),
@@ -214,9 +224,11 @@ describe("assembleProposal", () => {
 
 	it("takes the latest of several rejected attempts", async () => {
 		const p = makeProposal();
-		const rows = [rejected(NOW + 1), rejected(NOW + 3), rejected(NOW + 2)].map(
-			(r) => rowFor({ ...p, receipt: r }).receipts[0] as ReceiptRow,
-		);
+		const rows = [
+			await refusedReceiptFor(p, NOW + 1),
+			await refusedReceiptFor(p, NOW + 3),
+			await refusedReceiptFor(p, NOW + 2),
+		].map((r) => rowFor({ ...p, receipt: r }).receipts[0] as ReceiptRow);
 		const { assembled } = await assembleProposal(
 			rowFor(p, { receipts: rows }),
 			{ now: NOW },
@@ -226,7 +238,7 @@ describe("assembleProposal", () => {
 
 	it("does not take the relay's word for 'accepted'", async () => {
 		const p = makeProposal();
-		const row = rowFor({ ...p, receipt: rejected(NOW) });
+		const row = rowFor({ ...p, receipt: await refusedReceiptFor(p) });
 		const lying = {
 			...row,
 			receipts: row.receipts.map((r) => ({ ...r, accepted: true })),
@@ -236,6 +248,24 @@ describe("assembleProposal", () => {
 			status: "err",
 			response: "Invalid multi-sig inner signer",
 		});
+	});
+});
+
+describe("a receipt on the relay", () => {
+	it("is taken as the relay files it, also when a signature that was sent is not on the relay", async () => {
+		// A signed through a link, B (the finaliser) sent both: the relay holds
+		// only B's signature, so the submission cannot be rebuilt from its rows.
+		// The receipt is true, and has to stay.
+		const sent = await signAs(await signAs(makeProposal(), 1), 2);
+		const real = await receiptFor(sent);
+		const onRelay = { ...sent, signatures: sent.signatures.slice(1) };
+		const { assembled, issues } = await assembleProposal(
+			rowFor({ ...onRelay, receipt: real }),
+			{ now: NOW },
+		);
+		expect(signers(assembled?.proposal)).toEqual([B]);
+		expect(assembled?.proposal.receipt).toEqual(real);
+		expect(issues).toEqual([]);
 	});
 });
 

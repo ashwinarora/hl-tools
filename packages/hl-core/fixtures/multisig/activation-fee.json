@@ -1,0 +1,1446 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-11. What a send costs beyond its amount, by method, when the receiver is an address never used on HyperCore (`userRole` answered `missing`) and when it is in use. `senderHeld` is what the sender could move before the send (perps withdrawable, spot USDC), where it was recorded; `senderChange` and `receiverChange` are the balances read before and after; `ledgerFee` is the fee on the sender's ledger row. Each action is reduced to the fields that decide the outcome. Recorded by labs/multisig/49, 50 and 51, written by 52.",
+	"network": "testnet",
+	"sends": [
+		{
+			"about": "a first send to an address never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0x39708ee6fa91d9e66e3fdde8430faf6e5d695a14",
+				"amount": "2"
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 37.586431,
+				"spotUsdc": 16.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -2,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 1,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "a first send to an address never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xc74ad531b9b10b5ae3d3a5b4337b443d93ccb9cb",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2"
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 35.586431,
+				"spotUsdc": 16.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -3,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 2,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "a first send to an address never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xcf0de100a2aecc96b23f34fd1c5baf4c81f378e9",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 35.586431,
+				"spotUsdc": 13.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -2,
+				"spotUsdc": -1,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 2,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "a first send to an address never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xd6e8286ab8f02eaaa8346950dafb8d26528a5073",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 33.586431,
+				"spotUsdc": 12.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -2,
+				"spotUsdc": -1,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 2,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "a first send to an address never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xdc0e2076103bb1351937614eeae66b2585225873",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 31.586431,
+				"spotUsdc": 11.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -3,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 2,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "a first send to an address never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x6d424c996eac34d635914107e7539a7725dafa04",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 31.586431,
+				"spotUsdc": 8.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -3,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 2,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "the same address again, also through its other balance",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0x39708ee6fa91d9e66e3fdde8430faf6e5d695a14",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": {
+				"perps": 31.586431,
+				"spotUsdc": 5.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "the same address again, also through its other balance",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0x39708ee6fa91d9e66e3fdde8430faf6e5d695a14",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": {
+				"perps": 31.086431,
+				"spotUsdc": 5.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.5,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.5,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "the same address again, also through its other balance",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xc74ad531b9b10b5ae3d3a5b4337b443d93ccb9cb",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": {
+				"perps": 31.086431,
+				"spotUsdc": 4.707
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "the same address again, also through its other balance",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xdc0e2076103bb1351937614eeae66b2585225873",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "in use",
+			"senderHeld": {
+				"perps": 30.586431,
+				"spotUsdc": 4.707
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "the same address again, also through its other balance",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xcf0de100a2aecc96b23f34fd1c5baf4c81f378e9",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "in use",
+			"senderHeld": {
+				"perps": 30.086431,
+				"spotUsdc": 4.707
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.5,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.5,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "small amounts to addresses never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xd403c5fa28ac33691d1918862721682dd0191059",
+				"amount": "0.5"
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 30.086431,
+				"spotUsdc": 4.207
+			},
+			"answer": {
+				"status": "err",
+				"response": "Usd transfer is smaller than fee."
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": null
+		},
+		{
+			"about": "small amounts to addresses never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0x50c2261fcd6adb019b9ee89d8803a1f3a8551a30",
+				"amount": "1"
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 30.086431,
+				"spotUsdc": 4.207
+			},
+			"answer": {
+				"status": "err",
+				"response": "Usd transfer is smaller than fee."
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": null
+		},
+		{
+			"about": "small amounts to addresses never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0x0254ed8a1d139b722a2d539af8d08cfcb9c66d76",
+				"amount": "1.5"
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 30.086431,
+				"spotUsdc": 4.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -1.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "small amounts to addresses never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0x5be3504b380ae8823b3e8ea5feb4e25888e3a57a",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5"
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 28.586431,
+				"spotUsdc": 4.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -1.5,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.5,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "small amounts to addresses never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xa50e749eed54f0d5c1f0331c8e92a92e281544f6",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 28.586431,
+				"spotUsdc": 2.707
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.5,
+				"spotUsdc": -1,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "small amounts to addresses never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x9de1337c09e670a4ef9943806cd8aea497b003c7",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 28.086431,
+				"spotUsdc": 1.707
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -1.5,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.5,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "a token that is not USDC to an address never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xa0c2058bfab24c23c03c1d665065e1aa18e701c1",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.02"
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 28.086431,
+				"spotUsdc": 0.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -1,
+				"spotUsdc": 0,
+				"spotHype": -0.02
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0.02
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "a token that is not USDC to an address never used",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf1df5be44f63e3afa49a9429da4c79cf7a8f1ae7",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.02",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 27.086431,
+				"spotUsdc": 0.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -1,
+				"spotUsdc": 0,
+				"spotHype": -0.02
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0.02
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "a sender that can barely pay",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xdc0994efc66acefad20fbeea399d19d46e7e60ba",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2.85",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 3.356,
+				"spotUsdc": 0.097
+			},
+			"answer": {
+				"status": "err",
+				"response": "Insufficient USDC balance for token transfer gas."
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": null
+		},
+		{
+			"about": "a sender that can barely pay",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xff7e20fc5e5d020475618e7a7b2d6c3a625a4cfd",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2.35",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 3.356,
+				"spotUsdc": 0.097
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -3.35,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 2.35,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "a unified sender to an address never used",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x98190631977ebe2dae5f626e037fd8eff334a987",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 0,
+				"spotUsdc": 9.722
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -3,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 2,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "a unified sender to an address never used",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x7b7b74046f1fe550f3a85543a7ef2d46e19c7cd3",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 0,
+				"spotUsdc": 6.722
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -3,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 2,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "through the lab multi-sig",
+			"senderMode": "default",
+			"senderIs": "multi-sig",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xd2d395f686b4b449de9d381d687c18e97b441dd1",
+				"amount": "1.5"
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 8.758047,
+				"spotUsdc": 17.24
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -1.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "through the lab multi-sig",
+			"senderMode": "default",
+			"senderIs": "multi-sig",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x4b2ab9db82291f14100ca32b255d956829463e08",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "1.5",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 7.258047,
+				"spotUsdc": 17.24
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -1.5,
+				"spotUsdc": -1,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 1.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "1.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -1.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 1.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.5,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.5,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -2,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 2,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "2"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -2,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 2,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.5,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.5,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -2,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 2,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -2,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 2,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "2"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -2,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 2,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.5,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.5,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.5,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.5,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.02"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": -0.02
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0.02
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.02"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": -0.02
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0.02
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "2.35"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -2.35,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 2.35,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -2,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 2,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "2"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -2,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 2,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "0.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "back to an address in use",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "1.5"
+			},
+			"receiverWas": "in use",
+			"senderHeld": null,
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -1.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 1.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "0.0"
+		},
+		{
+			"about": "an API wallet address that never held funds (its role stays `agent`)",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x00000000000000000000000000000000000a9e17",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 26.086431,
+				"spotUsdc": 0.207
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -1.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.5,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "spot covers the amount but not the fee: the fee comes from perps",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x00000000000000000000000000000000000f3351",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2",
+				"fromSubAccount": ""
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 22.043431,
+				"spotUsdc": 2.5
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -1,
+				"spotUsdc": -2,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 2,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		},
+		{
+			"about": "spot covers the amount but not the fee: the fee comes from perps",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"action": {
+				"type": "spotSend",
+				"destination": "0x00000000000000000000000000000000000f3352",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "2"
+			},
+			"receiverWas": "never used",
+			"senderHeld": {
+				"perps": 19.043431,
+				"spotUsdc": 2.5
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -1,
+				"spotUsdc": -2,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 2,
+				"spotHype": 0
+			},
+			"ledgerFee": "1.0"
+		}
+	]
+}

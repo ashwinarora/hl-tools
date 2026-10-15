@@ -131,6 +131,55 @@ select ok((select frozen_at is null from public.treasuries where address = tests
 select is((select count(*)::int from public.events where treasury = tests.addr(20) and kind = 'treasury_unfrozen'), 2, 'the unfreeze is logged');
 select is((select count(*)::int from public.events where treasury = tests.addr(20) and kind = 'signers_changed'), 4, 'and so is the change');
 
+-- 13. the account itself registers: the wallet that converted its own account
+--     into a multi-sig is not one of its signers
+update r set other = tests.request(6, 'add', 'testnet', 6);
+select is(private.apply_lookup('testnet', tests.addr(6), 'policy', tests.addrs(1, 2), 2), 'added',
+	'an unknown multi-sig is stored when the account itself asked');
+select results_eq(
+	$$ select threshold::int, added_by::text from public.treasuries where address = tests.addr(6) $$,
+	$$ values (2, tests.addr(6)::text) $$, 'credited to the account');
+select is(tests.signers_of(6), tests.addrs(1, 2)::text[], 'with the signers Hyperliquid named, the account not among them');
+select is(tests.req_status((select other from r)), 'done', 'its request is done');
+select results_eq(
+	$$ select kind, actor::text from public.events where treasury = tests.addr(6) $$,
+	$$ values ('treasury_added', tests.addr(6)::text) $$, 'the history says the account registered itself');
+set local role authenticated;
+select tests.claims(6);
+select is_empty($$ select 1 from public.treasuries where address = tests.addr(6) $$, 'the account itself still reads nothing of its treasury');
+select is_empty($$ select 1 from public.treasury_signers where treasury = tests.addr(6) $$, 'not even who signs for it');
+select is_empty($$ select 1 from public.events where treasury = tests.addr(6) $$, 'nor its history');
+select isnt_empty($$ select 1 from public.treasury_requests where address = tests.addr(6) $$, 'only its own request');
+select tests.claims(1);
+select isnt_empty($$ select 1 from public.treasuries where address = tests.addr(6) $$, 'its signers see it without asking');
+reset role;
+
+-- 14. a signer and the account both ask: the signer is credited, whoever was first
+update r set by_signer = tests.request(2, 'add', 'testnet', 5), other = tests.request(5, 'add', 'testnet', 5);
+update public.treasury_requests set created_at = now() - interval '1 second' where id = (select other from r);
+select is(private.apply_lookup('testnet', tests.addr(5), 'policy', tests.addrs(2, 3), 1), 'added', 'asked by the account and by one of its signers');
+select is((select added_by::text from public.treasuries where address = tests.addr(5)), tests.addr(2)::text, 'the signer is credited before the account');
+select is(tests.req_status((select by_signer from r)) || ' ' || tests.req_status((select other from r)), 'done done', 'both requests are done');
+
+-- 15. the account asks and so does a stranger
+update r set other = tests.request(4, 'add', 'testnet', 4), by_stranger = tests.request(3, 'add', 'testnet', 4);
+select is(private.apply_lookup('testnet', tests.addr(4), 'policy', tests.addrs(1, 2), 1), 'added', 'the account and a stranger ask');
+select is(tests.req_status((select other from r)) || ' ' || tests.req_status((select by_stranger from r)), 'done rejected:not_a_signer',
+	'the stranger is refused as before');
+
+-- 16. the account asks while Hyperliquid does not show it as a multi-sig
+update r set other = tests.request(3, 'add', 'testnet', 3);
+select is(private.apply_lookup('testnet', tests.addr(3), 'none'), 'rejected', 'an account that is not a multi-sig cannot register itself');
+select is(tests.req_status((select other from r)), 'rejected:not_multisig', 'and is told so');
+select is_empty($$ select 1 from public.treasuries where address = tests.addr(3) $$, 'nothing is stored');
+
+-- 17. the account asks again for a treasury already known
+update r set other = tests.request(6, 'add', 'testnet', 6);
+select is(private.apply_lookup('testnet', tests.addr(6), 'policy', tests.addrs(1, 2), 2), 'unchanged', 'asking again for a known treasury changes nothing');
+select is(tests.req_status((select other from r)), 'done', 'and that request is done too');
+select is((select count(*)::int from public.treasuries where address = tests.addr(6)), 1, 'still one treasury');
+select is((select added_by::text from public.treasuries where address = tests.addr(6)), tests.addr(6)::text, 'and who registered it stays');
+
 select throws_ok($$ select private.apply_lookup('testnet', tests.addr(20), 'rate_limited') $$, 'P0001', null, 'any other outcome is a programming error');
 
 -- nothing here is callable through the API

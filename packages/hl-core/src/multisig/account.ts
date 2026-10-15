@@ -7,11 +7,58 @@ import type { Address } from "../identity.ts";
 import { type Issue, issue } from "../issues.ts";
 import { MAX_SIGNERS } from "../rules/multisig.ts";
 import type { Policy } from "./types.ts";
+import { isoTime } from "./when.ts";
 
 export interface AgentInput {
 	readonly name: string;
 	readonly address: string;
 	readonly validUntil: number;
+}
+
+/**
+ * The API wallet approved without a name, read from `webData3`. Hyperliquid
+ * lists only the named ones in `extraAgents`; the unnamed one is under
+ * `userState` there (`agentAddress`, `agentValidUntil`; measured on testnet,
+ * fixtures/multisig/agent-unnamed.json). Null: the account has none.
+ * Undefined: the answer does not say.
+ */
+export function unnamedApiWallet(
+	webData3: unknown,
+): AgentInput | null | undefined {
+	const state = (webData3 as { userState?: unknown } | null)?.userState;
+	if (!state || typeof state !== "object" || !("agentAddress" in state))
+		return undefined;
+	const { agentAddress, agentValidUntil } = state as Record<string, unknown>;
+	if (agentAddress === null) return null;
+	if (
+		typeof agentAddress !== "string" ||
+		!/^0x[0-9a-fA-F]{40}$/.test(agentAddress) ||
+		typeof agentValidUntil !== "number"
+	)
+		return undefined;
+	return {
+		name: "",
+		address: agentAddress.toLowerCase(),
+		validUntil: agentValidUntil,
+	};
+}
+
+/**
+ * Every API wallet of an account: the unnamed one first, then the named
+ * ones. Null when the answer about the unnamed one cannot be read: a list
+ * that may be short one wallet is not a list to show.
+ */
+export function allApiWallets(
+	named: readonly AgentInput[],
+	webData3: unknown,
+): readonly AgentInput[] | null {
+	const unnamed = unnamedApiWallet(webData3);
+	if (unnamed === undefined) return null;
+	// one key approved both ways is one wallet: its name says more
+	return unnamed &&
+		!named.some((a) => a.address.toLowerCase() === unnamed.address)
+		? [unnamed, ...named]
+		: named;
 }
 
 export interface AccountInput {
@@ -20,7 +67,7 @@ export interface AccountInput {
 	readonly policy: Policy | null;
 	/** `userRole`, fetched only for non-multisig addresses; null when not fetched. */
 	readonly role: UserRole | null;
-	/** `extraAgents`; null when the call failed. */
+	/** Every API wallet (`allApiWallets`); null when the read failed. */
 	readonly agents: readonly AgentInput[] | null;
 	/** Per-signer policy: a Policy = nested multi-sig, null = plain user, undefined = not checked. */
 	readonly signerPolicies: Readonly<Record<string, Policy | null | undefined>>;
@@ -56,7 +103,7 @@ function roleSummary(role: UserRole | null): string {
 		case "user":
 			return "A normal user: its own key signs every action. It may have been a multi-sig user before (load recent actions to see conversions).";
 		case "agent":
-			return `An API wallet (agent) of ${role.data.user}. Agents sign L1 actions for their master and cannot be multi-sig users or inner signers.`;
+			return `An API wallet (agent) of ${role.data.user}. Agents sign L1 actions for their master and cannot sign a multi-sig's inner actions for it. An API wallet address that has received funds can itself be listed as a signer.`;
 		case "vault":
 			return "A vault. Vaults are driven by their leader's account; multi-sig applies to the leader, not the vault address.";
 		case "subAccount":
@@ -79,7 +126,7 @@ export function assessAccount(input: AccountInput): AccountAssessment {
 			issue(
 				"account.agents_unknown",
 				"warning",
-				"Approved API wallets could not be loaded; an agent would trade for this account without the multi-sig.",
+				"Approved API wallets could not be loaded; an agent would act for this account without the multi-sig.",
 			),
 		);
 	}
@@ -89,9 +136,9 @@ export function assessAccount(input: AccountInput): AccountAssessment {
 			issue(
 				"account.agents_bypass",
 				"warning",
-				`${live.length} approved API wallet${live.length > 1 ? "s" : ""} (${live.map((a) => a.name || "main").join(", ")}) can place and cancel orders for this account without any multi-sig signatures. Agents cannot move funds, and they survive a revert to a normal user.`,
+				`${live.length} approved API wallet${live.length > 1 ? "s" : ""} (${live.map((a) => a.name || "main").join(", ")}) can act for this account without any multi-sig signatures: trade with everything it holds and move it into vaults. Agents cannot send funds to another account or withdraw them, and they survive a revert to a normal user.`,
 				{
-					fix: "Treat every approveAgent proposal as 'make trading single-key'; revoke agents you do not recognise.",
+					fix: "Treat every approveAgent proposal as 'one key can trade and fill vaults with all of it'; revoke agents you do not recognise.",
 				},
 			),
 		);
@@ -101,7 +148,7 @@ export function assessAccount(input: AccountInput): AccountAssessment {
 			issue(
 				"account.agent_expired",
 				"info",
-				`API wallet ${a.name || "main"} (${a.address}) expired on ${new Date(a.validUntil).toISOString()} and can no longer sign.`,
+				`API wallet ${a.name || "main"} (${a.address}) expired on ${isoTime(a.validUntil)} and can no longer sign.`,
 			),
 		);
 	}

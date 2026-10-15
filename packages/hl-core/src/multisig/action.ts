@@ -21,7 +21,7 @@ import {
 	type UserSignedSpec,
 	userSignedSpec,
 } from "../rules/signing.ts";
-import { normaliseAddress } from "./address.ts";
+import { normaliseAddress, ZERO_ADDRESS } from "./address.ts";
 import { parseSignersString, signersString } from "./signerSet.ts";
 import type { Kind, PlainObject, RiskFlag } from "./types.ts";
 
@@ -53,12 +53,28 @@ const FUNDS_OUT = new Set([
 ]);
 const EVM_TOUCHING = new Set(["sendToEvmWithData", "evmUserModify"]);
 
+/**
+ * An `approveAgent` that names the zero address approves nobody: it removes
+ * the API wallet of that name (`agentName` "" is the one without a name).
+ * Measured through a multi-sig: fixtures/multisig/agent-unnamed.json, and
+ * lab notes for a named one.
+ */
+export function isAgentRemoval(action: PlainObject): boolean {
+	return (
+		action.type === "approveAgent" &&
+		typeof action.agentAddress === "string" &&
+		action.agentAddress.toLowerCase() === ZERO_ADDRESS
+	);
+}
+
 /** Risk flags derived from the action type (and, for convert, its content). */
 export function riskFlags(action: PlainObject): RiskFlag[] {
 	const flags: RiskFlag[] = [];
 	const type = action.type;
 	if (typeof type !== "string") return flags;
-	if (type === "approveAgent") flags.push("agent_bypass");
+	// a removal lets nobody in
+	if (type === "approveAgent" && !isAgentRemoval(action))
+		flags.push("agent_bypass");
 	if (type === "convertToMultiSigUser") {
 		flags.push(
 			parseSignersString(action.signers).revert
@@ -66,7 +82,12 @@ export function riskFlags(action: PlainObject): RiskFlag[] {
 				: "policy_change",
 		);
 	}
-	if (FUNDS_OUT.has(type)) flags.push("funds_out");
+	// a vault deposit puts the money in the hands of the vault's leader
+	if (
+		FUNDS_OUT.has(type) ||
+		(type === "vaultTransfer" && action.isDeposit === true)
+	)
+		flags.push("funds_out");
 	if (EVM_TOUCHING.has(type)) flags.push("evm_warning");
 	return flags;
 }

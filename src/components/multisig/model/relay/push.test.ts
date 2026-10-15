@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import { A, B, C, makeProposal, NOW, signAs } from "#/test/keys";
 import { bareDocument } from "./assemble";
 import {
+	isRelayVaultAction,
 	type PushInput,
 	planPush,
 	publishBlocker,
 	publishRow,
 	type RelayKnown,
+	settledAlready,
 } from "./push";
 
 const SIG = {
@@ -187,6 +189,29 @@ describe("planPush", () => {
 	});
 });
 
+describe("settledAlready", () => {
+	const closed = { code: "relay.proposal_closed" };
+	it("a result the relay refuses because it already holds the proposal as accepted is done", () => {
+		expect(
+			settledAlready({ kind: "receipt", receipt: receipt() }, closed),
+		).toBe(true);
+	});
+	it("any other refusal of a result is a problem, and so is a closed proposal for a signature", () => {
+		const op = { kind: "receipt", receipt: receipt() } as const;
+		for (const code of [
+			"relay.not_finaliser",
+			"relay.rate_limited",
+			"relay.unreachable",
+			"relay.not_allowed",
+		])
+			expect(settledAlready(op, { code })).toBe(false);
+		// a signature that arrives after the proposal closed was not counted
+		expect(settledAlready({ kind: "sign", signature: SIG }, closed)).toBe(
+			false,
+		);
+	});
+});
+
 describe("publishRow", () => {
 	it("is the bare document filed under its own treasury, finaliser and nonce", async () => {
 		const p = { ...(await signAs(makeProposal(), 1)), receipt: receipt() };
@@ -209,13 +234,112 @@ describe("publishBlocker", () => {
 		expect(publishBlocker(makeProposal())).toBeNull();
 	});
 
+	const VAULT = "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0";
+	const deposit = {
+		type: "vaultTransfer",
+		vaultAddress: VAULT,
+		isDeposit: true,
+		usd: 5_000_000,
+	};
+	const vaultProposal = (
+		action: Record<string, unknown> = deposit,
+		kind: "l1" | "user-signed" = "l1",
+	) => {
+		const p = makeProposal();
+		return {
+			...p,
+			meta: { ...p.meta, kind },
+			payload: { ...p.payload, action: action as never },
+		};
+	};
+
+	it("lets a vault deposit or withdrawal through, in the exact shape the relay stores", () => {
+		expect(publishBlocker(vaultProposal())).toBeNull();
+		expect(
+			publishBlocker(vaultProposal({ ...deposit, isDeposit: false, usd: 1 })),
+		).toBeNull();
+		expect(isRelayVaultAction(deposit)).toBe(true);
+		expect(kinds(vaultProposal(), { relay: null, publish: true })).toContain(
+			"publish",
+		);
+	});
+
+	// the cases of supabase/tests/180_vault_proposals.sql, one for one
+	it.each([
+		["claims to be user-signed", vaultProposal(deposit, "user-signed")],
+		["has a field more", vaultProposal({ ...deposit, note: "x" })],
+		[
+			"has no direction",
+			vaultProposal({ type: "vaultTransfer", vaultAddress: VAULT, usd: 5 }),
+		],
+		[
+			"has no amount",
+			vaultProposal({
+				type: "vaultTransfer",
+				vaultAddress: VAULT,
+				isDeposit: true,
+			}),
+		],
+		[
+			"carries its amount as text",
+			vaultProposal({ ...deposit, usd: "5000000" }),
+		],
+		["carries nothing", vaultProposal({ ...deposit, usd: 0 })],
+		["carries a negative amount", vaultProposal({ ...deposit, usd: -5 })],
+		["carries a fraction", vaultProposal({ ...deposit, usd: 5.5 })],
+		[
+			"carries more than a number holds exactly",
+			vaultProposal({ ...deposit, usd: 10 ** 17 }),
+		],
+		[
+			"has its direction as text",
+			vaultProposal({ ...deposit, isDeposit: "true" }),
+		],
+		[
+			"names its vault with a capital",
+			vaultProposal({ ...deposit, vaultAddress: VAULT.replace("a1", "A1") }),
+		],
+		["names no address", vaultProposal({ ...deposit, vaultAddress: "0x1234" })],
+		["names no vault", vaultProposal({ ...deposit, vaultAddress: null })],
+	])("stops a vault action that %s", (_name, blocked) => {
+		expect(publishBlocker(blocked)).toBe(
+			"This vault action is not in the form the sharing service takes, so it cannot be shared through it. It still works as a link or a file.",
+		);
+		expect(kinds(blocked, { relay: null, publish: true })).toEqual([]);
+	});
+
+	it("stops every other action signed as a code, and a user-signed one that claims to be", () => {
+		const text =
+			"Of the actions signed as a code, only a vault deposit or withdrawal can be shared through the sharing service.";
+		expect(publishBlocker(vaultProposal({ type: "noop" }))).toBe(text);
+		expect(
+			publishBlocker(
+				vaultProposal({ type: "order", orders: [], grouping: "na" }),
+			),
+		).toBe(text);
+		const p = makeProposal();
+		expect(publishBlocker({ ...p, meta: { ...p.meta, kind: "l1" } })).toBe(
+			text,
+		);
+	});
+
+	it("stops a vault action sent for a vault or with an expiry, whatever else holds", () => {
+		const p = vaultProposal();
+		for (const beside of [{ vaultAddress: C }, { expiresAfter: NOW }])
+			expect(
+				publishBlocker({ ...p, payload: { ...p.payload, ...beside } }),
+			).toMatch(/a vault address or an expiry/);
+	});
+
 	it("stops an L1 action, a vault address and an expiry, and plans nothing for them", () => {
 		const p = makeProposal();
 		const l1 = { ...p, meta: { ...p.meta, kind: "l1" as const } };
 		const vault = { ...p, payload: { ...p.payload, vaultAddress: C } };
 		const expiring = { ...p, payload: { ...p.payload, expiresAfter: NOW } };
 		for (const blocked of [l1, vault, expiring]) {
-			expect(publishBlocker(blocked)).toMatch(/shared through the relay/);
+			expect(publishBlocker(blocked)).toMatch(
+				/shared through the sharing service/,
+			);
 			expect(kinds(blocked, { relay: null, publish: true })).toEqual([]);
 		}
 	});

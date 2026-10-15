@@ -19,6 +19,8 @@ import {
 	privateKeyToAccount,
 } from "viem/accounts";
 import { generateSiweNonce } from "viem/siwe";
+import type { Slots } from "#/components/multisig/model/relay/wallets";
+import { relayAuthOptions } from "#/components/multisig/relay/config";
 import { signIn } from "#/components/multisig/relay/session";
 
 /** The site the local stack is configured for (supabase/config.toml). */
@@ -75,6 +77,60 @@ export function newClient(): SupabaseClient {
 	});
 }
 
+/**
+ * One browser: its storage, and the client the app makes for each wallet
+ * (`relayAuthOptions`, a slot per wallet). Several wallets can sign in in it
+ * side by side, as they do behind one wallet extension.
+ */
+export function newBrowser(): {
+	readonly slots: Slots;
+	readonly map: Map<string, string>;
+	clientFor(wallet: Address): SupabaseClient;
+} {
+	const s = stack();
+	const map = new Map<string, string>();
+	const slots: Slots = {
+		get length() {
+			return map.size;
+		},
+		key: (i) => [...map.keys()][i] ?? null,
+		getItem: (k) => map.get(k) ?? null,
+		setItem: (k, v) => void map.set(k, v),
+		removeItem: (k) => void map.delete(k),
+	};
+	const made = new Map<Address, SupabaseClient>();
+	return {
+		slots,
+		map,
+		clientFor(wallet) {
+			let c = made.get(wallet);
+			if (!c) {
+				c = createClient(s.url, s.key, {
+					auth: relayAuthOptions(wallet, slots),
+				});
+				made.set(wallet, c);
+			}
+			return c;
+		},
+	};
+}
+
+/** Sign an account in through `client`, exactly as the page does. */
+export async function signInWith(
+	client: SupabaseClient,
+	account: PrivateKeyAccount,
+) {
+	return signIn(
+		client,
+		{
+			address: account.address,
+			chainId: 999,
+			signMessage: (message) => account.signMessage({ message }),
+		},
+		{ origin: ORIGIN, nonce: generateSiweNonce() },
+	);
+}
+
 export interface TestWallet {
 	readonly account: PrivateKeyAccount;
 	/** Lowercase. */
@@ -111,19 +167,41 @@ export type StubAnswer =
 	| "rate-limited"
 	| "broken";
 
+/** What the stand-in explorer says about one transaction hash. */
+export type StubTx =
+	| {
+			readonly user: Address;
+			readonly action: Record<string, unknown>;
+			readonly error?: string | null;
+			readonly time?: number;
+	  }
+	| "unknown"
+	| "rate-limited"
+	| "broken";
+
 export interface InfoStub {
 	/** As the database container reaches it. */
 	readonly url: string;
 	/** Every account asked about, in order. */
 	readonly calls: Address[];
+	/** Every transaction hash asked about, in order. */
+	readonly txCalls: string[];
 	answer(address: Address, a: StubAnswer): void;
+	/** Script the explorer's answer for a hash. Unscripted hashes are "unknown". */
+	tx(hash: string, a: StubTx): void;
 	close(): Promise<void>;
 }
 
-/** Stands in for `POST /info {type: "userToMultiSigSigners"}`. Unknown accounts are "not a multi-sig". */
+/**
+ * Stands in for `POST /info {type: "userToMultiSigSigners"}` (unknown accounts
+ * are "not a multi-sig") and for the explorer's `{type: "txDetails"}`
+ * (unknown hashes are "no such transaction"), on one address.
+ */
 export async function infoStub(): Promise<InfoStub> {
 	const answers = new Map<string, StubAnswer>();
+	const txs = new Map<string, StubTx>();
 	const calls: Address[] = [];
+	const txCalls: string[] = [];
 	const server: Server = createServer((req, res) => {
 		let body = "";
 		req.on("data", (c) => {
@@ -131,9 +209,40 @@ export async function infoStub(): Promise<InfoStub> {
 		});
 		req.on("end", () => {
 			let user = "";
+			let asked: { type?: unknown; hash?: unknown } = {};
 			try {
-				user = String((JSON.parse(body) as { user?: unknown }).user ?? "");
+				asked = JSON.parse(body) as typeof asked;
+				user = String((asked as { user?: unknown }).user ?? "");
 			} catch {}
+			if (asked.type === "txDetails") {
+				const hash = String(asked.hash ?? "");
+				txCalls.push(hash);
+				const t = txs.get(hash) ?? "unknown";
+				if (t === "rate-limited") {
+					res.writeHead(429).end();
+				} else if (t === "broken") {
+					res
+						.writeHead(502, { "content-type": "text/html" })
+						.end("<html>bad gateway</html>");
+				} else {
+					res.writeHead(200, { "content-type": "application/json" }).end(
+						t === "unknown"
+							? '{"type":"error","message":"invalid block height: 0"}'
+							: JSON.stringify({
+									type: "txDetails",
+									tx: {
+										time: t.time ?? Date.now(),
+										user: t.user,
+										action: t.action,
+										block: 1,
+										hash,
+										error: t.error ?? null,
+									},
+								}),
+					);
+				}
+				return;
+			}
 			calls.push(user as Address);
 			const a = answers.get(user) ?? "not-multisig";
 			if (a === "rate-limited") {
@@ -159,7 +268,9 @@ export async function infoStub(): Promise<InfoStub> {
 	return {
 		url: `http://host.docker.internal:${port}/info`,
 		calls,
+		txCalls,
 		answer: (address, a) => void answers.set(address, a),
+		tx: (hash, a) => void txs.set(hash, a),
 		close: () => new Promise((resolve) => server.close(() => resolve())),
 	};
 }

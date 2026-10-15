@@ -1,0 +1,42 @@
+{
+ "format": "hl-tools.ws-session",
+ "version": 1,
+ "network": "testnet",
+ "url": "wss://api.hyperliquid-testnet.xyz/ws",
+ "channel": "userFundings",
+ "subscription": {
+  "type": "userFundings",
+  "user": "0x0000000000000000000000000000000000000001"
+ },
+ "startedAt": 1791662607333,
+ "endedAt": 1791662612335,
+ "sanitized": true,
+ "truncated": false,
+ "messages": [
+  {
+   "t": 342,
+   "dir": "event",
+   "text": "open"
+  },
+  {
+   "t": 342,
+   "dir": "out",
+   "text": "{\"method\":\"subscribe\",\"subscription\":{\"type\":\"userFundings\",\"user\":\"0x0000000000000000000000000000000000000001\"}}"
+  },
+  {
+   "t": 502,
+   "dir": "in",
+   "text": "{\"channel\":\"subscriptionResponse\",\"data\":{\"method\":\"subscribe\",\"subscription\":{\"type\":\"userFundings\",\"user\":\"0x0000000000000000000000000000000000000001\"}}}"
+  },
+  {
+   "t": 502,
+   "dir": "in",
+   "text": "{\"channel\":\"userFundings\",\"data\":{\"isSnapshot\":true,\"user\":\"0x0000000000000000000000000000000000000001\",\"fundings\":[{\"time\":1791662400025,\"coin\":\"BTC\",\"usdc\":\"0.008398\",\"szi\":\"0.00019\",\"fundingRate\":\"-0.000532081\",\"nSamples\":null}]}}"
+  },
+  {
+   "t": 5002,
+   "dir": "event",
+   "text": "close 1000 (recording finished)"
+  }
+ ]
+}

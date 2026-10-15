@@ -78,6 +78,33 @@ function explainMessage(
 	};
 }
 
+/**
+ * Refusals after which the leader's number is still free: the envelope's own
+ * signature did not resolve to the leader's account, so nothing was charged
+ * to it.
+ */
+const NUMBER_KEPT: ReadonlySet<string> = new Set([
+	"signer-missing",
+	"must-deposit",
+]);
+
+/**
+ * Whether an answer from /exchange used up the envelope's number for its
+ * leader, so that the same proposal can never be sent again.
+ *
+ * Measured on testnet (2026-10-11, fixtures/multisig/nonce-order.json, suites
+ * `retry`, `retry2`, `retry3`): an envelope Hyperliquid took and refused,
+ * for whatever reason, is answered "duplicate nonce" when it is sent again,
+ * also minutes later and also when what was wrong has been put right. Seen
+ * for a threshold not met, a stranger's inner signature, an action that
+ * failed for balance, and a number outside the window. Only an answer that
+ * never reached the leader's account leaves the number free: a transport
+ * error (not HTTP 200), or a signature that recovered to another address.
+ */
+export function numberSpent(e: ErrorExplanation): boolean {
+	return e.source === "status" && !NUMBER_KEPT.has(e.id);
+}
+
 /** Explain any /exchange result. Never throws, whatever the body is. */
 export function explainExchangeError(
 	body: unknown,

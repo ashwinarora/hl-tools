@@ -1,4 +1,4 @@
-import type { Issue } from "@hl-tools/core";
+import type { Issue, Proposal } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Upload } from "lucide-react";
@@ -8,7 +8,7 @@ import { Callout, IssueList } from "#/components/hub/status";
 import { Button } from "#/components/ui/button";
 import { errorMessage } from "#/hooks/useHyperliquid";
 import { saveProposal } from "./model/history";
-import { openText } from "./model/transport";
+import { openAll } from "./model/transport";
 
 /**
  * Open a proposal someone sent: paste the document or the link, or upload the
@@ -30,25 +30,31 @@ export function OpenProposal({
 
 	const open = async (source: string) => {
 		setFailure(null);
-		const decoded = openText(source);
-		if (!decoded.proposal) {
+		// one proposal, or the two steps of a move in one link or file
+		const decoded = openAll(source);
+		const [first] = decoded.proposals;
+		if (!first) {
 			setIssues(decoded.issues);
 			return;
 		}
 		try {
-			const saved = await saveProposal(decoded.proposal);
-			if (!saved.saved) {
-				setIssues(saved.issues);
-				return;
+			let opened: Proposal | null = null;
+			for (const proposal of decoded.proposals) {
+				const saved = await saveProposal(proposal);
+				if (!saved.saved) {
+					setIssues(saved.issues);
+					return;
+				}
+				opened ??= saved.proposal;
+				await client.invalidateQueries({
+					queryKey: ["multisig-proposal", saved.proposal.digest],
+				});
 			}
 			setIssues([]);
 			await client.invalidateQueries({ queryKey: ["multisig-proposals"] });
-			await client.invalidateQueries({
-				queryKey: ["multisig-proposal", saved.proposal.digest],
-			});
 			void navigate({
 				to: "/multisig/proposal",
-				search: { digest: saved.proposal.digest },
+				search: { digest: (opened ?? first).digest },
 			});
 		} catch (e) {
 			setFailure(errorMessage(e));
@@ -80,6 +86,7 @@ export function OpenProposal({
 						onChange={(e) => setText(e.target.value)}
 						rows={5}
 						className="min-h-24"
+						// jargon: what a pasted document looks like, as it is
 						placeholder='{"v":1,"payload":{"network":"testnet","multiSigUser":"0x…", …}}  or  https://…/multisig/proposal#share=…'
 						data-private
 					/>
@@ -115,7 +122,7 @@ export function OpenProposal({
 				</div>
 				{issues.length > 0 && (
 					<Callout tone="danger" title="Not a proposal this page can open">
-						<IssueList issues={issues} />
+						<IssueList plain issues={issues} />
 					</Callout>
 				)}
 				{failure && (

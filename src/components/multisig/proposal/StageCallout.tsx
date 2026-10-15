@@ -1,12 +1,24 @@
 import type { ReactNode } from "react";
 import { Callout, type Tone } from "#/components/hub/status";
+import type { HelpKey } from "../model/help";
 import type { Phase, Stage } from "../model/stage";
+import { Sentence } from "../names/Sentence";
+import { Help } from "../shell/Help";
 
 const TONE: Record<Phase, Tone> = {
 	judging: "neutral",
 	collecting: "info",
 	ready: "success",
 	submitted: "success",
+	"carried-out": "success",
+	"in-effect": "success",
+	closed: "neutral",
+	stuck: "warning",
+	overtaken: "warning",
+	refused: "danger",
+	// held up by a no: open still, and a change of mind makes it live again
+	"cannot-pass": "warning",
+	"finaliser-no": "warning",
 	withdrawn: "neutral",
 	declined: "neutral",
 	"not-yet-valid": "info",
@@ -14,6 +26,19 @@ const TONE: Record<Phase, Tone> = {
 	"not-multisig": "danger",
 	unknown: "unknown",
 	unsupported: "warning",
+};
+
+/** The term a stage's sentence leans on, explained by the mark after it. */
+const TERM: Partial<Record<Phase, HelpKey>> = {
+	collecting: "signingWindow",
+	ready: "signingWindow",
+	"not-yet-valid": "signingWindow",
+	expired: "signingWindow",
+	"carried-out": "outside",
+	overtaken: "sendOrder",
+	stuck: "finaliser",
+	"cannot-pass": "sayNo",
+	"finaliser-no": "sayNo",
 };
 
 /** Where the proposal stands, in one sentence, at the top of the page. */
@@ -25,8 +50,18 @@ export function StageCallout({
 	action?: ReactNode;
 }) {
 	return (
-		<Callout tone={TONE[stage.phase]} title={stage.headline} action={action}>
-			{stage.detail}
+		<Callout
+			tone={TONE[stage.phase]}
+			title={<Sentence parts={stage.headlineParts} />}
+			action={action}
+		>
+			<Sentence parts={stage.detailParts} />
+			{TERM[stage.phase] && (
+				<>
+					{" "}
+					<Help k={TERM[stage.phase] as HelpKey} />
+				</>
+			)}
 		</Callout>
 	);
 }

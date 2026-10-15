@@ -1,15 +1,21 @@
 /**
- * What the signer screens know about a treasury: its signer set, approved API
- * wallets and balances, observed from the info API and re-observed while a
- * screen stays open. The screens only read this shape, so a later phase can
- * swap polling for WebSocket subscriptions without touching them.
+ * What the signer screens know about a treasury: who controls it and what it
+ * holds. Two ways to get there, one shape for the screens:
+ *
+ *  - `useTreasuryState`      read once over HTTP (looking an address up before
+ *                            adding it or proposing for it);
+ *  - `useLiveTreasuryState`  for a page that stays open: holdings pushed over
+ *                            the WebSocket, signers and API wallets asked for
+ *                            once a minute.
  */
-import type { AgentInfo, PerpState, Policy, SpotState } from "@hl-tools/core";
+
+import type { AccountMode, AgentInfo, Policy } from "@hl-tools/core";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useAccount } from "#/components/tools/multisig/useAccount";
-
-/** One refresh costs weight 64 of the 1200 per minute, so not more often than this. */
-export const REFRESH_MS = 30_000;
+import { CONTROL_REFRESH_MS, useControl } from "./live/useControl";
+import { type LiveWants, useLiveAccount } from "./live/useLiveAccount";
+import type { LiveAccount, LiveStatus } from "./model/live/account";
+import { localDateTime } from "./model/time";
 
 export interface TreasuryState {
 	readonly target: AccountTarget | null;
@@ -20,25 +26,45 @@ export interface TreasuryState {
 	readonly isMultiSig: boolean | null;
 	readonly policy: Policy | null;
 	readonly agents: readonly AgentInfo[] | null;
-	readonly perp: PerpState | null;
-	readonly spot: SpotState | null;
+	/** Perps on the first dex: what the account is worth there and what can be moved now. */
+	readonly perp: {
+		readonly accountValue: string;
+		readonly withdrawable: string;
+	} | null;
+	readonly spot:
+		| readonly {
+				readonly coin: string;
+				/** The token's index, where the source gave one. */
+				readonly token: number | null;
+				readonly total: string;
+				readonly hold: string;
+		  }[]
+		| null;
+	/**
+	 * How the account keeps its money (manual: perps and spot apart; unified:
+	 * one balance). Null while not read: only a page that stays open reads it.
+	 */
+	readonly mode: AccountMode | null;
+	/** The mode is on its way: the balances are not laid out before it is known. */
+	readonly modePending: boolean;
+	/** When the signer set and API wallets were read. */
 	readonly observedAt: number | null;
-	readonly requests: number;
-	readonly weight: number;
-	readonly live: boolean;
+	/** How this was observed, for the line under the figures. */
+	readonly source: string;
+	/** Holdings: read once with everything else, or arriving live (and how that connection is). */
+	readonly money: "once" | LiveStatus;
+	/** A read of signers and API wallets is under way. */
+	readonly checking: boolean;
 	refetch(): void;
 }
 
-export function useTreasuryState(
-	target: AccountTarget | null,
-	opts: { live?: boolean } = {},
-): TreasuryState {
-	const live = opts.live ?? false;
-	const query = useAccount(target, {
-		refetchInterval: live ? REFRESH_MS : undefined,
-	});
+export function useTreasuryState(target: AccountTarget | null): TreasuryState {
+	const query = useAccount(target);
 	const d = query.data;
 	const policy = d?.policy.ok ? d.policy.observed.data : null;
+	const perp = d?.perp.ok ? d.perp.observed.data : null;
+	const requests = d?.requests.length ?? 0;
+	const weight = d?.requests.reduce((n, r) => n + r.weight, 0) ?? 0;
 	return {
 		target,
 		loading: !!target && query.isPending,
@@ -50,12 +76,78 @@ export function useTreasuryState(
 		isMultiSig: d?.policy.ok ? policy !== null : null,
 		policy,
 		agents: d?.agents.ok ? d.agents.observed.data : null,
-		perp: d?.perp.ok ? d.perp.observed.data : null,
-		spot: d?.spot.ok ? d.spot.observed.data : null,
+		perp: perp
+			? {
+					accountValue: perp.marginSummary.accountValue,
+					withdrawable: perp.withdrawable,
+				}
+			: null,
+		spot: d?.spot.ok ? d.spot.observed.data.balances : null,
+		mode: null,
+		modePending: false,
 		observedAt: d?.observedAt ?? null,
-		requests: d?.requests.length ?? 0,
-		weight: d?.requests.reduce((n, r) => n + r.weight, 0) ?? 0,
-		live,
+		source: `${requests} info requests · weight ${weight}`,
+		money: "once",
+		checking: query.isFetching,
 		refetch: () => void query.refetch(),
+	};
+}
+
+const MONEY: Record<LiveStatus, string> = {
+	connecting: "balances connecting…",
+	live: "balances live",
+	reconnecting: "balances reconnecting…",
+	down: "balances not updating: Hyperliquid cannot be reached",
+	refused: "balances not updating: Hyperliquid refused live updates",
+};
+
+/**
+ * One line saying how a live treasury state is kept current. The time beside
+ * it is the signers' and API wallets'; balances that are not live get their
+ * own (`LiveAccount.asOf`), in the reader's zone like every time of the section.
+ */
+export function liveSource(
+	money: LiveStatus,
+	asOf: number | null = null,
+): string {
+	const balances =
+		money !== "live" && asOf !== null
+			? `${MONEY[money]} (as they were at ${localDateTime(asOf, {}, { seconds: true })})`
+			: MONEY[money];
+	return `signers and API wallets checked every ${CONTROL_REFRESH_MS / 60_000 === 1 ? "minute" : `${CONTROL_REFRESH_MS / 60_000} minutes`} while open · ${balances}`;
+}
+
+export interface LiveTreasuryState extends TreasuryState {
+	readonly live: LiveAccount & { retry(): void };
+	/** The latest read of signers or API wallets failed; what is shown is older. */
+	readonly failed: boolean;
+	readonly agentsError: string | null;
+}
+
+export function useLiveTreasuryState(
+	target: AccountTarget | null,
+	opts: LiveWants = {},
+): LiveTreasuryState {
+	const control = useControl(target);
+	const live = useLiveAccount(target, opts);
+	return {
+		target,
+		loading: control.loading,
+		error: control.error,
+		isMultiSig: control.isMultiSig,
+		policy: control.policy,
+		agents: control.agents,
+		agentsError: control.agentsError,
+		perp: live.perp,
+		spot: live.spot,
+		mode: control.mode,
+		modePending: control.modePending,
+		observedAt: control.checkedAt,
+		source: liveSource(live.status, live.asOf),
+		money: live.status,
+		checking: control.checking,
+		failed: control.failed,
+		refetch: control.refetch,
+		live,
 	};
 }

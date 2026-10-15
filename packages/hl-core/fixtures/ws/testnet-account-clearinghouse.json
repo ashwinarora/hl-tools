@@ -1,0 +1,87 @@
+{
+ "format": "hl-tools.ws-session",
+ "version": 1,
+ "network": "testnet",
+ "url": "wss://api.hyperliquid-testnet.xyz/ws",
+ "channel": "clearinghouseState",
+ "subscription": {
+  "type": "clearinghouseState",
+  "user": "0x0000000000000000000000000000000000000001"
+ },
+ "startedAt": 1791661826584,
+ "endedAt": 1791661860586,
+ "sanitized": true,
+ "truncated": false,
+ "messages": [
+  {
+   "t": 367,
+   "dir": "event",
+   "text": "open"
+  },
+  {
+   "t": 367,
+   "dir": "out",
+   "text": "{\"method\":\"subscribe\",\"subscription\":{\"type\":\"clearinghouseState\",\"user\":\"0x0000000000000000000000000000000000000001\"}}"
+  },
+  {
+   "t": 543,
+   "dir": "in",
+   "text": "{\"channel\":\"subscriptionResponse\",\"data\":{\"method\":\"subscribe\",\"subscription\":{\"type\":\"clearinghouseState\",\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\"}}}"
+  },
+  {
+   "t": 543,
+   "dir": "in",
+   "text": "{\"channel\":\"clearinghouseState\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"clearinghouseState\":{\"marginSummary\":{\"accountValue\":\"163.403954\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.693044\",\"totalMarginUsed\":\"0.785545\"},\"crossMarginSummary\":{\"accountValue\":\"163.403954\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.693044\",\"totalMarginUsed\":\"0.785545\"},\"crossMaintenanceMarginUsed\":\"0.196386\",\"withdrawable\":\"161.204448\",\"assetPositions\":[{\"type\":\"oneWay\",\"position\":{\"coin\":\"BTC\",\"szi\":\"0.00019\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"82689.0\",\"positionValue\":\"15.71091\",\"unrealizedPnl\":\"0.0\",\"returnOnEquity\":\"0.0\",\"liquidationPx\":null,\"marginUsed\":\"0.785545\",\"maxLeverage\":40,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}}],\"time\":1791661826683}}}"
+  },
+  {
+   "t": 5481,
+   "dir": "in",
+   "text": "{\"channel\":\"clearinghouseState\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"clearinghouseState\":{\"marginSummary\":{\"accountValue\":\"163.403954\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.693044\",\"totalMarginUsed\":\"0.785545\"},\"crossMarginSummary\":{\"accountValue\":\"163.403954\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.693044\",\"totalMarginUsed\":\"0.785545\"},\"crossMaintenanceMarginUsed\":\"0.196386\",\"withdrawable\":\"161.204448\",\"assetPositions\":[{\"type\":\"oneWay\",\"position\":{\"coin\":\"BTC\",\"szi\":\"0.00019\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"82689.0\",\"positionValue\":\"15.71091\",\"unrealizedPnl\":\"0.0\",\"returnOnEquity\":\"0.0\",\"liquidationPx\":null,\"marginUsed\":\"0.785545\",\"maxLeverage\":40,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}}],\"time\":1791661831612}}}"
+  },
+  {
+   "t": 5823,
+   "dir": "in",
+   "text": "{\"channel\":\"clearinghouseState\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"clearinghouseState\":{\"marginSummary\":{\"accountValue\":\"163.403954\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.693044\",\"totalMarginUsed\":\"0.785545\"},\"crossMarginSummary\":{\"accountValue\":\"163.403954\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.693044\",\"totalMarginUsed\":\"0.785545\"},\"crossMaintenanceMarginUsed\":\"0.196386\",\"withdrawable\":\"160.603548\",\"assetPositions\":[{\"type\":\"oneWay\",\"position\":{\"coin\":\"BTC\",\"szi\":\"0.00019\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"82689.0\",\"positionValue\":\"15.71091\",\"unrealizedPnl\":\"0.0\",\"returnOnEquity\":\"0.0\",\"liquidationPx\":null,\"marginUsed\":\"0.785545\",\"maxLeverage\":40,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}}],\"time\":1791661832063}}}"
+  },
+  {
+   "t": 9269,
+   "dir": "in",
+   "text": "{\"channel\":\"clearinghouseState\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"clearinghouseState\":{\"marginSummary\":{\"accountValue\":\"163.396594\",\"totalNtlPos\":\"30.73371\",\"totalRawUsd\":\"132.662884\",\"totalMarginUsed\":\"1.536685\"},\"crossMarginSummary\":{\"accountValue\":\"163.396594\",\"totalNtlPos\":\"30.73371\",\"totalRawUsd\":\"132.662884\",\"totalMarginUsed\":\"1.536685\"},\"crossMaintenanceMarginUsed\":\"0.496842\",\"withdrawable\":\"159.093908\",\"assetPositions\":[{\"type\":\"oneWay\",\"position\":{\"coin\":\"BTC\",\"szi\":\"0.00019\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"82689.0\",\"positionValue\":\"15.71091\",\"unrealizedPnl\":\"0.0\",\"returnOnEquity\":\"0.0\",\"liquidationPx\":null,\"marginUsed\":\"0.785545\",\"maxLeverage\":40,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}},{\"type\":\"oneWay\",\"position\":{\"coin\":\"ETH\",\"szi\":\"0.006\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"2503.9\",\"positionValue\":\"15.0228\",\"unrealizedPnl\":\"-0.0006\",\"returnOnEquity\":\"-0.0007987539\",\"liquidationPx\":null,\"marginUsed\":\"0.75114\",\"maxLeverage\":25,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}}],\"time\":1791661835540}}}"
+  },
+  {
+   "t": 10399,
+   "dir": "in",
+   "text": "{\"channel\":\"clearinghouseState\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"clearinghouseState\":{\"marginSummary\":{\"accountValue\":\"163.396594\",\"totalNtlPos\":\"30.73371\",\"totalRawUsd\":\"132.662884\",\"totalMarginUsed\":\"1.536685\"},\"crossMarginSummary\":{\"accountValue\":\"163.396594\",\"totalNtlPos\":\"30.73371\",\"totalRawUsd\":\"132.662884\",\"totalMarginUsed\":\"1.536685\"},\"crossMaintenanceMarginUsed\":\"0.496842\",\"withdrawable\":\"159.093908\",\"assetPositions\":[{\"type\":\"oneWay\",\"position\":{\"coin\":\"BTC\",\"szi\":\"0.00019\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"82689.0\",\"positionValue\":\"15.71091\",\"unrealizedPnl\":\"0.0\",\"returnOnEquity\":\"0.0\",\"liquidationPx\":null,\"marginUsed\":\"0.785545\",\"maxLeverage\":40,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}},{\"type\":\"oneWay\",\"position\":{\"coin\":\"ETH\",\"szi\":\"0.006\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"2503.9\",\"positionValue\":\"15.0228\",\"unrealizedPnl\":\"-0.0006\",\"returnOnEquity\":\"-0.0007987539\",\"liquidationPx\":null,\"marginUsed\":\"0.75114\",\"maxLeverage\":25,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}}],\"time\":1791661836615}}}"
+  },
+  {
+   "t": 12845,
+   "dir": "in",
+   "text": "{\"channel\":\"clearinghouseState\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"clearinghouseState\":{\"marginSummary\":{\"accountValue\":\"163.389235\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.678325\",\"totalMarginUsed\":\"0.785545\"},\"crossMarginSummary\":{\"accountValue\":\"163.389235\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.678325\",\"totalMarginUsed\":\"0.785545\"},\"crossMaintenanceMarginUsed\":\"0.196386\",\"withdrawable\":\"160.588829\",\"assetPositions\":[{\"type\":\"oneWay\",\"position\":{\"coin\":\"BTC\",\"szi\":\"0.00019\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"82689.0\",\"positionValue\":\"15.71091\",\"unrealizedPnl\":\"0.0\",\"returnOnEquity\":\"0.0\",\"liquidationPx\":null,\"marginUsed\":\"0.785545\",\"maxLeverage\":40,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}}],\"time\":1791661839073}}}"
+  },
+  {
+   "t": 15471,
+   "dir": "in",
+   "text": "{\"channel\":\"clearinghouseState\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"clearinghouseState\":{\"marginSummary\":{\"accountValue\":\"163.389235\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.678325\",\"totalMarginUsed\":\"0.785545\"},\"crossMarginSummary\":{\"accountValue\":\"163.389235\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.678325\",\"totalMarginUsed\":\"0.785545\"},\"crossMaintenanceMarginUsed\":\"0.196386\",\"withdrawable\":\"160.588829\",\"assetPositions\":[{\"type\":\"oneWay\",\"position\":{\"coin\":\"BTC\",\"szi\":\"0.00019\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"82689.0\",\"positionValue\":\"15.71091\",\"unrealizedPnl\":\"0.0\",\"returnOnEquity\":\"0.0\",\"liquidationPx\":null,\"marginUsed\":\"0.785545\",\"maxLeverage\":40,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}}],\"time\":1791661841644}}}"
+  },
+  {
+   "t": 20552,
+   "dir": "in",
+   "text": "{\"channel\":\"clearinghouseState\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"clearinghouseState\":{\"marginSummary\":{\"accountValue\":\"163.389235\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.678325\",\"totalMarginUsed\":\"0.785545\"},\"crossMarginSummary\":{\"accountValue\":\"163.389235\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.678325\",\"totalMarginUsed\":\"0.785545\"},\"crossMaintenanceMarginUsed\":\"0.196386\",\"withdrawable\":\"160.588829\",\"assetPositions\":[{\"type\":\"oneWay\",\"position\":{\"coin\":\"BTC\",\"szi\":\"0.00019\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"82689.0\",\"positionValue\":\"15.71091\",\"unrealizedPnl\":\"0.0\",\"returnOnEquity\":\"0.0\",\"liquidationPx\":null,\"marginUsed\":\"0.785545\",\"maxLeverage\":40,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}}],\"time\":1791661846685}}}"
+  },
+  {
+   "t": 25574,
+   "dir": "in",
+   "text": "{\"channel\":\"clearinghouseState\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"clearinghouseState\":{\"marginSummary\":{\"accountValue\":\"163.389235\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.678325\",\"totalMarginUsed\":\"0.785545\"},\"crossMarginSummary\":{\"accountValue\":\"163.389235\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.678325\",\"totalMarginUsed\":\"0.785545\"},\"crossMaintenanceMarginUsed\":\"0.196386\",\"withdrawable\":\"160.588829\",\"assetPositions\":[{\"type\":\"oneWay\",\"position\":{\"coin\":\"BTC\",\"szi\":\"0.00019\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"82689.0\",\"positionValue\":\"15.71091\",\"unrealizedPnl\":\"0.0\",\"returnOnEquity\":\"0.0\",\"liquidationPx\":null,\"marginUsed\":\"0.785545\",\"maxLeverage\":40,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}}],\"time\":1791661851795}}}"
+  },
+  {
+   "t": 30584,
+   "dir": "in",
+   "text": "{\"channel\":\"clearinghouseState\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"clearinghouseState\":{\"marginSummary\":{\"accountValue\":\"163.389235\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.678325\",\"totalMarginUsed\":\"0.785545\"},\"crossMarginSummary\":{\"accountValue\":\"163.389235\",\"totalNtlPos\":\"15.71091\",\"totalRawUsd\":\"147.678325\",\"totalMarginUsed\":\"0.785545\"},\"crossMaintenanceMarginUsed\":\"0.196386\",\"withdrawable\":\"160.588829\",\"assetPositions\":[{\"type\":\"oneWay\",\"position\":{\"coin\":\"BTC\",\"szi\":\"0.00019\",\"leverage\":{\"type\":\"cross\",\"value\":20},\"entryPx\":\"82689.0\",\"positionValue\":\"15.71091\",\"unrealizedPnl\":\"0.0\",\"returnOnEquity\":\"0.0\",\"liquidationPx\":null,\"marginUsed\":\"0.785545\",\"maxLeverage\":40,\"cumFunding\":{\"allTime\":\"0.0\",\"sinceOpen\":\"0.0\",\"sinceChange\":\"0.0\"}}}],\"time\":1791661856811}}}"
+  },
+  {
+   "t": 34001,
+   "dir": "event",
+   "text": "close 1000 (recording finished)"
+  }
+ ]
+}

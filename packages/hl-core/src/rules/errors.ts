@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.2.0",
-	verifiedAt: "2026-10-09",
+	version: "1.12.0",
+	verifiedAt: "2026-10-13",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
 	sources: [
@@ -30,6 +30,61 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.2.0",
 			date: "2026-10-09",
 			note: '"Insufficient balance for withdrawal." — the answer to a usdSend larger than the withdrawable perps balance (recorded on testnet through a multi-sig envelope; the chain uses the withdrawal wording for sends too).',
+		},
+		{
+			version: "1.3.0",
+			date: "2026-10-11",
+			note: '"Nonce already used." — the answer to a usdSend whose `time` is older than a usdSend the account has already carried out, even though that number was never used (recorded on testnet through multi-sig envelopes, with the same and with another leader). Not the leader\'s duplicate check, which reads "Invalid nonce: duplicate nonce N". Also "User has pending agent removal": a second API wallet removal sent a second after the first.',
+		},
+		{
+			version: "1.4.0",
+			date: "2026-10-11",
+			note: 'From the order lab (fixtures/multisig/nonce-order.json). "Nonce already used." is also the answer to a bridge withdrawal older than a carried-out send, and plain accounts get it like multi-sigs. A refused envelope uses up its number: "Multi-sig threshold not met" no longer says "resubmit". Replacing an API wallet counts as a removal for "User has pending agent removal". New: "Too many extra agents for cumulative volume traded", "Action disabled when unified account is active" (a usdSend from an account in unified mode), "Error withdrawing from bridge".',
+		},
+		{
+			version: "1.4.1",
+			date: "2026-10-11",
+			note: 'Unified account mode, measured on testnet: usdSend, spotSend and usdClassTransfer are all answered "Action disabled when unified account is active" (1.4.0 wrongly suggested a spot send), sendAsset works when its source is the spot balance, and with the perps balance as source it is answered "Unified account only supports sending assets through spot" (new entry).',
+		},
+		{
+			version: "1.5.0",
+			date: "2026-10-11",
+			note: 'Refusals met while measuring sends (fixtures/multisig/activation-fee.json, send-modes.json): "Usd transfer is smaller than fee." (a usdSend of 1 USDC or less to an address never used), "Insufficient USDC balance for token transfer gas." (neither balance can pay the 1 USDC for a new address), "Insufficient balance for token transfer" (a sendAsset above what the balance can release) and "Invalid token" (a token that is not the collateral sent into perps).',
+		},
+		{
+			version: "1.6.0",
+			date: "2026-10-12",
+			note: 'Recorded on testnet (fixtures/multisig/self-send.json, agent-reach.json, plain-convert.json): "Cannot self-transfer." (a usdSend or spotSend to the sender itself), "Invalid send" (a sendAsset to the sender itself into the same balance), "Multi-sig authorized user cannot be vault or sub-account", and "Agent can only send asset to same user or their sub-accounts." (an API wallet trying to send to another account).',
+		},
+		{
+			version: "1.7.0",
+			date: "2026-10-12",
+			note: 'Recorded on testnet through a multi-sig: "Withdrawal is smaller than fee." (a withdraw3 of exactly the bridge\'s 1 USDC fee).',
+		},
+		{
+			version: "1.8.0",
+			date: "2026-10-12",
+			note: 'Staking, recorded on testnet through a multi-sig (fixtures/multisig/staking.json): "Insufficient funds available to deposit." (moving more HYPE into staking than spot can release), "Insufficient balance to delegate" (staking more than the staking balance holds unstaked), "Unknown validator", "Cannot undelegate during lockup period after delegating or voting." (an unstake before the stake\'s lockup has ended, which a top-up restarts), "Insufficient balance to undelegate", "Insufficient balance to withdraw from CStaking" (returning more than is unstaked) and "Too many concurrent CStaking withdrawals" (a sixth return while five wait).',
+		},
+		{
+			version: "1.9.0",
+			date: "2026-10-13",
+			note: 'Recorded on testnet through a multi-sig (fixtures/multisig/evm-transfer.json): "Multi-sig user cannot transfer token to EVM" (a send to the token\'s own HyperEVM system address) and "EVM transfer not configured" (a send to another token\'s system address).',
+		},
+		{
+			version: "1.10.0",
+			date: "2026-10-13",
+			note: 'Recorded on testnet through a multi-sig: "Extra agent does not exist." (an approveAgent of the zero address, which removes an API wallet, under a name no API wallet of the account has).',
+		},
+		{
+			version: "1.11.0",
+			date: "2026-10-13",
+			note: 'Recorded on testnet through a multi-sig (fixtures/multisig/mode-switch.json): "Cannot disable unified account with open positions, open orders, or active TWAP orders" (a switch back to a manual account while anything is open; the same answer to userSetAbstraction and to userDexAbstraction).',
+		},
+		{
+			version: "1.12.0",
+			date: "2026-10-13",
+			note: 'Vaults, recorded on testnet through a multi-sig (fixtures/multisig/vaults.json): "Vault deposits must be at least $5.", "Vault is closed.", "This vault does not accept deposits.", "Vault not registered: <address>", "Cannot withdraw during lockup period after depositing." and "Insufficient vault equity for withdrawal". "Insufficient funds available to deposit." is also what a vault deposit gets when the perps balance cannot release that much, so its entry no longer speaks of staking alone (id `deposit-funds`, before `staking-deposit-funds`).',
 		},
 	],
 });
@@ -283,7 +338,7 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		category: "signing",
 		cause:
 			"Fewer distinct authorized signers than the threshold. Duplicate signatures from one signer count once; signatures from non-authorized or removed signers are rejected earlier.",
-		fix: "Collect signatures from more authorized users over the exact same payload, nonce and leader, then resubmit.",
+		fix: 'Collect signatures from more authorized users before submitting. The refused envelope has used up its number for that leader (sending it again is answered "duplicate nonce"), so it has to be proposed again with a new one.',
 		documented: true,
 	},
 	{
@@ -347,6 +402,16 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		documented: true,
 	},
 	{
+		id: "multisig-signer-kind",
+		pattern: /authorized user cannot be vault or sub-?account/i,
+		example: "Multi-sig authorized user cannot be vault or sub-account",
+		category: "account",
+		cause:
+			"An address in `authorizedUsers` is a vault or a sub-account. Neither has a key of its own, so neither can sign (recorded on testnet for a vault).",
+		fix: "Name the account that leads the vault or owns the sub-account, or another signer.",
+		documented: false,
+	},
+	{
 		id: "multisig-self",
 		pattern: /cannot register self as multi-sig authorized user/i,
 		example: "Cannot register self as multi-sig authorized user",
@@ -402,6 +467,307 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 			"The leader already used this nonce (the same envelope was submitted twice, or two proposals share a nonce). Nonce sets are per leader.",
 		fix: "If the first submission succeeded, nothing to do. Otherwise re-propose with a new nonce.",
 		documented: true,
+	},
+	{
+		id: "nonce-used",
+		pattern: /^nonce already used/i,
+		example: "Nonce already used.",
+		category: "signing",
+		cause:
+			'The account has already carried out a USDC send (usdSend) with this `time` or a later one. Hyperliquid takes an account\'s USDC sends, and its bridge withdrawals (withdraw3), only after its latest send: once a newer send has gone through, an older send or withdrawal is refused, whoever submits it and although its number was never used. The same holds for a plain account signing with its own key. A send dated ahead counts from the moment it is carried out, so sends dated "now" are refused until the clock has passed it.',
+		fix: "Check the ledger: if this action is there, nothing is left to do. Otherwise propose it again, so that it gets a new number; every signer signs again.",
+		documented: false,
+	},
+	{
+		id: "agent-removal-pending",
+		pattern: /pending agent removal/i,
+		example: "User has pending agent removal",
+		category: "account",
+		cause:
+			"The account removed or replaced another API wallet a moment ago and Hyperliquid has not finished with it. It takes one removal at a time, and approving a new address under a name in use removes the old one (recorded on testnet: refused a second after a removal, accepted 75 seconds after).",
+		fix: "Wait a minute or two and send it again. For a multi-sig that means proposing it again, since the refused one cannot be reused.",
+		documented: false,
+	},
+	{
+		id: "agent-missing",
+		pattern: /extra agent does not exist/i,
+		example: "Extra agent does not exist.",
+		category: "account",
+		cause:
+			"An approveAgent named the zero address, which removes the API wallet of the given name, and the account has no API wallet of that name: it was removed or replaced already, it expired, or the name is spelled differently (recorded on testnet).",
+		fix: "Read the account's API wallets again. If the wallet is gone there is nothing to remove; for a multi-sig, withdraw the proposal.",
+		documented: false,
+	},
+	{
+		id: "agent-limit",
+		pattern: /too many extra agents/i,
+		example:
+			"Too many extra agents for cumulative volume traded. Current limit is 3",
+		category: "account",
+		cause:
+			"The account already has as many named API wallets as Hyperliquid allows it (three for an account with little traded volume). Approving one more under a new name is refused.",
+		fix: "Remove an API wallet that is no longer used, or approve the new address under a name already in use, which replaces that wallet.",
+		documented: false,
+	},
+	{
+		id: "unified-busy",
+		pattern: /cannot disable unified account with open positions/i,
+		example:
+			"Cannot disable unified account with open positions, open orders, or active TWAP orders",
+		category: "account",
+		cause:
+			"The account asked to leave unified mode while it has an open position, a resting order or a running TWAP order. Hyperliquid switches back to separate perps and spot balances only when nothing is open (recorded on testnet through a multi-sig).",
+		fix: "Close the positions and cancel the orders first (for a multi-sig, with an API wallet), then ask again. For a multi-sig that is a new proposal: the refused one cannot be reused.",
+		documented: false,
+	},
+	{
+		id: "unified-disabled",
+		pattern: /disabled when unified account is active/i,
+		example: "Action disabled when unified account is active",
+		category: "account",
+		cause:
+			"The account is in unified account mode, where perps and spot share one balance. Three actions are switched off there: a USDC send from the perps balance (usdSend), a spot send (spotSend) and a transfer between perps and spot (usdClassTransfer). Recorded on testnet for all three.",
+		fix: 'Send it with sendAsset from the spot balance (sourceDex "spot"), which works in this mode, or leave unified account mode first.',
+		documented: false,
+	},
+	{
+		id: "unified-spot-only",
+		pattern: /unified account only supports sending assets through spot/i,
+		example: "Unified account only supports sending assets through spot",
+		category: "account",
+		cause:
+			"A sendAsset named the perps balance as its source, and the account is in unified account mode, where everything is held in the spot balance (recorded on testnet).",
+		fix: 'Set sourceDex to "spot". The destination can still be another account\'s perps or spot balance.',
+		documented: false,
+	},
+	{
+		id: "transfer-below-fee",
+		pattern: /usd transfer is smaller than fee/i,
+		example: "Usd transfer is smaller than fee.",
+		category: "margin",
+		cause:
+			"A USDC send (usdSend) to an address that was never used on Hyperliquid pays the one-time 1 USDC activation fee out of the amount sent, and this amount is 1 USDC or less.",
+		fix: "Send more than 1 USDC (the receiver gets the amount minus 1), or use sendAsset, which charges the fee on top and delivers the full amount.",
+		documented: false,
+	},
+	{
+		id: "withdrawal-below-fee",
+		pattern: /withdrawal is smaller than fee/i,
+		example: "Withdrawal is smaller than fee.",
+		category: "margin",
+		cause:
+			"A bridge withdrawal (withdraw3) pays the bridge's 1 USDC fee out of the amount withdrawn, and this amount is not more than that.",
+		fix: "Withdraw more than 1 USDC: the destination receives the amount minus 1.",
+		documented: false,
+	},
+	{
+		id: "transfer-gas",
+		pattern: /insufficient usdc balance for token transfer gas/i,
+		example: "Insufficient USDC balance for token transfer gas.",
+		category: "margin",
+		cause:
+			"The destination was never used on Hyperliquid, so the send costs 1 USDC on top of the amount, and neither the spot USDC left after the send nor the perps balance can pay it.",
+		fix: "Lower the amount by 1 USDC, or bring 1 USDC more into the account first.",
+		documented: false,
+	},
+	{
+		id: "token-balance",
+		pattern: /insufficient balance for token transfer/i,
+		example: "Insufficient balance for token transfer",
+		category: "margin",
+		cause:
+			"The sendAsset asks for more than the source balance can release. For an account in unified mode that is the spot total minus what positions and resting orders hold.",
+		fix: "Lower the amount to what can be moved now, or free margin first (close positions, cancel resting orders).",
+		documented: false,
+	},
+	{
+		id: "self-transfer",
+		pattern: /cannot self-transfer/i,
+		example: "Cannot self-transfer.",
+		category: "account",
+		cause:
+			"A usdSend or spotSend names the sending account itself as its destination (recorded on testnet).",
+		fix: "To move USDC between the account's own perps and spot balances use usdClassTransfer, or a sendAsset to itself with different source and destination balances.",
+		documented: false,
+	},
+	{
+		id: "send-invalid",
+		pattern: /^invalid send\.?$/i,
+		example: "Invalid send",
+		category: "account",
+		cause:
+			"A sendAsset names the sending account itself and the same balance as source and destination, so nothing would move (recorded on testnet, plain and through a multi-sig).",
+		fix: "Send to another account, or to the account's other balance.",
+		documented: false,
+	},
+	{
+		id: "evm-multisig",
+		pattern: /multi-?sig user cannot transfer token to evm/i,
+		example: "Multi-sig user cannot transfer token to EVM",
+		category: "account",
+		cause:
+			"A multi-sig account sent a token to that token's system address on HyperEVM (0x2222…2222 for HYPE, 0x20 followed by the token index for the others), which asks Hyperliquid to move the token to HyperEVM. Hyperliquid does not do that for a multi-sig account (recorded on testnet, spotSend and sendAsset).",
+		fix: "Send to an account on Hyperliquid instead. A multi-sig's tokens cannot be moved to HyperEVM.",
+		documented: false,
+	},
+	{
+		id: "evm-unconfigured",
+		pattern: /evm transfer not configured/i,
+		example: "EVM transfer not configured",
+		category: "account",
+		cause:
+			"The destination is a HyperEVM system address, and not the one of the token being sent: each token moves to HyperEVM only through its own system address (recorded on testnet through a multi-sig).",
+		fix: "Send to an account on Hyperliquid, or to the system address of the token being sent (0x20 followed by its index; 0x2222…2222 for HYPE). A multi-sig account is refused there too.",
+		documented: false,
+	},
+	{
+		id: "agent-send-scope",
+		pattern: /agent can only send asset to same user/i,
+		example: "Agent can only send asset to same user or their sub-accounts.",
+		category: "account",
+		cause:
+			"An API wallet signed an agentSendAsset whose destination is another account. An API wallet can move money only between the balances of the account it acts for (recorded on testnet).",
+		fix: "Send to another account with a user-signed sendAsset from the account itself (for a multi-sig, a proposal).",
+		documented: false,
+	},
+	{
+		id: "token-invalid",
+		pattern: /^invalid token/i,
+		example: "Invalid token",
+		category: "account",
+		cause:
+			"A sendAsset names a token the balance it is taken from or sent to cannot hold: only the collateral token (USDC on the first perp dex) moves into or out of a perps balance.",
+		fix: "Send a spot token from spot to spot. To move its value into perps, sell it for USDC first.",
+		documented: false,
+	},
+	{
+		id: "deposit-funds",
+		pattern: /insufficient funds available to deposit/i,
+		example: "Insufficient funds available to deposit.",
+		category: "margin",
+		cause:
+			"A deposit asks for more than the balance it draws on can release. Two actions get these words: a staking deposit (cDeposit), which takes HYPE from the spot balance, total minus what is on hold; and a vault deposit (vaultTransfer), which takes USDC from what the perps balance can withdraw, not from the account value and not from spot (from the one balance of a unified account).",
+		fix: "Lower the amount to what that balance can release. For a vault deposit from a manual account, move USDC from spot to perps first.",
+		documented: false,
+	},
+	{
+		id: "vault-min-deposit",
+		pattern: /vault deposits must be at least/i,
+		example: "Vault deposits must be at least $5.",
+		category: "account",
+		cause:
+			"A vault deposit of less than 5 USDC (recorded on testnet through a multi-sig).",
+		fix: "Deposit 5 USDC or more.",
+		documented: false,
+	},
+	{
+		id: "vault-closed",
+		pattern: /^vault is closed/i,
+		example: "Vault is closed.",
+		category: "account",
+		cause:
+			"The vault's leader has closed it: it takes no more deposits (recorded on testnet).",
+		fix: "Choose another vault. What was deposited before can still be withdrawn.",
+		documented: false,
+	},
+	{
+		id: "vault-no-deposits",
+		pattern: /vault does not accept deposits/i,
+		example: "This vault does not accept deposits.",
+		category: "account",
+		cause:
+			"The vault's leader has switched deposits off (`allowDeposits` false in vaultDetails; recorded on testnet).",
+		fix: "Choose another vault, or ask its leader.",
+		documented: false,
+	},
+	{
+		id: "vault-lockup",
+		pattern: /cannot withdraw during lockup period after depositing/i,
+		example: "Cannot withdraw during lockup period after depositing.",
+		category: "account",
+		cause:
+			"A withdrawal from a vault before the deposit's lockup has ended. The lockup starts again for the whole deposit each time it is added to; userVaultEquities gives its end as lockedUntilTimestamp (recorded on testnet: four days for HLP, 20 seconds for a user vault there).",
+		fix: "Wait until the lockup has ended. For a multi-sig, the proposal can be signed before and submitted after; a submission made too early uses the proposal up.",
+		documented: false,
+	},
+	{
+		id: "vault-equity",
+		pattern: /insufficient vault equity for withdrawal/i,
+		example: "Insufficient vault equity for withdrawal",
+		category: "account",
+		cause:
+			"A withdrawal of more than the account's deposit in that vault is worth now, or from a vault it has nothing in (recorded on testnet).",
+		fix: "Read the deposit again (userVaultEquities) and withdraw that much or less.",
+		documented: false,
+	},
+	{
+		id: "stake-balance",
+		pattern: /insufficient balance to delegate/i,
+		example: "Insufficient balance to delegate",
+		category: "margin",
+		cause:
+			"The action stakes more HYPE than the staking balance holds unstaked. HYPE has to be moved from spot into the staking balance before it can be staked.",
+		fix: "Move the missing HYPE from spot into the staking balance first, or stake less.",
+		documented: false,
+	},
+	{
+		id: "validator-unknown",
+		pattern: /^unknown validator/i,
+		example: "Unknown validator",
+		category: "account",
+		cause: "The address the action stakes with is not a validator.",
+		fix: "Use a validator's own address, as Hyperliquid's validator list gives it.",
+		documented: false,
+	},
+	{
+		id: "unstake-lockup",
+		pattern: /cannot undelegate during lockup period/i,
+		example:
+			"Cannot undelegate during lockup period after delegating or voting.",
+		category: "limits",
+		cause:
+			"The stake with this validator is still locked: a stake cannot be removed for a day after it was made or added to (2 minutes on testnet), and adding to it starts the wait again for all of it.",
+		fix: "Wait until the lockup of this stake has ended (the account's list of stakes gives the moment), then propose the unstake again.",
+		documented: false,
+	},
+	{
+		id: "unstake-balance",
+		pattern: /insufficient balance to undelegate/i,
+		example: "Insufficient balance to undelegate",
+		category: "margin",
+		cause: "The action unstakes more HYPE than is staked with that validator.",
+		fix: "Lower the amount to what is staked with this validator.",
+		documented: false,
+	},
+	{
+		id: "return-balance",
+		pattern: /insufficient balance to withdraw from cstaking/i,
+		example: "Insufficient balance to withdraw from CStaking",
+		category: "margin",
+		cause:
+			"The action returns more HYPE to spot than the staking balance holds unstaked. Staked HYPE has to be unstaked before it can be returned.",
+		fix: "Unstake the missing HYPE first, or return less.",
+		documented: false,
+	},
+	{
+		id: "return-queue-full",
+		pattern: /too many concurrent cstaking withdrawals/i,
+		example: "Too many concurrent CStaking withdrawals",
+		category: "limits",
+		cause:
+			"Five returns from staking to spot are already waiting for this account, and Hyperliquid takes no more than five at once.",
+		fix: "Wait until one of the waiting returns has landed in spot, then propose this one again.",
+		documented: false,
+	},
+	{
+		id: "bridge-withdraw",
+		pattern: /error withdrawing from bridge/i,
+		example: "Error withdrawing from bridge",
+		category: "margin",
+		cause:
+			"The bridge withdrawal (withdraw3) could not be made: recorded on testnet for an amount far above the account's balance.",
+		fix: "Check the amount against the withdrawable perps balance, the one-dollar fee included.",
+		documented: false,
 	},
 	{
 		id: "network-signature",

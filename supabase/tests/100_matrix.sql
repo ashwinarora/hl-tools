@@ -20,7 +20,8 @@ select tests.end_it(1, 10, 2, 'withdrawn');
 select tests.propose(1, 10, 2, 3);
 select tests.receipt(2, 10, 3, '{"status":"err","response":"x"}');
 select tests.propose(1, 12, 1, 4);
-select tests.propose(1, 12, 1, 5);
+-- its own number: two proposals with one action and one number are twins (see 120)
+select tests.propose(1, 12, 1, 5, tests.now_ms() + 5);
 select tests.request(5, 'add', 'testnet', 30);
 
 -- wallet 3 is removed from T10 by a lookup; T12 stops being a multi-sig
@@ -68,6 +69,10 @@ select throws_ok($$ select tests.sign(3, 10, 2) $$, '42501', null, 'removed sign
 select throws_ok($$ select tests.end_it(3, 10, 1, 'withdrawn') $$, '42501', null, 'removed signer: cannot end');
 select throws_ok($$ select tests.receipt(3, 10, 1, '{}') $$, '42501', null, 'removed signer: cannot record a result');
 select throws_ok($$ select tests.request(3, 'check', 'testnet', 10) $$, '42501', null, 'removed signer: cannot ask for a re-check');
+select throws_ok($$ select tests.report(3, 10, 1, 900) $$, '42501', null, 'removed signer: cannot report a transaction');
+select throws_ok($$ select tests.nick(3, 10, tests.addr(9000), 'Mine') $$, '42501', null, 'removed signer: cannot give a nickname');
+select throws_ok($$ select tests.view(3, 10, 1) $$, '42501', null, 'removed signer: cannot record a view');
+select throws_ok($$ select tests.mark(3, 10, 0) $$, '42501', null, 'removed signer: cannot move a marker');
 select tests.claims(3);
 delete from public.signatures where signer = tests.addr(3);
 select tests.claims(1);
@@ -79,6 +84,7 @@ select throws_ok($$ select tests.propose(5, 10, 2, 51) $$, '42501', null, 'stran
 select throws_ok($$ select tests.sign(5, 10, 1) $$, '42501', null, 'stranger: cannot sign');
 select throws_ok($$ select tests.end_it(5, 10, 1, 'declined') $$, '42501', null, 'stranger: cannot end');
 select throws_ok($$ select tests.receipt(5, 10, 1, '{}') $$, '42501', null, 'stranger: cannot record a result');
+select throws_ok($$ select tests.report(5, 10, 1, 901) $$, '42501', null, 'stranger: cannot report a transaction');
 select throws_ok($$ select tests.propose(4, 10, 2, 52) $$, '42501', null, 'other treasury''s signer: cannot propose here');
 select throws_ok($$ select tests.sign(4, 10, 1) $$, '42501', null, 'other treasury''s signer: cannot sign here');
 select throws_ok($$ select tests.propose(99, 10, 2, 53) $$, '42501', null, 'no wallet: cannot propose');
@@ -90,6 +96,7 @@ select throws_ok($$ select tests.sign(1, 12, 4) $$, 'P0001', 'relay.treasury_fro
 select lives_ok($$ select tests.end_it(1, 12, 4, 'withdrawn') $$, 'frozen: an open proposal can still be withdrawn');
 select lives_ok($$ select tests.receipt(1, 12, 5, '{"status":"err","response":"x"}') $$, 'frozen: a result can still be recorded');
 select lives_ok($$ select tests.request(1, 'check', 'testnet', 12) $$, 'frozen: a signer can ask for a re-check');
+select lives_ok($$ select tests.report(1, 12, 5, 902) $$, 'frozen: a transaction can still be reported');
 
 -- the history is written by the database alone
 select tests.claims(1);
@@ -101,7 +108,8 @@ reset role;
 -- ------------------------------------------------------------------------- anon
 set local role anon;
 select throws_ok(format('select 1 from public.%I', t), '42501', null, 'anon cannot read ' || t)
-from unnest(array['treasuries', 'treasury_signers', 'treasury_requests', 'events', 'proposals', 'signatures', 'endings', 'receipts']) t;
+from unnest(array['treasuries', 'treasury_signers', 'treasury_requests', 'events', 'proposals', 'signatures', 'endings', 'receipts',
+	'execution_reports', 'nicknames', 'nickname_changes', 'proposal_views', 'read_marks']) t;
 select throws_ok($$ select tests.sign(1, 10, 1) $$, '42501', null, 'anon cannot sign, whatever claims it carries');
 reset role;
 
@@ -124,8 +132,10 @@ select set_eq(
 	$$ select table_name || ':' || privilege_type from information_schema.role_table_grants
 	   where grantee = 'authenticated' and table_schema in ('public', 'private') $$,
 	array['treasuries:SELECT', 'treasury_signers:SELECT', 'treasury_requests:SELECT', 'events:SELECT',
-		'proposals:SELECT', 'signatures:SELECT', 'signatures:DELETE', 'endings:SELECT', 'receipts:SELECT'],
-	'authenticated holds exactly these table privileges: SELECT everywhere, DELETE on its own signatures');
+		'proposals:SELECT', 'signatures:SELECT', 'signatures:DELETE', 'endings:SELECT', 'receipts:SELECT',
+		'execution_reports:SELECT', 'nicknames:SELECT', 'nickname_changes:SELECT',
+		'proposal_views:SELECT', 'read_marks:SELECT', 'objections:SELECT', 'objections:DELETE'],
+	'authenticated holds exactly these table privileges: SELECT everywhere, DELETE on its own signatures and its own no');
 
 select set_eq(
 	$$ select table_name || ':' || string_agg(column_name, ',' order by column_name) from information_schema.column_privileges
@@ -134,7 +144,12 @@ select set_eq(
 		'proposals:digest,document,finaliser,network,nonce,treasury',
 		'signatures:digest,network,r,s,treasury,v',
 		'endings:digest,kind,network,treasury',
-		'receipts:digest,http_status,network,outer_r,outer_s,outer_v,response,signature_chain_id,submitted_at,treasury'],
+		'receipts:digest,http_status,network,outer_r,outer_s,outer_v,response,signature_chain_id,submitted_at,treasury',
+		'execution_reports:digest,network,treasury,tx_hash',
+		'nickname_changes:address,name,network,treasury',
+		'proposal_views:digest,network,treasury',
+		'read_marks:chain,event_id,network,treasury',
+		'objections:digest,network,treasury'],
 	'and may insert exactly these columns: never who acted, never a status');
 
 select is_empty(

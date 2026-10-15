@@ -2,11 +2,16 @@ import type { Address, Policy } from "@hl-tools/core";
 import { describe, expect, it } from "vitest";
 import { A, B, C, OUTSIDER } from "#/test/keys";
 import {
+	COUNTED_MEANWHILE,
 	compareSigners,
 	livePolicy,
+	mayAskAgain,
 	nextRecheck,
 	RECHECK_EVERY_MS,
 	RECHECK_MAX,
+	type RecheckState,
+	recheckLine,
+	requestRefusal,
 	type StoredPolicy,
 } from "./signers";
 
@@ -138,5 +143,57 @@ describe("nextRecheck", () => {
 		expect(nextRecheck(T, RECHECK_MAX - 1, T)).not.toBeNull();
 		expect(nextRecheck(T, RECHECK_MAX, T + 10 * RECHECK_EVERY_MS)).toBeNull();
 		expect(nextRecheck(null, RECHECK_MAX, T)).toBeNull();
+	});
+});
+
+describe("what the notice says is being done about a difference", () => {
+	const state = (over: Partial<RecheckState> = {}): RecheckState => ({
+		checking: false,
+		refused: null,
+		gaveUp: false,
+		...over,
+	});
+	it("says the relay was asked only of an ask that got through", () => {
+		expect(recheckLine(state())).toBe(
+			"The sharing service has been asked to look again; this page updates by itself.",
+		);
+		expect(recheckLine(state({ checking: true }))).toBe(
+			"The sharing service is checking this treasury on Hyperliquid now…",
+		);
+	});
+	it("says why an ask did not get through, and that the asking has stopped", () => {
+		// found in review: both read "has been asked to look again" before
+		expect(
+			recheckLine(state({ refused: "The relay could not be reached." })),
+		).toBe(
+			"The copy could not be brought up to date. The relay could not be reached.",
+		);
+		expect(recheckLine(state({ gaveUp: true }))).toBe(
+			`The sharing service was asked ${RECHECK_MAX} times and its copy of the signers still differs from Hyperliquid's. It may not be reaching Hyperliquid right now; try again later.`,
+		);
+		// a refusal says more than "asked six times"
+		expect(recheckLine(state({ gaveUp: true, refused: "No." }))).toContain(
+			"No.",
+		);
+	});
+	it("offers to ask by hand only once nothing is under way", () => {
+		expect(mayAskAgain(state())).toBe(false);
+		expect(mayAskAgain(state({ gaveUp: true }))).toBe(true);
+		expect(mayAskAgain(state({ refused: "No." }))).toBe(true);
+		expect(mayAskAgain(state({ gaveUp: true, checking: true }))).toBe(false);
+	});
+	it("never says the lists here count against the live list", () => {
+		expect(COUNTED_MEANWHILE).toContain("count signatures against the copy");
+	});
+	it("reads what the relay said of a request it could not do", () => {
+		expect(requestRefusal(null)).toBeNull();
+		expect(requestRefusal({ status: "pending", reason: null })).toBeNull();
+		expect(requestRefusal({ status: "done", reason: null })).toBeNull();
+		expect(requestRefusal({ status: "failed", reason: "lookup_failed" })).toBe(
+			"The sharing service could not reach Hyperliquid for this look-up. Try again in a minute.",
+		);
+		expect(requestRefusal({ status: "rejected", reason: null })).toBe(
+			"The sharing service refused the request.",
+		);
 	});
 });

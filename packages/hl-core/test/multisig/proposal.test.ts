@@ -80,6 +80,7 @@ describe("createProposal", () => {
 			createdAt: NOW,
 			supersedes: null,
 			policyAtCreation: null,
+			steps: null,
 		});
 		expect(p.receipt).toBeNull();
 	});
@@ -110,6 +111,7 @@ describe("createProposal", () => {
 				threshold: 1,
 				observedAt: NOW,
 			},
+			steps: null,
 		});
 		expect(codes(r.issues).sort()).toEqual([
 			"address.uppercase",
@@ -214,6 +216,24 @@ describe("createProposal", () => {
 		expect(codes(r.issues)).toEqual(["nonce.future"]);
 		expect(r.proposal).not.toBeNull();
 	});
+	it("a nonce or an expiry beyond any date is an error and never an exception", () => {
+		// a date holds ±8.64e15 ms, less than the largest integer a document may carry:
+		// building the window's dates for such a number used to throw
+		const beyond = 9_000_000_000_000_000;
+		expect(Number.isSafeInteger(beyond)).toBe(true);
+		const r = base({ nonce: beyond });
+		expect(codes(r.issues)).toEqual(["nonce.out_of_range"]);
+		expect(r.proposal).toBeNull();
+		// the latest nonce whose whole window is still a date is taken as a nonce
+		const last = 8_640_000_000_000_000 - NONCE_WINDOW.pastMs;
+		expect(codes(base({ nonce: last }).issues)).toEqual(["nonce.future"]);
+		expect(codes(base({ nonce: last + 1 }).issues)).toEqual([
+			"nonce.out_of_range",
+		]);
+		expect(codes(base({ expiresAfter: beyond }).issues)).toEqual([
+			"expires.invalid",
+		]);
+	});
 	it("create.expires: past, unreachable, invalid, user-signed warning", () => {
 		expect(codes(base({ expiresAfter: NOW }).issues)).toEqual(["expires.past"]);
 		expect(codes(base({ expiresAfter: 1.5 }).issues)).toEqual([
@@ -317,6 +337,12 @@ describe("validateProposal", () => {
 			expect(codes(validateProposal(bad).issues)).toEqual(["proposal.shape"]);
 	});
 	it("validate.version-unknown", () => {
+		// a version or a kind that is an integer too large for a number is said, not thrown
+		expect(
+			codes(
+				validateProposal({ ...docOf(good()), v: 12345678901234567890n }).issues,
+			),
+		).toEqual(["proposal.version"]);
 		expect(codes(validateProposal({ ...docOf(good()), v: 2 }).issues)).toEqual([
 			"proposal.version",
 		]);
@@ -378,6 +404,19 @@ describe("validateProposal", () => {
 		expect(codes(late.issues)).toEqual(["nonce.expired"]);
 		expect(late.proposal).toEqual(good());
 	});
+	it("validate: a document whose nonce or expiry is beyond any date is refused, not thrown at", () => {
+		// anyone can hand a signer a link or a file: the validator has to answer for all of them
+		for (const [field, code] of [
+			["nonce", "nonce.out_of_range"],
+			["expiresAfter", "expires.invalid"],
+		] as const) {
+			const d = docOf(good());
+			(d.payload as Record<string, unknown>)[field] = 9_000_000_000_000_000;
+			const r = validateProposal(d);
+			expect(r.proposal).toBeNull();
+			expect(codes(r.issues)).toContain(code);
+		}
+	});
 	it("validate.action-not-canonical: reordered keys are rejected", () => {
 		const d = docOf(good());
 		(d.payload as Record<string, unknown>).action = {
@@ -434,6 +473,17 @@ describe("validateProposal", () => {
 		).toBe(`0x${"ab".repeat(32)}`);
 		expect(codes(m({ policyAtCreation: 5 }).issues)).toEqual(["policy.shape"]);
 		expect(
+			codes(
+				m({
+					policyAtCreation: {
+						authorizedUsers: [B, A],
+						threshold: 1,
+						observedAt: 9_000_000_000_000_000,
+					},
+				}).issues,
+			),
+		).toEqual(["policy.shape"]);
+		expect(
 			m({
 				policyAtCreation: {
 					authorizedUsers: [B, A],
@@ -445,6 +495,34 @@ describe("validateProposal", () => {
 		expect(
 			m({ title: "t", note: "n", createdBy: A, createdAt: 7 }).proposal?.meta,
 		).toMatchObject({ title: "t", note: "n", createdBy: A, createdAt: 7 });
+	});
+	it("a title and a note lose what does not show, written here or come from elsewhere", () => {
+		// a "right-to-left override" turns around whatever is printed after it
+		const rlo = String.fromCodePoint(0x202e);
+		const zero = String.fromCodePoint(0x200b);
+		const d = docOf(good());
+		d.meta = {
+			...(d.meta as object),
+			title: `Pay${zero} rent ${rlo}`,
+			note: `to Ada${rlo}\n  as agreed `,
+		};
+		const read = validateProposal(d, { now: NOW });
+		expect(codes(read.issues)).toEqual([]);
+		expect(read.proposal?.meta).toMatchObject({
+			title: "Pay rent",
+			note: "to Ada\nas agreed",
+		});
+		// nothing of it is signed: the digest is the same document's
+		expect(read.proposal?.digest).toBe(good().digest);
+		const made = base({
+			action: usdSend(),
+			title: ` Pay ${rlo}rent\n now `,
+			note: `${zero}`,
+		});
+		expect(made.proposal?.meta).toMatchObject({
+			title: "Pay rent now",
+			note: null,
+		});
 	});
 	it("validate.signatures: not array, not object, bad signer, not document form, duplicate signer, bad at", async () => {
 		const p = good();
@@ -494,6 +572,10 @@ describe("validateProposal", () => {
 			);
 		expect(r(5)).toEqual(["receipt.shape"]);
 		expect(r({ ...receipt, submittedAt: null })).toEqual(["receipt.shape"]);
+		// a number that is no date on any calendar: printing it would throw
+		expect(r({ ...receipt, submittedAt: 9_000_000_000_000_000 })).toEqual([
+			"receipt.shape",
+		]);
 		expect(r({ ...receipt, signatureChainId: "0x66EEE" })).toEqual([
 			"receipt.shape",
 		]);

@@ -1,0 +1,52 @@
+{
+ "format": "hl-tools.ws-session",
+ "version": 1,
+ "network": "testnet",
+ "url": "wss://api.hyperliquid-testnet.xyz/ws",
+ "channel": "userFills",
+ "subscription": {
+  "type": "userFills",
+  "user": "0x0000000000000000000000000000000000000001"
+ },
+ "startedAt": 1791661826586,
+ "endedAt": 1791661860588,
+ "sanitized": true,
+ "truncated": false,
+ "messages": [
+  {
+   "t": 360,
+   "dir": "event",
+   "text": "open"
+  },
+  {
+   "t": 360,
+   "dir": "out",
+   "text": "{\"method\":\"subscribe\",\"subscription\":{\"type\":\"userFills\",\"user\":\"0x0000000000000000000000000000000000000001\"}}"
+  },
+  {
+   "t": 524,
+   "dir": "in",
+   "text": "{\"channel\":\"subscriptionResponse\",\"data\":{\"method\":\"subscribe\",\"subscription\":{\"type\":\"userFills\",\"user\":\"0x0000000000000000000000000000000000000001\",\"aggregateByTime\":false}}}"
+  },
+  {
+   "t": 524,
+   "dir": "in",
+   "text": "{\"channel\":\"userFills\",\"data\":{\"isSnapshot\":true,\"user\":\"0x0000000000000000000000000000000000000001\",\"fills\":[{\"coin\":\"BTC\",\"px\":\"83627.0\",\"sz\":\"0.001\",\"side\":\"B\",\"time\":1791399783602,\"startPosition\":\"0.0\",\"dir\":\"Open Long\",\"closedPnl\":\"0.0\",\"hash\":\"0x7b5f38a2e1881ef07cd8042b24982d010f0050887c8b3dc21f27e3f5a08bf8db\",\"oid\":62098165924,\"crossed\":true,\"fee\":\"0.037632\",\"tid\":763691698612610,\"feeToken\":\"USDC\",\"twapId\":null},{\"coin\":\"BTC\",\"px\":\"83626.0\",\"sz\":\"0.00013\",\"side\":\"A\",\"time\":1791399785498,\"startPosition\":\"0.001\",\"dir\":\"Close Long\",\"closedPnl\":\"-0.00013\",\"hash\":\"0xbe9dea722038e0c8c017042b24984f0108000257bb3bff9a626695c4df3cbab3\",\"oid\":62098168325,\"crossed\":true,\"fee\":\"0.004892\",\"tid\":496465618430033,\"feeToken\":\"USDC\",\"twapId\":null},{\"coin\":\"BTC\",\"px\":\"83615.0\",\"sz\":\"0.00024\",\"side\":\"A\",\"time\":1791399785498,\"startPosition\":\"0.00087\",\"dir\":\"Close Long\",\"closedPnl\":\"-0.00288\",\"hash\":\"0xbe9dea722038e0c8c017042b24984f0108000257bb3bff9a626695c4df3cbab3\",\"oid\":62098168325,\"crossed\":true,\"fee\":\"0.00903\",\"tid\":1058115039772302,\"feeToken\":\"USDC\",\"twapId\":null},{\"coin\":\"BTC\",\"px\":\"83610.0\",\"sz\":\"0.00063\",\"side\":\"A\",\"time\":1791399785498,\"startPosition\":\"0.00063\",\"dir\":\"Close Long\",\"closedPnl\":\"-0.01071\",\"hash\":\"0xbe9dea722038e0c8c017042b24984f0108000257bb3bff9a626695c4df3cbab3\",\"oid\":62098168325,\"crossed\":true,\"fee\":\"0.023703\",\"tid\":202257085758013,\"feeToken\":\"USDC\",\"twapId\":null},{\"coin\":\"BTC\",\"px\":\"82689.0\",\"sz\":\"0.00019\",\"side\":\"B\",\"time\":1791661246606,\"startPosition\":\"0.0\",\"dir\":\"Open Long\",\"closedPnl\":\"0.0\",\"hash\":\"0x00a175351208afca021b042b6217980000dc8d1aad0bce9ca46a2087d10c89b4\",\"oid\":62365328112,\"crossed\":true,\"fee\":\"0.007069\",\"tid\":250670224479262,\"feeToken\":\"USDC\",\"twapId\":null}]}}"
+  },
+  {
+   "t": 9263,
+   "dir": "in",
+   "text": "{\"channel\":\"userFills\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"fills\":[{\"coin\":\"ETH\",\"px\":\"2503.9\",\"sz\":\"0.006\",\"side\":\"B\",\"time\":1791661835540,\"startPosition\":\"0.0\",\"dir\":\"Open Long\",\"closedPnl\":\"0.0\",\"hash\":\"0x31259c03d66c3c49329f042b623808010600b3e9716f5b1bd4ee475695601633\",\"oid\":62365856658,\"crossed\":true,\"fee\":\"0.00676\",\"tid\":378408319907077,\"feeToken\":\"USDC\",\"twapId\":null}]}}"
+  },
+  {
+   "t": 12837,
+   "dir": "in",
+   "text": "{\"channel\":\"userFills\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"fills\":[{\"coin\":\"ETH\",\"px\":\"2503.7\",\"sz\":\"0.006\",\"side\":\"A\",\"time\":1791661839073,\"startPosition\":\"0.006\",\"dir\":\"Close Long\",\"closedPnl\":\"-0.0012\",\"hash\":\"0xfa520e5a4961622afbcb042b623839010100263fe46480fd9e1ab9ad08653c15\",\"oid\":62365860439,\"crossed\":true,\"fee\":\"0.006759\",\"tid\":680411812527273,\"feeToken\":\"USDC\",\"twapId\":null}]}}"
+  },
+  {
+   "t": 34002,
+   "dir": "event",
+   "text": "close 1000 (recording finished)"
+  }
+ ]
+}

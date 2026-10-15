@@ -62,13 +62,47 @@ describe("subscriptions", () => {
 			}).issues.map((i) => i.code),
 		).toContain("ws.param.mantissa");
 	});
+	it("builds the account channels the docs do not list", () => {
+		const user = "0xABCDEF0123456789abcdef0123456789ABCDEF01";
+		for (const type of ["userHistoricalOrders", "allDexsClearinghouseState"])
+			expect(buildSubscription(ch(type), { user }).subscription).toEqual({
+				type,
+				user: user.toLowerCase(),
+			});
+		// an empty dex is left out; the server answers with dex: "" and the ack still matches
+		const sub = buildSubscription(ch("clearinghouseState"), { user, dex: "" })
+			.subscription as Record<string, unknown>;
+		expect(sub).toEqual({
+			type: "clearinghouseState",
+			user: user.toLowerCase(),
+		});
+		expect(
+			isAckFor(
+				{
+					channel: "subscriptionResponse",
+					data: { method: "subscribe", subscription: { ...sub, dex: "" } },
+				},
+				sub,
+			),
+		).toBe(true);
+	});
 	it("every channel has a documented ordering statement", () => {
 		for (const c of WS_CHANNELS) expect(c.ordering).toMatch(/sequence/i);
 	});
 });
 
 describe("recorded sessions", () => {
-	for (const name of ["mainnet-btc-l2book", "mainnet-btc-trades"]) {
+	for (const name of [
+		"mainnet-btc-l2book",
+		"mainnet-btc-trades",
+		"testnet-account-clearinghouse",
+		"testnet-account-spot",
+		"testnet-account-open-orders",
+		"testnet-account-fills",
+		"testnet-account-order-history",
+		"testnet-account-ledger",
+		"testnet-account-fundings",
+	]) {
 		it(`${name}: parses, acks, reduces and is sanitised`, () => {
 			const parsed = parseSessionFile(loadText(`ws/${name}.json`));
 			expect(parsed.ok).toBe(true);
@@ -88,8 +122,14 @@ describe("recorded sessions", () => {
 			expect(summarizeMessage(spec.channel, data[0]?.data)).not.toBe("");
 			// No real addresses survive sanitisation (pseudonyms start with 28 zero nibbles).
 			for (const m of f.messages)
-				for (const a of m.text.match(/0x[0-9a-fA-F]{40}/g) ?? [])
+				for (const a of m.text.match(/0x[0-9a-fA-F]{40}(?![0-9a-fA-F])/g) ?? [])
 					expect(a.startsWith(`0x${"0".repeat(28)}`)).toBe(true);
+			// Transaction hashes are not addresses: they are kept whole.
+			for (const m of f.messages)
+				for (const h of m.text.matchAll(/"hash":"(0x[0-9a-fA-F]*)"/g)) {
+					expect(h[1]).toHaveLength(66);
+					expect(h[1]?.startsWith(`0x${"0".repeat(28)}`)).toBe(false);
+				}
 		});
 	}
 	it("dedupes trades by (time, tid) and diffs state", () => {
@@ -125,6 +165,51 @@ describe("session files", () => {
 		expect(s.subscription.user).toBe(`0x${"0".repeat(32)}00000001`);
 		expect(s.messages[0]?.text).toContain(`0x${"0".repeat(32)}00000001`);
 		expect(s.messages[0]?.text).toContain(`0x${"0".repeat(32)}00000002`);
+	});
+	it("leaves transaction hashes and signatures whole", () => {
+		const user = "0xabcdef0123456789abcdef0123456789abcdef01";
+		const hash = `0x${"c045da18".repeat(8)}`;
+		const sig = `0x${"ab".repeat(65)}`;
+		const rec = new SessionRecorder(
+			"testnet",
+			"wss://x",
+			"userNonFundingLedgerUpdates",
+			{ type: "userNonFundingLedgerUpdates", user },
+			0,
+		);
+		rec.push("in", JSON.stringify({ hash, sig, destination: user }), 5);
+		const text = sanitizeSession(rec.toFile(10)).messages[0]?.text as string;
+		expect(JSON.parse(text)).toEqual({
+			hash,
+			sig,
+			destination: `0x${"0".repeat(32)}00000001`,
+		});
+	});
+	it("folds order history to the latest status of each order", () => {
+		const spec = ch("userHistoricalOrders");
+		const entry = (oid: number, status: string) => ({
+			order: { coin: "BTC", side: "B", limitPx: "1", origSz: "1", oid },
+			status,
+			statusTimestamp: 1,
+		});
+		const s1 = reduceChannel(
+			spec,
+			{},
+			{
+				isSnapshot: true,
+				orderHistory: [
+					entry(7, "open"),
+					entry(7, "canceled"),
+					entry(8, "open"),
+				],
+			},
+		);
+		expect(s1).toMatchObject({
+			7: { status: "canceled" },
+			8: { status: "open" },
+		});
+		const s2 = reduceChannel(spec, s1, { orderHistory: [entry(8, "filled")] });
+		expect(diffChannelState(s1, s2).changed).toEqual(["8"]);
 	});
 	it("stops recording at the bound", () => {
 		const rec = new SessionRecorder(

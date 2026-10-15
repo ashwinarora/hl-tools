@@ -24,6 +24,9 @@ function getInitialMode(): ThemeMode {
 	return "auto";
 }
 
+/** The page's ground in each theme, for the browser's own bar (`theme-color`). */
+export const THEME_COLORS = { light: "#f9fafb", dark: "#0f1115" } as const;
+
 function applyThemeMode(mode: ThemeMode) {
 	const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 	const resolved = mode === "auto" ? (prefersDark ? "dark" : "light") : mode;
@@ -38,6 +41,11 @@ function applyThemeMode(mode: ThemeMode) {
 	}
 
 	document.documentElement.style.colorScheme = resolved;
+	// the browser's own bar follows the theme shown (set first by THEME_INIT_SCRIPT)
+	for (const meta of document.querySelectorAll<HTMLMetaElement>(
+		'meta[name="theme-color"]',
+	))
+		meta.content = THEME_COLORS[resolved];
 }
 
 export default function ThemeToggle() {

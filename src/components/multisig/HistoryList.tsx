@@ -1,15 +1,10 @@
-import { decodeProposal, describeAction, type Network } from "@hl-tools/core";
+import { decodeProposal, type Network, type Proposal } from "@hl-tools/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Panel } from "#/components/hub/layout";
-import {
-	Callout,
-	formatTimestamp,
-	NetworkBadge,
-	Pill,
-} from "#/components/hub/status";
+import { Callout, NetworkBadge, Pill } from "#/components/hub/status";
 import { short } from "#/components/tools/multisig/AddressLine";
 import { errorMessage } from "#/hooks/useHyperliquid";
 import {
@@ -17,16 +12,58 @@ import {
 	listProposals,
 	type StoredProposal,
 } from "./model/history";
+import { moveSentence, pairMoves } from "./model/move";
 import { RELAY_COPY } from "./model/relay/copy";
+import { actionLine } from "./model/staking";
 import { useRelay } from "./relay/useRelay";
+import { When } from "./shell/live";
 
-function headline(row: StoredProposal): string {
-	const p = decodeProposal(row.doc).proposal;
-	return p ? describeAction(p.payload.action).headline : row.actionType;
+/** One line of the list: a proposal, or the two steps of a move as one. */
+interface Entry {
+	readonly row: StoredProposal;
+	/** The second step, when the line is a move. */
+	readonly second: StoredProposal | null;
+	/** The action in words. */
+	readonly what: string;
 }
 
-function Row({ row, onDelete }: { row: StoredProposal; onDelete: () => void }) {
-	const what = useMemo(() => headline(row), [row]);
+/**
+ * The stored proposals as lines: the two steps of a move are one line, as on
+ * every other list. A document that no longer decodes stays a line of its own.
+ */
+function entriesOf(rows: readonly StoredProposal[]): Entry[] {
+	const plain: Entry[] = [];
+	const read: (Entry & { proposal: Proposal; proposedBy: null })[] = [];
+	for (const row of rows) {
+		const proposal = decodeProposal(row.doc).proposal;
+		if (!proposal) plain.push({ row, second: null, what: row.actionType });
+		else
+			read.push({
+				row,
+				second: null,
+				what: actionLine(
+					proposal.payload.action,
+					null,
+					proposal.payload.network,
+				),
+				proposal,
+				// no relay here: the documents' own word for who proposed them is compared
+				proposedBy: null,
+			});
+	}
+	const paired = pairMoves(read, (first, second, move) => ({
+		...first,
+		second: second.row,
+		what: moveSentence(move),
+	}));
+	return [...paired, ...plain].sort(
+		(a, b) => b.row.updatedAt - a.row.updatedAt,
+	);
+}
+
+function Row({ entry, onDelete }: { entry: Entry; onDelete: () => void }) {
+	const { row, second, what } = entry;
+	const outcomes = [row.submitted, ...(second ? [second.submitted] : [])];
 	return (
 		<li className="flex items-start justify-between gap-3 px-3 py-2.5">
 			<Link
@@ -47,14 +84,26 @@ function Row({ row, onDelete }: { row: StoredProposal; onDelete: () => void }) {
 					<span className="font-mono" title={row.multiSigUser}>
 						{short(row.multiSigUser)}
 					</span>
-					<span>
-						{row.signatures} signature{row.signatures === 1 ? "" : "s"}
-					</span>
-					{row.submitted === "ok" && <Pill tone="success">submitted</Pill>}
-					{row.submitted === "error" && <Pill tone="danger">rejected</Pill>}
-					<span className="font-mono">
-						{formatTimestamp(row.updatedAt).slice(0, 16)} UTC
-					</span>
+					{second ? (
+						<>
+							<Pill tone="info">2 steps</Pill>
+							<span>
+								{row.signatures} and {second.signatures} signatures
+							</span>
+						</>
+					) : (
+						<span>
+							{row.signatures} signature{row.signatures === 1 ? "" : "s"}
+						</span>
+					)}
+					{outcomes.every((o) => o === "ok") ? (
+						<Pill tone="success">sent</Pill>
+					) : outcomes.includes("error") ? (
+						<Pill tone="danger">rejected</Pill>
+					) : outcomes.includes("ok") ? (
+						<Pill tone="info">step 1 sent</Pill>
+					) : null}
+					<When at={row.updatedAt} />
 				</span>
 			</Link>
 			<button
@@ -82,14 +131,18 @@ export function HistoryList({ network }: { network: Network }) {
 	// "this browser only" is true of the list; with the relay in use it is not
 	// true of every proposal in it, so the sentence does not say it there
 	const relayOff = useRelay().mode === "off";
-	const rows = (query.data ?? []).filter((r) => all || r.network === network);
+	const rows = useMemo(
+		() => (query.data ?? []).filter((r) => all || r.network === network),
+		[query.data, all, network],
+	);
 	const hidden = (query.data?.length ?? 0) - rows.length;
+	const entries = useMemo(() => entriesOf(rows), [rows]);
 	return (
 		<Panel
 			title="Recent in this browser"
 			description={
 				relayOff
-					? "Proposals you made or opened here. Stored in this browser only (IndexedDB); the chain knows nothing of a proposal until it is submitted."
+					? "Proposals you made or opened here, saved in this browser. Hyperliquid sees nothing until one is sent. Clearing this site's data removes them."
 					: RELAY_COPY.recentHere
 			}
 			actions={
@@ -122,12 +175,14 @@ export function HistoryList({ network }: { network: Network }) {
 				</p>
 			) : (
 				<ul className="divide-y divide-border/60">
-					{rows.map((row) => (
+					{entries.map((entry) => (
 						<Row
-							key={row.digest}
-							row={row}
+							key={entry.row.digest}
+							entry={entry}
 							onDelete={async () => {
-								await deleteProposal(row.digest);
+								await deleteProposal(entry.row.digest);
+								// a move leaves this browser whole
+								if (entry.second) await deleteProposal(entry.second.digest);
 								await client.invalidateQueries({
 									queryKey: ["multisig-proposals"],
 								});

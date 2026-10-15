@@ -1,12 +1,16 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { SECTION_TITLE } from "#/components/multisig/model/relay/inbox";
 import { RelayProvider } from "#/components/multisig/relay/RelayProvider";
 import { MultisigShell } from "#/components/multisig/shell/MultisigShell";
+import { NotHere } from "#/components/multisig/shell/NotHere";
 import WalletProviders from "#/integrations/wallet/WalletProviders";
 import { signerConfig } from "#/lib/signerWagmiConfig";
 
 export const Route = createFileRoute("/multisig")({
-	head: () => ({ meta: [{ title: "Multisig — hl-tools" }] }),
+	head: () => ({ meta: [{ title: SECTION_TITLE }] }),
 	component: MultisigLayout,
+	// an unknown address under /multisig keeps the section's frame and says so
+	notFoundComponent: NotHere,
 });
 
 /**

@@ -5,10 +5,15 @@
  */
 import {
 	type Address,
+	buildEnvelope,
 	createProposal,
+	envelopeDigest,
+	normaliseSig,
 	type PlainObject,
 	type Policy,
 	type Proposal,
+	padSig,
+	type Receipt,
 	signProposal,
 	viemSigner,
 } from "@hl-tools/core";
@@ -60,7 +65,12 @@ export function usdSend(over: Record<string, unknown> = {}): PlainObject {
 
 /** An unsigned proposal: treasury → RECIPIENT, leader B unless overridden. */
 export function makeProposal(
-	over: { leader?: Address; action?: PlainObject; title?: string } = {},
+	over: {
+		leader?: Address;
+		action?: PlainObject;
+		title?: string;
+		nonce?: number;
+	} = {},
 ): Proposal {
 	const r = createProposal(
 		{
@@ -68,7 +78,7 @@ export function makeProposal(
 			multiSigUser: TREASURY,
 			outerSigner: over.leader ?? B,
 			action: over.action ?? usdSend(),
-			nonce: NONCE,
+			nonce: over.nonce ?? NONCE,
 			title: over.title ?? "test proposal",
 			policyAtCreation: POLICY,
 		},
@@ -86,3 +96,45 @@ export async function signAs(p: Proposal, index: number): Promise<Proposal> {
 	if (!s.signature) throw new Error(JSON.stringify(s.issues));
 	return { ...p, signatures: [...p.signatures, s.signature] };
 }
+
+/**
+ * A receipt as the finaliser's page makes it: the submission of `p` with the
+ * signatures it holds, signed by its finaliser (or by ACCOUNTS[by], for a
+ * receipt that is somebody else's). Accepted unless `over` says otherwise.
+ */
+export async function receiptFor(
+	p: Proposal,
+	over: Partial<Receipt> = {},
+	by: number = ADDRESSES.indexOf(p.payload.outerSigner),
+): Promise<Receipt> {
+	const account = ACCOUNTS[by];
+	if (!account) throw new Error(`no test account ${by}`);
+	const { request } = buildEnvelope(p);
+	const digest = envelopeDigest(request, p.payload.network).digest;
+	if (!digest) throw new Error("undigestable test submission");
+	const sig = normaliseSig(await account.sign({ hash: digest })).sig;
+	if (!sig) throw new Error("test signature did not parse");
+	return {
+		submittedAt: NOW,
+		signatureChainId: request.action.signatureChainId,
+		outerSignature: padSig(sig),
+		httpStatus: 200,
+		response: { status: "ok", response: { type: "default" } },
+		...over,
+	};
+}
+
+/** The same, refused by Hyperliquid. */
+export const refusedReceiptFor = (
+	p: Proposal,
+	submittedAt = NOW,
+	by?: number,
+): Promise<Receipt> =>
+	receiptFor(
+		p,
+		{
+			submittedAt,
+			response: { status: "err", response: "Invalid multi-sig inner signer" },
+		},
+		by,
+	);

@@ -56,11 +56,11 @@ export function StartProposal({ wallet }: { wallet?: string | null }) {
 					}}
 				>
 					<Field
-						label="Multi-sig account (treasury)"
+						label="Treasury address"
 						htmlFor="ms-treasury"
 						error={
 							input.trim() && !valid
-								? "A 20-byte hex address: 0x followed by 40 hex digits."
+								? "An address starts with 0x followed by 40 letters and digits (0-9, a-f)."
 								: undefined
 						}
 					>
@@ -100,7 +100,10 @@ export function StartProposal({ wallet }: { wallet?: string | null }) {
 							checked.address === address && (
 								<Link
 									to="/multisig/propose"
-									search={{ treasury: checked.address }}
+									search={{
+										treasury: checked.address,
+										network: checked.network,
+									}}
 									className="inline-flex h-8 items-center rounded-md border border-border-strong bg-surface px-3 text-sm font-medium hover:bg-surface-2"
 								>
 									Propose an action →

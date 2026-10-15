@@ -2,15 +2,23 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Link } from "@tanstack/react-router";
 import { LogOut, Wallet } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
-import { useAccount, useDisconnect } from "wagmi";
+import { toast } from "sonner";
+import { useAccount, useConnectors, useDisconnect } from "wagmi";
 import { short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
+import { NO_WALLET, walletInBrowser } from "#/lib/signerWallets";
 import { cn } from "#/lib/utils";
+import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 import { useWalletBusy } from "#/store/walletBusyStore";
+import { useSelfTreasury } from "../live/useSelfTreasury";
 import { chainLabel } from "../model/chains";
-import { RELAY_COPY } from "../model/relay/copy";
+import { othersSummary, RELAY_COPY } from "../model/relay/copy";
+import { connectedWallet } from "../model/relay/identity";
+import { selfTag } from "../model/selfTreasury";
 import { useRelay } from "../relay/useRelay";
-import { Btn } from "./kit";
+import { Help } from "./Help";
+import { Btn, Tag } from "./kit";
+import { Slow } from "./Slow";
 
 /** True after the first client render: the server cannot know the wallet. */
 export function useMounted(): boolean {
@@ -28,20 +36,57 @@ export function Avatar({ className = "size-7" }: { className?: string }) {
 	);
 }
 
+/**
+ * False once the page has looked and found no wallet in this browser: nothing
+ * injected, none announced (EIP-6963), and not inside a Safe app. The picker
+ * offers no QR code to a phone wallet (that would reach WalletConnect's
+ * relay, see `signerWallets.ts`), so such a visitor is told what to do.
+ */
+export function useWalletFound(): boolean {
+	// wagmi lists each wallet that announced itself as a connector of its own,
+	// and renders this again when one announces itself late
+	const announced = useConnectors().filter(
+		(c) => c.type === "injected" && c.id !== "injected",
+	).length;
+	const mounted = useMounted();
+	return mounted ? walletInBrowser(announced) : true;
+}
+
+/** Under a "Connect" button, when there is nothing to connect to. */
+export function NoWalletNote({ className }: { className?: string }) {
+	const found = useWalletFound();
+	if (found) return null;
+	return (
+		<output className={cn("block text-xs text-warning", className)}>
+			{NO_WALLET}
+		</output>
+	);
+}
+
 /** The connected wallet as it appears in the rail and the mobile bar. */
 export function useShellWallet() {
-	const { address, chainId, isConnected, connector } = useAccount();
+	const account = useAccount();
+	const { chainId, connector } = account;
 	const { disconnect } = useDisconnect();
 	const { openConnectModal } = useConnectModal();
 	const mounted = useMounted();
-	const connected = mounted && isConnected && !!address;
+	// the same definition of "connected" as the relay's (`connectedWallet`)
+	const address = mounted ? connectedWallet(account) : null;
+	const connected = address !== null;
+	// with nothing to connect to, the picker would open empty: say why instead
+	const connect = openConnectModal
+		? () => {
+				if (walletInBrowser()) openConnectModal();
+				else toast.warning(NO_WALLET);
+			}
+		: undefined;
 	return {
 		mounted,
 		connected,
-		address: connected ? (address.toLowerCase() as `0x${string}`) : null,
+		address,
 		chainId: connected ? (chainId ?? null) : null,
 		connectorName: connector?.name ?? null,
-		connect: openConnectModal,
+		connect,
 		disconnect,
 	};
 }
@@ -49,7 +94,7 @@ export function useShellWallet() {
 /** "By signing in you agree to the Privacy Policy." */
 export function SmallPrint({ className }: { className?: string }) {
 	return (
-		<span className={cn("text-[11px] text-subtle-foreground", className)}>
+		<span className={cn("text-xs text-subtle-foreground", className)}>
 			{RELAY_COPY.smallPrintBefore}
 			<Link to="/privacy" className="text-brand underline underline-offset-2">
 				{RELAY_COPY.smallPrintLink}
@@ -59,7 +104,43 @@ export function SmallPrint({ className }: { className?: string }) {
 	);
 }
 
+/**
+ * Said under the wallet when it is itself a treasury on the header's network:
+ * its own key cannot act for it there. One read per wallet and network.
+ */
+function SelfTag({ address }: { address: string }) {
+	const network = useNetwork();
+	const hydrated = useNetworkHydrated();
+	const self = useSelfTreasury(network, address, hydrated);
+	if (!self.policy) return null;
+	return (
+		<span className="flex items-center gap-1">
+			<Tag>{selfTag(self.policy)}</Tag>
+			<Help k="treasuryAccount" />
+		</span>
+	);
+}
+
 function WalletRow({
+	address,
+	sub,
+	title,
+	action,
+}: {
+	address: string;
+	sub: ReactNode;
+	title?: string;
+	action: ReactNode;
+}) {
+	return (
+		<>
+			<WalletLine address={address} sub={sub} title={title} action={action} />
+			<SelfTag address={address} />
+		</>
+	);
+}
+
+function WalletLine({
 	address,
 	sub,
 	title,
@@ -88,6 +169,58 @@ function WalletRow({
 			</span>
 			{action}
 		</div>
+	);
+}
+
+/**
+ * The phone bar's one line: who is connected and in what state, with the
+ * full box one tap away (`MobileBar`). Says no more than the box does.
+ */
+export function WalletSummary() {
+	const w = useShellWallet();
+	const relay = useRelay();
+	const state = !w.mounted
+		? "…"
+		: relay.mode === "on"
+			? relay.channel === "joined"
+				? "signed in · live"
+				: relay.channel === "down"
+					? "signed in · reconnecting…"
+					: "signed in"
+			: relay.mode === "restoring"
+				? "checking your session…"
+				: relay.mode === "unreachable"
+					? "can't reach the sharing service"
+					: relay.mode === "signed-out"
+						? w.connected
+							? "not signed in"
+							: "no wallet connected"
+						: w.chainId !== null
+							? `on ${chainLabel(w.chainId)}`
+							: w.connected
+								? "connected"
+								: "no wallet connected";
+	return (
+		<span className="flex min-w-0 items-center gap-2">
+			<Avatar className="size-5" />
+			<span className="min-w-0 truncate text-[13px]">
+				{w.address && (
+					<span className="font-mono" title={w.address}>
+						{short(w.address)}
+						{" · "}
+					</span>
+				)}
+				<span
+					className={
+						relay.mode === "unreachable"
+							? "text-warning"
+							: "text-subtle-foreground"
+					}
+				>
+					{state}
+				</span>
+			</span>
+		</span>
 	);
 }
 
@@ -160,6 +293,7 @@ export function WalletBox() {
 					<>
 						<b className="text-sm font-semibold">No wallet connected</b>
 						{connect("Connect wallet")}
+						<NoWalletNote />
 					</>
 				)}
 			</div>
@@ -186,47 +320,7 @@ export function WalletBox() {
 						</Btn>
 					}
 				/>
-			</div>
-		);
-	}
-
-	if (relay.mode === "suspended" && relay.sessionWallet) {
-		return (
-			<div className={box}>
-				{w.connected && w.address ? (
-					<WalletRow
-						address={w.address}
-						sub={chain}
-						title={title}
-						action={disconnect}
-					/>
-				) : null}
-				<p className="text-[13px] text-muted-foreground">
-					Signed in as{" "}
-					<span
-						className="font-mono text-foreground"
-						title={relay.sessionWallet}
-					>
-						{short(relay.sessionWallet)}
-					</span>
-					{w.connected && w.address
-						? ", but that is not the connected wallet. Nothing is read from or sent to the relay."
-						: ". Connect that wallet to continue."}
-				</p>
-				{w.connected && w.address ? (
-					<Btn variant="brand" disabled={busy} onClick={relay.signIn}>
-						{relay.signingIn
-							? "Waiting for your wallet…"
-							: `Sign in as ${short(w.address)}`}
-					</Btn>
-				) : (
-					connect("Connect wallet")
-				)}
-				<Btn size="sm" variant="ghost" onClick={relay.signOut}>
-					Sign out {short(relay.sessionWallet)}
-				</Btn>
-				{problem}
-				{w.connected && <SmallPrint />}
+				<OtherWallets />
 			</div>
 		);
 	}
@@ -242,9 +336,11 @@ export function WalletBox() {
 						action={disconnect}
 					/>
 				) : null}
-				<p className="text-[13px] text-muted-foreground" aria-busy="true">
-					Checking your session…
-				</p>
+				<Slow small>
+					<p className="text-[13px] text-muted-foreground" aria-busy="true">
+						Checking your session…
+					</p>
+				</Slow>
 			</div>
 		);
 	}
@@ -268,7 +364,9 @@ export function WalletBox() {
 		);
 	}
 
-	// signed out
+	// Signed out: the connected wallet is not signed in here, or no wallet is
+	// connected. Other wallets may be; they are listed, and never used meanwhile.
+	const parked = relay.others.length > 0;
 	return (
 		<div className={box}>
 			{w.connected && w.address ? (
@@ -279,15 +377,20 @@ export function WalletBox() {
 					action={disconnect}
 				/>
 			) : (
-				<b className="text-sm font-semibold">Not signed in</b>
+				<b className="text-sm font-semibold">
+					{parked ? "No wallet connected" : "Not signed in"}
+				</b>
 			)}
 			<span className="text-[13px] text-muted-foreground">
-				{RELAY_COPY.signedOutRail}
+				{parked && !w.connected
+					? RELAY_COPY.connectOneOf
+					: RELAY_COPY.signedOutRail}
 			</span>
 			<Btn variant="brand" disabled={busy} onClick={relay.signIn}>
 				{relay.signingIn ? "Waiting for your wallet…" : RELAY_COPY.signInButton}
 			</Btn>
 			{problem}
+			{!w.connected && <NoWalletNote />}
 			<SmallPrint />
 			{!w.connected && (
 				<Btn
@@ -299,6 +402,54 @@ export function WalletBox() {
 					Connect a wallet without signing in
 				</Btn>
 			)}
+			<OtherWallets />
 		</div>
+	);
+}
+
+/**
+ * The other wallets signed in in this browser, each with its own way out.
+ * They are only listed: while another wallet is connected (or none), nothing
+ * is read, sent or renewed for them.
+ */
+function OtherWallets() {
+	const relay = useRelay();
+	const w = useShellWallet();
+	const n = relay.others.length;
+	if (n === 0) return null;
+	return (
+		<details className="border-t border-border pt-2 text-xs">
+			<summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
+				{othersSummary(n, w.connected)}
+			</summary>
+			<ul className="mt-1.5 flex flex-col gap-0.5">
+				{relay.others.map((a) => (
+					<li key={a} className="flex items-center justify-between gap-2">
+						<span className="font-mono text-[12px]" title={a}>
+							{short(a)}
+						</span>
+						<Btn
+							size="sm"
+							variant="ghost"
+							onClick={() => relay.signOutWallet(a)}
+							aria-label={`Sign out ${a}`}
+						>
+							Sign out
+						</Btn>
+					</li>
+				))}
+			</ul>
+			<p className="mt-1.5 text-subtle-foreground">{RELAY_COPY.othersHow}</p>
+			{(n > 1 || relay.mode === "on") && (
+				<Btn
+					size="sm"
+					variant="ghost"
+					className="mt-1"
+					onClick={relay.signOutAll}
+				>
+					{RELAY_COPY.signOutAll}
+				</Btn>
+			)}
+		</details>
 	);
 }

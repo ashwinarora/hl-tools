@@ -40,7 +40,8 @@ export interface WsSessionFile {
 	readonly messages: readonly RecordedMessage[];
 }
 
-const ADDRESS_RE = /0x[0-9a-fA-F]{40}/g;
+// Exactly 20 bytes: a longer hex run (a 32-byte transaction hash, a signature) is left alone.
+const ADDRESS_RE = /0x[0-9a-fA-F]{40}(?![0-9a-fA-F])/g;
 
 /**
  * Replace every 20-byte address with a stable pseudonym (0xuser000…01, …)

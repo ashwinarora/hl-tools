@@ -15,6 +15,7 @@
  */
 import {
 	type Address,
+	checkReceipt,
 	decodeProposal,
 	deepEqual,
 	encodeProposal,
@@ -44,6 +45,13 @@ export interface StoredProposal {
 	/** `encodeProposal` text: the document is stored as it travels. */
 	readonly doc: string;
 }
+
+/** Said when a copy's report of a submission is not its finaliser's, and was left out. */
+export const RECEIPT_LEFT_OUT =
+	"This copy says the proposal was sent already, but that report is not signed by its finaliser. It was left out, and nothing here counts the proposal as sent because of it.";
+
+export const receiptLeftOut = (): Issue =>
+	issue("history.receipt_unsigned", "warning", RECEIPT_LEFT_OUT);
 
 export function receiptOk(r: Receipt): boolean {
 	return explainExchangeError(r.response, r.httpStatus).id === "ok";
@@ -134,7 +142,8 @@ export interface SaveResult {
  * Merge `incoming` with the stored copy of the same digest and write the
  * result. A copy whose payload differs from the stored one is refused: for
  * user-signed actions `vaultAddress` and `expiresAfter` are outside the digest,
- * so an equal digest does not prove an equal payload.
+ * so an equal digest does not prove an equal payload. The stored copy's
+ * unsigned fields (title, note) stay as they are.
  */
 export function saveProposal(
 	incoming: Proposal,
@@ -154,12 +163,38 @@ export function saveProposal(
 		if (!m.merged) {
 			return { proposal: existing ?? incoming, saved: false, issues: m.issues };
 		}
+		// A receipt is its finaliser's report or nobody's. One that another key
+		// signed (or none) is left out here, before it can close the proposal:
+		// anyone can write "accepted" or "refused" into a copy.
+		// The receipt this browser already holds is no news: a copy that carries
+		// it back (the page storing a signature beside it) is not asked again.
+		const known =
+			!!incoming.receipt &&
+			!!existing?.receipt &&
+			deepEqual(existing.receipt, incoming.receipt);
+		const reported =
+			incoming.receipt &&
+			(known ||
+				(await checkReceipt(incoming, incoming.receipt)) === "finaliser")
+				? incoming.receipt
+				: null;
 		const next: Proposal = {
 			...m.merged,
-			receipt: betterReceipt(existing?.receipt ?? null, incoming.receipt),
+			// The title, the note and the rest of `meta` are signed by nobody. A
+			// copy that comes back brings signatures; it never rewrites or adds to
+			// what this browser already holds about the proposal (audit F-026).
+			meta: existing ? existing.meta : m.merged.meta,
+			receipt: betterReceipt(existing?.receipt ?? null, reported),
 		};
 		await put(next, deps.now);
-		return { proposal: next, saved: true, issues: m.issues };
+		return {
+			proposal: next,
+			saved: true,
+			issues:
+				incoming.receipt && !reported
+					? [...m.issues, receiptLeftOut()]
+					: m.issues,
+		};
 	});
 }
 
@@ -171,7 +206,7 @@ function conflict(existing: Proposal): SaveResult {
 			issue(
 				"history.payload_conflict",
 				"error",
-				"This copy has the same digest as a stored proposal but a different payload (vault address or expiry). It was not merged.",
+				"This copy matches a saved proposal but carries other extra fields (a vault address or an expiry), which signers do not sign. It was not merged.",
 				{
 					fix: "Compare both copies in the Multisig Inspector; delete the stored one only if you trust the new copy.",
 				},

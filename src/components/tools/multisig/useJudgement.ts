@@ -13,7 +13,6 @@ import {
 	type Diagnosis,
 	diagnoseSignature,
 	envelopeDigest,
-	infoClient,
 	type Network,
 	type Observed,
 	type Policy,
@@ -25,6 +24,7 @@ import {
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import type { ParsedEnvelopeInput } from "./model";
+import { policyQueryOptions } from "./policyQuery";
 
 export type ProposalParsed = Extract<ParsedEnvelopeInput, { kind: "proposal" }>;
 
@@ -58,10 +58,7 @@ export function useJudgement(
 	const { proposal, network } = parsed;
 	const user = proposal.payload.multiSigUser;
 	const policyQuery = useQuery({
-		queryKey: ["multisig-policy", network, user],
-		queryFn: () => infoClient(network).multiSigSigners(user),
-		staleTime: 10_000,
-		retry: 1,
+		...policyQueryOptions(network, user),
 		refetchInterval: opts.refetchInterval,
 	});
 	// When this network's lookup succeeded but the address is not a multi-sig user, that is
@@ -81,14 +78,14 @@ export function useJudgement(
 	// other one does, the caller can say so.
 	const other: Network = network === "mainnet" ? "testnet" : "mainnet";
 	const otherQuery = useQuery({
-		queryKey: ["multisig-policy", other, user],
-		queryFn: () => infoClient(other).multiSigSigners(user),
-		staleTime: 10_000,
-		retry: 1,
+		...policyQueryOptions(other, user),
 		enabled:
 			!parsed.networkFromInput && policy !== null && policy.threshold === 0,
 	});
 	const [judgement, setJudgement] = useState<Judgement | null>(null);
+	// a request pasted in another form than Hyperliquid's own: a signature made
+	// over that form is told from a stranger's
+	const asSent = parsed.source === "envelope" ? parsed.asSent : null;
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
@@ -106,6 +103,7 @@ export function useJudgement(
 						c.signature,
 						proposal,
 						policy,
+						asSent ? { originalAction: asSent } : {},
 					);
 				}
 			}
@@ -136,6 +134,7 @@ export function useJudgement(
 		parsed.outerSignature,
 		parsed.request,
 		parsed.source,
+		asSent,
 		network,
 		policy,
 	]);

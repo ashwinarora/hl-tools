@@ -17,8 +17,16 @@ language sql immutable as $$
 	select ('7e570000-0000-4000-8000-' || lpad(to_hex(n), 12, '0'))::uuid
 $$;
 
--- A user as Supabase Auth leaves it after a wallet sign-in. `p_written` is the
--- address as the signed message spelled it (Auth keeps that spelling).
+-- The session a test wallet is signed in with (relay_live_sessions: a request
+-- counts only while the session its token names still exists).
+create function tests.session_id(n int) returns uuid
+language sql immutable as $$
+	select ('5e550000-0000-4000-8000-' || lpad(to_hex(n), 12, '0'))::uuid
+$$;
+
+-- A user as Supabase Auth leaves it after a wallet sign-in, with the session
+-- that sign-in opened. `p_written` is the address as the signed message
+-- spelled it (Auth keeps that spelling).
 create function tests.make_wallet(n int, p_written text default null) returns public.address
 language plpgsql as $$
 declare
@@ -32,6 +40,8 @@ begin
 	insert into auth.identities (provider_id, user_id, identity_data, provider, created_at, updated_at)
 	values ('web3:ethereum:' || a, tests.user_id(n),
 		jsonb_build_object('sub', 'web3:ethereum:' || a), 'web3', now(), now());
+	insert into auth.sessions (id, user_id, created_at, updated_at)
+	values (tests.session_id(n), tests.user_id(n), now(), now());
 	return lower(a)::public.address;
 end $$;
 
@@ -40,7 +50,8 @@ end $$;
 create function tests.claims(n int, p_extra jsonb default '{}') returns void
 language sql as $$
 	select set_config('request.jwt.claims',
-		(jsonb_build_object('sub', tests.user_id(n), 'role', 'authenticated') || p_extra)::text, true)
+		(jsonb_build_object('sub', tests.user_id(n), 'role', 'authenticated',
+			'session_id', tests.session_id(n)) || p_extra)::text, true)
 $$;
 
 create function tests.no_claims() returns void
@@ -76,7 +87,8 @@ begin
 	delete from private.session_marks;
 	delete from private.treasury_checks;
 	delete from public.treasury_requests;
-	update private.worker_state set last_lane = 'refresh', blocked_until_mainnet = null,
+	delete from public.execution_reports;
+	update private.worker_state set last_lane = 'refresh', last_kind = 'tx', blocked_until_mainnet = null,
 		blocked_until_testnet = null, last_run_at = null;
 	update private.settings set value = 'true' where key = 'worker.enabled';
 	update private.settings set value = '30' where key = 'worker.per_minute';
@@ -169,6 +181,51 @@ begin
 	values ('testnet', tests.addr(n_treasury), tests.digest(d), p_kind);
 end $$;
 
+-- A proposal declined by its finaliser, as the relay holds them from the time
+-- before relay_objections (a decline is no longer taken). Run as the owner:
+-- the guard is set aside for this one row, the rest of the ending runs as it did.
+create function tests.declined_before(n_by int, n_treasury int, d int) returns void
+language plpgsql as $$
+begin
+	alter table public.endings disable trigger ending_before;
+	insert into public.endings (network, treasury, digest, kind, ended_by)
+	values ('testnet', tests.addr(n_treasury), tests.digest(d), 'declined', tests.addr(n_by));
+	alter table public.endings enable trigger ending_before;
+end $$;
+
+-- Wallet n says no to proposal d of treasury n_treasury, or takes it back.
+create function tests.say_no(n int, n_treasury int, d int, p_network public.network default 'testnet') returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.objections (network, treasury, digest)
+	values (p_network, tests.addr(n_treasury), tests.digest(d));
+end $$;
+
+create function tests.take_back_no(n int, n_treasury int, d int) returns int
+language plpgsql as $$
+declare
+	gone int;
+begin
+	perform tests.claims(n);
+	delete from public.objections
+	where treasury = tests.addr(n_treasury) and digest = tests.digest(d) and signer = tests.addr(n);
+	get diagnostics gone = row_count;
+	return gone;
+end $$;
+
+create function tests.said_no(n_treasury int, d int) returns text[]
+language sql as $$
+	select coalesce(array_agg(signer::text order by signer), '{}') from public.objections
+	where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
+$$;
+
+create function tests.signed(n_treasury int, d int) returns text[]
+language sql as $$
+	select coalesce(array_agg(signer::text order by signer), '{}') from public.signatures
+	where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
+$$;
+
 create function tests.receipt(n int, n_treasury int, d int, p_response text, p_http int default 200, p_at bigint default null) returns void
 language plpgsql as $$
 begin
@@ -187,4 +244,70 @@ create function tests.kinds(n_treasury int, d int) returns text[]
 language sql as $$
 	select coalesce(array_agg(kind order by id), '{}') from public.events
 	where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
+$$;
+
+-- ------------------------------------------------------------ carried out outside
+create function tests.tx_hash(n int) returns public.hash32
+language sql immutable as $$
+	select ('0x' || lpad(to_hex(n), 60, '0') || '7e57')::public.hash32
+$$;
+
+-- Wallet n says transaction h carried proposal d of treasury n_treasury out.
+create function tests.report(n int, n_treasury int, d int, h int, p_network public.network default 'testnet') returns uuid
+language plpgsql as $$
+declare
+	rid uuid;
+begin
+	perform tests.claims(n);
+	insert into public.execution_reports (network, treasury, digest, tx_hash)
+	values (p_network, tests.addr(n_treasury), tests.digest(d), tests.tx_hash(h))
+	returning id into rid;
+	return rid;
+end $$;
+
+-- The action a stored proposal carries, as the explorer would return it.
+create function tests.action_of(n_treasury int, d int) returns jsonb
+language sql as $$
+	select document::jsonb #> '{payload,action}' from public.proposals
+	where treasury = tests.addr(n_treasury) and digest = tests.digest(d)
+$$;
+
+
+-- ---------------------------------------------------------------------- nicknames
+-- Wallet n names address `p_address` in treasury n_treasury (null takes the name away).
+create function tests.nick(n int, n_treasury int, p_address public.address, p_name text, p_network public.network default 'testnet') returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.nickname_changes (network, treasury, address, name)
+	values (p_network, tests.addr(n_treasury), p_address, p_name);
+end $$;
+
+create function tests.nick_of(n_treasury int, p_address public.address) returns text
+language sql as $$
+	select name from public.nicknames where treasury = tests.addr(n_treasury) and address = p_address
+$$;
+
+-- ---------------------------------------------------------------------- attention
+-- Wallet n opens proposal d of treasury n_treasury.
+create function tests.view(n int, n_treasury int, d int, p_network public.network default 'testnet') returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.proposal_views (network, treasury, digest)
+	values (p_network, tests.addr(n_treasury), tests.digest(d));
+end $$;
+
+-- Wallet n has read treasury n_treasury's news up to history entry `p_event`.
+create function tests.mark(n int, n_treasury int, p_event bigint, p_chain jsonb default '{}', p_network public.network default 'testnet') returns void
+language plpgsql as $$
+begin
+	perform tests.claims(n);
+	insert into public.read_marks (network, treasury, event_id, chain)
+	values (p_network, tests.addr(n_treasury), p_event, p_chain);
+end $$;
+
+create function tests.newest_event(n_treasury int) returns bigint
+language sql as $$
+	select coalesce(max(id), 0) from public.events where treasury = tests.addr(n_treasury)
 $$;

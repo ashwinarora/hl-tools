@@ -6,7 +6,7 @@ export const Route = createFileRoute("/privacy")({
 	component: PrivacyPage,
 });
 
-const UPDATED = "2026-10-10";
+const UPDATED = "2026-10-13";
 const REPO = "https://github.com/ashwinarora/hl-tools";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -58,7 +58,10 @@ function PrivacyPage() {
 							it. <b>The operator of the relay can read it as well.</b>
 						</li>
 						<li>
-							No analytics, no advertising, no trackers, no session recording.
+							No analytics, no advertising, no trackers and no session recording
+							of our own. One page, the faucet miner, loads a wallet picker made
+							by someone else, and that picker reports to its maker when the
+							page opens: see "Without signing in".
 						</li>
 					</ul>
 				</Section>
@@ -74,14 +77,36 @@ function PrivacyPage() {
 					<p>
 						Your browser keeps a few things locally: the selected network and
 						theme, recorded WebSocket sessions, the multi-sig proposals you made
-						or opened, treasury nicknames, and, in the faucet miner, the wallets
-						it generated. They never leave the browser unless you export or
-						share them. Clearing the site's data removes them.
+						or opened, names you gave treasuries in this browser, what you typed
+						into a Multisig form and have not created yet (for a week), and, in
+						the faucet miner, the wallets it generated. They never leave the
+						browser unless you export or share them. Clearing the site's data
+						removes them.
 					</p>
 					<p>
-						Connecting a wallet uses the wallet's own software. If you pick a
-						WalletConnect-based wallet, the connection is relayed by
-						WalletConnect under its policy.
+						Connecting a wallet uses the wallet's own software. The Multisig
+						section offers only the wallets in your browser, and its pages
+						contact nobody for it. The faucet miner is different: its wallet
+						picker can also connect a wallet through WalletConnect, and that
+						picker contacts WalletConnect as soon as the faucet miner page
+						opens, before you pick anything. It tells WalletConnect that it was
+						started and on which page, and WalletConnect sees your IP address.
+						If you pick a WalletConnect-based wallet there, the connection is
+						relayed by WalletConnect, and its window loads a font from Google.
+						All of that is under their policies, and none of it happens on any
+						other page.
+					</p>
+					<p>
+						A vault deposit or withdrawal in the Multisig section is signed
+						while your wallet is on a network added for that one purpose (the
+						page asks before it is added). While the wallet is on it, the wallet
+						itself asks that network's link what it asks of any network: which
+						chain it is, the latest block, and the balance of your address
+						there. Whoever serves the link therefore sees your IP address and
+						the wallet address asked about, as any network's endpoint does. The
+						link answers with fixed values and refuses every transaction;
+						nothing is ever sent on that network, and the wallet goes back to
+						its own once it has signed.
 					</p>
 				</Section>
 
@@ -110,17 +135,55 @@ function PrivacyPage() {
 							back.
 						</li>
 						<li>
-							<b>Outcomes</b>: that a proposal was withdrawn or declined, and
-							what Hyperliquid answered when it was submitted.
+							<b>A no</b> you said to a proposal, and when you said it or took
+							it back. No reason is stored with it.
+						</li>
+						<li>
+							<b>Outcomes</b>: that a proposal was withdrawn or declined, what
+							Hyperliquid answered when it was submitted, and, when a proposal
+							was carried out some other way, the transaction your browser
+							pointed the relay to.
+						</li>
+						<li>
+							<b>Nicknames</b> that you or a co-signer give to an address or to
+							a treasury, with who gave each one and when. A nickname belongs to
+							one treasury and is shown nowhere else.
+						</li>
+						<li>
+							<b>That you opened a proposal</b>: the first time you open a
+							pending proposal while signed in, the relay records it with the
+							time. Your co-signers see it next to your address ("seen 2 hours
+							ago"), and you see theirs.
+						</li>
+						<li>
+							<b>What you have marked as read</b>: for each treasury, up to
+							where you last pressed "Got it" in "While you were away", when,
+							and which API wallet addresses the page had shown you by then.
+						</li>
+						<li>
+							<b>Requests to add or re-check a treasury</b>: which wallet asked
+							about which account, when, and what came of it (for example that
+							the wallet is not one of its signers). A request is removed a week
+							after it was answered.
 						</li>
 						<li>
 							<b>A history</b> of the above: which address did what, and when.
+							Marking something as read is not part of that history.
 						</li>
 					</ul>
 					<p>
-						Your browser also keeps a session token so you stay signed in. The
-						relay never receives a private key or a seed phrase, and nothing on
-						this site asks for one.
+						To keep signer lists current, and to check a transaction it was
+						pointed to, the relay itself asks Hyperliquid's public API about
+						those accounts and transactions. It sends Hyperliquid nothing about
+						you.
+					</p>
+					<p>
+						Your browser also keeps a session for each wallet you sign in with,
+						so you stay signed in when you switch between them (at most eight
+						wallets; the one unused longest is dropped). Only the wallet that is
+						connected is ever used, and "Sign out" removes that wallet's session
+						from the browser at once. The relay never receives a private key or
+						a seed phrase, and nothing on this site asks for one.
 					</p>
 				</Section>
 
@@ -130,7 +193,8 @@ function PrivacyPage() {
 							<b>The current signers of a treasury</b>, according to
 							Hyperliquid's signer list, can read everything stored for that
 							treasury. A signer added later can read its earlier history; a
-							removed signer loses access once the list is refreshed.
+							removed signer loses access once the list is refreshed. One thing
+							is kept from co-signers: what each signer has marked as read.
 						</li>
 						<li>
 							<b>The operator of the relay</b> can read everything stored on it.
@@ -171,11 +235,18 @@ function PrivacyPage() {
 						limited time.
 					</p>
 					<p>
-						Proposals and history are kept until they are deleted. You can
-						export a proposal or a treasury's history as a file at any time. To
-						have your data removed, open an issue at the address below from an
-						account you can link to your wallet address, or ask a co-signer to;
-						we will ask you to prove control of the address with a signature.
+						Proposals, signatures and the history of a treasury are kept until
+						they are deleted. A few records are removed by themselves: a request
+						to add or re-check a treasury a week after it was answered, a
+						transaction your browser pointed the relay to 30 days after the
+						relay checked it (that the proposal was carried out stays on
+						record), an older "marked as read" point 30 days after a newer one
+						replaced it, and the record of who changed a nickname after a year.
+						You can export a proposal or a treasury's history as a file at any
+						time. To have your data removed, open an issue at the address below
+						from an account you can link to your wallet address, or ask a
+						co-signer to; we will ask you to prove control of the address with a
+						signature.
 					</p>
 				</Section>
 

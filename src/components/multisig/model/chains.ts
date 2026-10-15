@@ -85,8 +85,15 @@ export function knownChain(id: number): ChainChoice | null {
 	return SIGNER_CHAINS.find((c) => c.id === id) ?? null;
 }
 
-/** Chains a wallet is often on that no proposal here asks for; named only for display. */
-const OTHER_NAMES: Readonly<Record<number, string>> = { 1: "Ethereum" };
+/**
+ * Chains a wallet can be on that are not among the ones a readable action
+ * names; named only for display. 1337 is the network a wallet holds for
+ * signing codes (model/signingNetwork.ts): nothing is ever sent on it.
+ */
+const OTHER_NAMES: Readonly<Record<number, string>> = {
+	1: "Ethereum",
+	1337: "the signing network",
+};
 
 export function chainLabel(id: number): string {
 	const name = knownChain(id)?.label ?? OTHER_NAMES[id];

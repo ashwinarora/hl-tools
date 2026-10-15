@@ -1,12 +1,13 @@
 import type { Address, Network } from "@hl-tools/core";
-import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { usePersistHydrated } from "./hydrated";
 
 /**
  * What the Multisig section remembers in this browser only: that the
- * "this signs and sends" warning was read, the nicknames given to treasuries,
- * and which treasuries were seen or hidden. None of it is sent anywhere; a
+ * "this signs and sends" warning and the first-run card were read, the
+ * nicknames given to treasuries, which treasuries were seen or hidden, and
+ * whether "While you were away" is folded. None of it is sent anywhere; a
  * nickname is the reader's own label, never something a co-signer set.
  */
 interface PrefsState {
@@ -17,7 +18,13 @@ interface PrefsState {
 	seen: string[];
 	/** Treasuries taken out of this browser's list. */
 	hidden: string[];
+	/** "While you were away" shows its title only, on every page that has it. */
+	awayFolded: boolean;
+	/** The first-run card on the start page was put away. */
+	walkthroughSeen: boolean;
 	dismissWarning: () => void;
+	setAwayFolded: (folded: boolean) => void;
+	dismissWalkthrough: () => void;
 	rename: (network: Network, address: Address, name: string) => void;
 	markSeen: (network: Network, address: Address) => void;
 	setHidden: (network: Network, address: Address, hidden: boolean) => void;
@@ -39,7 +46,11 @@ export const useMultisigPrefs = create<PrefsState>()(
 			names: {},
 			seen: [],
 			hidden: [],
+			awayFolded: false,
+			walkthroughSeen: false,
 			dismissWarning: () => set({ warningSeen: true }),
+			setAwayFolded: (folded) => set({ awayFolded: folded }),
+			dismissWalkthrough: () => set({ walkthroughSeen: true }),
 			rename: (network, address, name) =>
 				set((s) => {
 					const names = { ...s.names };
@@ -68,6 +79,8 @@ export const useMultisigPrefs = create<PrefsState>()(
 				names: s.names,
 				seen: s.seen,
 				hidden: s.hidden,
+				awayFolded: s.awayFolded,
+				walkthroughSeen: s.walkthroughSeen,
 			}),
 			// restored after mount, so the server and the first client render agree
 			skipHydration: true,
@@ -85,6 +98,8 @@ export const useMultisigPrefs = create<PrefsState>()(
 					names,
 					seen: strings(p.seen),
 					hidden: strings(p.hidden),
+					awayFolded: p.awayFolded === true,
+					walkthroughSeen: p.walkthroughSeen === true,
 				};
 			},
 		},
@@ -93,19 +108,5 @@ export const useMultisigPrefs = create<PrefsState>()(
 
 /** True once the stored preferences are in; until then nothing depending on them is shown. */
 export function usePrefsHydrated(): boolean {
-	const [hydrated, setHydrated] = useState(
-		() => useMultisigPrefs.persist?.hasHydrated() ?? false,
-	);
-	useEffect(() => {
-		const api = useMultisigPrefs.persist;
-		if (!api) return;
-		if (api.hasHydrated()) {
-			setHydrated(true);
-			return;
-		}
-		const unsubscribe = api.onFinishHydration(() => setHydrated(true));
-		void api.rehydrate();
-		return unsubscribe;
-	}, []);
-	return hydrated;
+	return usePersistHydrated(useMultisigPrefs.persist);
 }

@@ -9,17 +9,48 @@ import {
 	type ErrorExplanation,
 	explainExchangeError,
 	type Hex,
+	isoTime,
 	type Network,
+	numberSpent,
+	type PlainObject,
 	type Policy,
 	type Proposal,
+	parseSignersString,
 	type Readiness,
+	vaultActionOf,
 } from "@hl-tools/core";
-import { chainIdToNumber, chainLabel } from "./chains";
+import { unmeasuredSwitch } from "./modeSwitch";
 import { describeWindow, type WindowInfo } from "./nonce";
+import {
+	joinParts,
+	type Part,
+	partsText,
+	say,
+	shortAddress,
+	whoPart,
+} from "./parts";
+import {
+	blockedText,
+	type Objection,
+	type Standing,
+	saidNo,
+	standing,
+} from "./relay/positions";
+import { switchSentence } from "./selfTreasury";
+import { CODE_COPY, isVaultAction, signingChainOf } from "./signingNetwork";
 
+export { shortAddress };
+
+/**
+ * `unknown`: a wallet is connected, but the signer set has not been read yet.
+ * `treasury`: the wallet is the treasury account itself, whose own key cannot
+ * act for it.
+ */
 export type WalletRole =
 	| "disconnected"
+	| "unknown"
 	| "outsider"
+	| "treasury"
 	| "signer"
 	| "finaliser"
 	| "signer-finaliser";
@@ -28,6 +59,14 @@ export type Phase =
 	| "judging"
 	| "unsupported"
 	| "submitted"
+	| "carried-out"
+	| "in-effect"
+	| "closed"
+	| "stuck"
+	| "overtaken"
+	| "refused"
+	| "cannot-pass"
+	| "finaliser-no"
 	| "withdrawn"
 	| "declined"
 	| "expired"
@@ -55,12 +94,75 @@ export interface StageInput {
 		readonly by: Address;
 	} | null;
 	/**
+	 * Set when the proposal was carried out and its result was never reported
+	 * here. By the relay: it closed the proposal after checking the
+	 * transaction on Hyperliquid itself. By this page (`seenBy: "page"`): a
+	 * staking step leaves no row in the ledger, so the page looked the
+	 * transaction up in Hyperliquid's own list of the account's staking steps.
+	 */
+	readonly carriedOut?: {
+		readonly txHash: Hex | null;
+		/**
+		 * "ledger": this page tied a row of Hyperliquid's ledger of the account
+		 * to this proposal by its number, with the transaction read from
+		 * Hyperliquid's explorer. That is Hyperliquid's own record, and it counts
+		 * over whatever a receipt in the copy reports.
+		 */
+		readonly seenBy?: "relay" | "page" | "ledger";
+	} | null;
+	/**
+	 * Hyperliquid's record of the account holds an action like this one that
+	 * could not be compared with it (the explorer did not answer, or the action
+	 * carries no number). Said beside a reported refusal: it may be carried out.
+	 */
+	readonly likeOnRecord?: boolean;
+	/** The relay closed the proposal in a way this version of the page does not know. */
+	readonly closedUnknown?: boolean;
+	/**
+	 * A newer action of the same ordered kind (a USDC send) has been carried out
+	 * for this treasury: Hyperliquid will refuse this one. See the core's
+	 * `overtakenBy`. A recorded attempt that Hyperliquid refused for that reason
+	 * says the same, and is read from the receipt here.
+	 */
+	readonly overtaken?: boolean;
+	/**
 	 * The network selected in the header. When given and different from the
 	 * proposal's, nothing can be signed until the reader switches: what gets
 	 * signed is decided by the proposal, and the reader must be looking at it.
 	 */
 	readonly headerNetwork?: Network;
+	/**
+	 * Who said no, as the relay holds it. A no is an objection the others see,
+	 * not an ending; it is counted here against the live signer set, like a
+	 * signature.
+	 */
+	readonly objections?: readonly Objection[];
+	/**
+	 * Hyperliquid would refuse the action before this moment (unix ms): an
+	 * unstake while the stake it takes from is still locked. Signing is open
+	 * all the same; only submitting waits.
+	 */
+	readonly heldUntil?: number | null;
+	/**
+	 * This build has the signing network (model/signingNetwork.ts), so a vault
+	 * action, which is signed as a code under it, can be signed here.
+	 */
+	readonly codeSigning?: boolean;
+	/**
+	 * Why Hyperliquid would refuse the action as things stand, in a few words
+	 * (the treasury's mode, a send to itself, a HyperEVM system address:
+	 * `modeRefusal`). Then nothing is signed or sent here until that changes;
+	 * the page says why beside where the buttons would be.
+	 */
+	readonly refusal?: string | null;
 }
+
+/**
+ * What a submission that has to wait for a lockup takes from: a stake (an
+ * unstake) or a vault deposit (a withdrawal from a vault).
+ */
+export const heldWhat = (action: PlainObject): "stake" | "deposit" =>
+	vaultActionOf(action) ? "deposit" : "stake";
 
 export interface Stage {
 	readonly phase: Phase;
@@ -74,12 +176,28 @@ export interface Stage {
 		readonly label: string;
 	} | null;
 	readonly onRequiredChain: boolean;
+	/**
+	 * The action is signed as a code (a vault action): the wallet cannot show
+	 * it, and the page shows the code it will show instead.
+	 */
+	readonly signsCode: boolean;
 	readonly canSign: boolean;
 	readonly signReason: string | null;
 	readonly canExecute: boolean;
 	/** True when the finaliser's own signature would complete the threshold. */
 	readonly executeAddsSignature: boolean;
 	readonly executeReason: string | null;
+	/**
+	 * Set while time is the only thing between the finaliser and Submit (see
+	 * `StageInput.heldUntil`): the moment it opens.
+	 */
+	readonly opensAt: number | null;
+	/**
+	 * The lockup ends only after the proposal has closed: as things stand
+	 * nobody can ever submit it. A sentence for every reader, while it is
+	 * still open; null otherwise.
+	 */
+	readonly closesFirst: readonly Part[] | null;
 	/** The live signer set differs from the one recorded when the proposal was made. */
 	readonly policyChanged: boolean;
 	/** The header is on the other network than the proposal: signing is refused until it is switched. */
@@ -87,11 +205,19 @@ export interface Stage {
 	/** The explanation of a recorded submission that the chain rejected. */
 	readonly failedAttempt: ErrorExplanation | null;
 	readonly window: WindowInfo;
+	/**
+	 * Who of the live signers said no, and whether the proposal can still go
+	 * ahead as things stand. Null until the signer set is known.
+	 */
+	readonly standing: Standing | null;
+	/** The connected wallet's own position is a no. */
+	readonly saidNo: boolean;
 	readonly headline: string;
 	readonly detail: string;
+	/** The two sentences with their addresses and moments marked (see model/parts). */
+	readonly headlineParts: readonly Part[];
+	readonly detailParts: readonly Part[];
 }
-
-export const shortAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 function policyChanged(p: Proposal, live: Policy | null): boolean {
 	const then = p.meta.policyAtCreation;
@@ -103,12 +229,85 @@ function policyChanged(p: Proposal, live: Policy | null): boolean {
 	);
 }
 
+/**
+ * The finaliser was one of the signers when the proposal was made and is not
+ * one any more. Hyperliquid accepts an envelope only from a current signer, so
+ * nobody can submit it. (A finaliser that never was a signer is left alone:
+ * a document made elsewhere may name a signer's funded API wallet, which can
+ * submit.)
+ */
+export function finaliserLeft(p: Proposal, live: Policy | null): boolean {
+	const then = p.meta.policyAtCreation;
+	const leader = p.payload.outerSigner;
+	if (!then || !live || live.threshold === 0) return false;
+	return (
+		then.authorizedUsers.includes(leader) &&
+		!live.authorizedUsers.includes(leader)
+	);
+}
+
+/**
+ * Hyperliquid took this proposal's envelope and refused it. That uses up the
+ * proposal's number for its finaliser, whatever the reason was (measured: see
+ * the core's `numberSpent`), so it can never be sent again: it has to be
+ * proposed again.
+ */
+export function refusedForGood(p: Proposal): boolean {
+	return (
+		!!p.receipt &&
+		numberSpent(explainExchangeError(p.receipt.response, p.receipt.httpStatus))
+	);
+}
+
+/**
+ * A change of signers whose result is what Hyperliquid reports now: the signer
+ * list it asks for, or (for the conversion back) no signer list at all. Then
+ * it has been carried out, whoever recorded that and whoever did not. Without
+ * this a co-signer opening it from a link would see its signatures judged
+ * against the signers it installed, and read "cannot be finished".
+ */
+export function changeInEffect(p: Proposal, live: Policy | null): boolean {
+	if (p.payload.action.type !== "convertToMultiSigUser" || !live) return false;
+	const asked = parseSignersString(p.payload.action.signers);
+	if (asked.revert) return live.authorizedUsers.length === 0;
+	if (!asked.set) return false;
+	return (
+		live.threshold === asked.set.threshold &&
+		live.authorizedUsers.length === asked.set.authorizedUsers.length &&
+		asked.set.authorizedUsers.every((a) => live.authorizedUsers.includes(a))
+	);
+}
+
+/** A moment as a part: shown in the reader's own zone; as plain text, in UTC, said so. */
+const heldWhen = (at: number): Part => ({
+	// a lockup's end comes from Hyperliquid's feed as it is: never a throw
+	text: `${isoTime(at).slice(0, 16).replace("T", " ")} UTC`,
+	when: at,
+});
+
+/** Phases in which nothing can send the proposal any more: only ending it is left. */
+export const CANNOT_BE_SENT: ReadonlySet<Phase> = new Set<Phase>([
+	"refused",
+	"overtaken",
+	"expired",
+	"stuck",
+	"not-multisig",
+]);
+
 export function deriveStage(input: StageInput): Stage {
 	const { proposal: p, readiness: r, policy } = input;
 	const now = input.now ?? Date.now();
 	const wallet = input.wallet ? input.wallet.toLowerCase() : null;
 	const leader = p.payload.outerSigner;
 	const window = describeWindow(p.payload.nonce, now);
+	const lockedUntil =
+		input.heldUntil != null && input.heldUntil > now ? input.heldUntil : null;
+	// A lockup can be made longer (by adding to what is locked), never
+	// shorter: one that ends after the window does is a certainty, not a guess.
+	const outlasts =
+		lockedUntil !== null && lockedUntil >= window.validUntil
+			? say`The ${heldWhat(p.payload.action)} this takes from is locked until ${heldWhen(lockedUntil)}, and this proposal closes before that, on ${heldWhen(window.validUntil)}. It cannot be sent in time: its proposer can cancel it and make it again later.`
+			: null;
 
 	const isLeader = wallet !== null && wallet === leader;
 	const isSigner =
@@ -124,19 +323,17 @@ export function deriveStage(input: StageInput): Stage {
 					: "signer"
 				: isLeader
 					? "finaliser"
-					: "outsider";
+					: // "not a signer" is a verdict: not before the signer set is known
+						!policy
+						? "unknown"
+						: wallet === p.payload.multiSigUser &&
+								policy.authorizedUsers.length > 0
+							? "treasury"
+							: "outsider";
 	const hasSigned =
 		wallet !== null && !!r && r.counted.some((a) => a === wallet);
 
-	const chainId = chainIdToNumber(p.payload.action.signatureChainId);
-	const requiredChain =
-		chainId === null
-			? null
-			: {
-					hex: String(p.payload.action.signatureChainId).toLowerCase() as Hex,
-					id: chainId,
-					label: chainLabel(chainId),
-				};
+	const requiredChain = signingChainOf(p.payload.action);
 	const onRequiredChain =
 		requiredChain !== null && input.walletChainId === requiredChain.id;
 
@@ -149,87 +346,209 @@ export function deriveStage(input: StageInput): Stage {
 		p.meta.kind === "user-signed" &&
 		(p.payload.vaultAddress !== null || p.payload.expiresAfter !== null);
 
+	const position =
+		policy && policy.authorizedUsers.length > 0
+			? standing({
+					signers: policy.authorizedUsers,
+					threshold: policy.threshold,
+					finaliser: leader,
+					objections: input.objections ?? [],
+				})
+			: null;
+	const iSaidNo = !!position && saidNo(position, wallet as Address | null);
+	const held = position?.blocked
+		? blockedText({
+				standing: position,
+				finaliser: leader,
+				me: wallet as Address | null,
+				lapsesAt: window.validUntil,
+				now,
+			})
+		: null;
+
+	const who = whoPart;
 	let phase: Phase;
-	let headline: string;
-	let detail: string;
+	let head: Part[];
+	let body: Part[];
 	if (accepted) {
+		const at = p.receipt?.submittedAt ?? 0;
 		phase = "submitted";
-		headline = "Submitted · accepted by Hyperliquid";
-		detail = `Submitted ${new Date(p.receipt?.submittedAt ?? 0).toISOString()}. Nothing more to sign.`;
+		head = say`Sent · accepted by Hyperliquid`;
+		body = say`Sent ${{ text: isoTime(at), when: at }}. Nothing more to sign.`;
+	} else if (input.carriedOut) {
+		phase = "carried-out";
+		// said this way because the submitter may well have used this page, signed out
+		head = say`Carried out, not reported here`;
+		body =
+			input.carriedOut.seenBy === "ledger"
+				? failedAttempt
+					? // a receipt's answer is outside its signature: the record decides
+						say`Hyperliquid's own record of this account holds this action, under this proposal's number: it was carried out. The copy opened here reports a refusal; the record is what counts. Nothing more to sign, and nothing to propose again.`
+					: say`Hyperliquid's own record of this account holds this action, under this proposal's number: it was carried out, but its result was never reported here. Nothing more to sign.`
+				: input.carriedOut.seenBy === "page"
+					? say`Hyperliquid's own list of this account's staking steps holds this action, under this proposal's number: it was carried out, but its result was never reported here. Nothing more to sign.`
+					: say`Hyperliquid carried this action out, but its result was never reported here: it was sent while signed out, or some other way. Its transaction was found on Hyperliquid. Nothing more to sign.`;
+		if (input.carriedOut.seenBy === "ledger" && failedAttempt)
+			head = say`Carried out · the refusal reported here is not Hyperliquid's record`;
+	} else if (input.closedUnknown) {
+		phase = "closed";
+		head = say`Closed`;
+		body = say`This proposal was closed in a way this version of the page does not recognise. Reload the page to update it.`;
 	} else if (input.ended?.kind === "withdrawn") {
 		phase = "withdrawn";
-		headline = `Withdrawn by the proposer, ${shortAddress(input.ended.by)}`;
-		detail = `Signatures already given remain valid on chain until the window closes (${window.text}), and only the finaliser ${shortAddress(leader)} could still submit it.`;
+		head = say`Cancelled by the proposer, ${who(input.ended.by)}`;
+		body = say`Signatures already given stay valid on Hyperliquid until the window closes (${window.parts}), and only the finaliser ${who(leader)} could still send it.`;
 	} else if (input.ended?.kind === "declined") {
 		phase = "declined";
-		headline = `Declined by the finaliser, ${shortAddress(input.ended.by)}`;
-		detail =
-			"It will not be submitted. Re-propose it with a different finaliser if it is still wanted.";
-	} else if (p.meta.kind === "l1") {
+		head = say`The finaliser, ${who(input.ended.by)}, will not send it`;
+		body = say`The finaliser said no. Propose it again with a different finaliser if it is still wanted.`;
+	} else if (changeInEffect(p, policy)) {
+		// before anything about signatures: they would be counted against the
+		// signers this very proposal put in place
+		phase = "in-effect";
+		head = say`In effect`;
+		body =
+			policy && policy.authorizedUsers.length === 0
+				? say`Hyperliquid reports no signers for this account any more: it is a normal account again, as this proposal asks. Nothing more to sign.`
+				: say`The treasury's signers on Hyperliquid are the ones this proposal asks for. Nothing more to sign.`;
+	} else if (p.meta.kind === "l1" && !isVaultAction(p.payload)) {
 		phase = "unsupported";
-		headline = "An L1 action: inspect only";
-		detail =
-			"Orders, cancels and other L1 actions are outside the signer. It can be read and checked here, not signed.";
+		head = say`A trading action: read only here`;
+		body = say`Orders, cancels and similar trading actions cannot be signed from this page. You can read and check it here; sign it with another tool.`;
+	} else if (p.meta.kind === "l1" && !input.codeSigning) {
+		phase = "unsupported";
+		head = say`${CODE_COPY.absentHead}`;
+		body = say`${CODE_COPY.absentBody}`;
 	} else if (unsignedFields) {
 		phase = "unsupported";
-		headline = "This document sets a vault address or an expiry";
-		detail =
-			"Signers of a user-signed action do not sign those two fields, so anyone could have added them. This page will not sign or submit it.";
+		head = say`This document sets a vault address or an expiry`;
+		body = say`Signers do not sign those two fields, so anyone who handled this copy could have added them. This page will not sign or send it. Ask the proposer for a fresh copy.`;
+	} else if (unmeasuredSwitch(p.payload.action) !== null && !failedAttempt) {
+		// before anyone signs: signatures cannot make it go through
+		phase = "unsupported";
+		head = say`A switch to an account mode this page was not tested with`;
+		body = say`${unmeasuredSwitch(p.payload.action) as string}`;
+	} else if (
+		failedAttempt &&
+		failedAttempt.id !== "nonce-used" &&
+		numberSpent(failedAttempt)
+	) {
+		// before anything about signatures: no signature changes it any more
+		phase = "refused";
+		head =
+			failedAttempt.id !== "nonce-duplicate" && input.likeOnRecord
+				? say`Refused, as reported · it may have happened anyway`
+				: say`Refused by Hyperliquid · cannot be sent again`;
+		body =
+			failedAttempt.id === "nonce-duplicate"
+				? // the number was used before this attempt: by an attempt that was
+					// refused, or by one that went through and whose answer never got here
+					// jargon: Hyperliquid's own answer, quoted for whoever searches for it
+					say`Hyperliquid answered that this proposal's number was already used ("duplicate nonce"). If the earlier attempt went through, the action has already happened. Look at the treasury's record on Hyperliquid before proposing it again.`
+				: input.likeOnRecord
+					? // the answer in a receipt is what its finaliser wrote down, and
+						// the record holds something like this action: never "propose again"
+						say`This copy says Hyperliquid refused it, but Hyperliquid's record shows a similar action. Check the record before proposing it again: if this one went through, a new proposal would do it a second time.`
+					: say`Hyperliquid refused this. A refused proposal cannot be sent again: its number is used up. Propose it again: it gets a new number, and every signer signs once more. The refusal is what the finaliser's page recorded: if in doubt, look at the treasury's record on Hyperliquid first.`;
 	} else if (!r) {
 		phase = "judging";
-		headline = "Checking signatures…";
-		detail = "Recovering every signer and fetching the live signer set.";
+		head = say`Checking signatures…`;
+		body = say`Checking the signatures against the treasury's current signers…`;
 	} else if (r.status === "expired") {
 		phase = "expired";
-		headline = "Expired";
-		detail = `The signing window ${window.text}. Re-propose it with a fresh nonce; collected signatures do not carry over.`;
+		head = say`Expired`;
+		body = say`The signing window ${window.parts}. Propose it again: it gets a new number, and every signer signs once more.`;
+	} else if (input.overtaken || failedAttempt?.id === "nonce-used") {
+		// before "ready": signatures change nothing once Hyperliquid will refuse it
+		phase = "overtaken";
+		head = say`Cannot be sent any more`;
+		body = say`Hyperliquid takes a treasury's USDC sends in the order they were proposed, and a newer one has been carried out. This one would be refused. Propose it again: it gets a new number, and the signers sign once more.`;
 	} else if (r.status === "not-multisig") {
 		phase = "not-multisig";
-		headline = `Not a multi-sig on ${p.payload.network}`;
-		detail = `${shortAddress(p.payload.multiSigUser)} has no signer set there, so no signature can count.`;
+		head = say`Not a treasury on ${p.payload.network}`;
+		body = say`Hyperliquid reports no signers for ${who(p.payload.multiSigUser)} there, so no signature can count.`;
 	} else if (r.status === "unknown") {
 		phase = "unknown";
-		headline = "Signer set not loaded";
-		detail =
-			"The signer set could not be fetched, so nothing can be judged yet.";
+		head = say`Signers not loaded`;
+		body = say`The signers could not be read from Hyperliquid, so nothing can be judged yet.`;
 	} else if (r.status === "not-yet-valid") {
 		phase = "not-yet-valid";
-		headline = `Not submittable yet · ${r.have} of ${r.need}`;
-		detail = `The signing window ${window.text}. Signers can sign in the meantime.`;
+		head = say`Cannot be sent yet · ${String(r.have)} of ${String(r.need)}`;
+		body = say`The signing window ${window.parts}. Signers can sign in the meantime.`;
+	} else if (finaliserLeft(p, policy)) {
+		// counted before "ready": enough signatures change nothing when nobody can submit
+		phase = "stuck";
+		head = say`Cannot be finished`;
+		body = say`Only the finaliser can send a proposal, and ${isLeader ? "your wallet" : who(leader)} is no longer one of this treasury's signers. Cancel it and propose it again with another finaliser.`;
+	} else if (position?.blocked && held) {
+		// Before "ready" and "collecting": as things stand it goes nowhere. It
+		// stays open all the same: a no can be taken back.
+		phase = position.blocked;
+		head = held.headline;
+		body = held.detail;
 	} else if (r.status === "ready") {
 		phase = "ready";
-		headline = `Ready · ${r.have} of ${r.need} signatures`;
-		detail = isLeader
-			? `You are the finaliser: submit it when you are ready · ${window.text}.`
-			: `The finaliser ${shortAddress(leader)} signs the envelope and submits · ${window.text}.`;
+		head = say`Ready · ${String(r.have)} of ${String(r.need)} signatures`;
+		body = outlasts
+			? outlasts
+			: lockedUntil
+				? say`${isLeader ? "You are the finaliser. It" : say`The finaliser ${who(leader)} sends it. It`} can be sent from ${heldWhen(lockedUntil)}: the ${heldWhat(p.payload.action)} it takes from is locked until then · ${window.parts}.`
+				: isLeader
+					? say`You are the finaliser: send it when you are ready · ${window.parts}.`
+					: say`The finaliser ${who(leader)} sends it · ${window.parts}.`;
 	} else {
 		phase = "collecting";
-		headline = `Collecting signatures · ${r.have} of ${r.need}`;
-		const who = r.missing.map(shortAddress).join(", ");
-		detail = `${who ? `${who} can still sign · ` : ""}${window.text}.`;
+		head = say`Collecting signatures · ${String(r.have)} of ${String(r.need)}`;
+		const missing = joinParts(
+			// the reader is "you", first
+			[...r.missing]
+				// somebody who said no is not waited for: their position is known
+				// (and stands two lines further down the page)
+				.filter((a) => !position?.objected.some((o) => o.signer === a))
+				.sort((a, b) => Number(b === wallet) - Number(a === wallet))
+				.map((a) => [a === wallet ? { text: "you", who: a } : who(a)]),
+			", ",
+		);
+		body = say`${missing.length ? say`${missing} can still sign · ` : ""}${window.parts}.`;
 	}
+	const headline = partsText(head);
+	const detail = partsText(body);
 
 	const networkMismatch =
 		input.headerNetwork !== undefined &&
 		input.headerNetwork !== p.payload.network;
 	const wrongNetwork = `This proposal is for ${p.payload.network}; the header is on ${input.headerNetwork}. Switch the header to ${p.payload.network} to continue.`;
 
+	// A proposal held up by a no is still open: the others can sign in the
+	// meantime, and the one who said no can sign instead (it replaces the no).
 	const signable =
-		phase === "collecting" || phase === "ready" || phase === "not-yet-valid";
+		phase === "collecting" ||
+		phase === "ready" ||
+		phase === "not-yet-valid" ||
+		phase === "cannot-pass" ||
+		phase === "finaliser-no";
+	const refused = input.refusal ? `${input.refusal}.` : null;
 	const signReason =
 		phase === "judging"
 			? "Checking signatures…"
 			: !signable
 				? headline
-				: networkMismatch
-					? wrongNetwork
-					: role === "disconnected"
-						? "Connect a wallet to sign."
-						: !isSigner
-							? `${shortAddress(wallet ?? "")} is not in the signer set.`
-							: hasSigned
-								? "You signed this."
-								: null;
+				: refused
+					? refused
+					: networkMismatch
+						? wrongNetwork
+						: role === "disconnected"
+							? "Connect a wallet to sign."
+							: role === "treasury"
+								? partsText(switchSentence(policy?.authorizedUsers ?? []))
+								: !isSigner
+									? `${shortAddress(wallet ?? "")} is not one of this treasury's signers.`
+									: hasSigned
+										? "You signed this."
+										: // the finaliser takes the no back first; submitting is its own step
+											isLeader && iSaidNo
+											? "You said no to this."
+											: null;
 	const canSign = signReason === null;
 
 	const need = r?.need ?? null;
@@ -247,14 +566,26 @@ export function deriveStage(input: StageInput): Stage {
 				? `${r?.have ?? 0} of ${need ?? "?"} signatures so far.`
 				: !executable
 					? headline
-					: networkMismatch
-						? wrongNetwork
-						: role === "disconnected"
-							? "Connect the finaliser's wallet to submit."
-							: !isLeader
-								? `Only the finaliser ${shortAddress(leader)} can submit.`
-								: null;
+					: refused
+						? refused
+						: networkMismatch
+							? wrongNetwork
+							: role === "disconnected"
+								? "Connect the finaliser's wallet to send it."
+								: !isLeader
+									? `Only the finaliser ${shortAddress(leader)} can send it.`
+									: lockedUntil
+										? `The ${heldWhat(p.payload.action)} this takes from is still locked, and Hyperliquid would refuse it until the lockup has ended.`
+										: null;
 	const canExecute = executeReason === null;
+	// time is all that is in the way: the page shows Submit, switched off, with the moment
+	const opensAt =
+		lockedUntil && executable && !networkMismatch && isLeader
+			? lockedUntil
+			: null;
+
+	const closesFirst =
+		phase === "collecting" || phase === "ready" ? outlasts : null;
 
 	return {
 		phase,
@@ -262,16 +593,23 @@ export function deriveStage(input: StageInput): Stage {
 		hasSigned,
 		requiredChain,
 		onRequiredChain,
+		signsCode: p.meta.kind === "l1",
 		canSign,
 		signReason,
 		canExecute,
 		executeAddsSignature: canExecute && executeAddsSignature,
 		executeReason,
+		opensAt,
+		closesFirst,
 		policyChanged: policyChanged(p, policy),
 		networkMismatch,
 		failedAttempt,
 		window,
+		standing: position,
+		saidNo: iSaidNo,
 		headline,
 		detail,
+		headlineParts: head,
+		detailParts: body,
 	};
 }

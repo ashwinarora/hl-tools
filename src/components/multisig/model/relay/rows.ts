@@ -6,12 +6,28 @@
  * by recovering it.)
  */
 import type { Address, Hex, Network } from "@hl-tools/core";
+import type { NicknameRow } from "./nicknames";
+import type { ViewRow } from "./views";
 
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 const HASH32 = /^0x[0-9a-f]{64}$/;
 const CHAIN_ID = /^0x[0-9a-f]{1,16}$/;
 
-export type ProposalStatus = "open" | "withdrawn" | "declined" | "accepted";
+export const PROPOSAL_STATUSES = [
+	"open",
+	"withdrawn",
+	"declined",
+	"accepted",
+	"carried_out",
+] as const;
+/**
+ * `carried_out`: Hyperliquid carried the action out without the result ever
+ * being recorded here (it was submitted some other way); the relay checked
+ * the transaction. `unknown`: a status this version of the page does not
+ * know. It is shown as closed, and nothing can be done to it from here.
+ */
+export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number] | "unknown";
+export type ReportStatus = "pending" | "confirmed" | "rejected" | "failed";
 export type RequestStatus = "pending" | "done" | "rejected" | "failed";
 export type RequestKind = "add" | "check";
 export type EndingKind = "withdrawn" | "declined";
@@ -27,8 +43,12 @@ export const EVENT_KINDS = [
 	"proposal_withdrawn",
 	"proposal_declined",
 	"submission_recorded",
+	"proposal_carried_out",
+	"objection_added",
+	"objection_removed",
 ] as const;
-export type EventKind = (typeof EVENT_KINDS)[number];
+/** `unknown`: an entry of a kind this version of the page does not know. It is still an entry. */
+export type EventKind = (typeof EVENT_KINDS)[number] | "unknown";
 
 export interface TreasuryRow {
 	readonly network: Network;
@@ -49,6 +69,12 @@ export interface SignatureRow {
 	readonly r: Hex;
 	readonly s: Hex;
 	readonly v: 27 | 28;
+	readonly createdAt: number;
+}
+
+/** A signer's no: who and when, nothing else. */
+export interface ObjectionRow {
+	readonly signer: Address;
 	readonly createdAt: number;
 }
 
@@ -86,6 +112,8 @@ export interface ProposalRow {
 	readonly closedAt: number | null;
 	readonly createdAt: number;
 	readonly signatures: readonly SignatureRow[];
+	/** Who said no, as the relay holds it; counted against the signer set by the page. */
+	readonly objections: readonly ObjectionRow[];
 	readonly ending: EndingRow | null;
 	readonly receipts: readonly ReceiptRow[];
 }
@@ -96,6 +124,8 @@ export interface EventRow {
 	readonly treasury: Address;
 	readonly digest: Hex | null;
 	readonly kind: EventKind;
+	/** The kind as the relay wrote it; differs from `kind` only when that is `unknown`. */
+	readonly rawKind: string;
 	readonly actor: Address | null;
 	readonly data: Readonly<Record<string, unknown>>;
 	readonly at: number;
@@ -110,6 +140,31 @@ export interface RequestRow {
 	readonly reason: string | null;
 	readonly createdAt: number;
 	readonly finishedAt: number | null;
+}
+
+/** The relay's answer to "this transaction carried that proposal out". */
+export interface ReportRow {
+	readonly id: string;
+	readonly network: Network;
+	readonly treasury: Address;
+	readonly digest: Hex;
+	readonly txHash: Hex;
+	readonly status: ReportStatus;
+	readonly reason: string | null;
+	readonly createdAt: number;
+	readonly finishedAt: number | null;
+}
+
+/** One "Got it": the signer's marker for a treasury at that moment. The newest per treasury counts. */
+export interface MarkRow {
+	readonly id: number;
+	readonly network: Network;
+	readonly treasury: Address;
+	readonly eventId: number;
+	/** Null when the marker never recorded one. */
+	readonly ledgerTime: number | null;
+	readonly agents: readonly Address[] | null;
+	readonly markedAt: number;
 }
 
 export interface Parsed<T> {
@@ -140,6 +195,21 @@ const text = (v: unknown): string => (typeof v === "string" ? v : bad());
 const oneOf = <T extends string>(v: unknown, all: readonly T[]): T =>
 	typeof v === "string" && (all as readonly string[]).includes(v)
 		? (v as T)
+		: bad();
+/**
+ * A word from a list the relay may grow: one this version does not know is
+ * kept as `unknown` rather than costing the whole row. (A row that vanished
+ * would read as "there is no such proposal"; an unknown one reads as "closed
+ * in a way this page cannot name".) Anything that is not text is still malformed.
+ */
+const known = <T extends string>(
+	v: unknown,
+	all: readonly T[],
+): T | "unknown" =>
+	typeof v === "string"
+		? (all as readonly string[]).includes(v)
+			? (v as T)
+			: "unknown"
 		: bad();
 const recid = (v: unknown): 27 | 28 => (v === 27 || v === 28 ? v : bad());
 /** A Postgres timestamp (ISO text) as unix ms. */
@@ -198,6 +268,11 @@ function signatureRow(v: unknown): SignatureRow {
 	};
 }
 
+function objectionRow(v: unknown): ObjectionRow {
+	const r = isObj(v) ? v : bad();
+	return { signer: address(r.signer), createdAt: time(r.created_at) };
+}
+
 function endingRow(v: unknown): EndingRow {
 	const r = isObj(v) ? v : bad();
 	return {
@@ -240,15 +315,11 @@ export function proposalRows(data: unknown): Parsed<ProposalRow> {
 			finaliser: address(r.finaliser),
 			nonce: int(r.nonce),
 			expiresAt: time(r.expires_at),
-			status: oneOf(r.status, [
-				"open",
-				"withdrawn",
-				"declined",
-				"accepted",
-			] as const),
+			status: known(r.status, PROPOSAL_STATUSES),
 			closedAt: optional(r.closed_at, time),
 			createdAt: time(r.created_at),
 			signatures: list(r.signatures ?? []).map(signatureRow),
+			objections: list(r.objections ?? []).map(objectionRow),
 			ending: optional(ending, endingRow),
 			receipts: list(r.receipts ?? [])
 				.map(receiptRow)
@@ -263,7 +334,8 @@ export function eventRows(data: unknown): Parsed<EventRow> {
 		network: network(r.network),
 		treasury: address(r.treasury),
 		digest: optional(r.digest, hash),
-		kind: oneOf(r.kind, EVENT_KINDS),
+		kind: known(r.kind, EVENT_KINDS),
+		rawKind: text(r.kind),
 		actor: optional(r.actor, address),
 		data: isObj(r.data) ? r.data : {},
 		at: time(r.at),
@@ -280,6 +352,80 @@ export function requestRows(data: unknown): Parsed<RequestRow> {
 		reason: optional(r.reason, text),
 		createdAt: time(r.created_at),
 		finishedAt: optional(r.finished_at, time),
+	}));
+}
+
+export function reportRows(data: unknown): Parsed<ReportRow> {
+	return each(data, (r) => ({
+		id: text(r.id),
+		network: network(r.network),
+		treasury: address(r.treasury),
+		digest: hash(r.digest),
+		txHash: hash(r.tx_hash),
+		status: oneOf(r.status, [
+			"pending",
+			"confirmed",
+			"rejected",
+			"failed",
+		] as const),
+		reason: optional(r.reason, text),
+		createdAt: time(r.created_at),
+		finishedAt: optional(r.finished_at, time),
+	}));
+}
+
+export function viewRows(data: unknown): Parsed<ViewRow> {
+	return each(data, (r) => ({
+		signer: address(r.signer),
+		seenAt: time(r.seen_at),
+	}));
+}
+
+export function markRows(data: unknown): Parsed<MarkRow> {
+	return each(data, (r) => {
+		const chain = isObj(r.chain) ? r.chain : {};
+		const eventId = int(r.event_id);
+		if (eventId < 0) bad();
+		return {
+			id: int(r.id),
+			network: network(r.network),
+			treasury: address(r.treasury),
+			eventId,
+			ledgerTime:
+				chain.ledgerTime === undefined
+					? null
+					: int(chain.ledgerTime) >= 0
+						? int(chain.ledgerTime)
+						: bad(),
+			agents:
+				chain.agents === undefined ? null : list(chain.agents).map(address),
+			markedAt: time(r.marked_at),
+		};
+	});
+}
+
+/** The newest marker per treasury, keyed `network:treasury`. */
+export function latestMarks(
+	rows: readonly MarkRow[],
+): ReadonlyMap<string, MarkRow> {
+	const out = new Map<string, MarkRow>();
+	for (const m of rows) {
+		const key = `${m.network}:${m.treasury}`;
+		const had = out.get(key);
+		if (!had || m.id > had.id) out.set(key, m);
+	}
+	return out;
+}
+
+/** Shape only: whether a nickname may be shown is decided by `acceptNicknames`. */
+export function nicknameRows(data: unknown): Parsed<NicknameRow> {
+	return each(data, (r) => ({
+		network: network(r.network),
+		treasury: address(r.treasury),
+		address: address(r.address),
+		name: text(r.name),
+		setBy: address(r.set_by),
+		setAt: time(r.set_at),
 	}));
 }
 

@@ -1,0 +1,292 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-11/12. convertToMultiSigUser signed by the account's own key, as posted: the action, the signature and the account it must recover to, with Hyperliquid's answer. Any signing chain is accepted. An account that never received funds cannot send it. As signers: a funded API wallet and another multi-sig are accepted, an API wallet that never received funds and a vault are refused. Lab keys only. Recorded by labs/multisig/57, 60, 61.",
+	"network": "testnet",
+	"conversions": [
+		{
+			"about": "a unified account converts itself (2 of 3)",
+			"account": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0x41e84a2c224151b85ef53945d5d31adcfe8955b9\",\"0x5e7c3420160987d04db5e8ed6d5bc14f61237216\",\"0xb70c120cd3702225fbe3657ace137ed5889f36ee\"],\"threshold\":2}",
+				"nonce": 1791730743859
+			},
+			"signature": {
+				"r": "0x38aaf757e028a578a1b177c5ca51969d5853aa256275eae0e0e83ad7e5113970",
+				"s": "0x51ed4a533e836ab7d72d65aaee3655c0d1aeb35d680f5a980ed8591721f5b7ef",
+				"v": 28
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "an account that is already a signer elsewhere converts itself",
+			"account": "0x41e84a2c224151b85ef53945d5d31adcfe8955b9",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\"],\"threshold\":1}",
+				"nonce": 1791741078666
+			},
+			"signature": {
+				"r": "0x7dc3560bd89d33106d454bae837276089de110d8aaff9b08360f212afc075206",
+				"s": "0x0f56f76a03bedd1773f76c3096c9e2bf961fda0369e97a79bc7d6118158e36cb",
+				"v": 27
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "signed under HyperEVM testnet",
+			"account": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x3e6",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\"],\"threshold\":1}",
+				"nonce": 1791744348081
+			},
+			"signature": {
+				"r": "0xeefd47f356167b97b147954682ba9245cd932ab8bbeeb3482c521262b9e72afc",
+				"s": "0x6aed0eaa2d879f567dd7fbc3119ed89cd70a397a64079418c2601e135b07e904",
+				"v": 27
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "signed under Arbitrum Sepolia",
+			"account": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\"],\"threshold\":1}",
+				"nonce": 1791744352566
+			},
+			"signature": {
+				"r": "0xef900dc3e6d307dd8793af9d585bc08fff93805c8e588b8c4b626a8dc6eeaf41",
+				"s": "0x148ee4e9be0207799a30032772c9569e211c53c034c1a05b8480819712ee4e33",
+				"v": 28
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "signed under Ethereum",
+			"account": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x1",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\"],\"threshold\":1}",
+				"nonce": 1791744357036
+			},
+			"signature": {
+				"r": "0x129b5feea6db65991a211fcea1dec238856bcdc891406cefac5ba9630b2b5da5",
+				"s": "0x711ffc172cf7328cda0ccccbca878bff2110c2f13e812ca20e0949d8d8e32fe7",
+				"v": 28
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "signed under Arbitrum One",
+			"account": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0xa4b1",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\"],\"threshold\":1}",
+				"nonce": 1791744361597
+			},
+			"signature": {
+				"r": "0xface60d91fa597d4d7613fbfbf616ecc11f520b816d984016c5817c033a8c364",
+				"s": "0x75c8861b0135ef8d96bf4ccac933cf0def758d31b57dab449a552d296a7a1dac",
+				"v": 28
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "signed under HyperEVM mainnet's id, on testnet",
+			"account": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x3e7",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\"],\"threshold\":1}",
+				"nonce": 1791744366249
+			},
+			"signature": {
+				"r": "0x8edf4d679542bcb2101a45b687a949cf3e25faafd84431c98c8964a8a792b2b6",
+				"s": "0x3c010d12cc9318f2ed58ccfeeea0540624b5526ac04a5ad2a2c8a9f257c02250",
+				"v": 28
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "a funded API wallet among the signers",
+			"account": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0x0a0edcfc1936199282f32dd66dd4c298d1c50224\",\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\"],\"threshold\":1}",
+				"nonce": 1791744336371
+			},
+			"signature": {
+				"r": "0x52fb16d3747ddb4ac6827c42aeef9065b764782c83003334ed47856b601f329c",
+				"s": "0x7249740b5e303789ce0067202bbc412fb8eee1a704de53e8bb8bad229f66aa4c",
+				"v": 28
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"signer": {
+				"role": "agent",
+				"funded": true
+			}
+		},
+		{
+			"about": "another multi-sig among the signers",
+			"account": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\",\"0xf8365a35694f401a554e4ffa51b5afe3b203d148\"],\"threshold\":1}",
+				"nonce": 1791744343610
+			},
+			"signature": {
+				"r": "0x71d659d40dcde02a2a15ac8fa9626aafb79984211582ef6f84388a98b72cec9b",
+				"s": "0x4cf37806da894a3e9637de98c7e3600d9e7e39d449726b230a40ec50801e54aa",
+				"v": 28
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"signer": {
+				"role": "user (itself a multi-sig)",
+				"funded": true
+			}
+		},
+		{
+			"about": "an API wallet never funded among the signers",
+			"account": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0x0a0edcfc1936199282f32dd66dd4c298d1c50224\",\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\"],\"threshold\":1}",
+				"nonce": 1791744331536
+			},
+			"signature": {
+				"r": "0xd014d5c069558feb75b5af39b9fcf1a7fd1503a7f252658e746a3988899a5207",
+				"s": "0x46c311214cb881bbc834c98ae9cb06a2aafd07c093a8af16f28557fa0b00ae8f",
+				"v": 27
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Multi-sig authorized user must exist on L1"
+			},
+			"signer": {
+				"role": "agent",
+				"funded": false
+			}
+		},
+		{
+			"about": "a vault among the signers",
+			"account": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0\",\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\"],\"threshold\":1}",
+				"nonce": 1791744341118
+			},
+			"signature": {
+				"r": "0xe37352ea216d4d94c31332867184161345be40e54a0bc03c050d37b410a7d6b9",
+				"s": "0x6fd9df2f89ec26ab122c2202d743d8f6d037fbe35d2b3a2fe5c154297f43a875",
+				"v": 28
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Multi-sig authorized user cannot be vault or sub-account"
+			},
+			"signer": {
+				"role": "vault",
+				"funded": null
+			}
+		},
+		{
+			"about": "an account that never received funds",
+			"account": "0xe7d33dab88e77256259d1f41e72da1830e3687f1",
+			"action": {
+				"type": "convertToMultiSigUser",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"signers": "{\"authorizedUsers\":[\"0xb0371456346fcb3f58218dece11dd77d6d8ddb15\"],\"threshold\":1}",
+				"nonce": 1791744330861
+			},
+			"signature": {
+				"r": "0xb81fb618f91ecd6f21a0ca0b998ae1a6fdd35cf4c6ae75fa11a69643721c9fd9",
+				"s": "0x4dad9910eaeaec2802870300724d7117863f633723920fd8ef2c2e7b9d007e2c",
+				"v": 28
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Must deposit before performing actions. User: 0xe7d33dab88e77256259d1f41e72da1830e3687f1"
+			}
+		}
+	]
+}

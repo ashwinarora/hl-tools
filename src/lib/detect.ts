@@ -25,6 +25,17 @@ export function detectInput(raw: string): Detection | null {
 			reason: "32-byte hash → HyperEVM transaction trace",
 		};
 	}
+	// By exact length first: an address or a token id may begin with 01 too,
+	// and CoreWriter bytes are never this long (4 bytes, then 32-byte words).
+	if (/^0x[0-9a-fA-F]{40}$/.test(v)) {
+		return {
+			tool: "multisig",
+			reason: "Address → Multisig Inspector (signers, agents, balances)",
+		};
+	}
+	if (/^0x[0-9a-fA-F]{32}$/.test(v)) {
+		return { tool: "assets", reason: "Token ID → asset resolver" };
+	}
 	if (
 		/^(0x)?01[0-9a-fA-F]{6}/.test(v) &&
 		/^(0x)?[0-9a-fA-F]+$/.test(v) &&
@@ -50,15 +61,6 @@ export function detectInput(raw: string): Detection | null {
 			};
 		}
 		return { tool: "rpc", reason: "URL → RPC capability probe" };
-	}
-	if (/^0x[0-9a-fA-F]{40}$/.test(v)) {
-		return {
-			tool: "multisig",
-			reason: "Address → Multisig Inspector (signers, agents, balances)",
-		};
-	}
-	if (/^0x[0-9a-fA-F]{32}$/.test(v)) {
-		return { tool: "assets", reason: "Token ID → asset resolver" };
 	}
 	if (v.startsWith("{") || v.startsWith("[")) {
 		const parsed = tryParseJson(v);

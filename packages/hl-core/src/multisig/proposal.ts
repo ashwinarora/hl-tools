@@ -12,6 +12,7 @@ import { NONCE_WINDOW } from "../rules/signing.ts";
 import { prepareInnerAction, riskFlags } from "./action.ts";
 import { normaliseAddress } from "./address.ts";
 import { innerDigest } from "./digest.ts";
+import { shownLine, shownNote } from "./shown.ts";
 import { normaliseSig, padSig } from "./signature.ts";
 import type {
 	Hex,
@@ -27,6 +28,7 @@ import type {
 	RiskFlag,
 	Sig,
 } from "./types.ts";
+import { isMoment, isoTime, MAX_TIME_MS, written } from "./when.ts";
 
 export interface NonceWindow {
 	/** Earliest chain time at which the nonce is accepted (nonce − 1 day). */
@@ -52,6 +54,9 @@ export interface ProposalResult {
 	readonly flags: readonly RiskFlag[];
 	readonly issues: readonly Issue[];
 }
+
+/** The latest nonce whose whole window still lies inside what a date can hold. */
+const MAX_NONCE_MS = MAX_TIME_MS - NONCE_WINDOW.pastMs;
 
 const HEX32 = /^0x[0-9a-f]{64}$/;
 const LOWER_ADDRESS = /^0x[0-9a-f]{40}$/;
@@ -86,6 +91,17 @@ function nonceIssues(
 			),
 		];
 	}
+	// a date holds less than a safe integer does: beyond it there is no window to speak of
+	if (nonce > MAX_NONCE_MS) {
+		return [
+			issue(
+				"nonce.out_of_range",
+				"error",
+				`nonce ${nonce} is beyond any date; Hyperliquid nonces are millisecond timestamps.`,
+				{ path: "payload.nonce" },
+			),
+		];
+	}
 	const w = nonceWindow(nonce);
 	const issues: Issue[] = [];
 	if (now >= w.validUntil) {
@@ -93,7 +109,7 @@ function nonceIssues(
 			issue(
 				"nonce.expired",
 				timingSeverity,
-				`The nonce expired at ${new Date(w.validUntil).toISOString()}; the chain rejects it as too low. Re-propose with a fresh nonce (everyone signs again).`,
+				`The nonce expired at ${isoTime(w.validUntil)}; the chain rejects it as too low. Re-propose with a fresh nonce (everyone signs again).`,
 				{ path: "payload.nonce" },
 			),
 		);
@@ -102,7 +118,7 @@ function nonceIssues(
 			issue(
 				"nonce.future",
 				"warning",
-				`The nonce is more than 1 day ahead: it cannot be submitted before ${new Date(w.validFrom).toISOString()} (and expires at ${new Date(w.validUntil).toISOString()}).`,
+				`The nonce is more than 1 day ahead: it cannot be submitted before ${isoTime(w.validFrom)} (and expires at ${isoTime(w.validUntil)}).`,
 				{ path: "payload.nonce" },
 			),
 		);
@@ -118,12 +134,12 @@ function expiresIssues(
 	timingSeverity: "error" | "warning",
 ): Issue[] {
 	if (expiresAfter === null) return [];
-	if (!isSafeInt(expiresAfter) || expiresAfter < 0) {
+	if (!isSafeInt(expiresAfter) || expiresAfter < 0 || !isMoment(expiresAfter)) {
 		return [
 			issue(
 				"expires.invalid",
 				"error",
-				"expiresAfter must be null or a non-negative safe integer (milliseconds).",
+				"expiresAfter must be null or a non-negative safe integer (milliseconds) that is a date.",
 				{ path: "payload.expiresAfter" },
 			),
 		];
@@ -134,7 +150,7 @@ function expiresIssues(
 			issue(
 				"expires.past",
 				timingSeverity,
-				`expiresAfter ${new Date(expiresAfter).toISOString()} is in the past; the chain answers "Action already expired".`,
+				`expiresAfter ${isoTime(expiresAfter)} is in the past; the chain answers "Action already expired".`,
 				{ path: "payload.expiresAfter" },
 			),
 		);
@@ -244,12 +260,14 @@ export function createProposal(
 	if (!d.digest) return fail();
 	const meta: ProposalMeta = {
 		kind: prepared.kind as Kind,
-		title: cleanText(input.title),
-		note: cleanText(input.note),
+		title: cleanText(input.title, shownLine),
+		note: cleanText(input.note, shownNote),
 		createdBy,
 		createdAt: now,
 		supersedes: input.supersedes ?? null,
 		policyAtCreation,
+		// set by `tieSteps`, once both proposals of a move exist
+		steps: null,
 	};
 	return {
 		proposal: {
@@ -265,9 +283,13 @@ export function createProposal(
 	};
 }
 
-function cleanText(value: string | null | undefined): string | null {
+/** A title or a note as it is kept: nothing in it that does not show (see shown.ts), and null when nothing is left. */
+function cleanText(
+	value: string | null | undefined,
+	shown: (raw: string) => string,
+): string | null {
 	if (typeof value !== "string") return null;
-	const t = value.trim();
+	const t = shown(value);
 	return t === "" ? null : t;
 }
 
@@ -295,7 +317,9 @@ function normalisePolicy(
 		!Array.isArray(users) ||
 		!isSafeInt(p.threshold) ||
 		p.threshold < 0 ||
-		!isSafeInt(p.observedAt)
+		// a moment a calendar holds: it is printed, and a date that is none throws
+		!isSafeInt(p.observedAt) ||
+		!isMoment(p.observedAt)
 	) {
 		shapeError();
 		return null;
@@ -335,6 +359,7 @@ const META_KEYS = new Set([
 	"createdAt",
 	"supersedes",
 	"policyAtCreation",
+	"steps",
 ]);
 const TOP_KEYS = new Set([
 	"v",
@@ -384,6 +409,11 @@ function nullableText(
 	);
 	return null;
 }
+
+const shownOrNull = (
+	text: string | null,
+	shown: (raw: string) => string,
+): string | null => (text === null ? null : shown(text));
 
 function nullableInt(
 	value: unknown,
@@ -449,7 +479,7 @@ export function validateProposal(
 			issue(
 				"proposal.version",
 				"error",
-				`Unsupported proposal version ${JSON.stringify(d.v)}; this build understands v1.`,
+				`Unsupported proposal version ${written(d.v)}; this build understands v1.`,
 				{ path: "v" },
 			),
 		);
@@ -539,7 +569,10 @@ export function validateProposal(
 			? null
 			: lowerAddress(p.vaultAddress, "payload.vaultAddress", issues);
 	issues.push(...nonceIssues(p.nonce, now, "warning"));
-	const nonce = isSafeInt(p.nonce) && p.nonce >= MIN_NONCE_MS ? p.nonce : null;
+	const nonce =
+		isSafeInt(p.nonce) && p.nonce >= MIN_NONCE_MS && p.nonce <= MAX_NONCE_MS
+			? p.nonce
+			: null;
 
 	let action: PlainObject | null = null;
 	let kind: Kind | null = null;
@@ -600,7 +633,7 @@ export function validateProposal(
 				issue(
 					"meta.kind",
 					"error",
-					`meta.kind is ${JSON.stringify(m.kind)} but the action is ${kind}.`,
+					`meta.kind is ${written(m.kind)} but the action is ${kind}.`,
 					{ path: "meta.kind" },
 				),
 			);
@@ -609,8 +642,13 @@ export function validateProposal(
 	const meta: ProposalMeta | null = m
 		? {
 				kind: kind ?? "l1",
-				title: nullableText(m.title, "meta.title", issues),
-				note: nullableText(m.note, "meta.note", issues),
+				// nobody signed these two, and the document may come from anyone:
+				// what does not show is dropped before any screen has them
+				title: shownOrNull(
+					nullableText(m.title, "meta.title", issues),
+					shownLine,
+				),
+				note: shownOrNull(nullableText(m.note, "meta.note", issues), shownNote),
 				createdBy:
 					m.createdBy === null || m.createdBy === undefined
 						? null
@@ -625,6 +663,7 @@ export function validateProposal(
 								"meta.policyAtCreation",
 								issues,
 							),
+				steps: stepsOf(m.steps, issues),
 			}
 		: null;
 
@@ -700,17 +739,47 @@ export function validateProposal(
 		);
 		return fail();
 	}
+	const read = meta as ProposalMeta;
+	// a list this proposal is not on is nobody's move
+	const own = digest.digest;
+	const steps = read.steps?.includes(own) ? read.steps : null;
+	if (read.steps && !steps) issues.push(stepsIgnored());
 	return {
 		proposal: {
 			v: 1,
 			payload,
 			digest: digest.digest,
 			signatures,
-			meta: meta as ProposalMeta,
+			meta: { ...read, steps },
 			receipt,
 		},
 		issues,
 	};
+}
+
+const stepsIgnored = (): Issue =>
+	issue(
+		"meta.steps",
+		"warning",
+		"This proposal says it belongs to a move of two steps, but not in a way this page can follow, so it is shown by itself.",
+		{ path: "meta.steps" },
+	);
+
+/**
+ * The two digests of a move. Anything else (another length, a repeat, not
+ * digests) is dropped with a warning and never fails the document: the tie
+ * is a way of showing two proposals, not part of either.
+ */
+function stepsOf(value: unknown, issues: Issue[]): readonly [Hex, Hex] | null {
+	if (value === null || value === undefined) return null;
+	const list = Array.isArray(value)
+		? value.map((v) => (typeof v === "string" ? v.toLowerCase() : ""))
+		: [];
+	const [first, second] = list;
+	if (list.length === 2 && first !== second && list.every((v) => HEX32.test(v)))
+		return [first as Hex, second as Hex];
+	issues.push(stepsIgnored());
+	return null;
 }
 
 function supersedesOf(value: unknown, issues: Issue[]): Hex | null {
@@ -745,6 +814,15 @@ function receiptOf(value: unknown, issues: Issue[]): Receipt | null {
 			issue("receipt.shape", "error", "receipt.submittedAt is required.", {
 				path: "receipt.submittedAt",
 			}),
+		);
+	else if (!isMoment(submittedAt))
+		issues.push(
+			issue(
+				"receipt.shape",
+				"error",
+				"receipt.submittedAt is not a moment any calendar holds.",
+				{ path: "receipt.submittedAt" },
+			),
 		);
 	if (
 		typeof r.signatureChainId !== "string" ||

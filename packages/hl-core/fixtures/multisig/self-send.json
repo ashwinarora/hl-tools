@@ -1,0 +1,153 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-11. An account sending USDC to its own address. Into the same balance every way is refused; between a manual account's two balances it is accepted (see send-modes.json, toItself); on a unified account sendAsset spot → perps to itself is accepted and changes nothing. Plain accounts signed with their own key, multi-sigs through an envelope of lab signers. Recorded by labs/multisig/58-self-send.ts.",
+	"network": "testnet",
+	"sends": [
+		{
+			"about": "sendAsset perps → perps, to itself",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"account": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.01",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Invalid send"
+			}
+		},
+		{
+			"about": "sendAsset spot → spot, to itself",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"account": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.01",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Invalid send"
+			}
+		},
+		{
+			"about": "usdSend to itself",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"account": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+			"action": {
+				"type": "usdSend",
+				"destination": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+				"amount": "0.01"
+			},
+			"answer": {
+				"status": "err",
+				"response": "Cannot self-transfer."
+			}
+		},
+		{
+			"about": "spotSend USDC to itself",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"account": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+			"action": {
+				"type": "spotSend",
+				"destination": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.01"
+			},
+			"answer": {
+				"status": "err",
+				"response": "Cannot self-transfer."
+			}
+		},
+		{
+			"about": "sendAsset perps → perps, to itself",
+			"senderMode": "default",
+			"senderIs": "multi-sig",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.01",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Invalid send"
+			}
+		},
+		{
+			"about": "sendAsset spot → spot, to itself",
+			"senderMode": "default",
+			"senderIs": "multi-sig",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.01",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Invalid send"
+			}
+		},
+		{
+			"about": "sendAsset spot → spot, to itself",
+			"senderMode": "unifiedAccount",
+			"senderIs": "multi-sig",
+			"account": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.01",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Invalid send"
+			}
+		},
+		{
+			"about": "sendAsset spot → perps, to itself",
+			"senderMode": "unifiedAccount",
+			"senderIs": "multi-sig",
+			"account": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.01",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		}
+	]
+}

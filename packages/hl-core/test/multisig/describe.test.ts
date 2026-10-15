@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { L1_ACTION_SHAPES } from "../../src/canonical.ts";
-import { describeAction, type PlainObject } from "../../src/multisig/index.ts";
+import {
+	describeAction,
+	type PlainObject,
+	returnQueueLine,
+	stakeLockupLine,
+} from "../../src/multisig/index.ts";
 import { USER_SIGNED_SPECS } from "../../src/rules/signing.ts";
 import { A, B, ORDER, RECIPIENT, usdSend } from "./_helpers.ts";
 
@@ -323,6 +328,22 @@ describe("describeAction details", () => {
 		expect(
 			describeAction(SAMPLES.scheduleCancel as PlainObject).headline,
 		).toContain("Schedule cancel-all at 2026-");
+		// a time that is no date is written as the number it is, never thrown at
+		for (const time of [9_000_000_000_000_000, "soon"])
+			expect(
+				describeAction({ type: "scheduleCancel", time } as PlainObject)
+					.headline,
+			).toMatch(/^Schedule cancel-all at .*\(no date\)$/);
+	});
+	it("says a value that holds an integer too large for a number, also nested", () => {
+		// order-preserving parsing hands such an integer over as a bigint
+		const d = describeAction({
+			type: "somethingNew",
+			limits: { max: 12345678901234567890n, list: [1n, "a"] },
+			big: 98765432109876543210n,
+		} as unknown as PlainObject);
+		expect(d.lines.join(" ")).toContain('"max":"12345678901234567890"');
+		expect(d.lines.join(" ")).toContain("98765432109876543210");
 	});
 	it("USD micro-units are rendered as USDC, raw otherwise", () => {
 		expect(describeAction(SAMPLES.vaultTransfer as PlainObject).headline).toBe(
@@ -418,9 +439,32 @@ describe("describeAction details", () => {
 			describeAction({ type: "spotSend", amount: "1", destination: RECIPIENT })
 				.headline,
 		).toContain("? (spot)");
-		expect(describeAction(SAMPLES.withdraw3 as PlainObject).headline).toContain(
-			"on Arbitrum",
+		// a testnet withdrawal leaves for Arbitrum's test network, and the bridge keeps its fee
+		const out = describeAction(SAMPLES.withdraw3 as PlainObject);
+		expect(out.headline).toBe(
+			`Withdraw 10 USDC to ${RECIPIENT} on Arbitrum Sepolia`,
 		);
+		expect(out.lines).toEqual([
+			"Leaves Hyperliquid through the bridge.",
+			"The bridge keeps 1 USDC of it as its fee: 9 USDC arrives.",
+		]);
+		const main = describeAction({
+			...(SAMPLES.withdraw3 as PlainObject),
+			hyperliquidChain: "Mainnet",
+		});
+		expect(main.headline).toBe(`Withdraw 10 USDC to ${RECIPIENT} on Arbitrum`);
+		// not more than the fee: said as the refusal it will be
+		expect(
+			describeAction({ ...(SAMPLES.withdraw3 as PlainObject), amount: "1" })
+				.lines[1],
+		).toBe(
+			"The bridge's fee is 1 USDC, and Hyperliquid refuses a withdrawal that is not more than that.",
+		);
+		// an amount that cannot be read: only what is certain
+		expect(
+			describeAction({ ...(SAMPLES.withdraw3 as PlainObject), amount: 7 })
+				.lines,
+		).toEqual(["Leaves Hyperliquid through the bridge."]);
 		expect(
 			describeAction(SAMPLES.usdClassTransfer as PlainObject).headline,
 		).toBe("Move 10 USDC perps → spot");
@@ -431,16 +475,55 @@ describe("describeAction details", () => {
 			} as PlainObject).headline,
 		).toBe("Move 10 USDC spot → perps");
 		const sa = describeAction(SAMPLES.sendAsset as PlainObject);
+		expect(sa.headline).toBe(`Send 1 USDC to ${RECIPIENT}`);
 		expect(sa.lines).toEqual([
-			'from dex "" to dex "xyz"',
+			"taken from the perps balance",
+			'arrives in the receiver\'s balance on perp dex "xyz"',
+			"token USDC",
 			`from sub-account ${A}`,
+		]);
+		// the usual case: perps or spot on either side, no sub-account, a token with its id
+		const plain = describeAction({
+			...SAMPLES.sendAsset,
+			sourceDex: "spot",
+			destinationDex: "",
+			token: "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+			amount: "12.5",
+			fromSubAccount: "",
+		} as PlainObject);
+		expect(plain.headline).toBe(`Send 12.5 USDC to ${RECIPIENT}`);
+		expect(plain.lines).toEqual([
+			"taken from the spot balance",
+			"arrives in the receiver's perps balance",
+			"token USDC:0xeb62eee3685fc4c43992febcd9e75443",
 		]);
 		expect(
 			describeAction({
 				...SAMPLES.sendAsset,
+				sourceDex: "xyz",
+				destinationDex: "spot",
 				fromSubAccount: "",
-			} as PlainObject).lines.length,
-		).toBe(1);
+			} as PlainObject).lines.slice(0, 2),
+		).toEqual([
+			'taken from the balance on perp dex "xyz"',
+			"arrives in the receiver's spot balance",
+		]);
+		// a field that is an integer too large for a number is written out, never thrown on
+		expect(
+			describeAction({
+				type: "sendAsset",
+				sourceDex: 12345678901234567890n,
+				destinationDex: "spot",
+			} as never).lines[0],
+		).toBe('taken from the balance on perp dex "12345678901234567890"');
+		// fields left out are shown as unknown, never guessed
+		const bare = describeAction({ type: "sendAsset" } as PlainObject);
+		expect(bare.headline).toBe("Send ? ? to ?");
+		expect(bare.lines).toEqual([
+			'taken from the balance on perp dex "?"',
+			'arrives in the receiver\'s balance on perp dex "?"',
+			"token ?",
+		]);
 		expect(describeAction(SAMPLES.approveAgent as PlainObject).headline).toBe(
 			`Approve API wallet ${B} named "lab"`,
 		);
@@ -451,24 +534,82 @@ describe("describeAction details", () => {
 		expect(describeAction(SAMPLES.approveAgent as PlainObject).flags).toEqual([
 			"agent_bypass",
 		]);
+		// a name is part of what is signed: a character in it that does not
+		// show is written out, never dropped
+		expect(
+			describeAction({
+				...SAMPLES.approveAgent,
+				agentName: `lab${String.fromCodePoint(0x202e)}`,
+			} as PlainObject).headline,
+		).toBe(`Approve API wallet ${B} named "lab\\u{202e}"`);
+		// the zero address approves nobody: it removes the wallet of that name
+		const removal = describeAction({
+			...SAMPLES.approveAgent,
+			agentAddress: `0x${"0".repeat(40)}`,
+		} as PlainObject);
+		expect(removal.headline).toBe('Remove the API wallet named "lab"');
+		expect(removal.lines[0]).toContain("stops acting for the account");
+		expect(removal.flags).toEqual([]);
+		// the zero address is no party to it
+		expect(removal.parties).toEqual([]);
+		expect(
+			describeAction({
+				...SAMPLES.approveAgent,
+				agentAddress: `0x${"0".repeat(40)}`,
+				agentName: "",
+			} as PlainObject).headline,
+		).toBe("Remove the API wallet without a name");
 		expect(
 			describeAction(SAMPLES.approveBuilderFee as PlainObject).headline,
 		).toBe(`Approve builder ${B} up to 0.01%`);
-		expect(describeAction(SAMPLES.tokenDelegate as PlainObject).headline).toBe(
-			`Delegate 100000000 wei of HYPE to validator ${B}`,
-		);
+		const stake = describeAction(SAMPLES.tokenDelegate as PlainObject);
+		expect(stake.headline).toBe(`Stake 1 HYPE with validator ${B}`);
+		// the wait of the network the action names for itself, in one verb
+		expect(stake.lines).toEqual([
+			"A stake cannot be unstaked for 2 minutes after it is made or added to.",
+		]);
 		expect(
 			describeAction({
 				...SAMPLES.tokenDelegate,
-				isUndelegate: true,
-			} as PlainObject).headline,
-		).toContain("Undelegate");
-		expect(describeAction(SAMPLES.cDeposit as PlainObject).headline).toContain(
-			"into staking",
+				hyperliquidChain: "Mainnet",
+			} as PlainObject).lines,
+		).toEqual([
+			"A stake cannot be unstaked for 1 day after it is made or added to.",
+		]);
+		// an action that names no network this version knows: both lengths
+		const { hyperliquidChain: _, ...nowhere } =
+			SAMPLES.tokenDelegate as PlainObject;
+		expect(describeAction(nowhere).lines).toEqual([stakeLockupLine(null)]);
+		expect(stakeLockupLine(null)).toBe(
+			"A stake cannot be unstaked for 1 day after it is made or added to (2 minutes on testnet).",
 		);
-		expect(describeAction(SAMPLES.cWithdraw as PlainObject).lines[0]).toContain(
-			"7 days",
+		const unstake = describeAction({
+			...SAMPLES.tokenDelegate,
+			isUndelegate: true,
+		} as PlainObject);
+		expect(unstake.headline).toBe(`Unstake 1 HYPE from validator ${B}`);
+		expect(unstake.lines[0]).toContain("separate step");
+		expect(describeAction(SAMPLES.cDeposit as PlainObject).headline).toBe(
+			"Move 0.00000005 HYPE from the spot balance to the staking balance",
 		);
+		const back = describeAction(SAMPLES.cWithdraw as PlainObject);
+		expect(back.headline).toBe(
+			"Return 0.00000005 HYPE from the staking balance to the spot balance",
+		);
+		expect(back.lines).toEqual([
+			"Hyperliquid releases a return to spot 5 minutes after it is carried out, with no further signature.",
+		]);
+		expect(returnQueueLine("mainnet")).toBe(
+			"Hyperliquid releases a return to spot 7 days after it is carried out, with no further signature.",
+		);
+		expect(returnQueueLine(null)).toBe(
+			"Hyperliquid releases a return to spot 7 days after it is carried out (5 minutes on testnet), with no further signature.",
+		);
+		// an amount that is no whole number is shown as it stands, never guessed
+		expect(
+			describeAction({ ...SAMPLES.cDeposit, wei: "1.5" } as PlainObject)
+				.headline,
+		).toBe("Move 1.5 wei of HYPE from the spot balance to the staking balance");
 		expect(
 			describeAction(SAMPLES.linkStakingUser as PlainObject).headline,
 		).toContain("Finalise");
@@ -490,9 +631,16 @@ describe("describeAction details", () => {
 				enabled: false,
 			} as PlainObject).headline,
 		).toContain("Disable");
+		// the measured switches are said in words (see modeSwitch.test.ts)
 		expect(
 			describeAction(SAMPLES.userSetAbstraction as PlainObject).headline,
-		).toContain("unifiedAccount");
+		).toBe("Switch to a unified account: one balance");
+		expect(
+			describeAction({
+				...SAMPLES.userSetAbstraction,
+				abstraction: "dexAbstraction",
+			} as PlainObject).headline,
+		).toContain('"dexAbstraction"');
 		expect(
 			describeAction(SAMPLES.userPortfolioMargin as PlainObject).headline,
 		).toContain("Disable portfolio margin");
@@ -541,5 +689,93 @@ describe("describeAction details", () => {
 			"nothing: null",
 		]);
 		expect(describeAction({ type: 5 as never }).headline).toContain('"5"');
+	});
+});
+
+describe("describeAction parties", () => {
+	const of = (type: string) =>
+		describeAction(SAMPLES[type] as PlainObject).parties.map(
+			(p) => `${p.role} ${p.address}`,
+		);
+	const lc = (a: string) => a.toLowerCase();
+	it("names every account an action mentions, with what it is to the action", () => {
+		expect(of("usdSend")).toEqual([`destination ${lc(RECIPIENT)}`]);
+		expect(of("spotSend")).toEqual([`destination ${lc(RECIPIENT)}`]);
+		expect(of("withdraw3")).toEqual([`destination ${lc(RECIPIENT)}`]);
+		expect(of("sendAsset")).toEqual([
+			`destination ${lc(RECIPIENT)}`,
+			`subAccount ${lc(A)}`,
+		]);
+		expect(of("sendToEvmWithData")).toEqual([`destination ${lc(B)}`]);
+		expect(of("approveAgent")).toEqual([`agent ${lc(B)}`]);
+		expect(of("approveBuilderFee")).toEqual([`builder ${lc(B)}`]);
+		expect(of("tokenDelegate")).toEqual([`validator ${lc(B)}`]);
+		expect(of("vaultTransfer")).toEqual([`vault ${lc(A)}`]);
+		expect(of("subAccountTransfer")).toEqual([`subAccount ${lc(A)}`]);
+		expect(of("subAccountSpotTransfer")).toEqual([`subAccount ${lc(A)}`]);
+		for (const type of [
+			"linkStakingUser",
+			"userDexAbstraction",
+			"userSetAbstraction",
+			"userPortfolioMargin",
+		])
+			expect(of(type)).toEqual([`user ${lc(B)}`]);
+		expect(of("convertToMultiSigUser")).toEqual(
+			[A, B].sort().map((a) => `signer ${lc(a)}`),
+		);
+	});
+	it("lists nobody for actions that name no account", () => {
+		for (const type of [
+			"order",
+			"cancel",
+			"usdClassTransfer",
+			"cDeposit",
+			"noop",
+			"createSubAccount",
+		])
+			expect(of(type)).toEqual([]);
+		expect(describeAction({ type: "spotDeploy", user: A }).parties).toEqual([]);
+		// converting back to a normal user names no signers
+		expect(
+			describeAction({ type: "convertToMultiSigUser", signers: "null" })
+				.parties,
+		).toEqual([]);
+		expect(
+			describeAction({ type: "convertToMultiSigUser", signers: "{" }).parties,
+		).toEqual([]);
+	});
+	it("lists an order's builder, lowercases, and skips what is not an address", () => {
+		expect(
+			describeAction({ ...ORDER, builder: { b: B, f: 10 } }).parties,
+		).toEqual([{ role: "builder", address: lc(B) }]);
+		expect(
+			describeAction({
+				type: "usdSend",
+				destination: RECIPIENT.toUpperCase().replace("0X", "0x"),
+				amount: "1",
+			}).parties,
+		).toEqual([{ role: "destination", address: lc(RECIPIENT) }]);
+		for (const destination of ["0x123", `${RECIPIENT}00`, 5, null, undefined])
+			expect(
+				describeAction({
+					type: "usdSend",
+					destination: destination as never,
+					amount: "1",
+				}).parties,
+			).toEqual([]);
+		// a sub-account sending to itself is one account in two roles; the same role twice is one entry
+		expect(
+			describeAction({
+				type: "sendAsset",
+				destination: A,
+				fromSubAccount: A,
+			}).parties.map((p) => p.role),
+		).toEqual(["destination", "subAccount"]);
+		expect(
+			describeAction({
+				type: "convertToMultiSigUser",
+				signers: JSON.stringify({ authorizedUsers: [A, A], threshold: 1 }),
+			}).parties,
+		).toEqual([{ role: "signer", address: lc(A) }]);
 	});
 });

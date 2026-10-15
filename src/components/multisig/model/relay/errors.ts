@@ -12,21 +12,28 @@ interface Known {
 }
 
 const REFUSALS: Record<string, Known> = {
+	// The gate in front of the API (relay_live_sessions): the token is still
+	// within its hour, but the session it was issued for has been ended.
+	"relay.session_ended": {
+		severity: "warning",
+		message: "This wallet's sign-in here has ended.",
+		fix: "Sign in again.",
+	},
 	"relay.rate_limited": {
-		message: "The relay's hourly limit for this was reached.",
+		message: "The sharing service's hourly limit for this was reached.",
 		fix: "Wait a while and retry; links and files have no limit.",
 	},
 	"relay.busy": {
-		message: "The relay is working through a backlog of lookups.",
+		message: "The sharing service is working through a backlog of look-ups.",
 		fix: "Try again in a few minutes.",
 	},
 	"relay.pending_cap": {
 		message: "Too many proposals are pending.",
-		fix: "Withdraw or finish some of them first.",
+		fix: "Cancel or finish some of them first.",
 	},
 	"relay.document_mismatch": {
 		message:
-			"The relay refused the document: it does not match the row it was sent with.",
+			"The sharing service refused the proposal: it does not match what was sent with it, or it is not a kind of proposal the service takes.",
 		fix: "Reload the proposal and retry. If it persists, pass it on as a file.",
 	},
 	"relay.treasury_frozen": {
@@ -35,24 +42,59 @@ const REFUSALS: Record<string, Known> = {
 	},
 	"relay.finaliser_not_signer": {
 		message:
-			"The finaliser is not in the relay's copy of this treasury's signers.",
+			"The finaliser is not in the sharing service's copy of this treasury's signers.",
 		fix: "Open the treasury page so the signer list is re-checked, or pick another finaliser.",
 	},
 	"relay.proposal_closed": {
-		message: "This proposal is already closed on the relay.",
+		message: "This proposal is already closed.",
+		fix: "Reload the page to see what closed it.",
 	},
 	"relay.proposal_expired": {
 		message: "This proposal's signing window has closed.",
-		fix: "Re-propose it.",
+		fix: "Propose it again.",
 	},
 	"relay.nonce_too_far": {
-		message: "The proposal's nonce is more than a day ahead.",
+		message:
+			"This proposal is dated more than a day ahead, so it cannot be shared.",
+		fix: "Create it again.",
 	},
 	"relay.not_finaliser": {
 		message: "Only the finaliser can do this.",
+		fix: "Connect the finaliser's wallet.",
+	},
+	"relay.report_ambiguous": {
+		message:
+			"Another proposal has the same action and number with a different finaliser, so Hyperliquid's record cannot tell which one was carried out.",
+	},
+	"relay.report_unnumbered": {
+		message:
+			"This kind of action carries no number of its own, so Hyperliquid's record of a transaction cannot say which proposal it came from.",
+	},
+	"relay.nickname_invalid": {
+		message: "That nickname cannot be used.",
+	},
+	"relay.nickname_not_yours": {
+		message: "Only that signer can choose the nickname of their own address.",
+	},
+	"relay.nickname_taken": {
+		message: "Another address in this treasury already has that nickname.",
+	},
+	"relay.nickname_cap": {
+		message: "A treasury keeps at most 500 nicknames.",
+		fix: "Take away one that is no longer needed.",
+	},
+	"relay.mark_invalid": {
+		message: "That could not be marked as read.",
+		fix: "Reload the page and try again.",
+	},
+	// an older page offering the finaliser's "Decline", which the relay no longer takes
+	"relay.decline_retired": {
+		message:
+			"A proposal is no longer declined. Its finaliser says no like any other signer, and only its proposer can end it.",
+		fix: "Reload the page and use “Say no”.",
 	},
 	"relay.not_proposer": {
-		message: "Only the wallet that proposed it can withdraw a proposal.",
+		message: "Only the wallet that proposed it can cancel a proposal.",
 	},
 };
 
@@ -86,6 +128,23 @@ export function isUnreachable(e: unknown): boolean {
 	);
 }
 
+/** The stable message of the gate in front of the API (relay_live_sessions). */
+export const SESSION_ENDED = "relay.session_ended";
+
+/**
+ * Whether an answer from the relay says "the session this token was issued
+ * for has ended". Not an expired token (the client renews that by itself) and
+ * not a refusal of one row: the wallet is no longer signed in.
+ */
+export function saysSessionEnded(status: number, body: unknown): boolean {
+	return (
+		status === 401 &&
+		!!body &&
+		typeof body === "object" &&
+		(body as { message?: unknown }).message === SESSION_ENDED
+	);
+}
+
 /** The relay already has that row: for a publish or a signature, as good as success. */
 export function isDuplicate(e: unknown): boolean {
 	return (
@@ -98,7 +157,7 @@ export function relayIssue(e: unknown): Issue {
 		return issue(
 			"relay.unreachable",
 			"warning",
-			"The relay could not be reached. Links and files still work.",
+			"Can't reach the sharing service. Your co-signers' updates will not show until it is back; you can still share by link or file.",
 		);
 	}
 	const o = (e && typeof e === "object" ? e : {}) as {
@@ -125,20 +184,24 @@ export function relayIssue(e: unknown): Issue {
 		return issue(
 			"relay.not_allowed",
 			"error",
-			"The relay refused this: your wallet is not in its copy of this treasury's signers.",
+			"The sharing service refused this: your wallet is not in its copy of this treasury's signers.",
 			{
 				fix: "If you were added recently, open the treasury page so the list is re-checked, then retry.",
 			},
 		);
 	}
 	if (code === "23505") {
-		return issue("relay.duplicate", "info", "The relay already has this.");
+		return issue(
+			"relay.duplicate",
+			"info",
+			"The sharing service already has this.",
+		);
 	}
 	if (code === "23503") {
 		return issue(
 			"relay.unknown_proposal",
 			"error",
-			"The relay does not have this proposal.",
+			"The sharing service does not have this proposal.",
 			{ fix: "Share it first." },
 		);
 	}
@@ -146,7 +209,8 @@ export function relayIssue(e: unknown): Issue {
 		return issue(
 			"relay.invalid",
 			"error",
-			"The relay refused the data as malformed.",
+			"The sharing service refused the data as malformed.",
+			{ fix: "Reload the page and try again." },
 		);
 	}
 	if (code === "PGRST301" || code === "PGRST303" || o.status === 401) {
@@ -171,15 +235,18 @@ export function relayIssue(e: unknown): Issue {
 		return issue(
 			"relay.signin_rejected",
 			"error",
-			`The relay did not accept the sign-in message: ${message}`,
-			{ fix: "Check the clock on this device and retry." },
+			`The sharing service did not accept the sign-in message: ${message}`,
+			{
+				fix: "Check that this device's date and time are set automatically, then sign in again.",
+			},
 		);
 	}
 	return issue(
 		"relay.error",
 		"error",
 		message
-			? `The relay answered with an error: ${message}`
-			: "The relay answered with an error.",
+			? `The sharing service answered with an error: ${message}`
+			: "The sharing service answered with an error.",
+		{ fix: "Try again. Links and files still work." },
 	);
 }

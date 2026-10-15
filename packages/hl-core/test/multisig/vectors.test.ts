@@ -113,6 +113,7 @@ describe(`python-sdk multi-sig vectors (hyperliquid-python-sdk ${data.pythonSdkV
 					createdAt: null,
 					supersedes: null,
 					policyAtCreation: null,
+					steps: null,
 				},
 				receipt: null,
 			};

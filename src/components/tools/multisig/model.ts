@@ -10,8 +10,10 @@ import {
 	type Issue,
 	innerDigest,
 	type Network,
+	type PlainObject,
 	type Proposal,
 	parseEnvelope,
+	requestAsJudged,
 	type Sig,
 	signingFamilyFor,
 	toPlain,
@@ -40,7 +42,10 @@ export type ParsedEnvelopeInput =
 			readonly network: Network;
 			readonly networkFromInput: boolean;
 			readonly outerSignature: Sig | null;
+			/** The request as Hyperliquid judges it: its inner action in Hyperliquid's own form (the core's `requestAsJudged`). */
 			readonly request: EnvelopeRequest;
+			/** The inner action as it was pasted, when that is another form: tried when a signature does not match. */
+			readonly asSent: PlainObject | null;
 			readonly issues: readonly Issue[];
 	  };
 
@@ -90,6 +95,7 @@ export function proposalFromRequest(
 				createdAt: null,
 				supersedes: null,
 				policyAtCreation: null,
+				steps: null,
 			},
 			receipt: null,
 		},
@@ -132,7 +138,12 @@ export function parseEnvelopeText(
 	if (!env.request) return { kind: "not-multisig", issues: env.issues };
 	const hint = envelopeNetworkHint(env.request);
 	const network = hint ?? fallbackNetwork;
-	const built = proposalFromRequest(env.request, network);
+	// Judged as Hyperliquid judges it: over its own writing of the inner
+	// action, whatever form was pasted (measured: the core's
+	// fixtures/multisig/inner-form.json). The pasted form is kept, so that a
+	// signature made over it is named as that and not as a stranger's.
+	const judged = requestAsJudged(env.request, network);
+	const built = proposalFromRequest(judged.request, network);
 	if (!built.proposal)
 		return { kind: "not-multisig", issues: [...env.issues, ...built.issues] };
 	return {
@@ -142,8 +153,9 @@ export function parseEnvelopeText(
 		network,
 		networkFromInput: hint !== null,
 		outerSignature: env.outerSignature,
-		request: env.request,
-		issues: [...env.issues, ...built.issues],
+		request: judged.request,
+		asSent: judged.asSent,
+		issues: [...env.issues, ...judged.issues, ...built.issues],
 	};
 }
 

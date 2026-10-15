@@ -75,7 +75,7 @@ export async function assembleProposal(
 				issue(
 					"relay.row_invalid",
 					"error",
-					`The relay's copy of ${row.digest} is not a valid proposal document and was ignored.`,
+					"A shared proposal is not one this page can read, and was ignored. Ask its proposer to share it again.",
 				),
 				...decoded.issues,
 			],
@@ -97,7 +97,7 @@ export async function assembleProposal(
 				issue(
 					"relay.row_mismatch",
 					"error",
-					`The relay files a document under ${row.digest} that does not match it (digest, network, treasury, finaliser or nonce differ). It was ignored.`,
+					"A shared proposal did not match its own details and was ignored. Nothing needs doing; ask its proposer to share it again if it is missing.",
 				),
 			],
 		};
@@ -121,21 +121,37 @@ export async function assembleProposal(
 	}
 	const dropped = merged.issues.filter(
 		(i) => i.code === "merge.signature_dropped",
-	).length;
-	if (dropped > 0) {
+	);
+	// whose they were filed under: the claimed copy is the merge's first side
+	const named = dropped.flatMap((i) => {
+		const at = /^a\.signatures\[(\d+)\]$/.exec(i.path ?? "");
+		const signer = at ? claimed[Number(at[1])]?.signer : undefined;
+		return signer ? [`${signer.slice(0, 6)}…${signer.slice(-4)}`] : [];
+	});
+	const under =
+		named.length === dropped.length ? ` (filed under ${named.join(", ")})` : "";
+	if (dropped.length > 0) {
 		issues.push(
 			issue(
 				"relay.signature_dropped",
 				"warning",
-				dropped === 1
-					? "1 stored signature does not verify and was ignored."
-					: `${dropped} stored signatures do not verify and were ignored.`,
+				dropped.length === 1
+					? `1 stored signature${under} does not verify and was ignored.`
+					: `${dropped.length} stored signatures${under} do not verify and were ignored.`,
 				{
 					fix: "Nothing to do: a signature that does not recover to its signer never counts. Its signer can sign again.",
 				},
 			),
 		);
 	}
+	// A receipt on the relay is taken as the relay files it: it accepts one only
+	// from the finaliser's own session (`receipt_before`). It is not checked
+	// here the way a copy opened from a link or a file is (`saveProposal`),
+	// because the check needs every signature that was sent, and the relay
+	// holds only the ones their signers put there themselves: one that
+	// travelled by link and was sent all the same would make a true receipt
+	// fail. Until the relay keeps what was sent, or Hyperliquid's own record is
+	// asked, this is the finaliser's report by the relay's word.
 	const receipt = row.receipts
 		.map(receiptFromRow)
 		.reduce<Receipt | null>((best, r) => betterReceipt(best, r), null);
@@ -193,7 +209,7 @@ export async function effectiveProposal(
 				issue(
 					"relay.local_conflict",
 					"error",
-					"This browser holds a different proposal under the same digest (vault address or expiry differ). The shared copy is shown; the local one was not merged.",
+					"This browser holds another copy of this proposal with different extra fields (a vault address or an expiry), which signers do not sign. The shared copy is shown; the one in this browser was not merged.",
 					{
 						fix: "Compare both in the Multisig Inspector before signing anything.",
 					},

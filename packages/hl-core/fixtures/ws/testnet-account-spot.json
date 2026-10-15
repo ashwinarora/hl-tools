@@ -1,0 +1,87 @@
+{
+ "format": "hl-tools.ws-session",
+ "version": 1,
+ "network": "testnet",
+ "url": "wss://api.hyperliquid-testnet.xyz/ws",
+ "channel": "spotState",
+ "subscription": {
+  "type": "spotState",
+  "user": "0x0000000000000000000000000000000000000001"
+ },
+ "startedAt": 1791661826583,
+ "endedAt": 1791661860586,
+ "sanitized": true,
+ "truncated": false,
+ "messages": [
+  {
+   "t": 363,
+   "dir": "event",
+   "text": "open"
+  },
+  {
+   "t": 363,
+   "dir": "out",
+   "text": "{\"method\":\"subscribe\",\"subscription\":{\"type\":\"spotState\",\"user\":\"0x0000000000000000000000000000000000000001\"}}"
+  },
+  {
+   "t": 536,
+   "dir": "in",
+   "text": "{\"channel\":\"subscriptionResponse\",\"data\":{\"method\":\"subscribe\",\"subscription\":{\"type\":\"spotState\",\"user\":\"0x0000000000000000000000000000000000000001\",\"ignorePortfolioMargin\":false}}}"
+  },
+  {
+   "t": 536,
+   "dir": "in",
+   "text": "{\"channel\":\"spotState\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"spotState\":{\"balances\":[{\"coin\":\"USDC\",\"token\":0,\"total\":\"10.5\",\"hold\":\"0.0\",\"entryNtl\":\"0.0\"}]}}}"
+  },
+  {
+   "t": 5462,
+   "dir": "in",
+   "text": "{\"channel\":\"spotState\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"spotState\":{\"balances\":[{\"coin\":\"USDC\",\"token\":0,\"total\":\"10.5\",\"hold\":\"0.0\",\"entryNtl\":\"0.0\"}]}}}"
+  },
+  {
+   "t": 5824,
+   "dir": "in",
+   "text": "{\"channel\":\"spotState\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"spotState\":{\"balances\":[{\"coin\":\"USDC\",\"token\":0,\"total\":\"10.5\",\"hold\":\"0.0\",\"entryNtl\":\"0.0\"}]}}}"
+  },
+  {
+   "t": 9268,
+   "dir": "in",
+   "text": "{\"channel\":\"spotState\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"spotState\":{\"balances\":[{\"coin\":\"USDC\",\"token\":0,\"total\":\"10.5\",\"hold\":\"0.0\",\"entryNtl\":\"0.0\"}]}}}"
+  },
+  {
+   "t": 10377,
+   "dir": "in",
+   "text": "{\"channel\":\"spotState\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"spotState\":{\"balances\":[{\"coin\":\"USDC\",\"token\":0,\"total\":\"10.5\",\"hold\":\"0.0\",\"entryNtl\":\"0.0\"}]}}}"
+  },
+  {
+   "t": 12843,
+   "dir": "in",
+   "text": "{\"channel\":\"spotState\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"spotState\":{\"balances\":[{\"coin\":\"USDC\",\"token\":0,\"total\":\"10.5\",\"hold\":\"0.0\",\"entryNtl\":\"0.0\"}]}}}"
+  },
+  {
+   "t": 15454,
+   "dir": "in",
+   "text": "{\"channel\":\"spotState\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"spotState\":{\"balances\":[{\"coin\":\"USDC\",\"token\":0,\"total\":\"10.5\",\"hold\":\"0.0\",\"entryNtl\":\"0.0\"}]}}}"
+  },
+  {
+   "t": 20530,
+   "dir": "in",
+   "text": "{\"channel\":\"spotState\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"spotState\":{\"balances\":[{\"coin\":\"USDC\",\"token\":0,\"total\":\"10.5\",\"hold\":\"0.0\",\"entryNtl\":\"0.0\"}]}}}"
+  },
+  {
+   "t": 25568,
+   "dir": "in",
+   "text": "{\"channel\":\"spotState\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"spotState\":{\"balances\":[{\"coin\":\"USDC\",\"token\":0,\"total\":\"10.5\",\"hold\":\"0.0\",\"entryNtl\":\"0.0\"}]}}}"
+  },
+  {
+   "t": 30571,
+   "dir": "in",
+   "text": "{\"channel\":\"spotState\",\"data\":{\"user\":\"0x0000000000000000000000000000000000000001\",\"spotState\":{\"balances\":[{\"coin\":\"USDC\",\"token\":0,\"total\":\"10.5\",\"hold\":\"0.0\",\"entryNtl\":\"0.0\"}]}}}"
+  },
+  {
+   "t": 34003,
+   "dir": "event",
+   "text": "close 1000 (recording finished)"
+  }
+ ]
+}

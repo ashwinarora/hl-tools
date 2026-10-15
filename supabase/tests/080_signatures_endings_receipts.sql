@@ -62,7 +62,7 @@ select throws_ok($$ select tests.sign(1, 10, 2) $$, 'P0001', 'relay.proposal_exp
 
 -- --------------------------------------------------------------------- endings
 select throws_ok($$ select tests.end_it(3, 10, 4, 'withdrawn') $$, 'P0001', 'relay.not_proposer', 'only the proposer withdraws');
-select throws_ok($$ select tests.end_it(1, 10, 4, 'declined') $$, 'P0001', 'relay.not_finaliser', 'only the finaliser declines');
+select throws_ok($$ select tests.end_it(1, 10, 4, 'declined') $$, 'P0001', 'relay.decline_retired', 'nobody declines any more');
 select throws_ok($$ select tests.end_it(5, 10, 4, 'withdrawn') $$, '42501', null, 'a stranger ends nothing');
 select throws_ok($$ select tests.end_it(4, 10, 4, 'declined') $$, '42501', null, 'nor does another treasury''s signer');
 select throws_ok($$ select tests.end_it(1, 10, 4, 'cancelled') $$, '23514', null, 'there is no general cancel');
@@ -78,14 +78,21 @@ select results_eq($$ select status, closed_at is not null from public.proposals 
 select results_eq($$ select kind, ended_by::text from public.endings where digest = tests.digest(4) $$,
 	$$ values ('withdrawn', tests.addr(1)::text) $$, 'with who and when');
 select is(tests.kinds(10, 4), array['proposal_created', 'proposal_withdrawn'], 'the history records it');
-select throws_ok($$ select tests.end_it(2, 10, 4, 'declined') $$, 'P0001', 'relay.proposal_closed', 'an ended proposal cannot be ended again');
+select throws_ok($$ select tests.end_it(1, 10, 4, 'withdrawn') $$, 'P0001', 'relay.proposal_closed', 'an ended proposal cannot be ended again');
 select throws_ok($$ select tests.sign(3, 10, 4) $$, 'P0001', 'relay.proposal_closed', 'nor signed');
 select throws_ok($$ update public.endings set kind = 'declined' $$, '42501', null, 'an ending cannot be edited');
 select throws_ok($$ delete from public.endings $$, '42501', null, 'nor undone');
 
-select lives_ok($$ select tests.end_it(2, 10, 5, 'declined') $$, 'the finaliser declines');
-select is(tests.status(10, 5), 'declined', 'the proposal is closed as declined');
-select is(tests.kinds(10, 5), array['proposal_created', 'proposal_declined'], 'the history records it');
+-- A finaliser used to be able to close a proposal for everybody by declining
+-- it. It says no like any other signer now (160_objections.sql).
+select throws_ok($$ select tests.end_it(2, 10, 5, 'declined') $$, 'P0001', 'relay.decline_retired', 'the finaliser no longer declines');
+select is(tests.status(10, 5), 'open', 'and the proposal stays open');
+-- one that was declined before stays as it is
+reset role;
+select tests.declined_before(2, 10, 5);
+set local role authenticated;
+select is(tests.status(10, 5), 'declined', 'a proposal declined before stays closed as declined');
+select is(tests.kinds(10, 5), array['proposal_created', 'proposal_declined'], 'with its entry in the history');
 
 -- a signature cannot be taken back once the proposal is over
 select tests.claims(3);

@@ -4,7 +4,9 @@ import {
 	assessAccount,
 	type DescribeContext,
 	describeAction,
+	EXPLORER_PAGE_CAP,
 	formatHype,
+	isoTime,
 	MULTISIG_FACTS,
 	type Network,
 	type PlainObject,
@@ -142,7 +144,7 @@ export function AccountView({
 					<EmptyState
 						icon={UsersRound}
 						title="Look up a multi-sig account"
-						description="Signers and threshold, approved API wallets (which bypass the multi-sig for trading), balances, open orders, health flags and recent actions."
+						description="Signers and threshold, approved API wallets (which act for the account without the multi-sig), balances, open orders, health flags and recent actions."
 						sample="0xf8365a35694f401a554e4ffa51b5afe3b203d148"
 						action={
 							<Button size="sm" variant="outline" onClick={onSample}>
@@ -417,7 +419,7 @@ function AccountResult({
 											<AddressLine address={a.address} network={data.network} />
 										</td>
 										<td className={`${TD} whitespace-nowrap`}>
-											{new Date(a.validUntil).toISOString().slice(0, 10)}{" "}
+											{isoTime(a.validUntil).slice(0, 10)}{" "}
 											{a.expired ? (
 												<Pill tone="neutral">expired</Pill>
 											) : (
@@ -676,7 +678,7 @@ function HistoryTable({
 			<ObservedLine
 				network={network}
 				observedAt={observedAt}
-				source={`${history.txs.length} actions${history.truncated ? " (capped: the explorer returns the newest ~101)" : ""}`}
+				source={`${history.txs.length} actions${history.truncated ? ` (may be cut: the explorer returns an account's newest transactions only, ${EXPLORER_PAGE_CAP} at last count)` : ""}`}
 			/>
 			<div className={TABLE}>
 				<table className="w-full min-w-[560px] border-collapse text-sm">
@@ -703,10 +705,7 @@ function HistoryTable({
 											className="hover:underline"
 											title={t.hash}
 										>
-											{new Date(t.time)
-												.toISOString()
-												.replace("T", " ")
-												.slice(0, 19)}
+											{isoTime(t.time).replace("T", " ").slice(0, 19)}
 										</a>
 									</td>
 									<td className={TD}>

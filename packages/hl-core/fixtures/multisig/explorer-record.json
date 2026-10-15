@@ -1,0 +1,580 @@
+{
+	"description": "Hyperliquid testnet explorer, `userDetails` for two lab multi-sig accounts (complete lists, under the cap), recorded by scripts/record_explorer_record.ts. Per account: how many entries the explorer listed, whether the list may be cut, the oldest entry's time, and for each action type the newest entry carried out and the newest refused (`error` set), as listed, plus the entries of the requests in mode-switch.json. A multi-sig's action is listed as its inner action under the multi-sig account. A mode switch is listed with its one-letter code (`abstraction` \"u\" or \"i\"), as Hyperliquid hashes it (mode-switch.json). Entries naming a non-lab wallet are left out.",
+	"network": "testnet",
+	"recordedAt": "2026-10-14T16:57:54.263Z",
+	"accounts": [
+		{
+			"account": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+			"listed": 68,
+			"truncated": false,
+			"oldest": 1791708706070,
+			"txs": [
+				{
+					"time": 1791730761560,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "order",
+						"orders": [
+							{
+								"a": 3,
+								"b": false,
+								"p": "80042",
+								"s": "0.0002",
+								"r": true,
+								"t": {
+									"limit": {
+										"tif": "Ioc"
+									}
+								}
+							}
+						],
+						"grouping": "na"
+					},
+					"block": 728831993,
+					"hash": "0x19e47268d533ce4a1b5e042b7117f90106008a4e7036ed1cbdad1dbb9437a834",
+					"error": null
+				},
+				{
+					"time": 1791730759804,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "cancel",
+						"cancels": [
+							{
+								"a": 3,
+								"o": 62428278443
+							}
+						]
+					},
+					"block": 728831964,
+					"hash": "0x87a743b528607b7c8921042b7117dc0102005b9ac3639a4e2b6fef07e7645567",
+					"error": null
+				},
+				{
+					"time": 1791727002147,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "userSetAbstraction",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+						"abstraction": "u",
+						"nonce": 1791727001372
+					},
+					"block": 728776820,
+					"hash": "0x8dd288535f0e03168f4c042b704074010400a038fa0121e8319b33a61e01dd01",
+					"error": null
+				},
+				{
+					"time": 1791727001023,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "sendAsset",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+						"sourceDex": "",
+						"destinationDex": "spot",
+						"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+						"amount": "15",
+						"fromSubAccount": "",
+						"nonce": 1791727000253
+					},
+					"block": 728776809,
+					"hash": "0xee5e113719ff7422efd7042b704069010200291cb4f292f49226bc89d8f34e0d",
+					"error": null
+				},
+				{
+					"time": 1791715383688,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "convertToMultiSigUser",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"signers": "null",
+						"nonce": 1791715382974
+					},
+					"block": 728611640,
+					"hash": "0xa559f0e3ca14c7cca6d3042b6dbb3801090008c96517e69e49229c368918a1b7",
+					"error": null
+				},
+				{
+					"time": 1791715381389,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "userSetAbstraction",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+						"abstraction": "u",
+						"nonce": 1791715380709
+					},
+					"block": 728611605,
+					"hash": "0x51e137e103147cd1535a042b6dbb150108004fc69e179ba3f5a9e333c21856bb",
+					"error": null
+				},
+				{
+					"time": 1791715326374,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "agentSetAbstraction",
+						"abstraction": "u"
+					},
+					"block": 728610808,
+					"hash": "0xfd275ccb32f52109fea1042b6db7f801070074b0cdf83fdca0f0081df1f8faf4",
+					"error": "Abstraction transition not allowed"
+				},
+				{
+					"time": 1791715320926,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "userDexAbstraction",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+						"enabled": false,
+						"nonce": 1791715320181
+					},
+					"block": 728610725,
+					"hash": "0x7658458f01dc541077d2042b6db7a50104005d749cdf72e21a20f0e1c0d02dfb",
+					"error": null
+				},
+				{
+					"time": 1791715315261,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "usdClassTransfer",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"amount": "0.067",
+						"toPerp": true,
+						"nonce": 1791715314679
+					},
+					"block": 728610642,
+					"hash": "0x3cb5b7b7b722449b3e2f042b6db7520000f0cf9d5225636de07e630a76261e85",
+					"error": "Action disabled when unified account is active"
+				},
+				{
+					"time": 1791715308914,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "sendAsset",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+						"sourceDex": "",
+						"destinationDex": "spot",
+						"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+						"amount": "0.064",
+						"fromSubAccount": "",
+						"nonce": 1791715308376
+					},
+					"block": 728610549,
+					"hash": "0xa4cd819a4910be3ba647042b6db6f5010800997fe413dd0d48962ced08149826",
+					"error": "Unified account only supports sending assets through spot"
+				},
+				{
+					"time": 1791715304510,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "spotSend",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+						"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+						"amount": "0.062",
+						"time": 1791715303824
+					},
+					"block": 728610485,
+					"hash": "0x0c442348bbbbddf70dbd042b6db6b50102003b2e56befcc9b00cce9b7abfb7e1",
+					"error": "Action disabled when unified account is active"
+				},
+				{
+					"time": 1791715302134,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "usdSend",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+						"amount": "0.061",
+						"time": 1791715301588
+					},
+					"block": 728610453,
+					"hash": "0x8b4d4e8c5b4e77c38cc7042b6db6950103006671f64196952f15f9df1a4251ae",
+					"error": "Action disabled when unified account is active"
+				},
+				{
+					"time": 1791715194188,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "spotSend",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+						"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+						"amount": "0.032",
+						"time": 1791715193594
+					},
+					"block": 728608887,
+					"hash": "0xc5c64f261242a7abc740042b6db077010900670bad45c67d698efa78d1468196",
+					"error": null
+				},
+				{
+					"time": 1791715192022,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "usdSend",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+						"amount": "0.031",
+						"time": 1791715191495
+					},
+					"block": 728608858,
+					"hash": "0xb1aa7179e545a148b324042b6db05a010a00895f8048c01a55731ccca4497b33",
+					"error": null
+				},
+				{
+					"time": 1791715184178,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "withdraw3",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+						"amount": "9999999",
+						"time": 1791715183548
+					},
+					"block": 728608740,
+					"hash": "0x0c14c6ce86e77f650d8e042b6dafe4010200deb421ea9e37afdd722145eb594f",
+					"error": "Error withdrawing from bridge"
+				},
+				{
+					"time": 1791715153973,
+					"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+					"action": {
+						"type": "usdClassTransfer",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"amount": "0.022",
+						"toPerp": true,
+						"nonce": 1791715153372
+					},
+					"block": 728608278,
+					"hash": "0xd9cb52837b99325cdb45042b6dae16010b006a69169c512e7d93fdd63a9d0c47",
+					"error": null
+				}
+			]
+		},
+		{
+			"account": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+			"listed": 124,
+			"truncated": false,
+			"oldest": 1791708708632,
+			"txs": [
+				{
+					"time": 1791838274303,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "userSetAbstraction",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"abstraction": "u",
+						"nonce": 1791838273670
+					},
+					"block": 730516054,
+					"hash": "0xce2eb87be2e51c84cfa8042b8aca56010800d0617de83b5671f763cea1e8f66f",
+					"error": null
+				},
+				{
+					"time": 1791835379265,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "vaultTransfer",
+						"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+						"isDeposit": false,
+						"usd": 1000000
+					},
+					"block": 730472235,
+					"hash": "0x053b35009a17869406b4042b8a1f2b010a004ce6351aa566a903e053591b607e",
+					"error": "Cannot withdraw during lockup period after depositing."
+				},
+				{
+					"time": 1791835370725,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "vaultTransfer",
+						"vaultAddress": "0x49d05977597b22e3c73d654c351adde9d9920e18",
+						"isDeposit": false,
+						"usd": 3000000
+					},
+					"block": 730472107,
+					"hash": "0x6ac42d364bd7d9e86c3d042b8a1eab010600451be6daf8ba0e8cd8890adbb3d3",
+					"error": null
+				},
+				{
+					"time": 1791734105191,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "sendAsset",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"sourceDex": "spot",
+						"destinationDex": "",
+						"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+						"amount": "0.01",
+						"fromSubAccount": "",
+						"nonce": 1791734104612
+					},
+					"block": 728883520,
+					"hash": "0x70a3106e22599e90721c042b71e1400105002853bd5cbd62146bbbc0e15d787b",
+					"error": null
+				},
+				{
+					"time": 1791734102322,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "sendAsset",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"sourceDex": "spot",
+						"destinationDex": "spot",
+						"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+						"amount": "0.01",
+						"fromSubAccount": "",
+						"nonce": 1791734101759
+					},
+					"block": 728883469,
+					"hash": "0xd071bb2484c0bcc1d1eb042b71e10d010300d30a1fc3db93743a667743c496ac",
+					"error": "Invalid send"
+				},
+				{
+					"time": 1791731171929,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "order",
+						"orders": [
+							{
+								"a": 3,
+								"b": false,
+								"p": "79991",
+								"s": "0.0002",
+								"r": true,
+								"t": {
+									"limit": {
+										"tif": "Ioc"
+									}
+								}
+							}
+						],
+						"grouping": "na"
+					},
+					"block": 728838107,
+					"hash": "0x4b68602c1fbc0e954ce2042b712fdb0104007811babf2d67ef310b7edebfe87f",
+					"error": null
+				},
+				{
+					"time": 1791731170186,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "cancel",
+						"cancels": [
+							{
+								"a": 3,
+								"o": 62429732289
+							}
+						]
+					},
+					"block": 728838078,
+					"hash": "0xb56dd3877285549cb6e7042b712fbe010a00eb6d0d88736e59367eda31892e87",
+					"error": null
+				},
+				{
+					"time": 1791730744417,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "convertToMultiSigUser",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"signers": "{\"authorizedUsers\":[\"0x41e84a2c224151b85ef53945d5d31adcfe8955b9\",\"0x5e7c3420160987d04db5e8ed6d5bc14f61237216\",\"0xb70c120cd3702225fbe3657ace137ed5889f36ee\"],\"threshold\":2}",
+						"nonce": 1791730743859
+					},
+					"block": 728831735,
+					"hash": "0x6fdb0f2640efd6d27154042b7116f7010300270bdbe2f5a413a3ba78ffe3b0bd",
+					"error": null
+				},
+				{
+					"time": 1791715185519,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "withdraw3",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"amount": "9999999",
+						"time": 1791715184983
+					},
+					"block": 728608762,
+					"hash": "0x2ec5f344c3fd6eae303f042b6daffa010d000b2a5ef08d80d28e9e9782f14898",
+					"error": "Error withdrawing from bridge"
+				},
+				{
+					"time": 1791715176417,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "spotSend",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+						"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+						"amount": "0.011",
+						"time": 1791715175839
+					},
+					"block": 728608614,
+					"hash": "0x611d05c8afef56196296042b6daf660108001dae4ae274eb04e5b11b6ee33004",
+					"error": "Action disabled when unified account is active"
+				},
+				{
+					"time": 1791715169965,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "spotSend",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+						"amount": "0.03",
+						"time": 1791715169464
+					},
+					"block": 728608522,
+					"hash": "0x7b42a58a97c1a23b7cbc042b6daf0a010200bd7032c4c10d1f0b50dd56c57c26",
+					"error": null
+				},
+				{
+					"time": 1791715162999,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "usdClassTransfer",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"amount": "0.022",
+						"toPerp": true,
+						"nonce": 1791715162464
+					},
+					"block": 728608415,
+					"hash": "0xa616399e17d99e31a78f042b6dae9f0102005183b2dcbd0349dee4f0d6dd781c",
+					"error": "Action disabled when unified account is active"
+				},
+				{
+					"time": 1791715129784,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "usdSend",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+						"amount": "0.011",
+						"time": 1791715129253
+					},
+					"block": 728607903,
+					"hash": "0x1c44fac1916055ba1dbe042b6dac9f01030012a72c63748cc00da61450642fa4",
+					"error": "Action disabled when unified account is active"
+				},
+				{
+					"time": 1791713803575,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "usdClassTransfer",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"amount": "0.01",
+						"toPerp": true,
+						"nonce": 1791713802886
+					},
+					"block": 728588752,
+					"hash": "0x9bcb3be3611de86d9d44042b6d61d001010053c8fc11073f3f93e7362011c258",
+					"error": null
+				},
+				{
+					"time": 1791709416409,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "userPortfolioMargin",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"enabled": true,
+						"nonce": 1791709417827
+					},
+					"block": 728526392,
+					"hash": "0x834522f3a0b1d9b384be042b6c6e380103003ad93bb4f885270dce465fb5b39e",
+					"error": "Portfolio margin requires account value of $10000 or total volume of $5000000."
+				},
+				{
+					"time": 1791709415184,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "userPortfolioMargin",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"enabled": false,
+						"nonce": 1791709413419
+					},
+					"block": 728526376,
+					"hash": "0xd0e599769706bde8d25f042b6c6e28000020b15c3209dcba74ae44c9560a97d3",
+					"error": null
+				},
+				{
+					"time": 1791709403152,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "usdSend",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+						"amount": "0.6",
+						"time": 1791709401224
+					},
+					"block": 728526223,
+					"hash": "0x523b28def11b364953b4042b6c6d8f01060040c48c1e551bf603d431b01f1033",
+					"error": null
+				},
+				{
+					"time": 1791709401926,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "userDexAbstraction",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"enabled": true,
+						"nonce": 1791709403224
+					},
+					"block": 728526207,
+					"hash": "0x9fdb9f61e7601a7ea155042b6c6d7f010300b7478263395043a44ab4a663f469",
+					"error": "Abstraction transition not allowed"
+				},
+				{
+					"time": 1791709400589,
+					"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+					"action": {
+						"type": "userDexAbstraction",
+						"signatureChainId": "0x66eee",
+						"hyperliquidChain": "Testnet",
+						"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"enabled": false,
+						"nonce": 1791709398929
+					},
+					"block": 728526191,
+					"hash": "0x05f679b62a68c6270770042b6c6d6f010300919bc56be4f9a9bf2508e96ca011",
+					"error": null
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,218 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-11. What an approved API wallet can do with an account's money, on a plain account and on a multi-sig (where it acts with no signer at all), next to the account's own key and to signers through an envelope. It may deposit into a vault (vaultTransfer, an L1 action) and move money between the account's own balances (agentSendAsset); it may not send to another account, and a user-signed action signed by it counts as coming from the API wallet's own, empty account. Vault withdrawals could not be judged: fresh deposits are locked. The vault is the testnet HLP vault. Recorded by labs/multisig/59*.ts.",
+	"network": "testnet",
+	"runs": [
+		{
+			"about": "vault deposit",
+			"signedBy": "own key",
+			"accountIs": "plain",
+			"account": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+				"isDeposit": true,
+				"usd": 5000000
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "vault deposit",
+			"signedBy": "API wallet",
+			"accountIs": "plain",
+			"account": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+				"isDeposit": true,
+				"usd": 5000000
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "move between the account's own balances",
+			"signedBy": "API wallet",
+			"accountIs": "plain",
+			"account": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+			"action": {
+				"type": "agentSendAsset",
+				"destination": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "1",
+				"fromSubAccount": ""
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "send to another account",
+			"signedBy": "API wallet",
+			"accountIs": "plain",
+			"account": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+			"action": {
+				"type": "agentSendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "1",
+				"fromSubAccount": ""
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Agent can only send asset to same user or their sub-accounts."
+			}
+		},
+		{
+			"about": "the user-signed perps → spot move, signed by the API wallet",
+			"signedBy": "API wallet",
+			"accountIs": "plain",
+			"account": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+			"action": {
+				"type": "usdClassTransfer",
+				"amount": "1",
+				"toPerp": false
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Must deposit before performing actions. User: 0x0a0edcfc1936199282f32dd66dd4c298d1c50224"
+			}
+		},
+		{
+			"about": "vault deposit, no signers",
+			"signedBy": "API wallet",
+			"accountIs": "multi-sig",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+				"isDeposit": true,
+				"usd": 5000000
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "move between the account's own balances, no signers",
+			"signedBy": "API wallet",
+			"accountIs": "multi-sig",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"action": {
+				"type": "agentSendAsset",
+				"destination": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "1",
+				"fromSubAccount": ""
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "move between the account's own balances, no signers",
+			"signedBy": "API wallet",
+			"accountIs": "multi-sig",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"action": {
+				"type": "agentSendAsset",
+				"destination": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "6",
+				"fromSubAccount": ""
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "vault deposit through the envelope",
+			"signedBy": "signers",
+			"accountIs": "multi-sig",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+				"isDeposit": true,
+				"usd": 5000000
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "vault withdrawal during the lock-up",
+			"signedBy": "API wallet",
+			"accountIs": "multi-sig",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+				"isDeposit": false,
+				"usd": 1000000
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Cannot withdraw during lockup period after depositing."
+			}
+		},
+		{
+			"about": "vault withdrawal during the lock-up",
+			"signedBy": "API wallet",
+			"accountIs": "plain",
+			"account": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+			"action": {
+				"type": "vaultTransfer",
+				"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+				"isDeposit": false,
+				"usd": 1000000
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Cannot withdraw during lockup period after depositing."
+			}
+		}
+	]
+}

@@ -10,23 +10,17 @@ import {
 } from "#/components/tools/multisig/model";
 import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 import { RELAY_COPY } from "../model/relay/copy";
+import { requestRefusal } from "../model/relay/signers";
 import { shortAddress } from "../model/stage";
 import { requestTreasury } from "../relay/api";
 import { useRequest, useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
+import { Help } from "../shell/Help";
 import { Btn, Card, linkButtonSm } from "../shell/kit";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
 import { useMounted } from "../shell/WalletBox";
 import { useTreasuryState } from "../useTreasuryState";
-
-const REASONS: Record<string, string> = {
-	not_a_signer:
-		"The relay looked the account up and your wallet is not one of its signers.",
-	not_multisig: "The relay looked the account up and it is not a multi-sig.",
-	lookup_failed:
-		"The relay could not reach Hyperliquid for this lookup. Try again in a minute.",
-};
 
 /**
  * Add a treasury: paste its address once. The browser reads the signer list
@@ -69,6 +63,8 @@ export function AddTreasuryScreen() {
 				(t) => t.network === current.network && t.address === current.address,
 			)
 		: undefined;
+	// the wallet that converted its own account: not a signer, but it may register it
+	const isSelf = !!me && !!current && current.address === me;
 	const who = (a: Address) => (a === me ? "you" : shortAddress(a));
 
 	// the worker answered
@@ -79,7 +75,7 @@ export function AddTreasuryScreen() {
 			void navigate({
 				to: "/multisig/t/$network/$address",
 				params: { network: request.network, address: request.address },
-				search: { tab: "signers" },
+				search: { tab: "overview" },
 			});
 		}
 	}, [request, current, queries, me, navigate]);
@@ -138,11 +134,12 @@ export function AddTreasuryScreen() {
 						}}
 					>
 						<Field
-							label={`Multi-sig account address on ${ready ? network : "…"}`}
+							label={`Treasury address on ${ready ? network : "…"}`}
+							trailing={<Help k="treasury" />}
 							htmlFor="ms-add"
 							error={
 								input.trim() && !valid
-									? "A 20-byte hex address: 0x followed by 40 hex digits."
+									? "An address starts with 0x followed by 40 letters and digits (0-9, a-f)."
 									: undefined
 							}
 						>
@@ -188,7 +185,7 @@ export function AddTreasuryScreen() {
 						{current && state.isMultiSig === false && (
 							<Callout
 								tone="warning"
-								title={`This account is not a multi-sig on ${current.network}`}
+								title={`This address is not a treasury on ${current.network}`}
 							>
 								Only a native multi-sig account can be added. Check the address
 								and the network selected in the header.
@@ -213,13 +210,39 @@ export function AddTreasuryScreen() {
 							state.isMultiSig &&
 							state.policy &&
 							!known &&
-							!isSigner && (
+							!isSigner &&
+							!isSelf && (
 								<Callout
 									tone="warning"
 									title="This account is a multi-sig, but your wallet is not one of its signers"
 								>
-									Only a signer can add a treasury. Ask a signer to add it, or
-									switch wallets.
+									Only a signer, or the account itself, can add a treasury. Ask
+									a signer to add it, or switch your wallet to one of its
+									signers.
+								</Callout>
+							)}
+						{current &&
+							state.isMultiSig &&
+							state.policy &&
+							!known &&
+							isSelf && (
+								<Callout
+									tone="success"
+									title={`${state.policy.threshold} of ${signers.length} multi-sig · ${RELAY_COPY.registerSelfTitle}`}
+									action={
+										<Btn
+											size="sm"
+											variant="brand"
+											type="button"
+											disabled={waiting}
+											onClick={() => void add()}
+										>
+											{waiting ? "Registering…" : RELAY_COPY.registerSelfButton}
+										</Btn>
+									}
+								>
+									Signers: {signers.map(who).join(", ")}.{" "}
+									{RELAY_COPY.registerSelfBody}
 								</Callout>
 							)}
 						{current &&
@@ -252,9 +275,9 @@ export function AddTreasuryScreen() {
 							)}
 
 						{request?.status === "pending" && slow && (
-							<Callout tone="neutral" title="Queued behind other lookups">
-								The relay looks accounts up one at a time. This page moves on by
-								itself when yours is done.
+							<Callout tone="neutral" title="Queued behind other look-ups">
+								The sharing service looks accounts up on Hyperliquid one at a
+								time. This page moves on by itself when yours is done.
 							</Callout>
 						)}
 						{request &&
@@ -264,8 +287,7 @@ export function AddTreasuryScreen() {
 									tone={request.status === "failed" ? "warning" : "danger"}
 									title="The treasury was not added"
 								>
-									{REASONS[request.reason ?? ""] ??
-										"The relay refused the request."}
+									{requestRefusal(request)}
 								</Callout>
 							)}
 						{issue && (

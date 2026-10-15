@@ -1,0 +1,626 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-11. `userSetAbstraction` to `unifiedAccount` through a 1-of-2 multi-sig (lab keys), each request exactly as it was posted. In both, the posted action and the signer's inner signature carry the long name. In `refused` the leader's envelope signature was made over the envelope as posted, as Hyperliquid's documentation gives it. In `accepted` it was made over the same envelope with `payload.action.abstraction` written as the one-letter code \"u\": Hyperliquid re-serialises that field before it hashes the envelope. Undocumented. Measured letters: \"u\" (unifiedAccount) and \"i\" (disabled), see `switches`. `switches` (2026-10-12 UTC, lab script 76, 2-of-3 multi-sigs): the same action in both directions with a position and orders open, and with nothing open; `before` and `after` are the account as Hyperliquid reported it around each request.",
+	"network": "testnet",
+	"hashedAs": {
+		"unifiedAccount": "u",
+		"disabled": "i"
+	},
+	"requests": [
+		{
+			"about": "the leader signed the envelope as posted",
+			"hashedAbstraction": "unifiedAccount",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0x32678f4a0da4752ecc98501e36fba5c2f1cd9ffc171c8b99ff20588a546d255b",
+							"s": "0x19ace899140443a66845df1a5186c5f7e4b6e3332f3aa627030fe01a95397625",
+							"v": 28
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "userSetAbstraction",
+							"signatureChainId": "0x66eee",
+							"hyperliquidChain": "Testnet",
+							"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+							"abstraction": "unifiedAccount",
+							"nonce": 1791715379424
+						}
+					}
+				},
+				"nonce": 1791715379424,
+				"signature": {
+					"r": "0x2aac5a56dd7e942d9c131cc9881cda723209732b3bdc2ae3f8685c6ef4ff06f9",
+					"s": "0x4f245685458bfb54cb029dbb94076334240f9b35710dd89a487816d5a7eb641d",
+					"v": 28
+				},
+				"vaultAddress": null
+			},
+			"answer": {
+				"status": "err",
+				"response": "Invalid multi-sig outer signer"
+			}
+		},
+		{
+			"about": "the leader signed the envelope with the one-letter code",
+			"hashedAbstraction": "u",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0x9ce7b9a0bb6a5f315453835f3706a896a39caa1fbc4246fca042240f5c6ee5bb",
+							"s": "0x5ae90d0b9c316cabfe958f7b9d5b8c881f07f71725dc0bc28c116361853b6247",
+							"v": 27
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "userSetAbstraction",
+							"signatureChainId": "0x66eee",
+							"hyperliquidChain": "Testnet",
+							"user": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+							"abstraction": "unifiedAccount",
+							"nonce": 1791715380709
+						}
+					}
+				},
+				"nonce": 1791715380709,
+				"signature": {
+					"r": "0xd3b6fe462e0b1946dd6920182f01d7685c2b3cbdf6fb5832d58904785d6f326e",
+					"s": "0x4d86e5162424a79aba01269a30bf62e939319130dbee41473ae049d166f86296",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		}
+	],
+	"switches": [
+		{
+			"about": "to unifiedAccount, leader hashes u",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"hashedAbstraction": "u",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0xeb747649435bcbbcd9c9a5f33169ac5111c5fd12d9d4aadea52f1d20f52d1b9c",
+							"s": "0x2aabb1f3c9eca3ac0530c795798e185da502f50cababcb0ed187d7be6681975e",
+							"v": 27
+						},
+						{
+							"r": "0xe35051dca7d4ec65d979026609389db3a78fa2fc235c922082e07d4572d0e1fc",
+							"s": "0x2411df4842cc403a8594090a689f6f4b5906f2a502256e6fbc605446c4a6b43",
+							"v": 28
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "userSetAbstraction",
+							"signatureChainId": "0x66eee",
+							"hyperliquidChain": "Testnet",
+							"user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+							"abstraction": "unifiedAccount",
+							"nonce": 1791838236799
+						}
+					}
+				},
+				"nonce": 1791838236799,
+				"signature": {
+					"r": "0x73cb44833c13a89c21583d3a878db34bc6845d724ee149e33a60e9d203fed3fb",
+					"s": "0x5c0a69717bb5d572424e865398d2b5e95bf2ba2ce47d911f2ceaed6c4244b856",
+					"v": 28
+				},
+				"vaultAddress": null
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"before": {
+				"mode": "default",
+				"perps": {
+					"withdrawable": "4.289279",
+					"accountValue": "7.089818",
+					"positions": [
+						"BTC 0.00019"
+					]
+				},
+				"spot": [
+					"USDC 9.24 (hold 0.0)",
+					"HYPE 0.0695 (hold 0.0)"
+				],
+				"openOrders": 2
+			},
+			"after": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.012293",
+					"accountValue": "2.812832",
+					"positions": [
+						"BTC 0.00019"
+					]
+				},
+				"spot": [
+					"USDC 16.329818 (hold 2.812832)",
+					"HYPE 0.0695 (hold 0.0)"
+				],
+				"openOrders": 2
+			}
+		},
+		{
+			"about": "to unifiedAccount again (already unified)",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"hashedAbstraction": "u",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0xdefcaa3ffae8811640d80014c924135808a7da0700694e864fdc36320e30fae3",
+							"s": "0x574f3f2b59d6b46aeab974fffa1579d91691d200fa4a41719373571bba799b3b",
+							"v": 27
+						},
+						{
+							"r": "0xb086bb39e4779c2f553c895136df34d0ae10e96895b17092b0ae93ca848c3c67",
+							"s": "0x177f13926b3f2ec567d8bebf71a08a6cc86058d638fd68e54781b6a4a23c5315",
+							"v": 27
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "userSetAbstraction",
+							"signatureChainId": "0x66eee",
+							"hyperliquidChain": "Testnet",
+							"user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+							"abstraction": "unifiedAccount",
+							"nonce": 1791838239562
+						}
+					}
+				},
+				"nonce": 1791838239562,
+				"signature": {
+					"r": "0x3fd24c5a5c41b171a417ca36cd4a436ace63a7468e6265c27e88eed5ee16f4c5",
+					"s": "0x34c143c93599159aa92239aab74f7e6c48992ef406adde4228f5676d697b50a5",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"before": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.012293",
+					"accountValue": "2.812832",
+					"positions": [
+						"BTC 0.00019"
+					]
+				},
+				"spot": [
+					"USDC 16.329818 (hold 2.812832)",
+					"HYPE 0.0695 (hold 0.0)"
+				],
+				"openOrders": 2
+			},
+			"after": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.012977",
+					"accountValue": "2.813592",
+					"positions": [
+						"BTC 0.00019"
+					]
+				},
+				"spot": [
+					"USDC 16.330578 (hold 2.812908)",
+					"HYPE 0.0695 (hold 0.0)"
+				],
+				"openOrders": 2
+			}
+		},
+		{
+			"about": "to disabled, leader hashes i",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"hashedAbstraction": "i",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0xc5ce2c3e2f6373c2bb779d7b0a6937925f46efd10e7e26a9ed8d86c01ff2d377",
+							"s": "0x3f43debb881dbb6bc41b8093179dc1c9225cdcd35e62c7205739602e113500c3",
+							"v": 27
+						},
+						{
+							"r": "0x26f076aa95b7902d532bf180cf865da69888cd78e47360a36809ad6fcf8c3d3a",
+							"s": "0x4cea443382df5fcb8ea28bdd8c41f8222a521e99e0be064d05b3f80d7cf2164",
+							"v": 28
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "userSetAbstraction",
+							"signatureChainId": "0x66eee",
+							"hyperliquidChain": "Testnet",
+							"user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+							"abstraction": "disabled",
+							"nonce": 1791838247217
+						}
+					}
+				},
+				"nonce": 1791838247217,
+				"signature": {
+					"r": "0xd64d3c938dd6ff05a4e8e29ba27f2a3ccafda9265e36e6d46eede7a76f009a31",
+					"s": "0x588a7fd6b3217c90bbc5014d9ab8c4e22537597b1dd7230128bf24ed15ce6e74",
+					"v": 28
+				},
+				"vaultAddress": null
+			},
+			"answer": {
+				"status": "err",
+				"response": "Cannot disable unified account with open positions, open orders, or active TWAP orders"
+			},
+			"before": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.012293",
+					"accountValue": "2.812832",
+					"positions": [
+						"BTC 0.00019"
+					]
+				},
+				"spot": [
+					"USDC 16.329818 (hold 2.812832)",
+					"HYPE 0.0695 (hold 0.0)"
+				],
+				"openOrders": 2
+			},
+			"after": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.012293",
+					"accountValue": "2.812832",
+					"positions": [
+						"BTC 0.00019"
+					]
+				},
+				"spot": [
+					"USDC 16.329818 (hold 2.812832)",
+					"HYPE 0.0695 (hold 0.0)"
+				],
+				"openOrders": 2
+			}
+		},
+		{
+			"about": "to disabled, leader hashes the long name",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"hashedAbstraction": "disabled",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0x481ba04462f08a03d3a01616c480f52e3a76a328681a2687dc03e9c2a76a6aad",
+							"s": "0x618f74bbb289303b03793575242293940be10ce91fda29a62cf72a51be395b05",
+							"v": 28
+						},
+						{
+							"r": "0x6e32355ffeff3353a66f34b42a84a95c93ea26f697389c06a9b43114b19beb6e",
+							"s": "0x24da7ad377b3ce7772abb8d44b72db67bd3f5897e8f38f9e4cb17ae993943503",
+							"v": 28
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "userSetAbstraction",
+							"signatureChainId": "0x66eee",
+							"hyperliquidChain": "Testnet",
+							"user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+							"abstraction": "disabled",
+							"nonce": 1791838255167
+						}
+					}
+				},
+				"nonce": 1791838255167,
+				"signature": {
+					"r": "0x67aaf2aa430aae7cce519a241130f8ecc6cc65411a3f71743515c8a79727d11a",
+					"s": "0x2e2cdb14ea43e304bc0d755b0d25a2255660384ad1d688124d4d483b38464953",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"answer": {
+				"status": "err",
+				"response": "Invalid multi-sig outer signer"
+			},
+			"before": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.012293",
+					"accountValue": "2.812832",
+					"positions": [
+						"BTC 0.00019"
+					]
+				},
+				"spot": [
+					"USDC 16.329818 (hold 2.812832)",
+					"HYPE 0.0695 (hold 0.0)"
+				],
+				"openOrders": 2
+			},
+			"after": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.01585",
+					"accountValue": "2.816784",
+					"positions": [
+						"BTC 0.00019"
+					]
+				},
+				"spot": [
+					"USDC 16.33377 (hold 2.813227)",
+					"HYPE 0.0695 (hold 0.0)"
+				],
+				"openOrders": 2
+			}
+		},
+		{
+			"about": "userDexAbstraction enabled:false",
+			"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+			"hashedAbstraction": null,
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0xc6058e8f8579aace6887108be5a0d79cc85ae04cd9318e621ba836267b9e98d8",
+							"s": "0x5aa5b693a745176e4ec7995ced485cabb0f90206e6c7b19e1a50929d799aec91",
+							"v": 28
+						},
+						{
+							"r": "0xea2dd2da6310b540c1094121195e4f55a877b7810816a2c0e95f9cbb92cf4e8d",
+							"s": "0xa6c1fee46225389ad16dec25fd49c93c72609169c2ba07fe3cb167212909d77",
+							"v": 28
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "userDexAbstraction",
+							"signatureChainId": "0x66eee",
+							"hyperliquidChain": "Testnet",
+							"user": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+							"enabled": false,
+							"nonce": 1791838257325
+						}
+					}
+				},
+				"nonce": 1791838257325,
+				"signature": {
+					"r": "0x10fb4108acd03b6e608fe16e1600612be6c056ceeb85e7be8c2ac1a07efa9c86",
+					"s": "0x6ac2b4812bb784ff28224c937883b2ba1b32f9b02dc165075badd0d5f630fc88",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"answer": {
+				"status": "err",
+				"response": "Cannot disable unified account with open positions, open orders, or active TWAP orders"
+			},
+			"before": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.01585",
+					"accountValue": "2.816784",
+					"positions": [
+						"BTC 0.00019"
+					]
+				},
+				"spot": [
+					"USDC 16.33377 (hold 2.813227)",
+					"HYPE 0.0695 (hold 0.0)"
+				],
+				"openOrders": 2
+			},
+			"after": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.01585",
+					"accountValue": "2.816784",
+					"positions": [
+						"BTC 0.00019"
+					]
+				},
+				"spot": [
+					"USDC 16.33377 (hold 2.813227)",
+					"HYPE 0.0695 (hold 0.0)"
+				],
+				"openOrders": 2
+			}
+		},
+		{
+			"about": "to disabled, leader hashes i",
+			"account": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+			"hashedAbstraction": "i",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0xf4632ede19938734fad7f5e32dbc2e03eddef5cd478f0acce35791cf72ff0a40",
+							"s": "0x328cc4a8539542e92473d365e4dbf1fb8fc960c82b3967194fc5d982334c50f9",
+							"v": 28
+						},
+						{
+							"r": "0xfea71f01c1e609a1c9a2c18ffa8a95b11162b602adc8099125063341fbb3eaae",
+							"s": "0x2b527e4eb8c0fb0e1c91c7ff73b296e47cf103f69e326cd270b9a32b6056a4d1",
+							"v": 27
+						}
+					],
+					"payload": {
+						"multiSigUser": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "userSetAbstraction",
+							"signatureChainId": "0x66eee",
+							"hyperliquidChain": "Testnet",
+							"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+							"abstraction": "disabled",
+							"nonce": 1791838268796
+						}
+					}
+				},
+				"nonce": 1791838268796,
+				"signature": {
+					"r": "0x4c2b6dd7517614745d1a17f2b66484f28fe9d7420fb0ef9cdad84da7c32ec70f",
+					"s": "0x1a542b1a2f46f83ce44fd55cf341d1b9c64298f10f156c7926d84bf3b1175004",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"before": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.0",
+					"accountValue": "0.0",
+					"positions": []
+				},
+				"spot": [
+					"USDC 5.304106 (hold 0.0)",
+					"HYPE 0.005 (hold 0.0)"
+				],
+				"openOrders": 0
+			},
+			"after": {
+				"mode": "disabled",
+				"perps": {
+					"withdrawable": "0.0",
+					"accountValue": "0.0",
+					"positions": []
+				},
+				"spot": [
+					"USDC 5.304106 (hold 0.0)",
+					"HYPE 0.005 (hold 0.0)"
+				],
+				"openOrders": 0
+			}
+		},
+		{
+			"about": "to unifiedAccount, leader hashes u",
+			"account": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+			"hashedAbstraction": "u",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0x4089125e6cd42f39e8f2ce19d51bf9c5d6a6db9ca06890c8d7dcb99aa9112892",
+							"s": "0x3f37e71b76176d8a4a4a2bf0c8043da94825e8e6b5ec8d9cfd2a9010a1b03d6e",
+							"v": 28
+						},
+						{
+							"r": "0x938172c696f3a5472eb16b69e272085701f9aff4e0410dda0f67a5d204460fc8",
+							"s": "0x58e1a7c49d7c13ad9e5964af24b77f27445802b96c48229595b5ace59562c3a9",
+							"v": 28
+						}
+					],
+					"payload": {
+						"multiSigUser": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "userSetAbstraction",
+							"signatureChainId": "0x66eee",
+							"hyperliquidChain": "Testnet",
+							"user": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+							"abstraction": "unifiedAccount",
+							"nonce": 1791838273670
+						}
+					}
+				},
+				"nonce": 1791838273670,
+				"signature": {
+					"r": "0xbcd97ae8b54e77e651b5991259b10331781e73281e183a0181f64ba07debcba3",
+					"s": "0x3f4b3b21f4fc2eafc3bc577e4d1a1d292e9495330ee59e8f4be3606b786e60c4",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"before": {
+				"mode": "disabled",
+				"perps": {
+					"withdrawable": "0.0",
+					"accountValue": "0.0",
+					"positions": []
+				},
+				"spot": [
+					"USDC 5.304106 (hold 0.0)",
+					"HYPE 0.005 (hold 0.0)"
+				],
+				"openOrders": 0
+			},
+			"after": {
+				"mode": "unifiedAccount",
+				"perps": {
+					"withdrawable": "0.0",
+					"accountValue": "0.0",
+					"positions": []
+				},
+				"spot": [
+					"USDC 5.304106 (hold 0.0)",
+					"HYPE 0.005 (hold 0.0)"
+				],
+				"openOrders": 0
+			}
+		}
+	]
+}
