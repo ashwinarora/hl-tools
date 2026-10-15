@@ -15,6 +15,7 @@
 			"**/.vscode/**/*",
 			"**/index.html",
 			"**/vite.config.ts",
+			"!!**/.claude",
 			"!**/src/routeTree.gen.ts",
 			"!**/src/styles.css"
 		]
