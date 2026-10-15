@@ -5,6 +5,7 @@ import {
 } from "@rainbow-me/rainbowkit";
 import { type ReactNode, useEffect, useState } from "react";
 import { type Config, WagmiProvider } from "wagmi";
+import { keepConnectorsUnique } from "./uniqueConnectors";
 
 import "@rainbow-me/rainbowkit/styles.css";
 
@@ -41,6 +42,8 @@ export default function WalletProviders({
 	children: ReactNode;
 }) {
 	const theme = useMountedTheme();
+	// wagmi appends the announced wallets again on every mount
+	keepConnectorsUnique(config);
 	return (
 		<WagmiProvider config={config}>
 			<RainbowKitProvider
