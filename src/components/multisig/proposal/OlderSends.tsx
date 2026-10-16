@@ -1,6 +1,7 @@
 import type { Address, Proposal } from "@hl-tools/core";
 import { wouldShutOut } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Callout } from "#/components/hub/status";
 import { sendsBefore } from "../model/send";
 import { waitingProposals } from "../model/signerSet";
@@ -57,7 +58,14 @@ function Named({ items }: { items: readonly Waiting[] }) {
  * withdrawals out for good, and a withdrawal should let older sends go first
  * (what it does to them was not measured). Never folded away.
  */
-export function OlderSends({ proposal }: { proposal: Proposal }) {
+export function OlderSends({
+	proposal,
+	onTitle,
+}: {
+	proposal: Proposal;
+	/** Told the warning's title while it is shown (null when it is not), to repeat it beside the buttons. */
+	onTitle?: (title: string | null) => void;
+}) {
 	const relay = useRelay();
 	const now = useNow();
 	const { network, multiSigUser, action } = proposal.payload;
@@ -91,13 +99,20 @@ export function OlderSends({ proposal }: { proposal: Proposal }) {
 		.map((item) => ({ action: item.action, item }));
 	const shutOut = wouldShutOut(action, waiting).map((x) => x.item);
 	const before = sendsBefore(action, waiting).map((x) => x.item);
-	if (shutOut.length > 0) {
+	const title =
+		shutOut.length > 0
+			? `Sending this first shuts out ${older(shutOut)}`
+			: before.length > 0
+				? before.length === 1
+					? "An older USDC send is still waiting"
+					: `${before.length} older USDC sends are still waiting`
+				: null;
+	useEffect(() => onTitle?.(title), [onTitle, title]);
+	useEffect(() => () => onTitle?.(null), [onTitle]);
+	if (shutOut.length > 0 && title) {
 		const one = shutOut.length === 1;
 		return (
-			<Callout
-				tone="warning"
-				title={`Sending this first shuts out ${older(shutOut)}`}
-			>
+			<Callout tone="warning" title={title}>
 				Hyperliquid takes a treasury's USDC sends, and its withdrawals after
 				them, in the order they were proposed. Still waiting from before this
 				one: <Named items={shutOut} />. Send {one ? "it" : "them"} first, or{" "}
@@ -105,17 +120,10 @@ export function OlderSends({ proposal }: { proposal: Proposal }) {
 			</Callout>
 		);
 	}
-	if (before.length > 0) {
+	if (before.length > 0 && title) {
 		const one = before.length === 1;
 		return (
-			<Callout
-				tone="warning"
-				title={
-					one
-						? "An older USDC send is still waiting"
-						: `${before.length} older USDC sends are still waiting`
-				}
-			>
+			<Callout tone="warning" title={title}>
 				This withdrawal is numbered after <Named items={before} />. Send{" "}
 				{one ? "it" : "them"} first: whether a withdrawal carried out first
 				stops an older send from going through has not been measured.

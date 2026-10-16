@@ -139,7 +139,12 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 	return (
 		<section
 			aria-label={RELAY_COPY.awayTitle}
-			className="rounded-[10px] border border-info/35 bg-surface shadow-sm"
+			className={cn(
+				"rounded-[10px] border border-info/35 bg-surface shadow-sm",
+				// lines of about 90 characters however wide the screen; from 1280 px
+				// the list of every treasury adds a column for their names
+				single ? "max-w-[38rem]" : "max-w-[38rem] xl:max-w-[51rem]",
+			)}
 		>
 			<header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
 				<h2 className="flex flex-wrap items-center gap-x-1.5 text-sm font-semibold">

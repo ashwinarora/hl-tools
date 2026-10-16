@@ -171,22 +171,32 @@ export function Figure({
 	value,
 	unit,
 	extra,
+	big = false,
 }: {
 	label: ReactNode;
 	value: ReactNode;
 	unit?: string;
 	extra?: ReactNode;
+	/** A key figure at the top of a page, set larger. */
+	big?: boolean;
 }) {
 	return (
 		<div className="min-w-0 px-4 py-3">
-			<dt className="flex items-center gap-1 text-xs text-muted-foreground">
+			<dt className="flex min-h-5 items-center gap-1 text-xs text-muted-foreground">
 				{label}
 				{extra}
 			</dt>
-			<dd className="mt-0.5 font-mono text-lg tabular-nums [overflow-wrap:anywhere] min-[861px]:text-xl">
+			<dd
+				className={cn(
+					"mt-0.5 font-mono tabular-nums [overflow-wrap:anywhere]",
+					big
+						? "mt-1 text-xl font-medium leading-7 tracking-tight min-[861px]:text-2xl"
+						: "text-lg min-[861px]:text-xl",
+				)}
+			>
 				{value}
 				{unit && (
-					<span className="ml-1.5 font-sans text-xs text-muted-foreground">
+					<span className="ml-1.5 font-sans text-xs font-normal tracking-normal text-muted-foreground">
 						{unit}
 					</span>
 				)}

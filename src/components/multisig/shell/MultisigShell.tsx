@@ -30,7 +30,7 @@ import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
 import { useTreasuryNames } from "../treasuryName";
 import { Btn, Count, Tag } from "./kit";
-import { Rail, RailHeading, RailLink } from "./Rail";
+import { Rail, RailHeading, RailLink, SectionMark } from "./Rail";
 import { BelowTitleProvider } from "./ShellPage";
 import { useStickyTop } from "./useStickyTop";
 import { WalletBox, WalletSummary } from "./WalletBox";
@@ -49,11 +49,11 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 	return (
 		<div className={MULTISIG_WRAP}>
 			{/* Wider than the hub's pages: the rail stays slim, the screen takes the rest. */}
-			<div className="grid grid-cols-1 items-start gap-4 pb-12 pt-4 min-[861px]:grid-cols-[228px_minmax(0,1fr)] min-[861px]:gap-7 min-[861px]:pb-16 min-[861px]:pt-6 xl:gap-8">
-				{/* The rail stays in view; a long one sticks once its end is reached. */}
+			<div className="grid grid-cols-1 items-start gap-4 pb-12 pt-4 min-[861px]:grid-cols-[248px_minmax(0,1fr)] min-[861px]:gap-7 min-[861px]:pb-16 min-[861px]:pt-6 xl:gap-8">
+				{/* The rail stays in view under the site header while it fits the window; a longer one scrolls with the page. */}
 				<aside
 					ref={rail.ref}
-					style={{ top: rail.top }}
+					style={rail.style}
 					aria-label="Multisig navigation"
 					className="sticky hidden flex-col gap-4 min-[861px]:flex"
 				>
@@ -86,6 +86,7 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 					</Rail>
 				</aside>
 				<main id="multisig-main" tabIndex={-1} className="min-w-0 outline-none">
+					<PhoneBar />
 					{relay.mode === "on" && <NetworkHint />}
 					{relay.mode === "on" && <AwayKeeper />}
 					{relay.mode === "on" && <TitleCount />}
@@ -190,11 +191,19 @@ function RailNav() {
 							key={`${t.network}:${t.address}`}
 							to="/multisig/t/$network/$address"
 							params={{ network: t.network, address: t.address }}
-							sub={`${shortAddress(t.address)} · ${
-								t.frozenAt === null
-									? `${t.threshold} of ${t.signers.length}`
-									: "no longer a multi-sig"
-							}`}
+							// the address and the threshold each whole: the second wraps rather than being cut
+							sub={
+								<>
+									<span className="whitespace-nowrap">
+										{shortAddress(t.address)} ·
+									</span>{" "}
+									<span className="whitespace-nowrap">
+										{t.frozenAt === null
+											? `${t.threshold} of ${t.signers.length}`
+											: "no longer a multi-sig"}
+									</span>
+								</>
+							}
 							trailing={
 								<>
 									{t.unread && <UnreadDot />}
@@ -284,6 +293,41 @@ function MobileSwitcher() {
 			<option value="__create">+ {CREATE.title}</option>
 			<option value="__add">+ {RELAY_COPY.addExisting}</option>
 		</select>
+	);
+}
+
+/**
+ * On a phone, above everything else in the section: its mark and name, so
+ * the reader knows where they are, and what needs them, one tap away. The
+ * wallet bar under the page's title has the rest of the rail.
+ */
+function PhoneBar() {
+	const relay = useRelay();
+	return (
+		<div className="mb-3 flex min-h-11 items-center justify-between gap-3 border-b border-border min-[861px]:hidden">
+			<SectionMark className="min-h-11 self-center" />
+			{relay.mode === "on" && <PhoneNeedsYou />}
+		</div>
+	);
+}
+
+const phoneLink =
+	"inline-flex min-h-11 items-center gap-2 rounded-md px-1.5 text-[13px] font-medium no-underline hover:text-foreground";
+
+function PhoneNeedsYou() {
+	const nav = useNav();
+	return (
+		<Link
+			to="/multisig"
+			activeOptions={{ exact: true }}
+			className={phoneLink}
+			activeProps={{ className: "text-foreground", "aria-current": "page" }}
+			inactiveProps={{ className: "text-muted-foreground" }}
+		>
+			Needs you
+			{nav.unread && <UnreadDot />}
+			<Count n={nav.needs} quiet={nav.needs === 0} label="need you" />
+		</Link>
 	);
 }
 
@@ -386,7 +430,8 @@ function FirstUse() {
 		<Callout
 			tone="warning"
 			title={RELAY_COPY.firstUseTitle}
-			className="mb-4"
+			// lines of about 90 characters, however wide the screen
+			className="mb-4 max-w-[40rem]"
 			action={
 				<Btn size="sm" variant="outline" onClick={dismiss}>
 					Got it

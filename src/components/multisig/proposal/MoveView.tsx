@@ -1,4 +1,4 @@
-import type { Address, Issue, Move, Proposal } from "@hl-tools/core";
+import type { Address, Issue, Move, Network, Proposal } from "@hl-tools/core";
 import { cutTo } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -36,6 +36,8 @@ import {
 import type { RelayClient } from "../relay/client";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
+import { AddressFact, Fact, Facts } from "../shell/Facts";
+import { Headline } from "../shell/Headline";
 import { Heard } from "../shell/Heard";
 import { Help } from "../shell/Help";
 import {
@@ -72,6 +74,7 @@ import { SignaturesPanel } from "./SignaturesPanel";
 import { TellCoSigners } from "./TellCoSigners";
 import { type MoveStepState, useMoveStep } from "./useMoveStep";
 import type { ProposalDoc } from "./useProposalDoc";
+import { Restated, StopLines } from "./YourPart";
 
 const TONE: Record<MovePhase, Tone> = {
 	judging: "neutral",
@@ -238,6 +241,22 @@ export function MoveView({
 	);
 	// on a phone, the bar at the bottom brings this wallet's part into view
 	const partRef = useRef<HTMLDivElement>(null);
+	// whom the two steps name (a validator, a vault), each once
+	const parties = [
+		...one.description.parties,
+		...two.description.parties,
+	].filter(
+		(p, i, all) =>
+			all.findIndex((q) => q.role === p.role && q.address === p.address) === i,
+	);
+	// the stop notices that apply, by title, said again above the buttons
+	const stops = [
+		...new Set(
+			docs.flatMap((d) =>
+				d.relay.issue?.severity === "error" ? [d.relay.issue.message] : [],
+			),
+		),
+	];
 	const relayIssues = [...issues[0], ...issues[1]].filter((i) =>
 		i.code.startsWith("relay."),
 	);
@@ -307,6 +326,54 @@ export function MoveView({
 								>
 									<Sentence parts={stage.detailParts} />
 								</Callout>
+								{/* The confirmation, right under where the move stands: the move
+								    set like a transfer, then whom it names, each address in full. */}
+								<Card
+									title="The move"
+									actions={<NetTag network={target.network} />}
+								>
+									<Headline text={sentence} />
+									<p className="mt-2.5 text-[13px] text-muted-foreground">
+										Two proposals, shown as one. Each is signed by itself, and
+										the second is sent only once Hyperliquid has accepted the
+										first.
+									</p>
+									<Facts className="mt-4 border-t border-border pt-3.5">
+										<AddressFact label="Treasury" address={target.address} />
+										{parties.map((party) => (
+											<AddressFact
+												key={`${party.role}:${party.address}`}
+												label={party.role === "vault" ? "Vault" : "Validator"}
+												address={party.address}
+												room="1.75rem"
+											>
+												<Who address={party.address} full editable />
+												{party.address === me && " (you)"}
+											</AddressFact>
+										))}
+										<AddressFact
+											label={
+												<>
+													Finaliser <Help k="finaliser" />
+												</>
+											}
+											address={finaliser}
+										>
+											<Who address={finaliser} full />
+											{finaliser === me ? " (you)" : ""}
+										</AddressFact>
+										{first.meta.note && (
+											<Fact label="Note">{first.meta.note}</Fact>
+										)}
+									</Facts>
+									{(first.meta.title || first.meta.note) && (
+										<p className="mt-3 text-xs text-subtle-foreground">
+											The title and note are not signed: whoever shared the
+											proposals wrote them. The two actions below are what
+											signers sign.
+										</p>
+									)}
+								</Card>
 								<FirstSign canSign={!stage.settled && stage.canSign} />
 								<Notices
 									items={{
@@ -354,48 +421,6 @@ export function MoveView({
 						}
 						main={
 							<>
-								<Card title="The move">
-									<p className="text-balance text-[17px] font-medium [overflow-wrap:anywhere]">
-										{sentence}
-									</p>
-									<p className="mt-1.5 text-[13px] text-muted-foreground">
-										Two proposals, shown as one. Each is signed by itself, and
-										the second is sent only once Hyperliquid has accepted the
-										first.
-									</p>
-									<dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
-										<dt className="pt-0.5 text-xs text-muted-foreground">
-											Treasury
-										</dt>
-										<dd className="font-mono text-[13px] [overflow-wrap:anywhere]">
-											{target.address}
-										</dd>
-										<dt className="flex items-center gap-1 pt-0.5 text-xs text-muted-foreground">
-											Finaliser <Help k="finaliser" />
-										</dt>
-										<dd className="text-[13px]">
-											<Who address={finaliser} full />
-											{finaliser === me ? " (you)" : ""}
-										</dd>
-										{first.meta.note && (
-											<>
-												<dt className="pt-0.5 text-xs text-muted-foreground">
-													Note
-												</dt>
-												<dd className="[overflow-wrap:anywhere]">
-													{first.meta.note}
-												</dd>
-											</>
-										)}
-									</dl>
-									{(first.meta.title || first.meta.note) && (
-										<p className="mt-3 text-xs text-subtle-foreground">
-											The title and note are not signed: whoever shared the
-											proposals wrote them. The two actions below are what
-											signers sign.
-										</p>
-									)}
-								</Card>
 								{steps.map((s, i) => (
 									<StepCard
 										key={s.proposal.digest}
@@ -416,6 +441,9 @@ export function MoveView({
 											steps={steps}
 											signers={signersNow}
 											now={clock}
+											// what is signed, said again where it is signed, and every stop
+											restate={{ headline: sentence, network: target.network }}
+											stops={stops}
 										/>
 									</div>
 								)}
@@ -682,10 +710,16 @@ function MovePart({
 	steps,
 	signers,
 	now,
+	restate,
+	stops,
 }: {
 	steps: readonly [MoveStepState, MoveStepState];
 	signers: readonly Address[];
 	now: number;
+	/** What is signed, said again at the top of this part. */
+	restate: { readonly headline: string; readonly network: Network };
+	/** The titles of the stop notices that apply, said again above the buttons. */
+	stops: readonly string[];
 }) {
 	const wallet = useWalletSigner();
 	const relay = useRelay();
@@ -956,6 +990,7 @@ function MovePart({
 			}
 			actions={isFinaliser ? <Tag tone="you">you are the finaliser</Tag> : null}
 		>
+			<Restated {...restate} />
 			{(stage.canExecute || stage.canSign) &&
 				coded.map((s) => (
 					<div key={s.proposal.digest} className="mb-3">
@@ -968,6 +1003,9 @@ function MovePart({
 						/>
 					</div>
 				))}
+			{(stage.canExecute || stage.canSign || waits) && (
+				<StopLines titles={stops} />
+			)}
 			{any && (
 				<div className="flex flex-wrap items-center gap-2">
 					{stage.canExecute ? (

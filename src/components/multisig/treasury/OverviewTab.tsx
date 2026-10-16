@@ -15,8 +15,6 @@ import {
 	useMultisigPrefs,
 	usePrefsHydrated,
 } from "#/store/multisigPrefsStore";
-import { useStaking } from "../live/useStaking";
-import { useVaults } from "../live/useVaults";
 import { API_WALLET_FORMER, API_WALLET_SENTENCE } from "../model/apiWallet";
 import {
 	amountText,
@@ -37,15 +35,13 @@ import { balanceView, modeLabel } from "../model/mode";
 import { RELAY_COPY } from "../model/relay/copy";
 import { type LastSigned, lastSignedText } from "../model/relay/lastSigned";
 import type { TreasuryRow } from "../model/relay/rows";
-import { stakingSummaryLine } from "../model/staking";
 import { fromNow, localDateTime } from "../model/time";
-import { vaultsSummaryLine } from "../model/vault";
 import { Who } from "../names/Names";
 import { Checked } from "../shell/Checked";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
 import { Btn, Card, linkButtonSm, PersonRow, Tag } from "../shell/kit";
-import { Figure, SourceLine, toneOf, Usdc, useNow, When } from "../shell/live";
+import { toneOf, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
 import type { KnownProposal } from "./useKnownProposals";
 import { useLastSigned } from "./useLastSigned";
@@ -233,14 +229,11 @@ export function OverviewTab({
 	const orders = live.openOrders ?? [];
 	const mode = state.mode ? modeLabel(state.mode) : null;
 	const reading = "Reading from Hyperliquid…";
-	// which figures there are depends on the mode: nothing is laid out before it is known
+	// which figures there are depends on the mode (the figures themselves are
+	// the tiles above the page's sections, with what is staked and in vaults)
 	const view = state.modePending
 		? null
 		: balanceView(state.mode, live.perp, live.spot);
-	// one read a minute: what is staked does not show in the spot balances
-	const staked = stakingSummaryLine(useStaking(state.target).summary);
-	// and so is what sits in a vault
-	const inVaults = vaultsSummaryLine(useVaults(state.target).deposits);
 
 	// who signs: the chain's list once it is read; the relay's copy until then,
 	// and for an account that is no longer a multi-sig
@@ -267,11 +260,6 @@ export function OverviewTab({
 		// From 1280 px: what it holds on the left, who controls it beside it.
 		<div className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start xl:gap-5">
 			<div className="flex min-w-0 flex-col gap-4">
-				<SourceLine status={live.status} asOf={live.asOf} onRetry={live.retry}>
-					Balances, positions and orders arrive live from Hyperliquid. Nothing
-					here is stored by this tool. <Help k="live" />
-				</SourceLine>
-
 				{live.otherDexes && live.otherDexes.length > 0 && (
 					<div className="rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-xs text-muted-foreground">
 						This treasury also holds something in{" "}
@@ -320,54 +308,6 @@ export function OverviewTab({
 					}
 					flush
 				>
-					{view === null ? (
-						<p className="flex min-h-[70px] items-center border-b border-border px-4 text-sm text-muted-foreground">
-							{reading}
-						</p>
-					) : (
-						<dl className="grid grid-cols-1 divide-y divide-border border-b border-border min-[641px]:grid-cols-3 min-[641px]:divide-x min-[641px]:divide-y-0">
-							{view.kind === "one" ? (
-								<>
-									<Figure
-										label="Balance"
-										value={<Usdc value={view.balance} />}
-										unit="USDC"
-									/>
-									<Figure
-										label="Can be moved now"
-										extra={<Help k="movable" />}
-										value={<Usdc value={view.movable} />}
-										unit="USDC"
-									/>
-									<Figure
-										label="In use"
-										extra={<Help k="inUse" />}
-										value={<Usdc value={view.inUse} />}
-										unit="USDC"
-									/>
-								</>
-							) : (
-								<>
-									<Figure
-										label="Perps account value"
-										value={<Usdc value={view.perpsValue} />}
-										unit="USDC"
-									/>
-									<Figure
-										label="Can be moved now"
-										extra={<Help k="movable" />}
-										value={<Usdc value={view.perpsMovable} />}
-										unit="USDC"
-									/>
-									<Figure
-										label="Spot USDC"
-										value={<Usdc value={view.spotUsdc} />}
-										unit="USDC"
-									/>
-								</>
-							)}
-						</dl>
-					)}
 					<DataTable
 						label="Spot balances"
 						columns={SPOT}
@@ -376,40 +316,6 @@ export function OverviewTab({
 						initialSort={{ id: "total", desc: true }}
 						empty={live.spot === null ? reading : "No spot balances."}
 					/>
-					{staked && (
-						// HYPE that left spot for staking is still the treasury's
-						<p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border px-4 py-2.5 text-[13px]">
-							<span className="text-muted-foreground">In staking:</span>
-							<span>{staked}</span>
-							{treasury && (
-								<Link
-									to="/multisig/t/$network/$address"
-									params={{ network, address }}
-									search={{ tab: "staking" }}
-									className="text-xs underline underline-offset-2"
-								>
-									Staking
-								</Link>
-							)}
-						</p>
-					)}
-					{inVaults && (
-						// USDC that went into a vault is still the treasury's
-						<p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border px-4 py-2.5 text-[13px]">
-							<span className="text-muted-foreground">In vaults:</span>
-							<span>{inVaults}</span>
-							{treasury && (
-								<Link
-									to="/multisig/t/$network/$address"
-									params={{ network, address }}
-									search={{ tab: "vaults" }}
-									className="text-xs underline underline-offset-2"
-								>
-									Vaults
-								</Link>
-							)}
-						</p>
-					)}
 				</Card>
 
 				{positions.length > 0 && (

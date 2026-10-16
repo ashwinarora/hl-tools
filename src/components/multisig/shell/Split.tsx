@@ -12,7 +12,8 @@ type From = "shell" | "xl";
 const GRID: Record<From, string> = {
 	shell:
 		"grid grid-cols-1 items-start gap-4 min-[861px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-5",
-	xl: "grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-5",
+	// a little wider from 1400 px: the preview's addresses and the two Create buttons each on one line
+	xl: "grid grid-cols-1 items-start gap-4 [--side:380px] min-[1400px]:[--side:408px] xl:grid-cols-[minmax(0,1fr)_var(--side)] xl:gap-5",
 };
 
 const STICKY: Record<From, string> = {
@@ -22,7 +23,9 @@ const STICKY: Record<From, string> = {
 
 /**
  * A screen in two columns: a wide main one, and beside it a narrower one
- * that stays in view (the signatures, the preview and Create, a summary).
+ * that stays in view under the site's header while it fits the window (the
+ * signatures, the preview and Create, a summary); a longer one scrolls with
+ * the page, never in a box of its own.
  * `top` sits above the main column, across both on a mid-sized screen; from
  * 1280 px the side column rises beside it. On a phone everything is one
  * column, and the reading order is always the order given: top, main, side.
@@ -74,10 +77,12 @@ export function Split({
 			</div>
 			<div
 				ref={sticky.ref}
-				// only a sticky column reads `top`; one column on a phone ignores it
-				style={{ top: sticky.top }}
+				// under the site's header while it fits; one column on a phone ignores it
+				style={sticky.style}
 				className={cn(
 					"flex min-w-0 flex-col gap-4 self-start",
+					// beside a form: what is signed and the button that creates it close together
+					from === "xl" && "xl:gap-3",
 					STICKY[from],
 					from === "shell"
 						? withTop

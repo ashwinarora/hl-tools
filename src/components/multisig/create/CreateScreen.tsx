@@ -59,7 +59,14 @@ import { requestTreasury } from "../relay/api";
 import { useRequest } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
 import { Help } from "../shell/Help";
-import { Btn, Card, linkButton, NetTag, SignsTag } from "../shell/kit";
+import {
+	Btn,
+	Card,
+	linkButton,
+	NetTag,
+	SignsTag,
+	StepTitle,
+} from "../shell/kit";
 import { useNow } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
@@ -583,7 +590,7 @@ function Wizard({
 			from="xl"
 			main={
 				<>
-					<Card title={`1 · ${CREATE.accountTitle}`}>
+					<Card title={<StepTitle n={1}>{CREATE.accountTitle}</StepTitle>}>
 						<div className="flex flex-col gap-3">
 							<div>
 								<p className="text-sm font-medium">
@@ -691,7 +698,7 @@ function Wizard({
 					</Card>
 
 					<Card
-						title={`2 · ${CREATE.signersTitle}`}
+						title={<StepTitle n={2}>{CREATE.signersTitle}</StepTitle>}
 						actions={
 							<span className="text-xs tabular-nums text-muted-foreground">
 								{n} of at most {SIGNERS_MAX}
@@ -742,7 +749,7 @@ function Wizard({
 					<Card
 						title={
 							<span className="inline-flex items-center gap-1.5">
-								3 · {CREATE.howManyTitle}
+								<StepTitle n={3}>{CREATE.howManyTitle}</StepTitle>
 								<Help k="stolenLost" />
 							</span>
 						}

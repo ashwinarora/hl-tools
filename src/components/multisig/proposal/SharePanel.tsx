@@ -30,6 +30,7 @@ import {
 	openText,
 	type Published,
 } from "../model/transport";
+import { OFF_LOOK } from "../shell/kit";
 import type { StoreResult } from "./useProposalDoc";
 
 const NO_MORE: readonly {
@@ -286,6 +287,7 @@ export function SharePanel({
 			</Field>
 			<div className="flex flex-wrap items-center gap-2">
 				<Button
+					className={OFF_LOOK}
 					size="sm"
 					variant="outline"
 					disabled={!text.trim()}

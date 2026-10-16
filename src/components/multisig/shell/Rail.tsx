@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import type { ComponentProps, ReactNode } from "react";
+import { tool } from "#/lib/tools";
 import { cn } from "#/lib/utils";
+import { MultisigMark } from "./MultisigMark";
 import { WalletBox } from "./WalletBox";
 
 const item =
@@ -51,10 +53,11 @@ export function RailLink({
 			className={item}
 			activeProps={{ className: cn(item, current), "aria-current": "page" }}
 		>
+			{/* never cut: a long name or its second line wraps instead */}
 			<span className="min-w-0 flex-1">
-				<span className="block truncate">{children}</span>
+				<span className="block [overflow-wrap:anywhere]">{children}</span>
 				{sub && (
-					<span className="block truncate font-mono text-2xs text-subtle-foreground">
+					<span className="block font-mono text-2xs text-subtle-foreground">
 						{sub}
 					</span>
 				)}
@@ -78,11 +81,30 @@ export function Rail({
 }) {
 	return (
 		<>
+			<SectionMark />
 			<WalletBox />
 			{children}
 			<div className="flex flex-col gap-0.5 border-t border-border pt-2.5">
 				{foot}
 			</div>
 		</>
+	);
+}
+
+/** The section's mark and name: where the reader is, at the top of the rail. */
+export function SectionMark({ className }: { className?: string }) {
+	return (
+		<Link
+			to="/multisig"
+			className={cn(
+				"inline-flex items-center gap-2 self-start rounded-md px-1 py-0.5 text-foreground no-underline",
+				className,
+			)}
+		>
+			<MultisigMark className="size-6" />
+			<span className="text-[15px] font-semibold tracking-tight">
+				{tool("multisig-sign").short}
+			</span>
+		</Link>
 	);
 }

@@ -1,12 +1,11 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { cn } from "#/lib/utils";
-import { GithubMark, isMultisigPath, MULTISIG_WRAP } from "./Header";
+import { GithubMark, MULTISIG_WRAP } from "./Header";
 
 export default function Footer() {
 	const year = new Date().getFullYear();
-	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	// lines up with the Multisig section's wider layout on its pages
-	const wrap = isMultisigPath(pathname) ? MULTISIG_WRAP : "page-wrap";
+	// as wide as the header on every page
+	const wrap = MULTISIG_WRAP;
 
 	return (
 		<footer className="border-t border-border text-muted-foreground">

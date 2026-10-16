@@ -63,18 +63,17 @@ export function Logo() {
 const REPO = "https://github.com/ashwinarora/hl-tools";
 
 /**
- * The Multisig section is laid out wider than the rest of the site; on its
- * pages the header and the footer line up with it. Every other page keeps
- * the site's `page-wrap`.
+ * The site's header and footer, and the Multisig section, run up to 1440 px
+ * wide. The header and the footer use it on every page, so the logo and the
+ * navigation stay put between pages; a page's own content keeps its width
+ * (the tools: `page-wrap`).
  */
 export const MULTISIG_WRAP = "mx-auto w-full max-w-[1440px] px-4 sm:px-6";
-export const isMultisigPath = (pathname: string) =>
-	pathname === "/multisig" || pathname.startsWith("/multisig/");
 
 export default function Header() {
 	const [open, setOpen] = useState(false);
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	const wrap = isMultisigPath(pathname) ? MULTISIG_WRAP : "page-wrap";
+	const wrap = MULTISIG_WRAP;
 	// biome-ignore lint/correctness/useExhaustiveDependencies: close the mobile menu on navigation
 	useEffect(() => setOpen(false), [pathname]);
 

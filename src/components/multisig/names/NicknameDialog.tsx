@@ -17,6 +17,7 @@ import {
 	nicknameRefusal,
 	nicknameText,
 } from "../model/relay/nicknames";
+import { OFF_LOOK } from "../shell/kit";
 import { useSetNickname } from "./useNicknames";
 
 /**
@@ -134,6 +135,7 @@ export function NicknameDialog({
 					<DialogFooter className="gap-2 sm:justify-between">
 						{had ? (
 							<Button
+								className={OFF_LOOK}
 								type="button"
 								variant="ghost"
 								disabled={busy}
@@ -146,6 +148,7 @@ export function NicknameDialog({
 						)}
 						<span className="flex gap-2">
 							<Button
+								className={OFF_LOOK}
 								type="button"
 								variant="outline"
 								disabled={busy}
@@ -154,6 +157,7 @@ export function NicknameDialog({
 								Cancel
 							</Button>
 							<Button
+								className={OFF_LOOK}
 								type="submit"
 								disabled={busy || text.length === 0 || !!problem}
 							>
