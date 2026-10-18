@@ -20,6 +20,7 @@ import { RELAY_COPY } from "../model/relay/copy";
 import {
 	countNeeds,
 	countOpen,
+	countTreasuriesOn,
 	SECTION_TITLE,
 	tabTitle,
 } from "../model/relay/inbox";
@@ -151,9 +152,7 @@ function useNav() {
 		elsewhere: me && countNeeds(visible, me, other) > 0 ? other : null,
 		other,
 		/** Treasuries on the network that is not selected: an empty list says where they are. */
-		onOther: rows.filter(
-			(t) => t.network === other && !isHidden(t.network, t.address),
-		).length,
+		onOther: countTreasuriesOn(rows, other, isHidden),
 	};
 }
 

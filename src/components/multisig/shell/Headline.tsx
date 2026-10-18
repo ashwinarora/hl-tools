@@ -1,33 +1,8 @@
 import { Fragment } from "react";
 import { cn } from "#/lib/utils";
+import { amountIn } from "../model/headline";
 
-/** The first figure with its unit in a sentence: "1 USDC", "0.02 HYPE". */
-const AMOUNT =
-	/(^|\s)(\d[\d,]*(?:\.\d+)?) ([A-Z][A-Z0-9]{1,11})(?=$|[\s),.;:])/;
 const ADDRESS = /(0x[0-9a-fA-F]{40})/;
-
-/**
- * A sentence cut around its amount, the words kept exactly: "Send" · "1
- * USDC" · "to 0x…". Null when the sentence names no amount.
- */
-export function amountIn(text: string): {
-	before: string;
-	figure: string;
-	unit: string;
-	after: string;
-} | null {
-	const m = AMOUNT.exec(text);
-	if (!m) return null;
-	const start = m.index + (m[1] ?? "").length;
-	const figure = m[2] ?? "";
-	const unit = m[3] ?? "";
-	return {
-		before: text.slice(0, start).trimEnd(),
-		figure,
-		unit,
-		after: text.slice(start + figure.length + 1 + unit.length).trimStart(),
-	};
-}
 
 /**
  * The type of a whole address on a line of its own: monospace, never broken,

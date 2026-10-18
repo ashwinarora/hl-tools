@@ -51,7 +51,7 @@ function NotATreasury({
  * side and wrap onto a new row where the screen is narrow; a thin line
  * parts them either way.
  */
-function Fact({
+function StripFact({
 	label,
 	children,
 	mono = false,
@@ -155,7 +155,7 @@ export function TreasuryStrip({
 				<>
 					{/* the clipped edge hides each row's first dividing line */}
 					<dl className="flex flex-wrap overflow-hidden">
-						<Fact label="Signers" className="flex-[1.2_1_12rem]">
+						<StripFact label="Signers" className="flex-[1.2_1_12rem]">
 							<span className="block">
 								{state.policy?.threshold} of{" "}
 								{state.policy?.authorizedUsers.length} must sign
@@ -172,8 +172,8 @@ export function TreasuryStrip({
 									</span>
 								))}
 							</span>
-						</Fact>
-						<Fact label={API_WALLET_ROW} className="flex-[1.2_1_12rem]">
+						</StripFact>
+						<StripFact label={API_WALLET_ROW} className="flex-[1.2_1_12rem]">
 							{state.agents === null ? (
 								"could not be loaded"
 							) : state.agents.length === 0 ? (
@@ -208,40 +208,40 @@ export function TreasuryStrip({
 									))}
 								</span>
 							)}
-						</Fact>
+						</StripFact>
 						{mode && (
-							<Fact label="Account mode" className="flex-[1.5_1_15rem]">
+							<StripFact label="Account mode" className="flex-[1.5_1_15rem]">
 								<span className="flex flex-col items-start gap-1">
 									<Tag tone={mode.caution ? "warn" : "gray"}>{mode.tag}</Tag>
 									<span className="text-xs text-muted-foreground">
 										{mode.text}
 									</span>
 								</span>
-							</Fact>
+							</StripFact>
 						)}
 						{view?.kind === "one" ? (
 							<>
-								<Fact label="Balance" mono>
+								<StripFact label="Balance" mono>
 									{view.balance === null
 										? "—"
 										: `${view.balance} USDC${others}`}
-								</Fact>
-								<Fact label="Can be moved now" mono>
+								</StripFact>
+								<StripFact label="Can be moved now" mono>
 									{view.movable === null ? "—" : `${view.movable} USDC`}
-								</Fact>
+								</StripFact>
 							</>
 						) : view ? (
 							<>
-								<Fact label="Perps (account value · withdrawable)" mono>
+								<StripFact label="Perps (account value · withdrawable)" mono>
 									{view.perpsValue === null
 										? "—"
 										: `${view.perpsValue} · ${view.perpsMovable} USDC`}
-								</Fact>
-								<Fact label="Spot" mono>
+								</StripFact>
+								<StripFact label="Spot" mono>
 									{view.spotUsdc === null
 										? "—"
 										: `${view.spotUsdc} USDC${others}`}
-								</Fact>
+								</StripFact>
 							</>
 						) : null}
 					</dl>

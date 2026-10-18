@@ -1,5 +1,4 @@
 import {
-	type ActionPartyRole,
 	type Address,
 	cutTo,
 	describeAction,
@@ -15,7 +14,7 @@ import {
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Callout } from "#/components/hub/status";
 import {
 	FLAG_TEXT,
@@ -84,7 +83,8 @@ import { ActionBar } from "./ActionBar";
 import { CopyNotes } from "./CopyNotes";
 import { FirstSign } from "./FirstSign";
 import { Notices } from "./Notices";
-import { OlderSends } from "./OlderSends";
+import { OlderSends, useOlderSends } from "./OlderSends";
+import { PARTY } from "./parties";
 import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
@@ -141,16 +141,6 @@ const REPROPOSABLE: ReadonlySet<Phase> = new Set([
 ]);
 
 /** What an address named in the action is to it, as a label. */
-const PARTY: Record<ActionPartyRole, string> = {
-	destination: "Destination",
-	agent: "API wallet",
-	signer: "Signer",
-	vault: "Vault",
-	subAccount: "Sub-account",
-	builder: "Builder",
-	validator: "Validator",
-	user: "Account",
-};
 const NO_SIGNERS: readonly Address[] = [];
 
 /** The stop notices' titles, said in full above the action and again beside the buttons. */
@@ -516,7 +506,7 @@ export function ProposalView({
 
 	// The stop notices that apply, by title: shown in full above the action
 	// and said again, one line each, right above the buttons that sign or send.
-	const [olderTitle, setOlderTitle] = useState<string | null>(null);
+	const older = useOlderSends(proposal, COSTED.has(stage.phase));
 	const rejectedTitle =
 		stage.failedAttempt && stage.phase !== "carried-out"
 			? `The last attempt to send it was refused: ${stage.failedAttempt.message}`
@@ -525,7 +515,7 @@ export function ProposalView({
 	const stopTitles: Partial<Record<NoticeId, string | null>> = {
 		"refused-now": blocked?.title ?? null,
 		shortfall: shortfall.length > 0 ? SHORTFALL_TITLE : null,
-		"older-sends": COSTED.has(stage.phase) ? olderTitle : null,
+		"older-sends": older.title,
 		rejected: rejectedTitle,
 		"signers-changed": signersChanged ? SIGNERS_CHANGED_TITLE : null,
 		"not-saved": doc.storageError ? NOT_SAVED_TITLE : null,
@@ -987,7 +977,7 @@ export function ProposalView({
 											</Callout>
 										),
 										"older-sends": COSTED.has(stage.phase) && (
-											<OlderSends proposal={proposal} onTitle={setOlderTitle} />
+											<OlderSends older={older} />
 										),
 										// once nobody signs any more, how signatures are counted is moot
 										"signers-changed": signersChanged && (

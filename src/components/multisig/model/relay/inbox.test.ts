@@ -4,6 +4,7 @@ import { A, B, C, TREASURY } from "#/test/keys";
 import {
 	countNeeds,
 	countOpen,
+	countTreasuriesOn,
 	finishLabel,
 	groupInbox,
 	type InboxEntry,
@@ -317,5 +318,25 @@ describe("why a proposal cannot be finished", () => {
 			"its finaliser left",
 			"a later send went first",
 		]);
+	});
+});
+
+describe("how many treasuries are on a network", () => {
+	const t = (network: "mainnet" | "testnet", n: number) => ({
+		network,
+		address: `0x${String(n).padStart(40, "0")}` as Address,
+	});
+	const rows = [t("testnet", 1), t("testnet", 2), t("mainnet", 3)];
+	it("counts that network's, leaving out the hidden ones", () => {
+		expect(countTreasuriesOn(rows, "testnet", () => false)).toBe(2);
+		expect(countTreasuriesOn(rows, "mainnet", () => false)).toBe(1);
+		expect(
+			countTreasuriesOn(
+				rows,
+				"testnet",
+				(_n, a) => a === t("testnet", 2).address,
+			),
+		).toBe(1);
+		expect(countTreasuriesOn([], "testnet", () => false)).toBe(0);
 	});
 });

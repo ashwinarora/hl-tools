@@ -8,7 +8,12 @@ import {
 import { useNetwork } from "#/store/networkStore";
 import { CREATE } from "../model/create";
 import { RELAY_COPY } from "../model/relay/copy";
-import { countNeeds, groupInbox, orderMatters } from "../model/relay/inbox";
+import {
+	countNeeds,
+	countTreasuriesOn,
+	groupInbox,
+	orderMatters,
+} from "../model/relay/inbox";
 import { type OpenProposal, useOpenProposals } from "../relay/openProposals";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -70,11 +75,11 @@ export function InboxScreen() {
 		groups.dead.length;
 	const name = (p: OpenProposal) => nameOf(p.network, p.treasury);
 	const hasTreasuries = treasuries.some((t) => t.network === network);
-	const onOther = treasuries.filter(
-		(t) =>
-			t.network === other &&
-			!(hydrated && hidden.includes(treasuryKey(t.network, t.address))),
-	).length;
+	const onOther = countTreasuriesOn(
+		treasuries,
+		other,
+		(n, a) => hydrated && hidden.includes(treasuryKey(n, a)),
+	);
 
 	return (
 		<ShellPage

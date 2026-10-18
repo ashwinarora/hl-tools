@@ -68,6 +68,7 @@ import { CodePanel } from "./CodePanel";
 import { CopyNotes } from "./CopyNotes";
 import { FirstSign } from "./FirstSign";
 import { Notices } from "./Notices";
+import { PARTY } from "./parties";
 import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
@@ -343,7 +344,7 @@ export function MoveView({
 										{parties.map((party) => (
 											<AddressFact
 												key={`${party.role}:${party.address}`}
-												label={party.role === "vault" ? "Vault" : "Validator"}
+												label={PARTY[party.role]}
 												address={party.address}
 												room="1.75rem"
 											>
@@ -593,7 +594,7 @@ function StepCard({
 			{description.parties.map((party) => (
 				<p key={`${party.role}:${party.address}`} className="mt-2 text-[13px]">
 					<span className="mr-2 text-xs text-muted-foreground">
-						{party.role === "vault" ? "Vault" : "Validator"}
+						{PARTY[party.role]}
 					</span>
 					<Who address={party.address} full editable />
 					{party.address === me && " (you)"}

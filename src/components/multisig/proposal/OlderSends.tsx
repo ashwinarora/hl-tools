@@ -1,7 +1,6 @@
 import type { Address, Proposal } from "@hl-tools/core";
 import { wouldShutOut } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { Callout } from "#/components/hub/status";
 import { sendsBefore } from "../model/send";
 import { waitingProposals } from "../model/signerSet";
@@ -11,7 +10,7 @@ import { useNow } from "../shell/live";
 import { useKnownProposals } from "../treasury/useKnownProposals";
 
 /** A proposal still waiting, as this warning names it. */
-interface Waiting {
+export interface Waiting {
 	readonly digest: string;
 	readonly label: string;
 	readonly action: { readonly type?: unknown };
@@ -52,20 +51,23 @@ function Named({ items }: { items: readonly Waiting[] }) {
 	);
 }
 
+export interface Older {
+	/** Older sends that this one, carried out first, would shut out for good. */
+	readonly shutOut: readonly Waiting[];
+	/** For a withdrawal: older sends that should go first. */
+	readonly before: readonly Waiting[];
+	/** The warning's title, or null when there is nothing to say. */
+	readonly title: string | null;
+}
+
+const NONE: Older = { shutOut: [], before: [], title: null };
+
 /**
- * Older USDC sends of the treasury still waiting, said to every signer while
- * this proposal can be signed: a send carried out first shuts older sends and
- * withdrawals out for good, and a withdrawal should let older sends go first
- * (what it does to them was not measured). Never folded away.
+ * The older USDC sends this proposal has to respect, worked out once for the
+ * page: the notice and the line above the buttons both say what this says.
+ * With `enabled` false (a proposal that can no longer be sent) nothing is read.
  */
-export function OlderSends({
-	proposal,
-	onTitle,
-}: {
-	proposal: Proposal;
-	/** Told the warning's title while it is shown (null when it is not), to repeat it beside the buttons. */
-	onTitle?: (title: string | null) => void;
-}) {
+export function useOlderSends(proposal: Proposal, enabled: boolean): Older {
 	const relay = useRelay();
 	const now = useNow();
 	const { network, multiSigUser, action } = proposal.payload;
@@ -73,7 +75,12 @@ export function OlderSends({
 	// otherwise this browser's own proposals, as the propose form reads them
 	const signedIn = relay.mode === "on";
 	const open = useOpenProposals();
-	const known = useKnownProposals(network, multiSigUser as Address, !signedIn);
+	const known = useKnownProposals(
+		network,
+		multiSigUser as Address,
+		enabled && !signedIn,
+	);
+	if (!enabled) return NONE;
 	const items: Waiting[] = signedIn
 		? open.items
 				.filter(
@@ -107,8 +114,18 @@ export function OlderSends({
 					? "An older USDC send is still waiting"
 					: `${before.length} older USDC sends are still waiting`
 				: null;
-	useEffect(() => onTitle?.(title), [onTitle, title]);
-	useEffect(() => () => onTitle?.(null), [onTitle]);
+	return { shutOut, before, title };
+}
+
+/**
+ * Older USDC sends of the treasury still waiting, said to every signer while
+ * this proposal can be signed: a send carried out first shuts older sends and
+ * withdrawals out for good, and a withdrawal should let older sends go first
+ * (what it does to them was not measured). Never folded away. What it says is
+ * `useOlderSends`'s, which the page also repeats above its buttons.
+ */
+export function OlderSends({ older }: { older: Older }) {
+	const { shutOut, before, title } = older;
 	if (shutOut.length > 0 && title) {
 		const one = shutOut.length === 1;
 		return (

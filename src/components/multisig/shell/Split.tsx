@@ -42,6 +42,8 @@ export function Split({
 	from?: From;
 }) {
 	const withTop = top !== undefined && top !== null && top !== false;
+	// nothing to do here (a closed proposal): the side column takes the width
+	const withMain = main !== undefined && main !== null && main !== false;
 	const sticky = useStickyTop<HTMLDivElement>();
 	return (
 		<div
@@ -61,20 +63,22 @@ export function Split({
 					{top}
 				</div>
 			)}
-			<div
-				className={cn(
-					"flex min-w-0 flex-col gap-4",
-					from === "shell"
-						? withTop
-							? "min-[861px]:col-start-1 min-[861px]:row-start-2"
-							: "min-[861px]:col-start-1 min-[861px]:row-start-1"
-						: withTop
-							? "xl:col-start-1 xl:row-start-2"
-							: "xl:col-start-1 xl:row-start-1",
-				)}
-			>
-				{main}
-			</div>
+			{withMain && (
+				<div
+					className={cn(
+						"flex min-w-0 flex-col gap-4",
+						from === "shell"
+							? withTop
+								? "min-[861px]:col-start-1 min-[861px]:row-start-2"
+								: "min-[861px]:col-start-1 min-[861px]:row-start-1"
+							: withTop
+								? "xl:col-start-1 xl:row-start-2"
+								: "xl:col-start-1 xl:row-start-1",
+					)}
+				>
+					{main}
+				</div>
+			)}
 			<div
 				ref={sticky.ref}
 				// under the site's header while it fits; one column on a phone ignores it
@@ -86,7 +90,10 @@ export function Split({
 					STICKY[from],
 					from === "shell"
 						? withTop
-							? "min-[861px]:col-start-2 min-[861px]:row-start-2 xl:row-span-2 xl:row-start-1"
+							? withMain
+								? "min-[861px]:col-start-2 min-[861px]:row-start-2 xl:row-span-2 xl:row-start-1"
+								: // under `top` across both columns, beside it from 1280 px
+									"min-[861px]:col-span-2 min-[861px]:col-start-1 min-[861px]:row-start-2 xl:col-span-1 xl:col-start-2 xl:row-span-2 xl:row-start-1"
 							: "min-[861px]:col-start-2 min-[861px]:row-start-1"
 						: withTop
 							? "xl:col-start-2 xl:row-span-2 xl:row-start-1"

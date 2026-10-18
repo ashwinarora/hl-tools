@@ -1894,6 +1894,20 @@ What decided it: B's propose form put "what every signer will sign" in a box wit
 | Wording | every on-screen string compared with the base: unchanged apart from the step numbers and two colons dropped from tile labels |
 | Suites | 130 files, 3,335 unit tests; types, lint and build clean (no relay or core change) |
 
+**After a code review of the branch (2026-10-18).** Ten findings, each checked against the code:
+
+| Finding | Verdict | Now |
+|---|---|---|
+| The large figure took the first "number + UPPERCASE word" anywhere in the sentence, so an API wallet named "pay 50 USDC daily" read as a 50 USDC payment | real, on a signing page | the figure is only the action's own amount, right after the verb and before any quotation mark (names others write are quoted); the rule moved to `model/headline.ts` with tests |
+| The older-send warning reached the line above the buttons through two effects, one render late | real, minor | `useOlderSends` works it out once; the notice and the line both use it |
+| The "treasuries on the other network" count was written twice | real | one tested `countTreasuriesOn` in `model/relay/inbox.ts` |
+| A closed proposal left an empty column beside its signatures between 861 and 1,279 px | confirmed in the browser at 1024 | with no main column the side column takes the width (`Split`) |
+| The new layout rule forbade a scrolling box for what is signed, yet the exact action's JSON scrolls in its code block | a wording conflict | the rule names the Preview and the buttons that act on it; the expert fold may scroll |
+| Two components named `Fact`; a move's party labelled "Validator" for any role but a vault | real, cosmetic | the strip's is `StripFact`; both proposal pages share one label map (`proposal/parties.ts`) |
+| The phone bar's data hook also runs on wide screens; the header found by measuring | declined | no extra request (the data is the rail's, shared), a measurement that works |
+
+131 files, 3,339 unit tests after it.
+
 Found on the way and fixed on `feat/multisig-live`: the wallet picker listed every wallet once more each time the section was entered again (wagmi's own bug; `src/integrations/wallet/uniqueConnectors.ts`, tested), and Biome refused to run while a Claude Code worktree sat under `.claude/`.
 
 ## Feedback round 1 (2026-10-04)
