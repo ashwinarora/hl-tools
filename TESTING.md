@@ -1858,6 +1858,44 @@ Left, with the reason: 5 (a copy's "accepted" replacing a stored refusal) is the
 - The CSV holds the rows the page has loaded: the Signing log's loaded pages, and the "On Hyperliquid" lists as Hyperliquid sent them (the newest trades and orders, then every new one).
 - Hosting and launch work (headers, the faucet miner's origin, production env) come after this round.
 
+## 22. Multisig: more room, chosen by a panel (2026-10-15 to 2026-10-18)
+
+The owner found the section squished: at 1440×900 the page stopped at 1,200 px, the rail took 252 px and the content had 872 px; on the propose form the left column was about 270 px and still split into two, and the API wallet's "until …" tag spilled out of its box. Four visual versions were built in parallel on their own branches, each with the same rules: Multisig only, no wording, flow, request or backend change. They ran side by side with today's on five ports. A matched set of 19 screenshots per version went to a panel of six independent judges, who did not see the builders' or the session's opinion. A+, version A with what the judges asked for, was then built and chosen by the owner.
+
+### The panel (overall score out of 10)
+
+| Judge | Today | A, more room | B, exchange-style | C, workspace | D, calm document |
+|---|---|---|---|---|---|
+| Exchange product designer | 4 | 7 | 8 | 6 | 5 |
+| Treasury operations lead | 5 | 8 | 7 | 6 | 4 |
+| Signing-safety specialist | 5 | 8 | 4 | 6 | 7 |
+| Design systems and brand lead | 5 | 8 | 7 | 5 | 6 |
+| Accessibility and mobile | 5 | 8 | 6 | 6 | 7 |
+| First-time co-signer | 5 | 7 | 6 | 8 | 6 |
+| Average | 4.8 | 7.7 | 6.3 | 6.2 | 5.8 |
+
+What decided it: B's propose form put "what every signer will sign" in a box with its own scrollbar under a pinned Create card that covered the exact action; C's proposal picture showed the receiver as its first and last four characters (the pattern address poisoning forges) and its multicolour avatars clashed with amber and red; D put a proposal's status after the whole document, below the fold. Every judge wanted D's confirmation block, B's balance tiles and phone section bar, and C's numbered steps carried into A.
+
+### A+ (branch `ui/a-plus`)
+
+| Check | Seen |
+|---|---|
+| Header and footer | one 1,440 px container on every page: the logo sits at the same x on `/`, `/tools/multisig` and `/multisig` (24 px at 1440, 257 px at 1920) |
+| Columns that stay in view | stick at the site header's measured height plus 16 px (73 px), only while they fit the window; the Preview title and its network badge no longer slide under the header |
+| Propose form | Preview, then Create, then the exact-action fold, with no inner scroll box; at 1440×900 the Create buttons end at 856 px once the one-time notice is dismissed |
+| Blocked buttons | grey, with the reason directly under them |
+| Proposal page | status first; under it the action, the amount as the largest figure in tabular numerals, the destination whole, and a Treasury / Destination / Finaliser table with copy buttons; signatures beside it; "Your part" restates the action, the full destination and the network above Sign |
+| Treasury page | balance tiles above "While you were away" and the tabs on every tab ("In staking" and "In vaults" on the Overview only, where they are read today); 2×2 on a phone |
+| Rail | 248 px; names wrap; "2 of 3" and "no longer a multi-sig" are never cut; the teal shield mark with "Multisig" |
+| Phone | a "Multisig · Needs you" bar; help marks have a 24×24 px target |
+| Light theme | "you: signer" chip 6.0:1, "signed · verified" 6.23:1 |
+| Overflow | no element wider than its box and no sideways page scroll at 375, 1024, 1280, 1440 and 1920, both themes, on the inbox, all six treasury tabs, open, expired and move proposals, both propose forms, the wizard, Open and the glossary |
+| An empty network | with mainnet selected and no mainnet treasury: "Looking for testnet? You have 12 treasuries there: switch the network in the header." and in the rail "None on mainnet yet. 12 on testnet." (staged by hiding the mainnet rows in the page only) |
+| Wording | every on-screen string compared with the base: unchanged apart from the step numbers and two colons dropped from tile labels |
+| Suites | 130 files, 3,335 unit tests; types, lint and build clean (no relay or core change) |
+
+Found on the way and fixed on `feat/multisig-live`: the wallet picker listed every wallet once more each time the section was entered again (wagmi's own bug; `src/integrations/wallet/uniqueConnectors.ts`, tested), and Biome refused to run while a Claude Code worktree sat under `.claude/`.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
