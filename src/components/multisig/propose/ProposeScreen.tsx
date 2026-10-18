@@ -33,14 +33,9 @@ import {
 	TextArea,
 	TextInput,
 } from "#/components/hub/layout";
-import {
-	Callout,
-	IssueList,
-	NetworkBadge,
-	Pill,
-} from "#/components/hub/status";
+import { Callout, IssueList, NetworkBadge } from "#/components/hub/status";
 import { AddressLine, short } from "#/components/tools/multisig/AddressLine";
-import { FLAG_TEXT } from "#/components/tools/multisig/EnvelopeView";
+import { FlagPill } from "#/components/tools/multisig/EnvelopeView";
 import {
 	type AccountTarget,
 	ADDRESS_RE,
@@ -1205,9 +1200,7 @@ function ProposeForm({
 													)}
 													<div className="mt-2 flex flex-wrap gap-2">
 														{flags.map((f) => (
-															<Pill key={f} tone={FLAG_TEXT[f]?.tone ?? "info"}>
-																{FLAG_TEXT[f]?.label ?? f}
-															</Pill>
+															<FlagPill key={f} flag={f} />
 														))}
 													</div>
 												</div>

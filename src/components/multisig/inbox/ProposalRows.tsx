@@ -125,6 +125,8 @@ export function ProposalRows({
 								{p.flags.map((f) => (
 									<Tag
 										key={f}
+										// a long one wraps on a narrow phone; 10 px is as round as a full radius on one line
+										className="whitespace-normal rounded-[10px]"
 										tone={
 											FLAG_TEXT[f]?.tone === "danger"
 												? "danger"

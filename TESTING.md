@@ -1910,6 +1910,19 @@ What decided it: B's propose form put "what every signer will sign" in a box wit
 
 Found on the way and fixed on `feat/multisig-live`: the wallet picker listed every wallet once more each time the section was entered again (wagmi's own bug; `src/integrations/wallet/uniqueConnectors.ts`, tested), and Biome refused to run while a Claude Code worktree sat under `.claude/`.
 
+**The fixes in the browser (testnet, nothing signed or sent).** Each finding was rebuilt on a real proposal of the 2-of-3 test treasury, created with "Create, sign later" and cancelled for everyone afterwards:
+
+| Check | Result |
+|---|---|
+| An `approveAgent` for an API wallet named "pay 50 USDC daily" | the Action card and "Your part" read a plain sentence, with no large figure; the party row says "API wallet" |
+| A withdrawal proposed after an older raw `usdSend` | the page's amber notice "An older USDC send is still waiting" and the same line above Sign, both within 250 ms of opening |
+| Mainnet emptied by a fetch stub, header on Mainnet | inbox: "Looking for testnet? You have 12 treasuries there…"; rail: "None on mainnet yet. 12 on testnet." |
+| A staking move and a vault move | the party rows read "Validator" and "Vault" |
+| An open proposal at 1024 px | "Your part" left and the signatures right, as before the fix; a closed one at 1024 and 1440 as in the review |
+| The inbox, every treasury tab, two forms and four proposals at 360 and 375 px (13 pages), most of them again at 1024 and 1440 px | nothing wider than the screen or its card, no sideways scroll; no failed request on an ordinary page load (the only console errors were rate-limit 429s while about 50 pages loaded in hidden frames within a few minutes) |
+
+The sweep found one older fault: a risk flag ("approves an API wallet (one key acts for the account)") never wrapped, so on a phone the inspector's pill in the expert fold ran 22 px off the screen, widened the page and pushed the fixed Sign bar 6 px out of view; the Action card's tag ran into its padding. The flags now wrap where they are too long for the line (`FlagPill` in the inspector's `EnvelopeView`, the proposal page, the inbox rows, the propose preview); on one line they are as before (20 px tall, the same radius).
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
