@@ -70,6 +70,11 @@ export function InboxScreen() {
 		groups.dead.length;
 	const name = (p: OpenProposal) => nameOf(p.network, p.treasury);
 	const hasTreasuries = treasuries.some((t) => t.network === network);
+	const onOther = treasuries.filter(
+		(t) =>
+			t.network === other &&
+			!(hydrated && hidden.includes(treasuryKey(t.network, t.address))),
+	).length;
 
 	return (
 		<ShellPage
@@ -176,6 +181,15 @@ export function InboxScreen() {
 										No treasuries on {network} yet.
 									</b>
 									<br />
+									{onOther > 0 && (
+										// the likeliest "where did they go?": the other network
+										<>
+											Looking for {other}? You have {onOther}{" "}
+											{onOther === 1 ? "treasury" : "treasuries"} there: switch
+											the network in the header.
+											<br />
+										</>
+									)}
 									Add a multi-sig account you sign for; your co-signers will see
 									it too. Or turn this wallet's own account into one.
 									<span className="mt-3 flex flex-wrap justify-center gap-2">

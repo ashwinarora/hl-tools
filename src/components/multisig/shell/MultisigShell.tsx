@@ -149,6 +149,11 @@ function useNav() {
 		unread: away.groups.length > 0,
 		/** Something needs the wallet on the network that is not selected. */
 		elsewhere: me && countNeeds(visible, me, other) > 0 ? other : null,
+		other,
+		/** Treasuries on the network that is not selected: an empty list says where they are. */
+		onOther: rows.filter(
+			(t) => t.network === other && !isHidden(t.network, t.address),
+		).length,
 	};
 }
 
@@ -226,7 +231,9 @@ function RailNav() {
 								? "Reading…"
 								: nav.issue
 									? nav.issue.message
-									: `None on ${nav.network} yet.`}
+									: nav.onOther > 0
+										? `None on ${nav.network} yet. ${nav.onOther} on ${nav.other}.`
+										: `None on ${nav.network} yet.`}
 						</span>
 					)}
 					<RailLink to="/multisig/create" search={{ network: nav.network }}>
