@@ -82,14 +82,23 @@ export const CREATE = {
 	pickFirst: "Add the signers first. The number is chosen out of them.",
 	later:
 		"The signers can change this number, and who signs, later with a proposal.",
-	infoTitle: "What converting does and does not do",
-	info: [
-		"Once converted, this account's own key cannot act alone any more: the signers you choose act for it, as many of them together as you set.",
-		"This changes the account on Hyperliquid's trading side only. On HyperEVM, Hyperliquid's EVM side, and on every other blockchain, this address stays under its own key and can transact exactly as before. Anything sent to it there is not protected by the signers.",
-		"Converting moves no funds and costs nothing. Balances, positions and history stay as they are.",
-		"Keep this account's key. It still controls the address outside Hyperliquid's trading side, and once the signers convert it back, it controls the account on Hyperliquid again.",
-		"Money can still be sent to this address on Hyperliquid as before.",
-	],
+	/** Beside the form: two short lists, what changes and what does not. */
+	does: {
+		title: "What converting does",
+		items: [
+			"This account's own key can no longer act alone on Hyperliquid.",
+			"The signers you choose act for it, as many of them together as you set.",
+		],
+	},
+	doesNot: {
+		title: "What it does not do",
+		items: [
+			"It moves no funds and costs nothing. Balances, positions and history stay.",
+			"It does not stop anyone sending money to this address.",
+			"It does not cover HyperEVM or other chains: there this address answers to its own key alone, and nothing sent there is protected by the signers.",
+			"It does not retire this account's key. Keep it: it controls the account again if the signers ever convert it back.",
+		],
+	},
 	/** Above the button: what is about to change, in place of any confirmation. */
 	before: (account: string, k: number, n: number, unable = 0) => {
 		// counted among the signers who can sign: nobody holds the zero address's key
@@ -235,9 +244,9 @@ export function accountLines(f: AccountFacts): AccountJudgement {
  */
 const REFUSED: Readonly<Record<string, string>> = {
 	"must-deposit":
-		"This account has never received anything on Hyperliquid, so it cannot send the conversion.",
+		"This account has never received anything on Hyperliquid, so it cannot send the conversion. Deposit or send funds to it first.",
 	"multisig-signer-missing":
-		"One of the signers has never been used on Hyperliquid. Each signer has to have received something there first.",
+		"One of the signers has never been used on Hyperliquid. Deposit or send funds to that address first.",
 	"multisig-signer-kind":
 		"One of the signers is a vault or a sub-account. Hyperliquid refuses those as signers.",
 	"multisig-self": "The account is in its own signer list.",

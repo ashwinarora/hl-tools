@@ -263,7 +263,7 @@ function addedLines(
 				line(
 					"blocked",
 					"signer.missing",
-					"Never used on Hyperliquid. It has to receive something first.",
+					"Never used on Hyperliquid, so it cannot be a signer yet. Deposit or send funds to this address first, then check again.",
 				),
 			);
 			break;

@@ -65,6 +65,7 @@ import { useRequest } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
 import { Help } from "../shell/Help";
 import {
+	BRAND_TEXT,
 	Btn,
 	Card,
 	linkButton,
@@ -784,13 +785,20 @@ function Wizard({
 			}
 			side={
 				<>
-					<section className="rounded-[10px] border border-border bg-surface-2 px-4 py-3.5">
-						<h2 className="text-[13px] font-semibold">{CREATE.infoTitle}</h2>
-						<ul className="mt-2 flex list-disc flex-col gap-1.5 pl-4 text-[13px] text-muted-foreground">
-							{CREATE.info.map((t) => (
-								<li key={t}>{t}</li>
-							))}
-						</ul>
+					{/* what changes and what does not: short lines, in the brand's own tint */}
+					<section className="flex flex-col gap-3 rounded-[10px] border border-brand/30 bg-brand-soft px-4 py-3.5">
+						{[CREATE.does, CREATE.doesNot].map((list) => (
+							<div key={list.title}>
+								<h2 className={cn("text-[13px] font-semibold", BRAND_TEXT)}>
+									{list.title}
+								</h2>
+								<ul className="mt-1.5 flex list-disc flex-col gap-1 pl-4 text-[13px] text-foreground/85">
+									{list.items.map((t) => (
+										<li key={t}>{t}</li>
+									))}
+								</ul>
+							</div>
+						))}
 					</section>
 
 					<Card>
