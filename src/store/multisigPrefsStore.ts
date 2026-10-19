@@ -6,8 +6,9 @@ import { usePersistHydrated } from "./hydrated";
 /**
  * What the Multisig section remembers in this browser only: that the
  * "this signs and sends" warning and the first-run card were read, the
- * nicknames given to treasuries, which treasuries were seen or hidden, and
- * whether "While you were away" is folded. None of it is sent anywhere; a
+ * nicknames given to treasuries, which treasuries were seen or hidden, whose
+ * "added to this tool by…" panel was closed, and whether "While you were
+ * away" is folded. None of it is sent anywhere; a
  * nickname is the reader's own label, never something a co-signer set.
  */
 interface PrefsState {
@@ -22,12 +23,15 @@ interface PrefsState {
 	awayFolded: boolean;
 	/** The first-run card on the start page was put away. */
 	walkthroughSeen: boolean;
+	/** Treasuries whose "added to this tool by…" panel was closed. */
+	provenanceClosed: string[];
 	dismissWarning: () => void;
 	setAwayFolded: (folded: boolean) => void;
 	dismissWalkthrough: () => void;
 	rename: (network: Network, address: Address, name: string) => void;
 	markSeen: (network: Network, address: Address) => void;
 	setHidden: (network: Network, address: Address, hidden: boolean) => void;
+	closeProvenance: (network: Network, address: Address) => void;
 }
 
 export const MULTISIG_PREFS_KEY = "hl-tools:multisig";
@@ -48,6 +52,7 @@ export const useMultisigPrefs = create<PrefsState>()(
 			hidden: [],
 			awayFolded: false,
 			walkthroughSeen: false,
+			provenanceClosed: [],
 			dismissWarning: () => set({ warningSeen: true }),
 			setAwayFolded: (folded) => set({ awayFolded: folded }),
 			dismissWalkthrough: () => set({ walkthroughSeen: true }),
@@ -70,6 +75,13 @@ export const useMultisigPrefs = create<PrefsState>()(
 					const rest = s.hidden.filter((k) => k !== key);
 					return { hidden: hidden ? [...rest, key] : rest };
 				}),
+			closeProvenance: (network, address) =>
+				set((s) => {
+					const key = treasuryKey(network, address);
+					return s.provenanceClosed.includes(key)
+						? s
+						: { provenanceClosed: [...s.provenanceClosed, key] };
+				}),
 		}),
 		{
 			name: MULTISIG_PREFS_KEY,
@@ -81,6 +93,7 @@ export const useMultisigPrefs = create<PrefsState>()(
 				hidden: s.hidden,
 				awayFolded: s.awayFolded,
 				walkthroughSeen: s.walkthroughSeen,
+				provenanceClosed: s.provenanceClosed,
 			}),
 			// restored after mount, so the server and the first client render agree
 			skipHydration: true,
@@ -100,6 +113,7 @@ export const useMultisigPrefs = create<PrefsState>()(
 					hidden: strings(p.hidden),
 					awayFolded: p.awayFolded === true,
 					walkthroughSeen: p.walkthroughSeen === true,
+					provenanceClosed: strings(p.provenanceClosed),
 				};
 			},
 		},

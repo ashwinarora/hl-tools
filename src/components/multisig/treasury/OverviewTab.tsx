@@ -7,9 +7,8 @@ import type {
 } from "@hl-tools/core";
 import { visibleText } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
 import { type ReactNode, useId, useMemo, useState } from "react";
-import { useMultisigDrafts } from "#/store/multisigDraftsStore";
 import {
 	treasuryKey,
 	useMultisigPrefs,
@@ -42,12 +41,12 @@ import { RELAY_COPY } from "../model/relay/copy";
 import { type LastSigned, lastSignedText } from "../model/relay/lastSigned";
 import type { TreasuryRow } from "../model/relay/rows";
 import { fromNow, localDateTime } from "../model/time";
-import { Who } from "../names/Names";
+import { PROVENANCE_CLOSE } from "../model/toasts";
+import { useNames, Who } from "../names/Names";
 import { Checked } from "../shell/Checked";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
 import {
-	Btn,
 	Card,
 	linkButtonSm,
 	PersonRow,
@@ -327,8 +326,14 @@ export function OverviewTab({
 
 	const hydrated = usePrefsHydrated();
 	const prefsKey = treasuryKey(network, address);
-	const hidden = useMultisigPrefs((s) => s.hidden.includes(prefsKey));
-	const setHidden = useMultisigPrefs((s) => s.setHidden);
+	const provenanceClosed = useMultisigPrefs((s) =>
+		s.provenanceClosed.includes(prefsKey),
+	);
+	const closeProvenance = useMultisigPrefs((s) => s.closeProvenance);
+	// a signer with no nickname here yet is offered one in words, beside "you"
+	const names = useNames();
+	const nameYourself =
+		!!me && !!names && names.canName(me) && names.of(me) === null;
 
 	return (
 		// From 1280 px: what it holds on the left, who controls it beside it.
@@ -494,9 +499,30 @@ export function OverviewTab({
 						signers.map((a) => (
 							<PersonRow
 								key={a}
-								trailing={a === me ? <Tag tone="you">you</Tag> : null}
+								trailing={
+									a === me ? (
+										<span className="inline-flex items-center gap-1.5">
+											{nameYourself && (
+												<button
+													type="button"
+													onClick={() => names?.edit(a)}
+													title={RELAY_COPY.nameYourselfTitle}
+													className="inline-flex min-h-11 items-center rounded px-1 text-xs font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:min-h-0"
+												>
+													{RELAY_COPY.nameYourself}
+												</button>
+											)}
+											<Tag tone="you">you</Tag>
+										</span>
+									) : null
+								}
 							>
-								<Who address={a} editable className="text-[13px]" />
+								{/* your own row offers the words "Name yourself" instead of the small icon */}
+								<Who
+									address={a}
+									editable={!(a === me && nameYourself)}
+									className="text-[13px]"
+								/>
 								{lastSignedText(signed?.get(a), now) && (
 									<span
 										className="block text-xs text-subtle-foreground"
@@ -627,9 +653,9 @@ export function OverviewTab({
 				</Card>
 			</div>
 
-			{treasury && (
-				<div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3 text-xs text-muted-foreground xl:col-span-2">
-					<span>
+			{treasury && hydrated && !provenanceClosed && (
+				<div className="flex items-start gap-2 rounded-lg border border-border bg-surface-2 py-2 pr-1.5 pl-3.5 text-xs text-muted-foreground xl:col-span-2">
+					<span className="min-w-0 flex-1 py-1">
 						{treasury.addedBy === address ? (
 							`${RELAY_COPY.registeredByAccount}, `
 						) : (
@@ -655,27 +681,15 @@ export function OverviewTab({
 							me !== address &&
 							` ${RELAY_COPY.addedByOther}`}
 					</span>
-					{hydrated && (
-						<div className="flex flex-wrap items-center gap-2">
-							<Btn
-								size="sm"
-								variant="outline"
-								onClick={() => {
-									// taken out of this browser's list: what was half-filled for it goes too
-									if (!hidden)
-										useMultisigDrafts.getState().dropFor(network, address);
-									setHidden(network, address, !hidden);
-								}}
-							>
-								{hidden ? "Show in my list again" : "Hide from my list"}
-							</Btn>
-							<span>
-								{hidden
-									? "Hidden in this browser. It stays reachable by its address."
-									: "Hiding is for this browser only; nothing changes for your co-signers."}
-							</span>
-						</div>
-					)}
+					<button
+						type="button"
+						onClick={() => closeProvenance(network, address)}
+						aria-label={PROVENANCE_CLOSE}
+						title={PROVENANCE_CLOSE}
+						className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-subtle-foreground transition-colors hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:size-7"
+					>
+						<X className="size-3.5" aria-hidden />
+					</button>
 				</div>
 			)}
 		</div>

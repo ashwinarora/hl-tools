@@ -64,6 +64,7 @@ import { OverviewTab } from "./OverviewTab";
 import { PendingTab } from "./PendingTab";
 import { SigningLogTab } from "./SigningLogTab";
 import { StakingTab } from "./StakingTab";
+import { HiddenTag, TreasuryMenu } from "./TreasuryMenu";
 import { useKnownProposals } from "./useKnownProposals";
 import { VaultsTab } from "./VaultsTab";
 
@@ -488,19 +489,23 @@ export function TreasuryScreen({
 							<Help k="threshold" />
 						</span>
 						{frozen && <Tag tone="warn">no longer a multi-sig</Tag>}
+						<HiddenTag network={network} address={address} />
 						<SignsTag />
 					</>
 				}
 				actions={
-					noSignerSet || itself ? null : (
-						<Link
-							to="/multisig/propose"
-							search={{ treasury: address, network }}
-							className="inline-flex h-[34px] items-center justify-center whitespace-nowrap rounded-md bg-brand px-3.5 text-[13px] font-medium text-brand-foreground no-underline transition-colors hover:bg-brand/90"
-						>
-							Propose an action
-						</Link>
-					)
+					<>
+						{!(noSignerSet || itself) && (
+							<Link
+								to="/multisig/propose"
+								search={{ treasury: address, network }}
+								className="inline-flex h-[34px] items-center justify-center whitespace-nowrap rounded-md bg-brand px-3.5 text-[13px] font-medium text-brand-foreground no-underline transition-colors hover:bg-brand/90"
+							>
+								Propose an action
+							</Link>
+						)}
+						<TreasuryMenu network={network} address={address} />
+					</>
 				}
 			>
 				{/* what it holds first, on every section: the figures pushed live */}

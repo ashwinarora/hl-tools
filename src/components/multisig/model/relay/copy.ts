@@ -79,6 +79,9 @@ export const RELAY_COPY = {
 	// so none of this may call them the reader's own secret.
 	nicknameScope:
 		"Used only in this treasury: its signers see it, and it is shown nowhere else. The address stays visible next to it.",
+	// beside "you" in a treasury's signer list, while your address has no nickname there
+	nameYourself: "Name yourself",
+	nameYourselfTitle: "Give your own address a nickname in this treasury",
 	nicknameOwn:
 		"This is your own address: nobody else can choose its nickname here.",
 	nicknameTreasury: "Any signer of this treasury can change it.",

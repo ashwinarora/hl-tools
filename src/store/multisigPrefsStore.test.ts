@@ -1,3 +1,4 @@
+import type { Address } from "@hl-tools/core";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 /** A stand-in for the browser's `localStorage`: the tests run without one. */
@@ -49,5 +50,30 @@ describe("the Multisig section's preferences, as restored", () => {
 			walkthroughSeen: true,
 		}) as Record<string, unknown>;
 		expect(stored).toMatchObject({ awayFolded: true, walkthroughSeen: true });
+	});
+
+	it('keep which treasuries\' "added by" panel was closed, as a list of names only', () => {
+		const back = restore({
+			provenanceClosed: ["testnet:0xabc", 7, null, "mainnet:0xdef"],
+		});
+		expect(back.provenanceClosed).toEqual(["testnet:0xabc", "mainnet:0xdef"]);
+		expect(restore({}).provenanceClosed).toEqual([]);
+		const partialize = useMultisigPrefs.persist.getOptions().partialize;
+		expect(
+			partialize?.({
+				...useMultisigPrefs.getState(),
+				provenanceClosed: ["testnet:0xabc"],
+			}),
+		).toMatchObject({ provenanceClosed: ["testnet:0xabc"] });
+	});
+
+	it("close a panel once, whatever is clicked twice", () => {
+		const { closeProvenance } = useMultisigPrefs.getState();
+		const at = "0x00000000000000000000000000000000000000aa" as Address;
+		closeProvenance("testnet", at);
+		closeProvenance("testnet", at);
+		expect(useMultisigPrefs.getState().provenanceClosed).toEqual([
+			"testnet:0x00000000000000000000000000000000000000aa",
+		]);
 	});
 });
