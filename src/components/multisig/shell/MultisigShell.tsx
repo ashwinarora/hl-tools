@@ -3,7 +3,6 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronDown, ShieldCheck } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { MULTISIG_WRAP } from "#/components/Header";
-import { Callout } from "#/components/hub/status";
 import { tool, toolRuleSets, toolVerifiedAt } from "#/lib/tools";
 import {
 	treasuryKey,
@@ -30,7 +29,7 @@ import { useOpenProposals } from "../relay/openProposals";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
 import { useTreasuryNames } from "../treasuryName";
-import { Btn, Count, Tag } from "./kit";
+import { Count, Tag } from "./kit";
 import { Rail, RailHeading, RailLink, SectionMark } from "./Rail";
 import { BelowTitleProvider } from "./ShellPage";
 import { useStickyTop } from "./useStickyTop";
@@ -91,14 +90,7 @@ export function MultisigShell({ children }: { children: ReactNode }) {
 					{relay.mode === "on" && <NetworkHint />}
 					{relay.mode === "on" && <AwayKeeper />}
 					{relay.mode === "on" && <TitleCount />}
-					<BelowTitleProvider
-						value={
-							<>
-								<MobileBar />
-								<FirstUse />
-							</>
-						}
-					>
+					<BelowTitleProvider value={<MobileBar />}>
 						{children}
 					</BelowTitleProvider>
 					<ShellFoot />
@@ -419,33 +411,6 @@ function MobileBar() {
 				</span>
 			</div>
 		</details>
-	);
-}
-
-/**
- * The full "this signs and sends" warning, once. After that every page keeps
- * a small "Signs & sends" tag and the buttons that open the wallet say what
- * to check there.
- */
-function FirstUse() {
-	const hydrated = usePrefsHydrated();
-	const seen = useMultisigPrefs((s) => s.warningSeen);
-	const dismiss = useMultisigPrefs((s) => s.dismissWarning);
-	if (!hydrated || seen) return null;
-	return (
-		<Callout
-			tone="warning"
-			title={RELAY_COPY.firstUseTitle}
-			// lines of about 90 characters, however wide the screen
-			className="mb-4 max-w-[40rem]"
-			action={
-				<Btn size="sm" variant="outline" onClick={dismiss}>
-					Got it
-				</Btn>
-			}
-		>
-			{relayConfig() ? RELAY_COPY.firstUseBody : RELAY_COPY.firstUseBodySolo}
-		</Callout>
 	);
 }
 

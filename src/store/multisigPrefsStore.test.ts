@@ -76,4 +76,31 @@ describe("the Multisig section's preferences, as restored", () => {
 			"testnet:0x00000000000000000000000000000000000000aa",
 		]);
 	});
+
+	it("keep the first-sign line apart from the card, read as before for an old choice", () => {
+		expect(restore({ walkthroughSeen: true }).firstSignSeen).toBe(true);
+		expect(restore({ firstSignSeen: true }).firstSignSeen).toBe(true);
+		expect(restore({}).firstSignSeen).toBe(false);
+		// the warning of old is gone: nothing of it is kept
+		expect(
+			(restore({ warningSeen: true }) as unknown as Record<string, unknown>)
+				.warningSeen,
+		).toBeUndefined();
+	});
+
+	it("fold and unfold the card, and let 'Got it' fold it too", () => {
+		const s = useMultisigPrefs.getState();
+		s.setWalkthroughFolded(true);
+		expect(useMultisigPrefs.getState().walkthroughSeen).toBe(true);
+		s.setWalkthroughFolded(false);
+		expect(useMultisigPrefs.getState().walkthroughSeen).toBe(false);
+		s.dismissFirstSign();
+		expect([
+			useMultisigPrefs.getState().firstSignSeen,
+			useMultisigPrefs.getState().walkthroughSeen,
+		]).toEqual([true, true]);
+		// unfolding the card does not bring the line back
+		s.setWalkthroughFolded(false);
+		expect(useMultisigPrefs.getState().firstSignSeen).toBe(true);
+	});
 });
