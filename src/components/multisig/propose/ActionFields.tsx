@@ -24,6 +24,7 @@ import {
 	type Receiver,
 } from "../model/actions";
 import { API_WALLET_PROPOSE } from "../model/apiWallet";
+import type { MaxAmount } from "../model/max";
 import { modeLabel } from "../model/mode";
 import { MODE_SWITCH, type ModeTarget } from "../model/modeSwitch";
 import { RELAY_COPY } from "../model/relay/copy";
@@ -32,6 +33,7 @@ import { shortAddress } from "../model/stage";
 import { fromNow } from "../model/time";
 import { useNames, Who } from "../names/Names";
 import { Help } from "../shell/Help";
+import { useMax } from "./MaxButton";
 
 export interface TokenOption {
 	readonly index: number;
@@ -166,6 +168,7 @@ export function ActionFields({
 	agents,
 	agentsFailed,
 	now,
+	max,
 }: {
 	form: ActionForm;
 	set: <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => void;
@@ -193,8 +196,11 @@ export function ActionFields({
 	agentsFailed: boolean;
 	/** The page's clock, for what has expired. */
 	now: number;
+	/** The amount's Max (`model/max.ts`); null for a kind with no amount. */
+	max: MaxAmount | null;
 }) {
 	const unified = mode?.kind === "unified";
+	const maxUi = useMax(max, form.amount, (a) => set("amount", a));
 	const destination = (hint: ReactNode) => (
 		<Field
 			label="Destination"
@@ -227,6 +233,7 @@ export function ActionFields({
 			htmlFor="ms-amount"
 			error={error("amount")}
 			hint={hint}
+			trailing={maxUi.button}
 		>
 			<TextInput
 				id="ms-amount"
@@ -237,6 +244,7 @@ export function ActionFields({
 				placeholder="0.0"
 				aria-invalid={!!error("amount")}
 			/>
+			{maxUi.line}
 		</Field>
 	);
 

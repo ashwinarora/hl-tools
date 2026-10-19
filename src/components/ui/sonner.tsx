@@ -41,9 +41,14 @@ export function Toaster(props: ToasterProps) {
 					description: "text-muted-foreground",
 					actionButton: "bg-primary text-primary-foreground",
 					cancelButton: "bg-muted text-muted-foreground",
-					error: "!border-destructive/50 !bg-destructive/10 !text-destructive",
-					success: "!border-emerald-500/40 !bg-emerald-500/10",
-					warning: "!border-warning/40 !bg-warning-soft !text-warning",
+					// a tint painted over the card's solid colour: a see-through toast lets
+					// the page's text run through its own
+					error:
+						"!border-destructive/50 !bg-card ![background-image:linear-gradient(color-mix(in_oklab,var(--destructive)_10%,transparent),color-mix(in_oklab,var(--destructive)_10%,transparent))] !text-destructive",
+					success:
+						"!border-emerald-500/40 !bg-card ![background-image:linear-gradient(color-mix(in_oklab,var(--color-emerald-500)_10%,transparent),color-mix(in_oklab,var(--color-emerald-500)_10%,transparent))]",
+					warning:
+						"!border-warning/40 !bg-card ![background-image:linear-gradient(var(--warning-soft),var(--warning-soft))] !text-warning",
 				},
 			}}
 			{...props}

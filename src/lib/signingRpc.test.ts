@@ -3,6 +3,8 @@ import {
 	answerSigningRpc,
 	REFUSES_TRANSACTIONS,
 	SIGNING_RPC_CHAIN_ID,
+	SIGNING_RPC_PAGE,
+	signingRpcResponse,
 } from "./signingRpc";
 
 const NOW = Date.UTC(2026, 9, 13, 12);
@@ -111,5 +113,55 @@ describe("the stand-in behind the signing network", () => {
 				}
 			).result,
 		).toMatch(/^0x/);
+	});
+});
+
+describe("the signing network over HTTP", () => {
+	const URL_ = "https://hltools.tech/rpc/1337";
+	const post = (body: string) =>
+		signingRpcResponse(new Request(URL_, { method: "POST", body }), NOW);
+
+	it("answers a wallet's POST with JSON, open to any origin", async () => {
+		const res = await post(
+			JSON.stringify({ jsonrpc: "2.0", id: 7, method: "eth_chainId" }),
+		);
+		expect(res.status).toBe(200);
+		expect(res.headers.get("content-type")).toBe("application/json");
+		expect(res.headers.get("access-control-allow-origin")).toBe("*");
+		expect(await res.json()).toEqual({
+			jsonrpc: "2.0",
+			id: 7,
+			result: "0x539",
+		});
+	});
+
+	it("answers the browser's CORS question and a person's GET", async () => {
+		const pre = await signingRpcResponse(
+			new Request(URL_, { method: "OPTIONS" }),
+		);
+		expect(pre.status).toBe(204);
+		expect(pre.headers.get("access-control-allow-methods")).toBe(
+			"POST, OPTIONS",
+		);
+		const page = await signingRpcResponse(new Request(URL_));
+		expect(page.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+		expect(await page.text()).toBe(SIGNING_RPC_PAGE);
+	});
+
+	it("takes a body that is not JSON, or far too large, as no request", async () => {
+		const notJson = (await (await post("{nope")).json()) as {
+			error: { code: number };
+		};
+		expect(notJson.error.code).toBe(-32600);
+		const huge = JSON.stringify({
+			jsonrpc: "2.0",
+			id: 1,
+			method: "eth_chainId",
+			pad: "x".repeat(100_001),
+		});
+		const big = (await (await post(huge)).json()) as {
+			error: { code: number };
+		};
+		expect(big.error.code).toBe(-32600);
 	});
 });

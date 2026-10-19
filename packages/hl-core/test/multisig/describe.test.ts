@@ -360,14 +360,29 @@ describe("describeAction details", () => {
 				usd: "12",
 			}).headline,
 		).toBe(`Withdraw 12 (raw) from vault ${A}`);
-		expect(
+		// the sign of the amount says add or remove; isBuy has no effect (Hyperliquid's docs)
+		const margin = (ntli: bigint | number, isBuy = false) =>
+			describeAction({ type: "updateIsolatedMargin", asset: 3, isBuy, ntli })
+				.headline;
+		expect(margin(2_500_000n)).toBe("Add 2.5 USDC isolated margin on asset #3");
+		expect(margin(-2_500_000, true)).toBe(
+			"Remove 2.5 USDC isolated margin on asset #3",
+		);
+		expect(margin(2.5)).toBe("Change asset #3 isolated margin by 2.5 (raw)");
+	});
+	it("a pasted vault amount that is not whole millionths is shown as it came, never thrown on", () => {
+		const withdraw = (usd: number) =>
 			describeAction({
-				type: "updateIsolatedMargin",
-				asset: 3,
-				isBuy: false,
-				ntli: 2_500_000n,
-			}).headline,
-		).toBe("Remove 2.5 USDC isolated margin on asset #3");
+				type: "vaultTransfer",
+				vaultAddress: A,
+				isDeposit: false,
+				usd,
+			}).headline;
+		expect(withdraw(5.5)).toBe(`Withdraw 5.5 (raw) from vault ${A}`);
+		expect(withdraw(10_005_691)).toBe(
+			`Withdraw 10.005691 USDC from vault ${A}`,
+		);
+		expect(withdraw(-500_000)).toBe(`Withdraw -0.5 USDC from vault ${A}`);
 	});
 	it("twap buy and a sub-account deposit", () => {
 		expect(

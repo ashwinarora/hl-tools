@@ -1923,6 +1923,56 @@ Found on the way and fixed on `feat/multisig-live`: the wallet picker listed eve
 
 The sweep found one older fault: a risk flag ("approves an API wallet (one key acts for the account)") never wrapped, so on a phone the inspector's pill in the expert fold ran 22 px off the screen, widened the page and pushed the fixed Sign bar 6 px out of view; the Action card's tag ran into its padding. The flags now wrap where they are too long for the line (`FlagPill` in the inspector's `EnvelopeView`, the proposal page, the inbox rows, the propose preview); on one line they are as before (20 px tall, the same radius).
 
+## 23. The launch PR: headers, `/rpc/1337`, licenses (2026-10-19)
+
+Branch `launch/phase-7`, stacked on PR #9. Checked on a production build served on `http://localhost:3000` (the address local sign-in accepts), with the local relay and the rewritten 1337 stand-in, in Brave with Rabby, testnet only.
+
+| Check | Result |
+|---|---|
+| Headers on a page (`/multisig`) | Content-Security-Policy with this response's nonce, HSTS, `X-Frame-Options: DENY`, `nosniff`, `strict-origin-when-cross-origin`, Permissions-Policy, `Cache-Control: private, no-cache`; a built asset keeps `public, max-age=31536000, immutable` |
+| Inline scripts in a page | all carry the nonce (theme and network init, the router's stream barrier, its module loader) and a `csp-nonce` meta is written; the one bare `<script>` is the router's empty render hook, which browsers skip before any policy check |
+| Rabby under the policy | `window.ethereum` present (`isRabby`), the page "signed in · live" (the relay's REST and its live channel get through), no console errors or warnings |
+| Every section, loaded and navigated | home, the eight tools, `/changes`, `/privacy`, the faucet miner, the Multisig inbox and propose form: no policy violation (a `securitypolicyviolation` listener from the first byte) |
+| The tools that reach any endpoint | WebSocket workbench "Connect & subscribe" opened; the RPC probe ran against the public HyperEVM endpoint; no violation |
+| The faucet's WalletConnect | in a separate browser context with no wallet: the connect window opened, Rainbow's QR code was drawn over WalletConnect, no violation, no console error |
+| A vault code under the policy | a 1 USDC HLP withdrawal created and signed by S1: Rabby switched to the custom 1337 network (served by the rewritten stand-in), showed `Agent` with source `b`, signed; the page read "Collecting signatures · 1 of 2"; then cancelled for everyone, never sent |
+| `/rpc/1337` | `eth_chainId` answers `0x539` by POST, a line of text on GET, 204 with CORS on OPTIONS, on the dev server, the Bun build and the Node build |
+| The build Railway runs (`bun run build`, Node server) | preset `node-server`; `node .output/server/index.mjs` serves the same headers and `/rpc/1337` |
+| The faucet's mock worker | not in the build, and a request for it answers 404 (a first attempt deleted the file after the build, and the server, which lists its files while building, answered 500: the worker now lives in `dev/` and only the dev server serves it); in development `/faucet-miner?mock=1` still runs MSW from it |
+
+To check on the staging copy, where localhost cannot show it: the headers as Railway's edge serves them over HTTPS, sign-in from a real domain, Rabby's phishing check on a page that is no longer `localhost`, adding the 1337 network from an internet address, and the hosted relay's gate, jobs and look-ups.
+
+**On the staging copy** (`hl-tools-hl-tools-pr-10.up.railway.app`, Railway, the hosted relay HLTools after its 12 migrations were pushed; testnet, Rabby):
+
+| Check | Result |
+|---|---|
+| Headers over HTTPS from Railway's edge | the same policy, HSTS and the rest; the policy names HLTools and the staging address, so the build took its variables; `/rpc/1337` answers `0x539`; the mock worker 404 |
+| Rabby on a real domain | the connect prompt showed no warning ("Site popularity: High"); its window closed itself before an automated click three times, so the owner connected by hand |
+| First sign-in | refused: "Signed Ethereum message is using a Domain that does not match the one in URI which is not allowed on this server". Supabase checks the domain as `https://<domain>/` and the list held the address without the slash; with both forms listed, signed in · live |
+| A treasury added | checked by HLTools itself against Hyperliquid (2 of 3, three signers), in 3 s; no scheduled job failed |
+| A proposal | created and signed by S1 (Rabby showed the send in full), stored on HLTools with its signature, then cancelled for everyone; no policy violation on any page |
+
+**The sign-in toast** (dev server, a stub returning that same refusal for one page load): one toast "Sign-in didn't go through. Please try again." with "Details" folded, nothing beside the buttons; a decline in Rabby replaced it with "Sign-in cancelled in your wallet."; a real sign-in afterwards left no toast. The error toast's background was see-through (the page's text ran through its title) and is now solid under the tint.
+
+**The mainnet smoke test** (on staging, every click and signature the owner's; mainnet test treasury, 2 of 3): the HLP withdrawal of the listed worth, 10.005691 USDC, was refused, "Insufficient vault equity for withdrawal", with nothing moved; one of 10 USDC was accepted (Hyperliquid's ledger: requested 9.999999, none kept back); perps 9.999999, 0.00569 USDC left in HLP; HLTools holds both proposals with their signatures and answers. Read-only on mainnet afterwards: for 25 HLP depositors, `maxWithdrawable` was always the precise value cut down to 6 decimals and `userVaultEquities.equity` above it for 22.
+
+**Max, on testnet in the browser** (dev server, S1, Rabby, nothing created):
+
+| Form (treasury) | Max filled | The line |
+|---|---|---|
+| Send USDC, no destination (0xe45e…, 53 spot, 0 perps) | nothing | "Enter the destination first: a first send to a new address costs 1 USDC…" |
+| Send USDC to a new address | 52 | all of spot less the 1 USDC fee, which nothing else can pay; the form's cost line agreed and nothing was refused |
+| Spot → perps / perps → spot | 53 / nothing | all the spot not on hold / nothing to move |
+| Bridge withdrawal | nothing | 0 to withdraw, and it has to be more than the bridge's 1 USDC |
+| Vault deposit | nothing | perps can release 0, a deposit is at least 5 USDC, type more to move from spot |
+| Vault withdrawal | 2.029483 | Hyperliquid's figure at the page's last read; the list read "releases 2.029483 USDC · unlocked" (Hyperliquid testnet a minute later: maxWithdrawable 2.029285, equity 2.029301 above the precise 2.0292852) |
+| Stake (0x4b46…, 0.086 HYPE in spot) | 0.086 | spot plus the staking balance |
+| Return to spot (stake with two validators) | nothing | choose which validator |
+| Move, from the validator holding 0.01000588 | 0.01000588 | all staked with it |
+| Send HYPE | 0.086 | all HYPE not on hold |
+
+134 files, 3,382 unit tests after it (`max.test.ts` with the fee grid; the mainnet vault figures in `vault.test.ts`; the core's coverage stays at 100%).
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).

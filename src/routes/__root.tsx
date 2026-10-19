@@ -4,6 +4,7 @@ import {
 	createRootRouteWithContext,
 	HeadContent,
 	Scripts,
+	useRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { useEffect } from "react";
@@ -76,13 +77,24 @@ function NetworkHydrator() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+	// the response's nonce: the security policy lets these two run and no other inline script
+	const nonce = useRouter().options.ssr?.nonce;
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
-				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: constant pre-hydration theme script */}
-				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: constant pre-hydration network script */}
-				<script dangerouslySetInnerHTML={{ __html: NETWORK_INIT_SCRIPT }} />
+				<script
+					nonce={nonce}
+					// the browser hides a nonce once read: what hydration sees differs by design
+					suppressHydrationWarning
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: constant pre-hydration theme script
+					dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+				/>
+				<script
+					nonce={nonce}
+					suppressHydrationWarning
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: constant pre-hydration network script
+					dangerouslySetInnerHTML={{ __html: NETWORK_INIT_SCRIPT }}
+				/>
 				<HeadContent />
 			</head>
 			<body className="font-sans antialiased">

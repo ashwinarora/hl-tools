@@ -36,17 +36,21 @@ const addressOf = (v: unknown): string | null =>
 const timeOf = (v: unknown): number | null =>
 	typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? v : null;
 const dec = (v: string): Decimal => Decimal.parse(v);
-/** A decimal Hyperliquid gave as a string or as a number, in canonical form; null for anything else. */
+/**
+ * A decimal Hyperliquid gave as a string or as a number, in canonical form;
+ * null for anything else. A string is taken exactly. A JSON number (as
+ * `maxWithdrawable` comes) is read as the shortest text that is that number,
+ * which is what Hyperliquid wrote, exponent form included, and then cut down
+ * to a vault amount's 6 decimals: never rounded, so a figure is never more
+ * than Hyperliquid said (`toFixed` would round 4.9999995 up to 5).
+ */
 function amountOf(v: unknown): string | null {
-	const text =
-		typeof v === "string"
-			? v
-			: typeof v === "number" && Number.isFinite(v)
-				? // a JSON number: never in exponent form at these sizes once fixed
-					v.toFixed(VAULT_USD_DECIMALS)
-				: null;
-	const d = text === null ? null : Decimal.tryParse(text);
-	return d ? d.toString() : null;
+	if (typeof v === "string") return Decimal.tryParse(v)?.toString() ?? null;
+	if (typeof v !== "number" || !Number.isFinite(v)) return null;
+	// a finite number's text is always one Decimal reads, "1e+21" and "5e-7" included
+	return Decimal.parse(String(v))
+		.roundToDecimals(VAULT_USD_DECIMALS, "floor")
+		.toString();
 }
 
 // ------------------------------------------------------------------ amounts
@@ -312,7 +316,13 @@ export function planDeposit(i: {
 		amount: i.amount,
 	};
 	if (i.unified || i.perps === null || i.spot === null) return [deposit];
-	const short = dec(i.amount).sub(dec(i.perps));
+	// the move has to cover the shortfall and carries 6 decimals: a perps figure
+	// with more would make it uncarriable, so it is the smallest 6-decimal amount
+	// that covers it (at most a millionth more, between the account's own
+	// balances); the deposit itself stays exactly as typed
+	const short = dec(i.amount)
+		.sub(dec(i.perps))
+		.roundToDecimals(VAULT_USD_DECIMALS, "ceil");
 	if (!short.isPositive() || short.gt(dec(i.spot))) return [deposit];
 	return [{ kind: "toPerps", amount: short.toString() }, deposit];
 }
