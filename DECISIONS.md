@@ -442,6 +442,8 @@ Non-obvious choices made while turning hl-tools into a developer tooling hub, an
 
 **The signing settings are folded, with the choice in the fold's title.** "Signers sign under" and the signing window keep their defaults for almost every proposal; folded under "Advanced", whose title names what is chosen ("signed for HyperEVM testnet · 2 days to sign"), nothing is hidden that the reader does not see named. It opens by itself when the window is why the form says no.
 
+**A title in the Multisig section is the brand's teal.** (2026-10-19, the owner's pick of three variants shown as screenshots.) Headings were near-white over gray text, so nothing marked where a card began. Teal card titles give the eye a landmark per card. Brightening all secondary text as well (the third variant) was barely visible, flattened the step between text and context, and would have changed every page of the hub, so it was left out. The diagnostic tools keep their titles as they were: the section's `Card` and its own `Panel` (`shell/kit.tsx`, over the hub's with `titleClassName`) carry the colour.
+
 **The big "this signs and sends" banner is gone.** Its sentences were already where they apply: the first-run card's steps, the line under every Sign button, the line above a first proposal to sign, and "cannot be undone" beside "Send to Hyperliquid". The first-run card folds to its title instead of disappearing, and its steps also head the glossary.
 
 ## Testing

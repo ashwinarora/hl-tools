@@ -1992,6 +1992,7 @@ Branch `ui/review-fixes`, off `main` after the launch. Dev server on `http://loc
 | Wizard | "What converting does" / "What it does not do", two short lists in the brand's tint, dark and light |
 | Glossary | "How this works" with the six steps above the terms; the start page's banner gone |
 | Phone (375 px) | the Overview's tabs scroll inside their row, the page itself never sideways |
+| Teal titles (variant B, the owner's pick) | every card and panel title of the section, the treasury strip and "While you were away" in `oklch(0.83 0.12 175)` dark and `oklch(0.45 0.1 178)` light; the inspector's panels unchanged |
 | Console | the wallet extensions' own warnings only |
 | Production build (`bun run build`, Node on :3111) | the policy header on every page; no violation on the glossary or the treasury page |
 

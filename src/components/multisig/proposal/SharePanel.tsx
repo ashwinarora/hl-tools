@@ -8,7 +8,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Download, Link2, Search, ShieldAlert, Upload } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { CopyButton } from "#/components/hub/CopyButton";
-import { Field, Panel, TextArea } from "#/components/hub/layout";
+import { Field, TextArea } from "#/components/hub/layout";
 import { Callout, IssueList } from "#/components/hub/status";
 import { Button } from "#/components/ui/button";
 import {
@@ -31,7 +31,7 @@ import {
 	openText,
 	type Published,
 } from "../model/transport";
-import { OFF_LOOK } from "../shell/kit";
+import { OFF_LOOK, Panel } from "../shell/kit";
 import { notify } from "../shell/notify";
 import type { StoreResult } from "./useProposalDoc";
 

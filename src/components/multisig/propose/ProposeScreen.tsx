@@ -27,7 +27,6 @@ import {
 	EmptyState,
 	Field,
 	KeyValueGrid,
-	Panel,
 	Segmented,
 	Select,
 	TextArea,
@@ -115,6 +114,7 @@ import { Help } from "../shell/Help";
 import {
 	Btn,
 	NetTag,
+	Panel,
 	SignsTag,
 	StepTitle,
 	backLink as shellBack,

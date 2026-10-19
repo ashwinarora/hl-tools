@@ -3,13 +3,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Field, Panel, TextArea } from "#/components/hub/layout";
+import { Field, TextArea } from "#/components/hub/layout";
 import { Callout, IssueList } from "#/components/hub/status";
 import { Button } from "#/components/ui/button";
 import { errorMessage } from "#/hooks/useHyperliquid";
 import { saveProposal } from "./model/history";
 import { openAll } from "./model/transport";
-import { OFF_LOOK } from "./shell/kit";
+import { OFF_LOOK, Panel } from "./shell/kit";
 
 /**
  * Open a proposal someone sent: paste the document or the link, or upload the

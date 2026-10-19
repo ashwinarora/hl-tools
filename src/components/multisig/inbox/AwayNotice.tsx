@@ -19,7 +19,7 @@ import { NamesFor } from "../names/Names";
 import { Sentence } from "../names/Sentence";
 import { RecordTag } from "../proposal/RecordNote";
 import { Help } from "../shell/Help";
-import { Btn } from "../shell/kit";
+import { BRAND_TEXT, Btn } from "../shell/kit";
 import { When } from "../shell/live";
 import { useTreasuryNames } from "../treasuryName";
 
@@ -147,7 +147,12 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 			)}
 		>
 			<header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-				<h2 className="flex flex-wrap items-center gap-x-1.5 text-sm font-semibold">
+				<h2
+					className={cn(
+						"flex flex-wrap items-center gap-x-1.5 text-sm font-semibold",
+						BRAND_TEXT,
+					)}
+				>
 					<button
 						type="button"
 						aria-expanded={!folded}
