@@ -33,7 +33,7 @@ export const HELP = {
 	},
 	signingWindow: {
 		title: "Signing window",
-		body: "How long a proposal can still be sent: two days from when it was made, or almost three for one dated ahead (the form's “Give signers 3 days”). After that Hyperliquid refuses it and its signatures are worth nothing. It can then be proposed again.",
+		body: "How long a proposal can still be sent: two days from when it was made, or almost three with the form's “3 days” (under Advanced). Either can be sent as soon as enough have signed. After that Hyperliquid refuses it and its signatures are worth nothing.",
 	},
 	signingChain: {
 		title: "Signed under a chain",

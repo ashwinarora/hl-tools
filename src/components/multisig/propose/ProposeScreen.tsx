@@ -75,6 +75,7 @@ import {
 	type NonceMode,
 	NUMBERED_AFTER,
 	proposalNonce,
+	WINDOW_EITHER,
 } from "../model/nonce";
 import { isOutcomeShare } from "../model/outcomes";
 import { RELAY_COPY } from "../model/relay/copy";
@@ -517,6 +518,10 @@ function ProposeForm({
 						.validUntil,
 				)
 			: null;
+	// the Advanced fold opens by itself when what it holds is the reason the form says no
+	const [advancedOpen, setAdvancedOpen] = useState(false);
+	const windowMatters =
+		vaultPlan?.issues?.some((i) => i.code === "vault.lockup_outlasts") ?? false;
 
 	const chain = innerChain(network, form.chain);
 	const context = (nonce: number) => ({
@@ -1095,74 +1100,109 @@ function ProposeForm({
 													/>
 												</Select>
 											</Field>
-											<Field
-												// a vault action is signed as a code: the choice is for what the finaliser signs
-												label={
-													vaultOn ? CODE_COPY.chainLabel : "Signers sign under"
-												}
-												trailing={<Help k="signingChain" />}
-												hint={
-													<>
-														{vaultOn
-															? CODE_COPY.chainHint(
-																	chain.label,
-																	vaultPlan?.steps?.length === 2,
-																)
-															: `Signed for ${chain.label}. Your wallet may ask to switch to it. Nothing is sent or paid there.`}
-														<span className="mt-0.5 block font-mono text-subtle-foreground">
-															{/* jargon: the exact values, for experts */}
-															Technical: EIP-712 chain {chain.hex} ({chain.id})
-														</span>
-													</>
-												}
+											{/* fixed defaults most never change: folded, with the choice in its title */}
+											<details
+												className="group md:col-span-2"
+												open={advancedOpen || windowMatters}
+												onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
 											>
-												<Segmented<InnerChain>
-													label="Signing chain"
-													value={form.chain}
-													onChange={(v) => set("chain", v)}
-													options={[
-														{
-															value: "hyperevm",
-															label: innerChain(network, "hyperevm").label,
-														},
-														{
-															value: "arbitrum",
-															label: innerChain(network, "arbitrum").label,
-														},
-													]}
-												/>
-											</Field>
-											<Field
-												label="Signing window"
-												trailing={<Help k="signingWindow" />}
-												// The moment in the reader's own time, like everywhere in the
-												// section, and so only once the page runs in the browser: the
-												// server has another clock and another way of writing a date,
-												// and React would have to throw its copy of the form away.
-												hint={
-													<>
-														If created now:{" "}
-														{hydrated ? <Sentence parts={window.parts} /> : "…"}
-														. After that Hyperliquid refuses it, and it has to
-														be proposed again.
-														{numbered.raised ? ` ${NUMBERED_AFTER}` : ""}
-														{actionType === "usdSend" &&
-														form.nonceMode === "extended"
-															? ` ${DATED_AHEAD}`
-															: ""}
-													</>
-												}
-											>
-												<Segmented<NonceMode>
-													label="Signing window"
-													value={form.nonceMode}
-													onChange={(v) => set("nonceMode", v)}
-													options={[
-														{ value: "now", label: "2 days" },
-														{ value: "extended", label: "Give signers 3 days" },
-													]}
-												/>
-											</Field>
+												<summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground sm:min-h-0 [&::-webkit-details-marker]:hidden">
+													<span aria-hidden className="group-open:hidden">
+														▸
+													</span>
+													<span
+														aria-hidden
+														className="hidden group-open:inline"
+													>
+														▾
+													</span>
+													Advanced
+													<span className="font-normal text-subtle-foreground">
+														· {vaultOn ? "finaliser signs for" : "signed for"}{" "}
+														{chain.label} ·{" "}
+														{form.nonceMode === "extended"
+															? "3 days"
+															: "2 days"}{" "}
+														to sign
+													</span>
+												</summary>
+												<div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-x-6">
+													<Field
+														// a vault action is signed as a code: the choice is for what the finaliser signs
+														label={
+															vaultOn
+																? CODE_COPY.chainLabel
+																: "Signers sign under"
+														}
+														trailing={<Help k="signingChain" />}
+														hint={
+															<>
+																{vaultOn
+																	? CODE_COPY.chainHint(
+																			chain.label,
+																			vaultPlan?.steps?.length === 2,
+																		)
+																	: `Signed for ${chain.label}. Your wallet may ask to switch to it. Nothing is sent or paid there.`}
+																<span className="mt-0.5 block font-mono text-subtle-foreground">
+																	{/* jargon: the exact values, for experts */}
+																	Technical: EIP-712 chain {chain.hex} (
+																	{chain.id})
+																</span>
+															</>
+														}
+													>
+														<Segmented<InnerChain>
+															label="Signing chain"
+															value={form.chain}
+															onChange={(v) => set("chain", v)}
+															options={[
+																{
+																	value: "hyperevm",
+																	label: innerChain(network, "hyperevm").label,
+																},
+																{
+																	value: "arbitrum",
+																	label: innerChain(network, "arbitrum").label,
+																},
+															]}
+														/>
+													</Field>
+													<Field
+														label="Signing window"
+														trailing={<Help k="signingWindow" />}
+														// The moment in the reader's own time, like everywhere in the
+														// section, and so only once the page runs in the browser: the
+														// server has another clock and another way of writing a date,
+														// and React would have to throw its copy of the form away.
+														hint={
+															<>
+																If created now:{" "}
+																{hydrated ? (
+																	<Sentence parts={window.parts} />
+																) : (
+																	"…"
+																)}
+																. {WINDOW_EITHER}
+																{numbered.raised ? ` ${NUMBERED_AFTER}` : ""}
+																{actionType === "usdSend" &&
+																form.nonceMode === "extended"
+																	? ` ${DATED_AHEAD}`
+																	: ""}
+															</>
+														}
+													>
+														<Segmented<NonceMode>
+															label="Signing window"
+															value={form.nonceMode}
+															onChange={(v) => set("nonceMode", v)}
+															options={[
+																{ value: "now", label: "2 days" },
+																{ value: "extended", label: "3 days" },
+															]}
+														/>
+													</Field>
+												</div>
+											</details>
 										</div>
 									</Panel>
 									<Panel

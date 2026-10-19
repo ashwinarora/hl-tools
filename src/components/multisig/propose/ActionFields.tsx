@@ -255,12 +255,7 @@ export function ActionFields({
 					{destination(
 						"Another Hyperliquid account. Not an exchange deposit address.",
 					)}
-					{amount(
-						"USDC",
-						unified
-							? `Leaves this treasury's balance${movable.spotUsdc !== null ? ` (${movable.spotUsdc} USDC can be moved now)` : ""}. Written exactly as typed, never rounded.`
-							: "Written exactly as typed, never rounded.",
-					)}
+					{/* the balance first: what can be sent, and Max, depend on it */}
 					{!unified && (
 						<Field
 							label="Taken from"
@@ -283,6 +278,12 @@ export function ActionFields({
 								]}
 							/>
 						</Field>
+					)}
+					{amount(
+						"USDC",
+						unified
+							? `Leaves this treasury's balance${movable.spotUsdc !== null ? ` (${movable.spotUsdc} USDC can be moved now)` : ""}. Written exactly as typed, never rounded.`
+							: "Written exactly as typed, never rounded.",
 					)}
 					{receiver?.mode?.kind !== "unified" && (
 						<Field

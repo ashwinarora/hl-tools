@@ -44,6 +44,10 @@ export const NUMBERED_AFTER =
  * does to every other send of the account once it is carried out (measured on
  * testnet, 2026-10-11).
  */
+/** Under the form's signing window: neither choice makes anybody wait. */
+export const WINDOW_EITHER =
+	"Either way, it can be sent as soon as enough have signed. After that date Hyperliquid refuses it, and it has to be proposed again.";
+
 export const DATED_AHEAD =
 	"This send is dated 23 hours ahead. Once it is carried out, Hyperliquid refuses every USDC send and withdrawal of this treasury dated earlier, also ones made with another tool, until that time has passed.";
 
