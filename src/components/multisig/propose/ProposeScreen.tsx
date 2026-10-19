@@ -67,6 +67,7 @@ import {
 	proposeDraftFor,
 } from "../model/drafts";
 import { loadProposal, saveProposal } from "../model/history";
+import { maxFor } from "../model/max";
 import {
 	DATED_AHEAD,
 	describeWindow,
@@ -645,6 +646,48 @@ function ProposeForm({
 					perpsUsdc: movable.perps,
 					spot: state.spot,
 				});
+	// The Max of the amount field: worked out in the model from what the page
+	// has read, never by arithmetic here.
+	const tokenId = form.token.split(":")[1] ?? "";
+	const coin = form.token.split(":")[0] ?? "";
+	const tokenInfo = universe.data?.tokens.find((t) => t.tokenId === tokenId);
+	const vaultInfo =
+		vaultLookup.lookup?.kind === "vault" &&
+		vaultLookup.lookup.vault.address === vaultTyped
+			? vaultLookup.lookup.vault
+			: null;
+	const amountMax = maxFor(form, {
+		modeKnown: hydrated && !state.modePending && !!state.mode,
+		unified,
+		perps: movable.perps,
+		spotUsdc: movable.spotUsdc,
+		from: sourcePocket(form, context(previewNonce)),
+		receiver:
+			lookup.state === "idle"
+				? null
+				: lookup.state === "loading"
+					? "loading"
+					: (lookup.receiver?.status ?? null),
+		token:
+			form.kind === "sendToken" && coin
+				? {
+						coin,
+						available: spotAvailable(state.spot, coin),
+						decimals: tokenInfo?.weiDecimals ?? null,
+					}
+				: null,
+		maxWithdrawable: vaultInfo?.maxWithdrawable ?? null,
+		staking: {
+			spot: spotHype,
+			undelegated: staking.summary?.undelegated ?? null,
+			delegations: staking.delegations,
+		},
+	});
+	// what Hyperliquid releases from each vault the treasury has money in
+	const releasable = new Map<string, string>();
+	for (const [vault, l] of vaultDetails)
+		if (l.kind === "vault" && l.vault.maxWithdrawable !== null)
+			releasable.set(vault, l.vault.maxWithdrawable);
 	// a unified treasury has one balance: nothing to move between perps and spot
 	// a vault action is signed as a code: without the signing network this copy cannot sign one
 	const canSignCodes = signingNetwork() !== null;
@@ -960,6 +1003,8 @@ function ProposeForm({
 													unified={unified}
 													plan={vaultPlan}
 													now={now}
+													max={amountMax}
+													releasable={releasable}
 												/>
 											) : stakingPlan ? (
 												<StakingFields
@@ -971,6 +1016,7 @@ function ProposeForm({
 													spotAvailable={spotHype}
 													plan={stakingPlan}
 													now={now}
+													max={amountMax}
 												/>
 											) : form.kind === "changeSigners" ? (
 												<ChangeSignersFields
@@ -1010,6 +1056,7 @@ function ProposeForm({
 													agents={state.agents}
 													agentsFailed={!!state.agentsError}
 													now={now}
+													max={amountMax}
 												/>
 											)}
 										</div>

@@ -1954,7 +1954,24 @@ To check on the staging copy, where localhost cannot show it: the headers as Rai
 
 **The sign-in toast** (dev server, a stub returning that same refusal for one page load): one toast "Sign-in didn't go through. Please try again." with "Details" folded, nothing beside the buttons; a decline in Rabby replaced it with "Sign-in cancelled in your wallet."; a real sign-in afterwards left no toast. The error toast's background was see-through (the page's text ran through its title) and is now solid under the tint.
 
-133 files, 3,357 unit tests after it (`securityHeaders.test.ts`, the HTTP exchange in `signingRpc.test.ts`, `signInNotice.test.ts`).
+**The mainnet smoke test** (on staging, every click and signature the owner's; mainnet test treasury, 2 of 3): the HLP withdrawal of the listed worth, 10.005691 USDC, was refused, "Insufficient vault equity for withdrawal", with nothing moved; one of 10 USDC was accepted (Hyperliquid's ledger: requested 9.999999, none kept back); perps 9.999999, 0.00569 USDC left in HLP; HLTools holds both proposals with their signatures and answers. Read-only on mainnet afterwards: for 25 HLP depositors, `maxWithdrawable` was always the precise value cut down to 6 decimals and `userVaultEquities.equity` above it for 22.
+
+**Max, on testnet in the browser** (dev server, S1, Rabby, nothing created):
+
+| Form (treasury) | Max filled | The line |
+|---|---|---|
+| Send USDC, no destination (0xe45e…, 53 spot, 0 perps) | nothing | "Enter the destination first: a first send to a new address costs 1 USDC…" |
+| Send USDC to a new address | 52 | all of spot less the 1 USDC fee, which nothing else can pay; the form's cost line agreed and nothing was refused |
+| Spot → perps / perps → spot | 53 / nothing | all the spot not on hold / nothing to move |
+| Bridge withdrawal | nothing | 0 to withdraw, and it has to be more than the bridge's 1 USDC |
+| Vault deposit | nothing | perps can release 0, a deposit is at least 5 USDC, type more to move from spot |
+| Vault withdrawal | 2.029483 | Hyperliquid's figure at the page's last read; the list read "releases 2.029483 USDC · unlocked" (Hyperliquid testnet a minute later: maxWithdrawable 2.029285, equity 2.029301 above the precise 2.0292852) |
+| Stake (0x4b46…, 0.086 HYPE in spot) | 0.086 | spot plus the staking balance |
+| Return to spot (stake with two validators) | nothing | choose which validator |
+| Move, from the validator holding 0.01000588 | 0.01000588 | all staked with it |
+| Send HYPE | 0.086 | all HYPE not on hold |
+
+134 files, 3,382 unit tests after it (`max.test.ts` with the fee grid; the mainnet vault figures in `vault.test.ts`; the core's coverage stays at 100%).
 
 ## Feedback round 1 (2026-10-04)
 

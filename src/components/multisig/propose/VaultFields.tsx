@@ -4,6 +4,7 @@ import { cn } from "#/lib/utils";
 import type { Vaults } from "../live/useVaults";
 import type { ActionForm } from "../model/actions";
 import { amountText } from "../model/chain/columns";
+import type { MaxAmount } from "../model/max";
 import type { Line } from "../model/signerSet";
 import { shortAddress } from "../model/stage";
 import { untilWords } from "../model/time";
@@ -20,6 +21,7 @@ import {
 import { Help } from "../shell/Help";
 import { When } from "../shell/live";
 import { Lines } from "../signers/parts";
+import { useMax } from "./MaxButton";
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 
@@ -42,6 +44,8 @@ export function VaultFields({
 	unified,
 	plan,
 	now,
+	max,
+	releasable,
 }: {
 	form: ActionForm;
 	set: <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => void;
@@ -60,8 +64,13 @@ export function VaultFields({
 	unified: boolean;
 	plan: VaultPlan;
 	now: number;
+	/** The amount's Max (`model/max.ts`). */
+	max: MaxAmount | null;
+	/** What Hyperliquid releases from each vault the treasury has money in, where read. */
+	releasable: ReadonlyMap<string, string>;
 }) {
 	const kind = form.kind as VaultKind;
+	const maxUi = useMax(max, form.amount, (a) => set("amount", a));
 	const deposit = kind === "vaultDeposit";
 	const typed = form.vault.trim().toLowerCase();
 	// to the last decimal: a figure rounded up would promise more than can be moved
@@ -200,13 +209,16 @@ export function VaultFields({
 										<span className="font-semibold">
 											{vaultLabel(d.vault, network, names.get(d.vault))}
 										</span>
+										{/* what Hyperliquid releases: the deposit's worth can be above it */}
 										<span className="font-mono text-xs text-muted-foreground">
-											{usdc(d.equity)}
+											{releasable.has(d.vault)
+												? `releases ${usdc(releasable.get(d.vault))}`
+												: `worth about ${usdc(d.equity)}`}
 										</span>
 										<span className="ml-auto text-xs text-subtle-foreground">
 											{d.lockedUntil > now
 												? `locked, ${untilWords(d.lockedUntil, now)}`
-												: "can be withdrawn"}
+												: "unlocked"}
 										</span>
 									</button>
 								);
@@ -260,6 +272,7 @@ export function VaultFields({
 				htmlFor="ms-vault-amount"
 				error={error("amount")}
 				hint="In USDC, with up to 6 decimals. It is never rounded for you."
+				trailing={maxUi.button}
 			>
 				<TextInput
 					id="ms-vault-amount"
@@ -269,6 +282,7 @@ export function VaultFields({
 					placeholder={deposit ? "5" : "0.0"}
 					aria-invalid={!!error("amount")}
 				/>
+				{maxUi.line}
 			</Field>
 
 			{steps && (
