@@ -25,6 +25,7 @@ import { Route as ToolsOrdersRouteImport } from './routes/tools/orders'
 import { Route as ToolsMultisigRouteImport } from './routes/tools/multisig'
 import { Route as ToolsCorewriterRouteImport } from './routes/tools/corewriter'
 import { Route as ToolsAssetsRouteImport } from './routes/tools/assets'
+import { Route as Rpc1337RouteImport } from './routes/rpc/1337'
 import { Route as MultisigProposeRouteImport } from './routes/multisig/propose'
 import { Route as MultisigProposalRouteImport } from './routes/multisig/proposal'
 import { Route as MultisigOpenRouteImport } from './routes/multisig/open'
@@ -114,6 +115,11 @@ const ToolsAssetsRoute = ToolsAssetsRouteImport.update({
   path: '/tools/assets',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Rpc1337Route = Rpc1337RouteImport.update({
+  id: '/rpc/1337',
+  path: '/rpc/1337',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MultisigProposeRoute = MultisigProposeRouteImport.update({
   id: '/propose',
   path: '/propose',
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/multisig/open': typeof MultisigOpenRoute
   '/multisig/proposal': typeof MultisigProposalRoute
   '/multisig/propose': typeof MultisigProposeRoute
+  '/rpc/1337': typeof Rpc1337Route
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
   '/tools/multisig': typeof ToolsMultisigRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/multisig/open': typeof MultisigOpenRoute
   '/multisig/proposal': typeof MultisigProposalRoute
   '/multisig/propose': typeof MultisigProposeRoute
+  '/rpc/1337': typeof Rpc1337Route
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
   '/tools/multisig': typeof ToolsMultisigRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/multisig/open': typeof MultisigOpenRoute
   '/multisig/proposal': typeof MultisigProposalRoute
   '/multisig/propose': typeof MultisigProposeRoute
+  '/rpc/1337': typeof Rpc1337Route
   '/tools/assets': typeof ToolsAssetsRoute
   '/tools/corewriter': typeof ToolsCorewriterRoute
   '/tools/multisig': typeof ToolsMultisigRoute
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/multisig/open'
     | '/multisig/proposal'
     | '/multisig/propose'
+    | '/rpc/1337'
     | '/tools/assets'
     | '/tools/corewriter'
     | '/tools/multisig'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/multisig/open'
     | '/multisig/proposal'
     | '/multisig/propose'
+    | '/rpc/1337'
     | '/tools/assets'
     | '/tools/corewriter'
     | '/tools/multisig'
@@ -298,6 +309,7 @@ export interface FileRouteTypes {
     | '/multisig/open'
     | '/multisig/proposal'
     | '/multisig/propose'
+    | '/rpc/1337'
     | '/tools/assets'
     | '/tools/corewriter'
     | '/tools/multisig'
@@ -318,6 +330,7 @@ export interface RootRouteChildren {
   ChangesRoute: typeof ChangesRoute
   HowToUseRoute: typeof HowToUseRoute
   PrivacyRoute: typeof PrivacyRoute
+  Rpc1337Route: typeof Rpc1337Route
   ToolsAssetsRoute: typeof ToolsAssetsRoute
   ToolsCorewriterRoute: typeof ToolsCorewriterRoute
   ToolsMultisigRoute: typeof ToolsMultisigRoute
@@ -442,6 +455,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolsAssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rpc/1337': {
+      id: '/rpc/1337'
+      path: '/rpc/1337'
+      fullPath: '/rpc/1337'
+      preLoaderRoute: typeof Rpc1337RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/multisig/propose': {
       id: '/multisig/propose'
       path: '/propose'
@@ -547,6 +567,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChangesRoute: ChangesRoute,
   HowToUseRoute: HowToUseRoute,
   PrivacyRoute: PrivacyRoute,
+  Rpc1337Route: Rpc1337Route,
   ToolsAssetsRoute: ToolsAssetsRoute,
   ToolsCorewriterRoute: ToolsCorewriterRoute,
   ToolsMultisigRoute: ToolsMultisigRoute,
@@ -561,10 +582,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }
