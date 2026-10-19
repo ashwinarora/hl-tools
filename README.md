@@ -91,11 +91,11 @@ VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
 | `bun --bun run dev` | Dev server on port 3000 |
 | `bun --bun run build` | Production build into `.output/` |
 | `bun --bun run start` | Serve the production build (`node .output/server/index.mjs`) |
-| `bun --bun run test` | Vitest: protocol core and the app's pure logic (3,335 tests) |
+| `bun --bun run test` | Vitest: protocol core and the app's pure logic (3,427 tests) |
 | `bun --bun run check` | Biome lint + format check |
 | `bun run db:start` / `db:stop` | Start or stop the local relay (Supabase CLI and Docker) |
 | `bun run db:reset` | Rebuild the local relay database from `supabase/migrations/` |
-| `bun run db:test` | pgTAP: the relay's access rules, guards and worker (1,015 assertions) |
+| `bun run db:test` | pgTAP: the relay's access rules, guards and worker (1,047 assertions) |
 | `bun run test:relay` | Integration tests of the relay client against the local stack (78 tests) |
 | `bun run rpc:1337` | Serve the signing network's stand-in on its own, on `http://localhost:3337/rpc` (the app also serves it at `/rpc/1337`) |
 
