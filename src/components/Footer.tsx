@@ -1,12 +1,20 @@
 import { Link } from "@tanstack/react-router";
-import { GithubMark } from "./Header";
+import { cn } from "#/lib/utils";
+import { GithubMark, MULTISIG_WRAP } from "./Header";
 
 export default function Footer() {
 	const year = new Date().getFullYear();
+	// as wide as the header on every page
+	const wrap = MULTISIG_WRAP;
 
 	return (
 		<footer className="border-t border-border text-muted-foreground">
-			<div className="page-wrap flex flex-col gap-4 py-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+			<div
+				className={cn(
+					wrap,
+					"flex flex-col gap-4 py-8 text-sm sm:flex-row sm:items-center sm:justify-between",
+				)}
+			>
 				<div className="space-y-1">
 					<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
 						<span className="font-mono font-semibold text-foreground">

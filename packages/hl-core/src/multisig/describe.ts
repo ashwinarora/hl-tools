@@ -5,6 +5,7 @@
  * decimals, integers for USD micro-units), never re-rounded.
  */
 
+import { Decimal } from "../decimal.ts";
 import type { Network } from "../network.ts";
 import { RETURN_QUEUE, STAKE_LOCKUP } from "../rules/staking.ts";
 import { WITHDRAWAL_FEE_USDC } from "../rules/transfers.ts";
@@ -187,17 +188,19 @@ const balanceName = (dex: unknown): string =>
 		: dex === "spot"
 			? "the spot balance"
 			: `the balance on perp dex ${written(dex ?? "?")}`;
+/** A whole number of millionths, as the actions carry USDC; null for anything else. */
+const millionths = (v: unknown): bigint | null =>
+	typeof v === "bigint"
+		? v
+		: typeof v === "number" && Number.isSafeInteger(v)
+			? BigInt(v)
+			: null;
+/** Millionths of a USDC in words, exactly; anything else (a fraction, text) as it came. */
 const usd = (v: unknown): string => {
-	if (typeof v === "number" || typeof v === "bigint") {
-		const n = BigInt(v);
-		const whole = n / 1_000_000n;
-		const frac = (n % 1_000_000n)
-			.toString()
-			.padStart(6, "0")
-			.replace(/0+$/, "");
-		return frac ? `${whole}.${frac} USDC` : `${whole} USDC`;
-	}
-	return `${s(v)} (raw)`;
+	const n = millionths(v);
+	return n === null
+		? `${s(v)} (raw)`
+		: `${Decimal.fromScaled(n, 6).toString()} USDC`;
 };
 const coinOf = (ctx: DescribeContext, asset: unknown): string =>
 	typeof asset === "number"
@@ -309,10 +312,18 @@ export function describeAction(
 			return done(
 				`Set ${coinOf(ctx, action.asset)} leverage to ${s(action.leverage)}x ${action.isCross ? "cross" : "isolated"}`,
 			);
-		case "updateIsolatedMargin":
+		case "updateIsolatedMargin": {
+			// Hyperliquid's docs: `isBuy` "won't have any effect until hedge mode is
+			// introduced"; the amount adds or removes, and its sign says which (the
+			// SDKs send a negative amount to remove)
+			const n = millionths(action.ntli);
+			const coin = coinOf(ctx, action.asset);
 			return done(
-				`${action.isBuy ? "Add" : "Remove"} ${usd(action.ntli)} isolated margin on ${coinOf(ctx, action.asset)}`,
+				n === null
+					? `Change ${coin} isolated margin by ${usd(action.ntli)}`
+					: `${n < 0n ? "Remove" : "Add"} ${usd(n < 0n ? -n : n)} isolated margin on ${coin}`,
 			);
+		}
 		case "twapOrder": {
 			const t = (action.twap ?? {}) as Record<string, unknown>;
 			return done(

@@ -62,15 +62,24 @@ export function Logo() {
 
 const REPO = "https://github.com/ashwinarora/hl-tools";
 
+/**
+ * The site's header and footer, and the Multisig section, run up to 1440 px
+ * wide. The header and the footer use it on every page, so the logo and the
+ * navigation stay put between pages; a page's own content keeps its width
+ * (the tools: `page-wrap`).
+ */
+export const MULTISIG_WRAP = "mx-auto w-full max-w-[1440px] px-4 sm:px-6";
+
 export default function Header() {
 	const [open, setOpen] = useState(false);
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const wrap = MULTISIG_WRAP;
 	// biome-ignore lint/correctness/useExhaustiveDependencies: close the mobile menu on navigation
 	useEffect(() => setOpen(false), [pathname]);
 
 	return (
 		<header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-			<nav className="page-wrap flex h-14 items-center gap-3">
+			<nav className={cn(wrap, "flex h-14 items-center gap-3")}>
 				<Logo />
 				<div className="ml-4 hidden items-center gap-1 md:flex">
 					<DropdownMenu>
@@ -161,7 +170,7 @@ export default function Header() {
 				hidden={!open}
 				className={cn("border-t border-border bg-background md:hidden")}
 			>
-				<div className="page-wrap grid gap-1 py-3">
+				<div className={cn(wrap, "grid gap-1 py-3")}>
 					{TOOLS.map((t) => (
 						<Link
 							key={t.id}

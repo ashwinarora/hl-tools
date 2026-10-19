@@ -4,6 +4,7 @@ import { Field, Segmented, Select, TextInput } from "#/components/hub/layout";
 import type { Staking } from "../live/useStaking";
 import type { ActionForm } from "../model/actions";
 import { amountText } from "../model/chain/columns";
+import type { MaxAmount } from "../model/max";
 import type { Line } from "../model/signerSet";
 import {
 	lockupWords,
@@ -19,6 +20,7 @@ import { untilWords } from "../model/time";
 import { Help } from "../shell/Help";
 import { When } from "../shell/live";
 import { Lines } from "../signers/parts";
+import { useMax } from "./MaxButton";
 import { ValidatorPicker } from "./ValidatorPicker";
 
 /**
@@ -35,6 +37,7 @@ export function StakingFields({
 	spotAvailable,
 	plan,
 	now,
+	max,
 }: {
 	form: ActionForm;
 	set: <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => void;
@@ -45,7 +48,13 @@ export function StakingFields({
 	spotAvailable: string | null;
 	plan: StakingPlan;
 	now: number;
+	/** The amount's Max (`model/max.ts`); a return may name the validator it takes from. */
+	max: (MaxAmount & { readonly validator?: string }) | null;
 }) {
+	const maxUi = useMax(max, form.amount, (amount, validator) => {
+		set("amount", amount);
+		if (validator) set("validator", validator);
+	});
 	const kind = form.kind as StakingKind;
 	const validators = staking.validators;
 	const stakes = staking.delegations ?? [];
@@ -180,6 +189,7 @@ export function StakingFields({
 				htmlFor="ms-stake-amount"
 				error={error("amount")}
 				hint="In HYPE, with up to 8 decimals. It is never rounded for you."
+				trailing={maxUi.button}
 			>
 				<TextInput
 					id="ms-stake-amount"
@@ -189,6 +199,7 @@ export function StakingFields({
 					placeholder="100"
 					aria-invalid={!!error("amount")}
 				/>
+				{maxUi.line}
 			</Field>
 
 			{kind === "stake" && toValidator("validator", STAKING.validator.stake)}

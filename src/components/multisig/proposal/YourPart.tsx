@@ -1,6 +1,7 @@
 import {
 	type Address,
 	type Issue,
+	type Network,
 	type Proposal,
 	stakingActionOf,
 	vaultActionOf,
@@ -34,9 +35,10 @@ import {
 } from "../model/stage";
 import { untilWords } from "../model/time";
 import { Sentence } from "../names/Sentence";
+import { Headline } from "../shell/Headline";
 import { Heard } from "../shell/Heard";
 import { Help } from "../shell/Help";
-import { Btn, Card, Tag } from "../shell/kit";
+import { Btn, Card, NetTag, Tag } from "../shell/kit";
 import { When } from "../shell/live";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
 import type { WalletSigner } from "../useWalletSigner";
@@ -49,6 +51,8 @@ import {
 } from "./actions";
 import { CodePanel } from "./CodePanel";
 import type { ProposalDoc } from "./useProposalDoc";
+
+const NO_STOPS: readonly string[] = [];
 
 const FRESH: Record<StepId, StepState> = {
 	inner: "todo",
@@ -71,6 +75,8 @@ export function YourPart({
 	need,
 	signers,
 	now,
+	restate,
+	stops = NO_STOPS,
 }: {
 	proposal: Proposal;
 	stage: Stage;
@@ -83,6 +89,10 @@ export function YourPart({
 	signers: readonly Address[];
 	/** The page's clock: one for every age said on it. */
 	now: number;
+	/** What is signed, said again at the top of this part: the action's headline and its network. */
+	restate?: { readonly headline: string; readonly network: Network };
+	/** The titles of the stop notices that apply, said again right above the buttons. */
+	stops?: readonly string[];
 }) {
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
 	const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -328,6 +338,7 @@ export function YourPart({
 			}
 			actions={isFinaliser ? <Tag tone="you">you are the finaliser</Tag> : null}
 		>
+			{restate && <Restated {...restate} />}
 			{theirs && (
 				<p className="mb-2.5 flex items-start gap-1.5 text-[13px] text-warning">
 					<span
@@ -349,6 +360,9 @@ export function YourPart({
 						failed={addFailed}
 					/>
 				</div>
+			)}
+			{(stage.canExecute || stage.canSign || waits) && (
+				<StopLines titles={stops} />
 			)}
 			{any && (
 				<div className="flex flex-wrap items-center gap-2">
@@ -549,5 +563,54 @@ export function YourPart({
 				)}
 			</Heard>
 		</Card>
+	);
+}
+
+/**
+ * At the top of the reader's part: what is signed, once more, where it is
+ * signed. The action's own words, its amount and its address whole, and the
+ * network it is for.
+ */
+export function Restated({
+	headline,
+	network,
+}: {
+	headline: string;
+	network: Network;
+}) {
+	return (
+		<div className="@container mb-3.5 rounded-lg border border-border bg-surface-2 px-3.5 py-3">
+			{/* the network beside the action where there is room, under it on a phone */}
+			<div className="flex flex-col gap-2 @min-[30rem]:flex-row @min-[30rem]:items-start @min-[30rem]:justify-between @min-[30rem]:gap-3">
+				<Headline text={headline} size="sm" className="flex-1" />
+				<span className="shrink-0">
+					<NetTag network={network} />
+				</span>
+			</div>
+		</div>
+	);
+}
+
+/**
+ * The stop notices that apply, by their titles, right above the buttons:
+ * one amber line each. The notices themselves stay in full above the action.
+ */
+export function StopLines({ titles }: { titles: readonly string[] }) {
+	if (titles.length === 0) return null;
+	return (
+		<ul className="mb-3 flex flex-col gap-1">
+			{titles.map((t) => (
+				<li
+					key={t}
+					className="flex items-start gap-1.5 text-[13px] font-medium text-warning"
+				>
+					<span
+						className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+						aria-hidden
+					/>
+					<span className="min-w-0 [overflow-wrap:anywhere]">{t}</span>
+				</li>
+			))}
+		</ul>
 	);
 }

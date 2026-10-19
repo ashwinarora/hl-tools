@@ -8,7 +8,12 @@ import {
 import { useNetwork } from "#/store/networkStore";
 import { CREATE } from "../model/create";
 import { RELAY_COPY } from "../model/relay/copy";
-import { countNeeds, groupInbox, orderMatters } from "../model/relay/inbox";
+import {
+	countNeeds,
+	countTreasuriesOn,
+	groupInbox,
+	orderMatters,
+} from "../model/relay/inbox";
 import { type OpenProposal, useOpenProposals } from "../relay/openProposals";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -70,6 +75,11 @@ export function InboxScreen() {
 		groups.dead.length;
 	const name = (p: OpenProposal) => nameOf(p.network, p.treasury);
 	const hasTreasuries = treasuries.some((t) => t.network === network);
+	const onOther = countTreasuriesOn(
+		treasuries,
+		other,
+		(n, a) => hydrated && hidden.includes(treasuryKey(n, a)),
+	);
 
 	return (
 		<ShellPage
@@ -176,6 +186,15 @@ export function InboxScreen() {
 										No treasuries on {network} yet.
 									</b>
 									<br />
+									{onOther > 0 && (
+										// the likeliest "where did they go?": the other network
+										<>
+											Looking for {other}? You have {onOther}{" "}
+											{onOther === 1 ? "treasury" : "treasuries"} there: switch
+											the network in the header.
+											<br />
+										</>
+									)}
 									Add a multi-sig account you sign for; your co-signers will see
 									it too. Or turn this wallet's own account into one.
 									<span className="mt-3 flex flex-wrap justify-center gap-2">

@@ -59,6 +59,7 @@ import { useShellWallet } from "../shell/WalletBox";
 import { defaultTreasuryName, useTreasuryName } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
 import { ChainTab } from "./ChainTab";
+import { HoldingTiles } from "./HoldingTiles";
 import { OverviewTab } from "./OverviewTab";
 import { PendingTab } from "./PendingTab";
 import { SigningLogTab } from "./SigningLogTab";
@@ -325,6 +326,13 @@ export function TreasuryScreen({
 				{selfSigners && (
 					<SwitchToSigner signers={selfSigners} className="mb-4" />
 				)}
+				<HoldingTiles
+					network={network}
+					address={address}
+					state={live}
+					holdings
+					linked={false}
+				/>
 				<OverviewTab
 					network={network}
 					address={address}
@@ -386,6 +394,13 @@ export function TreasuryScreen({
 						</Link>
 					</p>
 				</Card>
+				<HoldingTiles
+					network={network}
+					address={address}
+					state={live}
+					holdings
+					linked={false}
+				/>
 				<OverviewTab
 					network={network}
 					address={address}
@@ -485,6 +500,14 @@ export function TreasuryScreen({
 					)
 				}
 			>
+				{/* what it holds first, on every section: the figures pushed live */}
+				<HoldingTiles
+					network={network}
+					address={address}
+					state={live}
+					holdings={tab === "overview"}
+					linked
+				/>
 				{frozen && (
 					<Callout
 						tone="warning"

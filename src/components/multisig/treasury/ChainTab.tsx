@@ -144,7 +144,12 @@ export function ChainTab({
 							{w.party && (
 								<>
 									{" "}
-									<Who address={w.party} editable />
+									{/* the cell grows to hold it: the table scrolls, the address never spills over */}
+									<Who
+										address={w.party}
+										editable
+										className="max-w-none flex-nowrap"
+									/>
 								</>
 							)}
 						</>

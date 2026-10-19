@@ -1,15 +1,19 @@
 import { Link } from "@tanstack/react-router";
 import type { ComponentProps, ReactNode } from "react";
+import { tool } from "#/lib/tools";
 import { cn } from "#/lib/utils";
+import { MultisigMark } from "./MultisigMark";
 import { WalletBox } from "./WalletBox";
 
 const item =
-	"flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-muted-foreground no-underline transition-colors hover:bg-surface-2 hover:text-foreground";
-const current = "bg-surface-3 font-medium text-foreground";
+	"relative flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground no-underline transition-colors hover:bg-surface-2 hover:text-foreground";
+// where the reader is: a filled row with a short mark in the section's colour on its edge
+const current =
+	"bg-surface-3 font-medium text-foreground before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-brand";
 
 export function RailHeading({ children }: { children: ReactNode }) {
 	return (
-		<h3 className="mb-1.5 px-2.5 text-xs font-semibold uppercase tracking-[0.07em] text-subtle-foreground">
+		<h3 className="mb-1 px-2.5 text-2xs font-semibold uppercase tracking-[0.08em] text-subtle-foreground">
 			{children}
 		</h3>
 	);
@@ -49,10 +53,11 @@ export function RailLink({
 			className={item}
 			activeProps={{ className: cn(item, current), "aria-current": "page" }}
 		>
+			{/* never cut: a long name or its second line wraps instead */}
 			<span className="min-w-0 flex-1">
-				<span className="block truncate">{children}</span>
+				<span className="block [overflow-wrap:anywhere]">{children}</span>
 				{sub && (
-					<span className="block truncate font-mono text-xs text-subtle-foreground">
+					<span className="block font-mono text-2xs text-subtle-foreground">
 						{sub}
 					</span>
 				)}
@@ -76,11 +81,30 @@ export function Rail({
 }) {
 	return (
 		<>
+			<SectionMark />
 			<WalletBox />
 			{children}
-			<div className="flex flex-col gap-0.5 border-t border-border pt-3">
+			<div className="flex flex-col gap-0.5 border-t border-border pt-2.5">
 				{foot}
 			</div>
 		</>
+	);
+}
+
+/** The section's mark and name: where the reader is, at the top of the rail. */
+export function SectionMark({ className }: { className?: string }) {
+	return (
+		<Link
+			to="/multisig"
+			className={cn(
+				"inline-flex items-center gap-2 self-start rounded-md px-1 py-0.5 text-foreground no-underline",
+				className,
+			)}
+		>
+			<MultisigMark className="size-6" />
+			<span className="text-[15px] font-semibold tracking-tight">
+				{tool("multisig-sign").short}
+			</span>
+		</Link>
 	);
 }

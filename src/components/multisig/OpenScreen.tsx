@@ -71,10 +71,11 @@ export function OpenScreen() {
 					<FirstRun sharing={false} />
 				</div>
 			)}
-			<div className="grid gap-4 lg:grid-cols-2">
+			{/* the two ways in side by side, what this browser keeps across the page under them */}
+			<div className="grid items-start gap-4 lg:grid-cols-2 xl:gap-5">
 				<StartProposal wallet={address} />
-				<div className="space-y-4">
-					<OpenProposal handed={handed} />
+				<OpenProposal handed={handed} />
+				<div className="min-w-0 lg:col-span-2">
 					<HistoryList network={network} />
 				</div>
 			</div>

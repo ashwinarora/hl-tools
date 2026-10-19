@@ -58,11 +58,19 @@ export function PageHead({
 
 export type TagTone = "gray" | "you" | "warn" | "ok" | "info" | "danger";
 
+/**
+ * The section's teal and green as text on their own soft grounds. In the
+ * light theme the hub's tokens sit just under 4.5:1 there (4.46 and 4.61),
+ * so the text is a shade darker (6.0:1 and 6.2:1); the dark theme keeps them.
+ */
+export const BRAND_TEXT = "text-[oklch(0.45_0.1_178)] dark:text-brand";
+const SUCCESS_TEXT = "text-[oklch(0.45_0.12_150)] dark:text-success";
+
 const TAG: Record<TagTone, string> = {
 	gray: "border-border bg-surface-2 text-muted-foreground",
-	you: "border-transparent bg-brand-soft text-brand",
+	you: cn("border-transparent bg-brand-soft", BRAND_TEXT),
 	warn: "border-warning/35 bg-warning-soft text-warning",
-	ok: "border-success/35 bg-success-soft text-success",
+	ok: cn("border-success/35 bg-success-soft", SUCCESS_TEXT),
 	info: "border-info/35 bg-info-soft text-info",
 	danger: "border-danger/35 bg-danger-soft text-danger",
 };
@@ -243,6 +251,14 @@ export function Empty({ children }: { children: ReactNode }) {
 	);
 }
 
+/**
+ * A button that cannot be pressed looks it, whatever its colour: a grey
+ * fill, a grey label and no coloured edge, never the brand's green at half
+ * strength. Its reason is said next to it, in words.
+ */
+export const OFF_LOOK =
+	"disabled:opacity-100 disabled:border-border disabled:bg-surface-3 disabled:text-subtle-foreground disabled:shadow-none";
+
 /** Buttons at the mockup's two heights (34 and 28 px). */
 export function Btn({
 	size = "md",
@@ -258,9 +274,38 @@ export function Btn({
 					? "h-11 px-3.5 text-[13px] sm:h-[34px]"
 					: "h-11 px-2.5 text-xs sm:h-7",
 				className,
+				OFF_LOOK,
 			)}
 			{...props}
 		/>
+	);
+}
+
+/**
+ * A step's number in a form's heading, read out with it ("1 · Action"),
+ * in a small teal ring.
+ */
+export function StepNo({ n }: { n: number }) {
+	return (
+		<span
+			className={cn(
+				"inline-grid size-[22px] shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-semibold tabular-nums ring-1 ring-brand/30 ring-inset",
+				BRAND_TEXT,
+			)}
+		>
+			{n}
+			<span className="sr-only"> · </span>
+		</span>
+	);
+}
+
+/** A form's heading with its step's number. */
+export function StepTitle({ n, children }: { n: number; children: ReactNode }) {
+	return (
+		<span className="inline-flex items-center gap-2">
+			<StepNo n={n} />
+			<span>{children}</span>
+		</span>
 	);
 }
 

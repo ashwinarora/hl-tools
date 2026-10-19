@@ -35,7 +35,8 @@ export function Landing() {
 			<div className="mb-4">
 				<FirstRun sharing />
 			</div>
-			<div className="grid grid-cols-1 items-start gap-4 min-[861px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+			{/* the four ways in, two by two, each row's cards of one height */}
+			<div className="grid grid-cols-1 gap-4 min-[861px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] xl:grid-cols-2 xl:gap-5">
 				<Card title={RELAY_COPY.teamTitle}>
 					<div className="flex flex-col gap-4">
 						<span className="text-sm text-muted-foreground">

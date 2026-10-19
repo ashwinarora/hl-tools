@@ -12,6 +12,7 @@ import {
 	useNetworkHydrated,
 	useNetworkStore,
 } from "#/store/networkStore";
+import { OFF_LOOK } from "./shell/kit";
 import { TreasuryStrip } from "./TreasuryStrip";
 import { useTreasuryState } from "./useTreasuryState";
 
@@ -75,6 +76,7 @@ export function StartProposal({ wallet }: { wallet?: string | null }) {
 					</Field>
 					<div className="flex flex-wrap items-center gap-2">
 						<Button
+							className={OFF_LOOK}
 							type="submit"
 							size="sm"
 							variant="brand"
@@ -83,6 +85,7 @@ export function StartProposal({ wallet }: { wallet?: string | null }) {
 							Check on {network}
 						</Button>
 						<Button
+							className={OFF_LOOK}
 							type="button"
 							size="sm"
 							variant="ghost"

@@ -197,7 +197,7 @@ export const VAULT_REFUSALS: Readonly<Record<VaultRefusal, string>> = {
 	"vault-lockup":
 		"The deposit this takes from is still locked, and Hyperliquid refuses a withdrawal until the lockup has ended.",
 	"vault-equity":
-		"This withdraws more USDC than the treasury's deposit in that vault is worth now.",
+		"This withdraws more USDC than can come out of the treasury's deposit in that vault now.",
 	"transfer-balance":
 		"This moves more USDC to the perps balance than the spot balance can release now.",
 };
@@ -280,7 +280,9 @@ function refusalDetail(
 			(facts.deposit && facts.deposit !== "none" ? facts.deposit.equity : null);
 		return limit === null
 			? "The treasury has nothing in this vault."
-			: `It is worth ${usdc(limit)}, and this withdraws ${usdc(step.amount)}.`;
+			: facts.maxWithdrawable !== null
+				? `Hyperliquid releases ${usdc(limit)} from it now, and this withdraws ${usdc(step.amount)}.`
+				: `It is worth ${usdc(limit)}, and this withdraws ${usdc(step.amount)}.`;
 	}
 	return "";
 }

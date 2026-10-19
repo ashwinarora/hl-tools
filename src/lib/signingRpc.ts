@@ -136,3 +136,44 @@ export function answerSigningRpc(
 ): unknown {
 	return Array.isArray(body) ? body.map((q) => one(q, now)) : one(body, now);
 }
+
+/** Anyone's wallet may ask: the answers are the same for everybody. */
+const CORS = {
+	"access-control-allow-origin": "*",
+	"access-control-allow-headers": "content-type",
+	"access-control-allow-methods": "POST, OPTIONS",
+} as const;
+
+/** A wallet's questions are a few hundred bytes; anything this large is not one. */
+const MAX_BODY = 100_000;
+
+/** What a person opening the link in a browser reads. */
+export const SIGNING_RPC_PAGE =
+	"The hl-tools signing network (chain 1337). Wallets post JSON-RPC here; nothing can be sent on it.\n";
+
+/**
+ * The whole HTTP exchange of the signing network, for whatever serves it (the
+ * app's `/rpc/1337` route, `bun run rpc:1337`): JSON-RPC by POST, a line of
+ * text on GET, the CORS answer on OPTIONS. Reads the body only; never logs.
+ */
+export async function signingRpcResponse(
+	request: Request,
+	now: number = Date.now(),
+): Promise<Response> {
+	if (request.method === "OPTIONS")
+		return new Response(null, { status: 204, headers: CORS });
+	if (request.method !== "POST")
+		return new Response(SIGNING_RPC_PAGE, {
+			headers: { "content-type": "text/plain; charset=utf-8", ...CORS },
+		});
+	let body: unknown = null;
+	try {
+		const text = await request.text();
+		if (text.length <= MAX_BODY) body = JSON.parse(text);
+	} catch {
+		body = null;
+	}
+	return new Response(JSON.stringify(answerSigningRpc(body, now)), {
+		headers: { "content-type": "application/json", ...CORS },
+	});
+}

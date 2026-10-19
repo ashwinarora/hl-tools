@@ -6,7 +6,7 @@ export const Route = createFileRoute("/privacy")({
 	component: PrivacyPage,
 });
 
-const UPDATED = "2026-10-13";
+const UPDATED = "2026-10-19";
 const REPO = "https://github.com/ashwinarora/hl-tools";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -92,9 +92,9 @@ function PrivacyPage() {
 						opens, before you pick anything. It tells WalletConnect that it was
 						started and on which page, and WalletConnect sees your IP address.
 						If you pick a WalletConnect-based wallet there, the connection is
-						relayed by WalletConnect, and its window loads a font from Google.
-						All of that is under their policies, and none of it happens on any
-						other page.
+						relayed by WalletConnect. All of that is under their policies, and
+						none of it happens on any other page. No page of this site loads a
+						font, a stylesheet or a script from another host.
 					</p>
 					<p>
 						A vault deposit or withdrawal in the Multisig section is signed
@@ -102,11 +102,13 @@ function PrivacyPage() {
 						page asks before it is added). While the wallet is on it, the wallet
 						itself asks that network's link what it asks of any network: which
 						chain it is, the latest block, and the balance of your address
-						there. Whoever serves the link therefore sees your IP address and
-						the wallet address asked about, as any network's endpoint does. The
-						link answers with fixed values and refuses every transaction;
-						nothing is ever sent on that network, and the wallet goes back to
-						its own once it has signed.
+						there. This site serves that link itself (hltools.tech/rpc/1337), so
+						our host sees your IP address and the wallet address asked about, as
+						any network's endpoint does. The site keeps none of it; the hosting
+						provider's access log records the request's path and IP address, not
+						what was asked. The link answers with fixed values and refuses every
+						transaction; nothing is ever sent on that network, and the wallet
+						goes back to its own once it has signed.
 					</p>
 				</Section>
 
@@ -229,10 +231,15 @@ function PrivacyPage() {
 
 				<Section title="Where it is kept, and for how long">
 					<p>
-						The relay runs on Supabase (a database and sign-in service), which
-						processes the data on our behalf and, like any host, sees the IP
-						addresses that connect to it and keeps its own access logs for a
-						limited time.
+						The site is served by Railway, from the EU (the Netherlands). Like
+						any host it sees the IP addresses that connect to it and keeps its
+						own access logs for a limited time; the pages send it nothing else.
+					</p>
+					<p>
+						The relay runs on Supabase (a database and sign-in service), in the
+						EU (Frankfurt), which processes the data on our behalf and, like any
+						host, sees the IP addresses that connect to it and keeps its own
+						access logs for a limited time.
 					</p>
 					<p>
 						Proposals, signatures and the history of a treasury are kept until
@@ -252,8 +259,9 @@ function PrivacyPage() {
 
 				<Section title="Running your own">
 					<p>
-						The code is open. A team that wants to keep its proposals to itself
-						can run its own relay, or use links and files only. See the{" "}
+						The code is open (AGPL-3.0; the protocol core is MIT). A team that
+						wants to keep its proposals to itself can run its own relay, or use
+						links and files only. See the{" "}
 						<a
 							href={REPO}
 							target="_blank"

@@ -3,6 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { useId, useMemo } from "react";
 import { toast } from "sonner";
 import { Callout } from "#/components/hub/status";
+import { cn } from "#/lib/utils";
 import { useMultisigPrefs, usePrefsHydrated } from "#/store/multisigPrefsStore";
 import {
 	type AwayGroup,
@@ -138,7 +139,12 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 	return (
 		<section
 			aria-label={RELAY_COPY.awayTitle}
-			className="rounded-[10px] border border-info/35 bg-surface shadow-sm"
+			className={cn(
+				"rounded-[10px] border border-info/35 bg-surface shadow-sm",
+				// lines of about 90 characters however wide the screen; from 1280 px
+				// the list of every treasury adds a column for their names
+				single ? "max-w-[38rem]" : "max-w-[38rem] xl:max-w-[51rem]",
+			)}
 		>
 			<header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
 				<h2 className="flex flex-wrap items-center gap-x-1.5 text-sm font-semibold">
@@ -193,10 +199,15 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 				{groups.map((g) => (
 					<div
 						key={`${g.network}:${g.treasury}`}
-						className="border-t border-border px-4 py-3 first-of-type:border-t-0"
+						className={cn(
+							"border-t border-border px-4 py-3 first-of-type:border-t-0",
+							// from 1280 px the treasury and its "Got it" have a column of their own
+							!single &&
+								"xl:grid xl:grid-cols-[12rem_minmax(0,1fr)] xl:gap-x-6 xl:py-3.5",
+						)}
 					>
 						{!single && (
-							<div className="mb-1.5 flex items-center justify-between gap-2.5">
+							<div className="mb-1.5 flex items-center justify-between gap-2.5 xl:row-span-2 xl:mb-0 xl:flex-col xl:items-start xl:justify-start xl:gap-2">
 								<Link
 									to="/multisig/t/$network/$address"
 									params={{ network: g.network, address: g.treasury }}
@@ -235,7 +246,7 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 						</NamesFor>
 						{g.chain !== "checked" && (
 							<p
-								className={`mt-2 text-xs ${g.chain === "failed" || g.chain === "partly" ? "text-warning" : "text-subtle-foreground"}`}
+								className={`mt-2 text-xs xl:col-start-2 ${g.chain === "failed" || g.chain === "partly" ? "text-warning" : "text-subtle-foreground"}`}
 							>
 								{CHAIN_LINE[g.chain]}
 							</p>

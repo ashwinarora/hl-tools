@@ -9,6 +9,7 @@ import { Button } from "#/components/ui/button";
 import { errorMessage } from "#/hooks/useHyperliquid";
 import { saveProposal } from "./model/history";
 import { openAll } from "./model/transport";
+import { OFF_LOOK } from "./shell/kit";
 
 /**
  * Open a proposal someone sent: paste the document or the link, or upload the
@@ -93,6 +94,7 @@ export function OpenProposal({
 				</Field>
 				<div className="flex flex-wrap items-center gap-2">
 					<Button
+						className={OFF_LOOK}
 						size="sm"
 						variant="brand"
 						disabled={!text.trim()}

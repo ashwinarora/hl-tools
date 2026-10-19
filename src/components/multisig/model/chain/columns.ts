@@ -63,10 +63,13 @@ export function amountText(
 ): string {
 	const d = dec(v);
 	if (!d) return "—";
-	const shown =
+	// cut, never rounded: a figure shown is never larger than Hyperliquid's; one
+	// the cut would turn to nothing is shown whole, never as a bare 0
+	const cut =
 		opts.maxDecimals !== undefined && d.decimalPlaces() > opts.maxDecimals
-			? d.roundToDecimals(opts.maxDecimals, "half-even")
+			? d.roundToDecimals(opts.maxDecimals, "down")
 			: d;
+	const shown = cut.isZero() && !d.isZero() ? d : cut;
 	return shown.toDisplay({ minDecimals: opts.minDecimals });
 }
 

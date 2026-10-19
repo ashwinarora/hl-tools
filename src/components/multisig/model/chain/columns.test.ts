@@ -67,10 +67,12 @@ describe("amount text", () => {
 		expect(amountText("0.00019")).toBe("0.00019");
 		expect(amountText("-12.50")).toBe("-12.5");
 	});
-	it("rounds only when asked, and can pad", () => {
+	it("cuts only when asked, never rounds, and can pad", () => {
 		expect(amountText("163.403954", { maxDecimals: 2 })).toBe("163.4");
 		expect(amountText("163.405", { maxDecimals: 2 })).toBe("163.4");
-		expect(amountText("163.415", { maxDecimals: 2 })).toBe("163.42");
+		expect(amountText("163.419", { maxDecimals: 2 })).toBe("163.41");
+		// a figure the cut would turn to nothing is shown whole
+		expect(amountText("0.0012", { maxDecimals: 2 })).toBe("0.0012");
 		expect(amountText("10.5", { maxDecimals: 2, minDecimals: 2 })).toBe(
 			"10.50",
 		);
@@ -89,9 +91,10 @@ describe("amount text", () => {
 		expect(signedText("1.5")).toBe("+1.5");
 		expect(signedText("-0.0012")).toBe("−0.0012");
 		expect(signedText("0.0")).toBe("0");
-		// a loss too small to show at two places is not shown as "−0"
-		expect(signedText("-0.0012", { maxDecimals: 2 })).toBe("0");
-		expect(signedText("-0.006", { maxDecimals: 2 })).toBe("−0.01");
+		// a loss too small for two places is shown whole, never as "0" or "−0"
+		expect(signedText("-0.0012", { maxDecimals: 2 })).toBe("−0.0012");
+		// and a larger one is cut, never rounded up
+		expect(signedText("-1.239", { maxDecimals: 2 })).toBe("−1.23");
 		expect(signOf("-0.0")).toBe(0);
 		expect(signOf("-1")).toBe(-1);
 		expect(signOf("3")).toBe(1);

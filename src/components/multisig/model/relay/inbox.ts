@@ -191,6 +191,21 @@ export function countNeeds(
 }
 
 /**
+ * How many of the wallet's treasuries are on a network, leaving out the ones
+ * hidden in this browser: what an empty list on the other network names
+ * ("You have 2 treasuries there"), in the inbox and in the rail alike.
+ */
+export function countTreasuriesOn(
+	rows: readonly { readonly network: Network; readonly address: Address }[],
+	network: Network,
+	hidden: (network: Network, address: Address) => boolean,
+): number {
+	return rows.filter(
+		(t) => t.network === network && !hidden(t.network, t.address),
+	).length;
+}
+
+/**
  * A treasury's proposals that can still go somewhere, whoever they wait for.
  * Those of an account that stopped being a multi-sig are not counted: nobody
  * can sign or submit them (audit F-023).

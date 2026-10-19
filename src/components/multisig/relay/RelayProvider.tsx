@@ -15,6 +15,7 @@ import { generateSiweNonce } from "viem/siwe";
 import { useAccount, useSignMessage } from "wagmi";
 import { NO_WALLET, walletInBrowser } from "#/lib/signerWallets";
 import { useWalletBusy } from "#/store/walletBusyStore";
+import { RELAY_COPY } from "../model/relay/copy";
 import { relayIssue, SESSION_ENDED } from "../model/relay/errors";
 import {
 	connectedWallet,
@@ -25,6 +26,7 @@ import {
 	stillAsked,
 } from "../model/relay/identity";
 import { reconnectDelay } from "../model/relay/reconnect";
+import { type SignInNotice, signInNotice } from "../model/relay/signInNotice";
 import {
 	adoptLegacy,
 	forgetWallet,
@@ -67,6 +69,32 @@ import {
  */
 /** The least time between two checks of the session when the tab is looked at again. */
 const SESSION_RECHECK_MS = 60_000;
+
+/** One toast for sign-in at a time: a new attempt or a success replaces it. */
+const SIGN_IN_TOAST = "relay-sign-in";
+
+/**
+ * A sign-in that did not finish: one line in a toast, staying until it is
+ * closed or replaced when something failed; the exact reason folded under
+ * "Details". Never written next to the button, and never twice.
+ */
+function showSignInNotice(n: SignInNotice) {
+	const description = n.details ? (
+		<details className="mt-1 text-xs text-muted-foreground">
+			<summary className="cursor-pointer select-none">
+				{RELAY_COPY.signInDetails}
+			</summary>
+			<p className="mt-1 [overflow-wrap:anywhere]">{n.details}</p>
+		</details>
+	) : undefined;
+	if (n.tone === "error")
+		toast.error(n.title, {
+			id: SIGN_IN_TOAST,
+			description,
+			duration: Number.POSITIVE_INFINITY,
+		});
+	else toast(n.title, { id: SIGN_IN_TOAST, description });
+}
 
 export function RelayProvider({ children }: { children: ReactNode }) {
 	const config = useMemo(() => relayConfig(), []);
@@ -367,6 +395,7 @@ function RelaySession({
 		if (!useWalletBusy.getState().begin()) return;
 		setSigningIn(true);
 		setIssue(null);
+		toast.dismiss(SIGN_IN_TOAST);
 		const waiting = toast.loading(
 			"Waiting for your wallet: approve the sign-in message (it cannot move funds)",
 		);
@@ -396,10 +425,12 @@ function RelaySession({
 			} else {
 				// a session left behind by a sign-in the relay could not finish is asked about
 				if (hasSlot(slots, me)) dispatch({ type: "appeared", wallet: me });
-				if (stillAsked(latest.current, me, turn)) setIssue(r.issue);
+				if (stillAsked(latest.current, me, turn))
+					showSignInNotice(signInNotice(r.issue, r.cancelled));
 			}
 		} catch (e) {
-			if (stillAsked(latest.current, me, turn)) setIssue(relayIssue(e));
+			if (stillAsked(latest.current, me, turn))
+				showSignInNotice(signInNotice(relayIssue(e), false));
 		} finally {
 			toast.dismiss(waiting);
 			useWalletBusy.getState().end();

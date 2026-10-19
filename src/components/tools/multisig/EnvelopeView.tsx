@@ -61,6 +61,18 @@ export const FLAG_TEXT: Record<
 	evm_warning: { label: "touches HyperEVM", tone: "info" },
 };
 
+/** A flag as a pill; a long one wraps on a narrow screen instead of running off it. */
+export function FlagPill({ flag }: { flag: string }) {
+	return (
+		<Pill
+			tone={FLAG_TEXT[flag]?.tone ?? "info"}
+			className="h-auto min-h-5 whitespace-normal py-px"
+		>
+			{FLAG_TEXT[flag]?.label ?? flag}
+		</Pill>
+	);
+}
+
 export function EnvelopeView({
 	text,
 	onChange,
@@ -364,9 +376,7 @@ export function ProposalResult({
 				)}
 				<div className="mt-3 flex flex-wrap gap-2">
 					{flags.map((f) => (
-						<Pill key={f} tone={FLAG_TEXT[f]?.tone ?? "info"}>
-							{FLAG_TEXT[f]?.label ?? f}
-						</Pill>
+						<FlagPill key={f} flag={f} />
 					))}
 					{!description.known && (
 						<Pill tone="unknown">unknown action type</Pill>

@@ -1858,6 +1858,121 @@ Left, with the reason: 5 (a copy's "accepted" replacing a stored refusal) is the
 - The CSV holds the rows the page has loaded: the Signing log's loaded pages, and the "On Hyperliquid" lists as Hyperliquid sent them (the newest trades and orders, then every new one).
 - Hosting and launch work (headers, the faucet miner's origin, production env) come after this round.
 
+## 22. Multisig: more room, chosen by a panel (2026-10-15 to 2026-10-18)
+
+The owner found the section squished: at 1440×900 the page stopped at 1,200 px, the rail took 252 px and the content had 872 px; on the propose form the left column was about 270 px and still split into two, and the API wallet's "until …" tag spilled out of its box. Four visual versions were built in parallel on their own branches, each with the same rules: Multisig only, no wording, flow, request or backend change. They ran side by side with today's on five ports. A matched set of 19 screenshots per version went to a panel of six independent judges, who did not see the builders' or the session's opinion. A+, version A with what the judges asked for, was then built and chosen by the owner.
+
+### The panel (overall score out of 10)
+
+| Judge | Today | A, more room | B, exchange-style | C, workspace | D, calm document |
+|---|---|---|---|---|---|
+| Exchange product designer | 4 | 7 | 8 | 6 | 5 |
+| Treasury operations lead | 5 | 8 | 7 | 6 | 4 |
+| Signing-safety specialist | 5 | 8 | 4 | 6 | 7 |
+| Design systems and brand lead | 5 | 8 | 7 | 5 | 6 |
+| Accessibility and mobile | 5 | 8 | 6 | 6 | 7 |
+| First-time co-signer | 5 | 7 | 6 | 8 | 6 |
+| Average | 4.8 | 7.7 | 6.3 | 6.2 | 5.8 |
+
+What decided it: B's propose form put "what every signer will sign" in a box with its own scrollbar under a pinned Create card that covered the exact action; C's proposal picture showed the receiver as its first and last four characters (the pattern address poisoning forges) and its multicolour avatars clashed with amber and red; D put a proposal's status after the whole document, below the fold. Every judge wanted D's confirmation block, B's balance tiles and phone section bar, and C's numbered steps carried into A.
+
+### A+ (branch `ui/a-plus`)
+
+| Check | Seen |
+|---|---|
+| Header and footer | one 1,440 px container on every page: the logo sits at the same x on `/`, `/tools/multisig` and `/multisig` (24 px at 1440, 257 px at 1920) |
+| Columns that stay in view | stick at the site header's measured height plus 16 px (73 px), only while they fit the window; the Preview title and its network badge no longer slide under the header |
+| Propose form | Preview, then Create, then the exact-action fold, with no inner scroll box; at 1440×900 the Create buttons end at 856 px once the one-time notice is dismissed |
+| Blocked buttons | grey, with the reason directly under them |
+| Proposal page | status first; under it the action, the amount as the largest figure in tabular numerals, the destination whole, and a Treasury / Destination / Finaliser table with copy buttons; signatures beside it; "Your part" restates the action, the full destination and the network above Sign |
+| Treasury page | balance tiles above "While you were away" and the tabs on every tab ("In staking" and "In vaults" on the Overview only, where they are read today); 2×2 on a phone |
+| Rail | 248 px; names wrap; "2 of 3" and "no longer a multi-sig" are never cut; the teal shield mark with "Multisig" |
+| Phone | a "Multisig · Needs you" bar; help marks have a 24×24 px target |
+| Light theme | "you: signer" chip 6.0:1, "signed · verified" 6.23:1 |
+| Overflow | no element wider than its box and no sideways page scroll at 375, 1024, 1280, 1440 and 1920, both themes, on the inbox, all six treasury tabs, open, expired and move proposals, both propose forms, the wizard, Open and the glossary |
+| An empty network | with mainnet selected and no mainnet treasury: "Looking for testnet? You have 12 treasuries there: switch the network in the header." and in the rail "None on mainnet yet. 12 on testnet." (staged by hiding the mainnet rows in the page only) |
+| Wording | every on-screen string compared with the base: unchanged apart from the step numbers and two colons dropped from tile labels |
+| Suites | 130 files, 3,335 unit tests; types, lint and build clean (no relay or core change) |
+
+**After a code review of the branch (2026-10-18).** Ten findings, each checked against the code:
+
+| Finding | Verdict | Now |
+|---|---|---|
+| The large figure took the first "number + UPPERCASE word" anywhere in the sentence, so an API wallet named "pay 50 USDC daily" read as a 50 USDC payment | real, on a signing page | the figure is only the action's own amount, right after the verb and before any quotation mark (names others write are quoted); the rule moved to `model/headline.ts` with tests |
+| The older-send warning reached the line above the buttons through two effects, one render late | real, minor | `useOlderSends` works it out once; the notice and the line both use it |
+| The "treasuries on the other network" count was written twice | real | one tested `countTreasuriesOn` in `model/relay/inbox.ts` |
+| A closed proposal left an empty column beside its signatures between 861 and 1,279 px | confirmed in the browser at 1024 | with no main column the side column takes the width (`Split`) |
+| The new layout rule forbade a scrolling box for what is signed, yet the exact action's JSON scrolls in its code block | a wording conflict | the rule names the Preview and the buttons that act on it; the expert fold may scroll |
+| Two components named `Fact`; a move's party labelled "Validator" for any role but a vault | real, cosmetic | the strip's is `StripFact`; both proposal pages share one label map (`proposal/parties.ts`) |
+| The phone bar's data hook also runs on wide screens; the header found by measuring | declined | no extra request (the data is the rail's, shared), a measurement that works |
+
+131 files, 3,339 unit tests after it.
+
+Found on the way and fixed on `feat/multisig-live`: the wallet picker listed every wallet once more each time the section was entered again (wagmi's own bug; `src/integrations/wallet/uniqueConnectors.ts`, tested), and Biome refused to run while a Claude Code worktree sat under `.claude/`.
+
+**The fixes in the browser (testnet, nothing signed or sent).** Each finding was rebuilt on a real proposal of the 2-of-3 test treasury, created with "Create, sign later" and cancelled for everyone afterwards:
+
+| Check | Result |
+|---|---|
+| An `approveAgent` for an API wallet named "pay 50 USDC daily" | the Action card and "Your part" read a plain sentence, with no large figure; the party row says "API wallet" |
+| A withdrawal proposed after an older raw `usdSend` | the page's amber notice "An older USDC send is still waiting" and the same line above Sign, both within 250 ms of opening |
+| Mainnet emptied by a fetch stub, header on Mainnet | inbox: "Looking for testnet? You have 12 treasuries there…"; rail: "None on mainnet yet. 12 on testnet." |
+| A staking move and a vault move | the party rows read "Validator" and "Vault" |
+| An open proposal at 1024 px | "Your part" left and the signatures right, as before the fix; a closed one at 1024 and 1440 as in the review |
+| The inbox, every treasury tab, two forms and four proposals at 360 and 375 px (13 pages), most of them again at 1024 and 1440 px | nothing wider than the screen or its card, no sideways scroll; no failed request on an ordinary page load (the only console errors were rate-limit 429s while about 50 pages loaded in hidden frames within a few minutes) |
+
+The sweep found one older fault: a risk flag ("approves an API wallet (one key acts for the account)") never wrapped, so on a phone the inspector's pill in the expert fold ran 22 px off the screen, widened the page and pushed the fixed Sign bar 6 px out of view; the Action card's tag ran into its padding. The flags now wrap where they are too long for the line (`FlagPill` in the inspector's `EnvelopeView`, the proposal page, the inbox rows, the propose preview); on one line they are as before (20 px tall, the same radius).
+
+## 23. The launch PR: headers, `/rpc/1337`, licenses (2026-10-19)
+
+Branch `launch/phase-7`, stacked on PR #9. Checked on a production build served on `http://localhost:3000` (the address local sign-in accepts), with the local relay and the rewritten 1337 stand-in, in Brave with Rabby, testnet only.
+
+| Check | Result |
+|---|---|
+| Headers on a page (`/multisig`) | Content-Security-Policy with this response's nonce, HSTS, `X-Frame-Options: DENY`, `nosniff`, `strict-origin-when-cross-origin`, Permissions-Policy, `Cache-Control: private, no-cache`; a built asset keeps `public, max-age=31536000, immutable` |
+| Inline scripts in a page | all carry the nonce (theme and network init, the router's stream barrier, its module loader) and a `csp-nonce` meta is written; the one bare `<script>` is the router's empty render hook, which browsers skip before any policy check |
+| Rabby under the policy | `window.ethereum` present (`isRabby`), the page "signed in · live" (the relay's REST and its live channel get through), no console errors or warnings |
+| Every section, loaded and navigated | home, the eight tools, `/changes`, `/privacy`, the faucet miner, the Multisig inbox and propose form: no policy violation (a `securitypolicyviolation` listener from the first byte) |
+| The tools that reach any endpoint | WebSocket workbench "Connect & subscribe" opened; the RPC probe ran against the public HyperEVM endpoint; no violation |
+| The faucet's WalletConnect | in a separate browser context with no wallet: the connect window opened, Rainbow's QR code was drawn over WalletConnect, no violation, no console error |
+| A vault code under the policy | a 1 USDC HLP withdrawal created and signed by S1: Rabby switched to the custom 1337 network (served by the rewritten stand-in), showed `Agent` with source `b`, signed; the page read "Collecting signatures · 1 of 2"; then cancelled for everyone, never sent |
+| `/rpc/1337` | `eth_chainId` answers `0x539` by POST, a line of text on GET, 204 with CORS on OPTIONS, on the dev server, the Bun build and the Node build |
+| The build Railway runs (`bun run build`, Node server) | preset `node-server`; `node .output/server/index.mjs` serves the same headers and `/rpc/1337` |
+| The faucet's mock worker | not in the build, and a request for it answers 404 (a first attempt deleted the file after the build, and the server, which lists its files while building, answered 500: the worker now lives in `dev/` and only the dev server serves it); in development `/faucet-miner?mock=1` still runs MSW from it |
+
+To check on the staging copy, where localhost cannot show it: the headers as Railway's edge serves them over HTTPS, sign-in from a real domain, Rabby's phishing check on a page that is no longer `localhost`, adding the 1337 network from an internet address, and the hosted relay's gate, jobs and look-ups.
+
+**On the staging copy** (`hl-tools-hl-tools-pr-10.up.railway.app`, Railway, the hosted relay HLTools after its 12 migrations were pushed; testnet, Rabby):
+
+| Check | Result |
+|---|---|
+| Headers over HTTPS from Railway's edge | the same policy, HSTS and the rest; the policy names HLTools and the staging address, so the build took its variables; `/rpc/1337` answers `0x539`; the mock worker 404 |
+| Rabby on a real domain | the connect prompt showed no warning ("Site popularity: High"); its window closed itself before an automated click three times, so the owner connected by hand |
+| First sign-in | refused: "Signed Ethereum message is using a Domain that does not match the one in URI which is not allowed on this server". Supabase checks the domain as `https://<domain>/` and the list held the address without the slash; with both forms listed, signed in · live |
+| A treasury added | checked by HLTools itself against Hyperliquid (2 of 3, three signers), in 3 s; no scheduled job failed |
+| A proposal | created and signed by S1 (Rabby showed the send in full), stored on HLTools with its signature, then cancelled for everyone; no policy violation on any page |
+
+**The sign-in toast** (dev server, a stub returning that same refusal for one page load): one toast "Sign-in didn't go through. Please try again." with "Details" folded, nothing beside the buttons; a decline in Rabby replaced it with "Sign-in cancelled in your wallet."; a real sign-in afterwards left no toast. The error toast's background was see-through (the page's text ran through its title) and is now solid under the tint.
+
+**The mainnet smoke test** (on staging, every click and signature the owner's; mainnet test treasury, 2 of 3): the HLP withdrawal of the listed worth, 10.005691 USDC, was refused, "Insufficient vault equity for withdrawal", with nothing moved; one of 10 USDC was accepted (Hyperliquid's ledger: requested 9.999999, none kept back); perps 9.999999, 0.00569 USDC left in HLP; HLTools holds both proposals with their signatures and answers. Read-only on mainnet afterwards: for 25 HLP depositors, `maxWithdrawable` was always the precise value cut down to 6 decimals and `userVaultEquities.equity` above it for 22.
+
+**Max, on testnet in the browser** (dev server, S1, Rabby, nothing created):
+
+| Form (treasury) | Max filled | The line |
+|---|---|---|
+| Send USDC, no destination (0xe45e…, 53 spot, 0 perps) | nothing | "Enter the destination first: a first send to a new address costs 1 USDC…" |
+| Send USDC to a new address | 52 | all of spot less the 1 USDC fee, which nothing else can pay; the form's cost line agreed and nothing was refused |
+| Spot → perps / perps → spot | 53 / nothing | all the spot not on hold / nothing to move |
+| Bridge withdrawal | nothing | 0 to withdraw, and it has to be more than the bridge's 1 USDC |
+| Vault deposit | nothing | perps can release 0, a deposit is at least 5 USDC, type more to move from spot |
+| Vault withdrawal | 2.029483 | Hyperliquid's figure at the page's last read; the list read "releases 2.029483 USDC · unlocked" (Hyperliquid testnet a minute later: maxWithdrawable 2.029285, equity 2.029301 above the precise 2.0292852) |
+| Stake (0x4b46…, 0.086 HYPE in spot) | 0.086 | spot plus the staking balance |
+| Return to spot (stake with two validators) | nothing | choose which validator |
+| Move, from the validator holding 0.01000588 | 0.01000588 | all staked with it |
+| Send HYPE | 0.086 | all HYPE not on hold |
+
+134 files, 3,382 unit tests after it (`max.test.ts` with the fee grid; the mainnet vault figures in `vault.test.ts`; the core's coverage stays at 100%).
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).
