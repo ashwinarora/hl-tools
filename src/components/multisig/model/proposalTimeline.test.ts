@@ -107,6 +107,50 @@ describe("a proposal's timeline, from the sharing service's history", () => {
 		expect(out.items.find((i) => i.tone === "wrong")).toBeDefined();
 	});
 
+	it("tells two decisions apart, and one step as one", () => {
+		const events = [
+			event(d, "objection_added", C, NOW),
+			// a minute later: taking the no back, then signing, are two decisions
+			event(d, "objection_removed", C, NOW + MIN),
+			event(d, "signature_added", C, NOW + 2 * MIN),
+			// saying no takes the signature back in the same step: one
+			event(d, "signature_removed", C, NOW + 3 * MIN),
+			event(d, "objection_added", C, NOW + 3 * MIN + 1),
+		];
+		expect(
+			proposalTimeline(
+				[{ proposal: p, events, counted: null }],
+				null,
+			).items.map((i) => partsText(i.parts)),
+		).toEqual([
+			`${short(C)} said no.`,
+			`${short(C)} took back their no.`,
+			`${short(C)} signed.`,
+			`${short(C)} said no, taking back their signature.`,
+		]);
+	});
+
+	it("puts Hyperliquid's record after the send it records", () => {
+		const out = proposalTimeline(
+			[
+				{
+					proposal: p,
+					events: [
+						event(d, "submission_recorded", B, NOW + 2_000, { accepted: true }),
+					],
+					counted: null,
+				},
+			],
+			null,
+			// the transaction's own time is a moment before the send was noted
+			[{ hash: "0x1", at: NOW }],
+		);
+		expect(out.items.map((i) => [i.at, partsText(i.parts)])).toEqual([
+			[NOW + 2_000, `Sent by ${short(B)}; accepted by Hyperliquid.`],
+			[NOW, "On Hyperliquid's record."],
+		]);
+	});
+
 	it("tells a proposal carried out without being sent from here, with its transaction", () => {
 		const out = proposalTimeline(
 			[

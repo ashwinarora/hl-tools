@@ -45,6 +45,10 @@ export interface TimelineItem {
 	readonly tone?: "ok" | "wrong";
 	/** A transaction on Hyperliquid to link to. */
 	readonly hash?: string;
+	/** The proposal was sent to Hyperliquid here: its record comes after it. */
+	readonly sent?: true;
+	/** What Hyperliquid's record shows. */
+	readonly record?: true;
 }
 
 export interface Timeline {
@@ -79,6 +83,13 @@ export function recordEntries(
 
 /** Two entries this close and alike, on the two steps of a move, are one. */
 const SAME_MOMENT_MS = 5 * 60_000;
+
+/**
+ * Two entries of one wallet this close are one step (proposing and signing
+ * in one go; saying no, which takes the signature back; signing, which
+ * replaces a no): further apart, they were two decisions and are told apart.
+ */
+const ONE_STEP_MS = 10_000;
 
 function forOne(s: TimelineStep, me: Address | null): TimelineItem[] {
 	const step = s.step ?? null;
@@ -115,6 +126,7 @@ function forOne(s: TimelineStep, me: Address | null): TimelineItem[] {
 				at: r.submittedAt,
 				parts: say`Sent to Hyperliquid by ${object(s.proposal.payload.outerSigner)}, its finaliser.`,
 				step,
+				sent: true,
 			});
 		return out;
 	}
@@ -131,7 +143,10 @@ function forOne(s: TimelineStep, me: Address | null): TimelineItem[] {
 		if (folded.has(e.id)) continue;
 		const next = asc.slice(i + 1)[0];
 		const followedBy = (kind: EventRow["kind"]) =>
-			!!next && next.kind === kind && next.actor === e.actor;
+			!!next &&
+			next.kind === kind &&
+			next.actor === e.actor &&
+			next.at - e.at <= ONE_STEP_MS;
 		const item = (
 			parts: Part[],
 			extra: Partial<TimelineItem> = {},
@@ -207,10 +222,11 @@ function forOne(s: TimelineStep, me: Address | null): TimelineItem[] {
 					e.data.accepted === true
 						? item(say`Sent by ${object(e.actor)}; accepted by Hyperliquid.`, {
 								tone: "ok",
+								sent: true,
 							})
 						: item(
 								say`Sent by ${object(e.actor)}; Hyperliquid refused it. ${afterRejection(e.data.http_status)}`,
-								{ tone: "wrong" },
+								{ tone: "wrong", sent: true },
 							),
 				);
 				break;
@@ -265,6 +281,7 @@ export function proposalTimeline(
 			step: r.step ?? null,
 			tone: r.refused ? "wrong" : "ok",
 			hash: r.hash,
+			record: true,
 		});
 
 	// a move: an entry of step 2 just like one of step 1, at the same moment, joins it
@@ -293,16 +310,34 @@ export function proposalTimeline(
 		used.add(a.key);
 	}
 
-	// oldest first; what the copy does not date goes last, in its own order
+	// oldest first; what the copy does not date goes last, in its own order.
+	// Hyperliquid's record comes after the send it records, whatever the few
+	// seconds between the transaction's time and the send being noted.
 	const order = new Map(merged.map((m, i) => [m.key, i]));
-	const items = [...merged].sort((a, b) =>
-		a.at === null && b.at === null
+	const sentAt = (step: 1 | 2 | null) =>
+		Math.max(
+			...merged
+				.filter(
+					(m) =>
+						m.at !== null &&
+						m.sent === true &&
+						(step === null || m.step === null || m.step === step),
+				)
+				.map((m) => m.at as number),
+			Number.NEGATIVE_INFINITY,
+		);
+	const sortAt = (m: TimelineItem) =>
+		m.at === null ? null : m.record ? Math.max(m.at, sentAt(m.step)) : m.at;
+	const items = [...merged].sort((a, b) => {
+		const x = sortAt(a);
+		const y = sortAt(b);
+		return x === null && y === null
 			? (order.get(a.key) ?? 0) - (order.get(b.key) ?? 0)
-			: a.at === null
+			: x === null
 				? 1
-				: b.at === null
+				: y === null
 					? -1
-					: a.at - b.at || (order.get(a.key) ?? 0) - (order.get(b.key) ?? 0),
-	);
+					: x - y || (order.get(a.key) ?? 0) - (order.get(b.key) ?? 0);
+	});
 	return { items, fromCopy: steps.some((s) => s.events === null) };
 }
