@@ -235,14 +235,22 @@ export function parseSignature(input: unknown): ParsedSignature {
 	let v: number;
 	if (typeof input === "string") {
 		const h = input.trim().toLowerCase().replace(/^0x/, "");
-		if (!/^[0-9a-f]{130}$/.test(h)) {
+		if (/^[0-9a-f]{130}$/.test(h)) {
+			r = `0x${h.slice(0, 64)}`;
+			s = `0x${h.slice(64, 128)}`;
+			v = Number.parseInt(h.slice(128), 16);
+		} else if (/^[0-9a-f]{128}$/.test(h)) {
+			// EIP-2098 compact: r ‖ (yParity << 255 | s)
+			r = `0x${h.slice(0, 64)}`;
+			const yParityAndS = BigInt(`0x${h.slice(64, 128)}`);
+			const yParity = yParityAndS >> 255n;
+			s = `0x${(yParityAndS & ((1n << 255n) - 1n)).toString(16).padStart(64, "0")}`;
+			v = Number(yParity) + 27;
+		} else {
 			throw new SignatureParseError(
-				"A hex signature must be exactly 65 bytes (130 hex digits): r ‖ s ‖ v.",
+				"A hex signature must be 65 bytes (130 hex digits: r ‖ s ‖ v) or 64 bytes (EIP-2098 compact).",
 			);
 		}
-		r = `0x${h.slice(0, 64)}`;
-		s = `0x${h.slice(64, 128)}`;
-		v = Number.parseInt(h.slice(128), 16);
 	} else if (input && typeof input === "object") {
 		const o = input as Record<string, unknown>;
 		if (typeof o.r !== "string" || typeof o.s !== "string") {
@@ -569,7 +577,7 @@ export async function inspectAction(input: InspectInput): Promise<Inspection> {
 				issue(
 					"multisig.unsupported",
 					"info",
-					"Multi-sig envelopes are out of scope for this inspector. Inspect the inner action on its own instead.",
+					"Multi-sig envelopes are not inspected here: use the multisig module (envelopeDigest / classifySignatures) or the Multisig Inspector. Inspect the inner action on its own instead.",
 				),
 			],
 		};

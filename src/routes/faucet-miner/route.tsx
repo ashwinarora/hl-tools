@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect } from "react";
 import WalletProviders from "#/integrations/wallet/WalletProviders";
+import { config } from "#/lib/wagmiConfig";
 
 // Dev-only: Vite replaces `import.meta.env.DEV` with `false` in production, so
 // the MockPanel chunk and MSW are never emitted there.
@@ -41,7 +42,7 @@ function useMocks() {
 function FaucetLayout() {
 	useMocks();
 	return (
-		<WalletProviders>
+		<WalletProviders config={config}>
 			<Outlet />
 			{MockPanel && (
 				<Suspense fallback={null}>

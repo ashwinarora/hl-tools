@@ -1,0 +1,114 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-12/13. Sends from a 2-of-3 multi-sig (lab keys, through the multi-sig envelope) to HyperEVM's system addresses: 0x2222…2222 for HYPE and 0x20 followed by the token's index for any other token. `answer` is Hyperliquid's. A plain account's spotSend of HYPE to 0x2222…2222 was accepted the same day (not repeated here: it moves the token to HyperEVM).",
+	"network": "testnet",
+	"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+	"tokens": {
+		"USDC": {
+			"index": 0,
+			"system": "0x2000000000000000000000000000000000000000"
+		},
+		"HYPE": {
+			"index": 1105,
+			"system": "0x2222222222222222222222222222222222222222"
+		}
+	},
+	"sends": [
+		{
+			"about": "spotSend of HYPE to HYPE's system address",
+			"action": {
+				"type": "spotSend",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"destination": "0x2222222222222222222222222222222222222222",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.0006",
+				"time": 1791835490253
+			},
+			"answer": "Multi-sig user cannot transfer token to EVM"
+		},
+		{
+			"about": "sendAsset of HYPE, spot to spot, to HYPE's system address",
+			"action": {
+				"type": "sendAsset",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"destination": "0x2222222222222222222222222222222222222222",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.0006",
+				"fromSubAccount": "",
+				"nonce": 1791835492413
+			},
+			"answer": "Multi-sig user cannot transfer token to EVM"
+		},
+		{
+			"about": "spotSend of USDC to USDC's system address",
+			"action": {
+				"type": "spotSend",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"destination": "0x2000000000000000000000000000000000000000",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5",
+				"time": 1791835494562
+			},
+			"answer": "Multi-sig user cannot transfer token to EVM"
+		},
+		{
+			"about": "sendAsset of USDC from perps to USDC's system address",
+			"action": {
+				"type": "sendAsset",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"destination": "0x2000000000000000000000000000000000000000",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5",
+				"fromSubAccount": "",
+				"nonce": 1791835496727
+			},
+			"answer": "Multi-sig user cannot transfer token to EVM"
+		},
+		{
+			"about": "spotSend of HYPE to USDC's system address",
+			"action": {
+				"type": "spotSend",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"destination": "0x2000000000000000000000000000000000000000",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.0006",
+				"time": 1791835498957
+			},
+			"answer": "EVM transfer not configured"
+		},
+		{
+			"about": "spotSend of HYPE to the system address of HYPE's token index",
+			"action": {
+				"type": "spotSend",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"destination": "0x2000000000000000000000000000000000000451",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.0006",
+				"time": 1791835501072
+			},
+			"answer": "EVM transfer not configured"
+		},
+		{
+			"about": "spotSend of USDC to HYPE's system address",
+			"action": {
+				"type": "spotSend",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"destination": "0x2222222222222222222222222222222222222222",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.5",
+				"time": 1791835503247
+			},
+			"answer": "EVM transfer not configured"
+		}
+	]
+}

@@ -17,6 +17,7 @@ import {
 	NetworkBadge,
 	Pill,
 } from "#/components/hub/status";
+import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
 import { stringifyTyped } from "./model";
 
@@ -154,9 +155,12 @@ export function Verdict({
 export function InspectionView({
 	inspection,
 	pastedPretty,
+	onHandOff,
 }: {
 	inspection: Inspection;
 	pastedPretty: string;
+	/** Opens the pasted payload in the Multisig Inspector (multi-sig envelopes only). */
+	onHandOff?: () => void;
 }) {
 	const [msgView, setMsgView] = useState<"bytes" | "decoded">("bytes");
 	const [path, setPath] = useState<string | null>(null);
@@ -176,9 +180,20 @@ export function InspectionView({
 				</Panel>
 			)}
 			{inspection.family === "multisig" && (
-				<Callout tone="unknown" title="Multi-sig is out of scope">
+				<Callout
+					tone="info"
+					title="Multi-sig envelope detected"
+					action={
+						onHandOff && (
+							<Button size="sm" variant="outline" onClick={onHandOff}>
+								Open in Multisig Inspector
+							</Button>
+						)
+					}
+				>
 					This inspector covers the single-signer L1 and user-signed schemes.
-					Paste the inner action to inspect it on its own.
+					The Multisig Inspector decodes the inner action, recovers every
+					signature and checks readiness against the live signer set.
 				</Callout>
 			)}
 			{(l1 || typedData) && (

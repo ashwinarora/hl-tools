@@ -26,36 +26,54 @@ export interface SharePayload {
 	readonly state: Record<string, unknown>;
 }
 
-export function buildShareUrl(
+/** `share=<base64url>`: what goes after the `#`. Pure, so links can be built without a window. */
+export function shareFragment(
 	tool: string,
 	state: Record<string, unknown>,
 ): string {
 	const payload: SharePayload = { v: 1, tool, state };
+	return PREFIX + toBase64Url(JSON.stringify(payload));
+}
+
+/** Decode a fragment (with or without the leading `#`). Null when it is not a share fragment. */
+export function parseShareFragment(hash: string): SharePayload | null {
+	const h = hash.startsWith("#") ? hash.slice(1) : hash;
+	if (!h.startsWith(PREFIX)) return null;
+	try {
+		const payload = JSON.parse(
+			fromBase64Url(h.slice(PREFIX.length)),
+		) as SharePayload;
+		if (
+			payload.v !== 1 ||
+			typeof payload.tool !== "string" ||
+			typeof payload.state !== "object" ||
+			payload.state === null
+		)
+			return null;
+		return payload;
+	} catch {
+		return null;
+	}
+}
+
+/** `path` sends the link to another page of the hub instead of the current one. */
+export function buildShareUrl(
+	tool: string,
+	state: Record<string, unknown>,
+	opts: { path?: string } = {},
+): string {
 	const url = new URL(window.location.href);
 	url.search = "";
-	url.hash = PREFIX + toBase64Url(JSON.stringify(payload));
+	if (opts.path) url.pathname = opts.path;
+	url.hash = shareFragment(tool, state);
 	return url.toString();
 }
 
 /** Read (without keeping) shared state for `tool` from the current fragment. */
 export function readShared(tool: string): Record<string, unknown> | null {
 	if (typeof window === "undefined") return null;
-	const hash = window.location.hash.slice(1);
-	if (!hash.startsWith(PREFIX)) return null;
-	try {
-		const payload = JSON.parse(
-			fromBase64Url(hash.slice(PREFIX.length)),
-		) as SharePayload;
-		if (
-			payload.v !== 1 ||
-			payload.tool !== tool ||
-			typeof payload.state !== "object"
-		)
-			return null;
-		return payload.state;
-	} catch {
-		return null;
-	}
+	const payload = parseShareFragment(window.location.hash);
+	return payload && payload.tool === tool ? payload.state : null;
 }
 
 /** Drop the fragment once its content is loaded into the page. */

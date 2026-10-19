@@ -1,0 +1,87 @@
+{
+ "format": "hl-tools.ws-session",
+ "version": 1,
+ "network": "testnet",
+ "url": "wss://api.hyperliquid-testnet.xyz/ws",
+ "channel": "openOrders",
+ "subscription": {
+  "type": "openOrders",
+  "user": "0x0000000000000000000000000000000000000001"
+ },
+ "startedAt": 1791661826579,
+ "endedAt": 1791661860581,
+ "sanitized": true,
+ "truncated": false,
+ "messages": [
+  {
+   "t": 370,
+   "dir": "event",
+   "text": "open"
+  },
+  {
+   "t": 370,
+   "dir": "out",
+   "text": "{\"method\":\"subscribe\",\"subscription\":{\"type\":\"openOrders\",\"user\":\"0x0000000000000000000000000000000000000001\"}}"
+  },
+  {
+   "t": 542,
+   "dir": "in",
+   "text": "{\"channel\":\"subscriptionResponse\",\"data\":{\"method\":\"subscribe\",\"subscription\":{\"type\":\"openOrders\",\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\"}}}"
+  },
+  {
+   "t": 542,
+   "dir": "in",
+   "text": "{\"channel\":\"openOrders\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"orders\":[{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"66149.0\",\"sz\":\"0.00019\",\"oid\":62365325077,\"timestamp\":1791661243433,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.00019\",\"tif\":\"Gtc\",\"cloid\":null}]}}"
+  },
+  {
+   "t": 5468,
+   "dir": "in",
+   "text": "{\"channel\":\"openOrders\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"orders\":[{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"66149.0\",\"sz\":\"0.00019\",\"oid\":62365325077,\"timestamp\":1791661243433,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.00019\",\"tif\":\"Gtc\",\"cloid\":null}]}}"
+  },
+  {
+   "t": 5828,
+   "dir": "in",
+   "text": "{\"channel\":\"openOrders\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"orders\":[{\"coin\":\"ETH\",\"side\":\"B\",\"limitPx\":\"2003.0\",\"sz\":\"0.006\",\"oid\":62365853874,\"timestamp\":1791661832063,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.006\",\"tif\":\"Gtc\",\"cloid\":null},{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"66149.0\",\"sz\":\"0.00019\",\"oid\":62365325077,\"timestamp\":1791661243433,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.00019\",\"tif\":\"Gtc\",\"cloid\":null}]}}"
+  },
+  {
+   "t": 9272,
+   "dir": "in",
+   "text": "{\"channel\":\"openOrders\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"orders\":[{\"coin\":\"ETH\",\"side\":\"B\",\"limitPx\":\"2003.0\",\"sz\":\"0.006\",\"oid\":62365853874,\"timestamp\":1791661832063,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.006\",\"tif\":\"Gtc\",\"cloid\":null},{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"66149.0\",\"sz\":\"0.00019\",\"oid\":62365325077,\"timestamp\":1791661243433,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.00019\",\"tif\":\"Gtc\",\"cloid\":null}]}}"
+  },
+  {
+   "t": 10384,
+   "dir": "in",
+   "text": "{\"channel\":\"openOrders\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"orders\":[{\"coin\":\"ETH\",\"side\":\"B\",\"limitPx\":\"2003.0\",\"sz\":\"0.006\",\"oid\":62365853874,\"timestamp\":1791661832063,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.006\",\"tif\":\"Gtc\",\"cloid\":null},{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"66149.0\",\"sz\":\"0.00019\",\"oid\":62365325077,\"timestamp\":1791661243433,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.00019\",\"tif\":\"Gtc\",\"cloid\":null}]}}"
+  },
+  {
+   "t": 12847,
+   "dir": "in",
+   "text": "{\"channel\":\"openOrders\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"orders\":[{\"coin\":\"ETH\",\"side\":\"B\",\"limitPx\":\"2003.0\",\"sz\":\"0.006\",\"oid\":62365853874,\"timestamp\":1791661832063,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.006\",\"tif\":\"Gtc\",\"cloid\":null},{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"66149.0\",\"sz\":\"0.00019\",\"oid\":62365325077,\"timestamp\":1791661243433,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.00019\",\"tif\":\"Gtc\",\"cloid\":null}]}}"
+  },
+  {
+   "t": 15459,
+   "dir": "in",
+   "text": "{\"channel\":\"openOrders\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"orders\":[{\"coin\":\"ETH\",\"side\":\"B\",\"limitPx\":\"2003.0\",\"sz\":\"0.006\",\"oid\":62365853874,\"timestamp\":1791661832063,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.006\",\"tif\":\"Gtc\",\"cloid\":null},{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"66149.0\",\"sz\":\"0.00019\",\"oid\":62365325077,\"timestamp\":1791661243433,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.00019\",\"tif\":\"Gtc\",\"cloid\":null}]}}"
+  },
+  {
+   "t": 20537,
+   "dir": "in",
+   "text": "{\"channel\":\"openOrders\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"orders\":[{\"coin\":\"ETH\",\"side\":\"B\",\"limitPx\":\"2003.0\",\"sz\":\"0.006\",\"oid\":62365853874,\"timestamp\":1791661832063,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.006\",\"tif\":\"Gtc\",\"cloid\":null},{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"66149.0\",\"sz\":\"0.00019\",\"oid\":62365325077,\"timestamp\":1791661243433,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.00019\",\"tif\":\"Gtc\",\"cloid\":null}]}}"
+  },
+  {
+   "t": 25570,
+   "dir": "in",
+   "text": "{\"channel\":\"openOrders\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"orders\":[{\"coin\":\"ETH\",\"side\":\"B\",\"limitPx\":\"2003.0\",\"sz\":\"0.006\",\"oid\":62365853874,\"timestamp\":1791661832063,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.006\",\"tif\":\"Gtc\",\"cloid\":null},{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"66149.0\",\"sz\":\"0.00019\",\"oid\":62365325077,\"timestamp\":1791661243433,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.00019\",\"tif\":\"Gtc\",\"cloid\":null}]}}"
+  },
+  {
+   "t": 30572,
+   "dir": "in",
+   "text": "{\"channel\":\"openOrders\",\"data\":{\"dex\":\"\",\"user\":\"0x0000000000000000000000000000000000000001\",\"orders\":[{\"coin\":\"ETH\",\"side\":\"B\",\"limitPx\":\"2003.0\",\"sz\":\"0.006\",\"oid\":62365853874,\"timestamp\":1791661832063,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.006\",\"tif\":\"Gtc\",\"cloid\":null},{\"coin\":\"BTC\",\"side\":\"B\",\"limitPx\":\"66149.0\",\"sz\":\"0.00019\",\"oid\":62365325077,\"timestamp\":1791661243433,\"triggerCondition\":\"N/A\",\"isTrigger\":false,\"triggerPx\":\"0.0\",\"children\":[],\"isPositionTpsl\":false,\"reduceOnly\":false,\"orderType\":\"Limit\",\"origSz\":\"0.00019\",\"tif\":\"Gtc\",\"cloid\":null}]}}"
+  },
+  {
+   "t": 34002,
+   "dir": "event",
+   "text": "close 1000 (recording finished)"
+  }
+ ]
+}

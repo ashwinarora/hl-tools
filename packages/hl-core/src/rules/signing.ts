@@ -41,6 +41,15 @@ export const L1_TYPES = {
 
 export const USER_SIGNED_DOMAIN_NAME = "HyperliquidSignTransaction";
 export const DEFAULT_SIGNATURE_CHAIN_ID = "0x66eee";
+/**
+ * Conventional `signatureChainId` per network (Arbitrum One / Arbitrum Sepolia),
+ * as used by the official SDKs. The chain does not check it against the network;
+ * it only has to match the EIP-712 domain the wallet signed with.
+ */
+export const SIGNATURE_CHAIN_IDS = {
+	mainnet: "0xa4b1",
+	testnet: "0x66eee",
+} as const;
 
 export interface Eip712Field {
 	readonly name: string;
@@ -60,10 +69,15 @@ export interface UserSignedSpec {
 
 const HC = { name: "hyperliquidChain", type: "string" } as const;
 
-function spec(
+/**
+ * Declare a user-signed spec: `hyperliquidChain` is always the first field,
+ * the primary type is `HyperliquidTransaction:<primary>`, and the nonce field
+ * is `time` when the struct has one, else `nonce`.
+ */
+export function defineUserSignedSpec(
 	actionType: string,
 	primary: string,
-	fields: Eip712Field[],
+	fields: readonly Eip712Field[],
 	description: string,
 ): UserSignedSpec {
 	const nonceField = fields.some((f) => f.name === "time") ? "time" : "nonce";
@@ -75,6 +89,8 @@ function spec(
 		description,
 	};
 }
+
+const spec = defineUserSignedSpec;
 
 export const USER_SIGNED_SPECS: readonly UserSignedSpec[] = [
 	spec(
@@ -254,8 +270,44 @@ export function userSignedSpec(actionType: string): UserSignedSpec | undefined {
 	return BY_TYPE.get(actionType);
 }
 
-/** Action types that are out of scope for the inspector. */
+/** The multi-sig envelope action type (handled by the multisig module). */
 export const MULTISIG_ACTION_TYPES = new Set(["multiSig"]);
+
+/**
+ * Fields a multi-sig *inner* user-signed action gains, inserted right after
+ * `hyperliquidChain` (Python SDK `add_multi_sig_types`, nktkas `signUserSignedAction`).
+ */
+export const MULTISIG_ENRICH_FIELDS: readonly Eip712Field[] = [
+	{ name: "payloadMultiSigUser", type: "address" },
+	{ name: "outerSigner", type: "address" },
+];
+
+/** A user-signed spec with the multi-sig inner fields inserted after `hyperliquidChain`. */
+export function enrichSpecForMultiSig(base: UserSignedSpec): UserSignedSpec {
+	const [hc, ...rest] = base.fields;
+	if (!hc || hc.name !== HC.name) {
+		throw new Error(
+			`Cannot enrich ${base.primaryType}: first field must be hyperliquidChain`,
+		);
+	}
+	return { ...base, fields: [hc, ...MULTISIG_ENRICH_FIELDS, ...rest] };
+}
+
+/**
+ * The envelope (outer) signature of a multi-sig action: the leader signs
+ * `HyperliquidTransaction:SendMultiSig{hyperliquidChain, multiSigActionHash, nonce}`
+ * where `multiSigActionHash` is the L1-style hash of the envelope action
+ * without its `type` key.
+ */
+export const SEND_MULTISIG_SPEC: UserSignedSpec = defineUserSignedSpec(
+	"multiSig",
+	"SendMultiSig",
+	[
+		{ name: "multiSigActionHash", type: "bytes32" },
+		{ name: "nonce", type: "uint64" },
+	],
+	"Submit a multi-sig envelope (signed by the leader).",
+);
 
 /** Nonce validity window relative to the block timestamp T. */
 export const NONCE_WINDOW = {

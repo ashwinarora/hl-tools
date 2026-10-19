@@ -7,9 +7,16 @@
         "mcp"
       ]
     },
-     "motion": {
+    "motion": {
       "command": "npx",
-      "args": ["-y", "https://api.motion.dev/registry.tgz?package=motion-studio-mcp&version=latest"]
+      "args": [
+        "-y",
+        "https://api.motion.dev/registry.tgz?package=motion-studio-mcp&version=latest"
+      ]
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=rxtzmotkphkjsfjcfoke&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"
     }
   }
 }

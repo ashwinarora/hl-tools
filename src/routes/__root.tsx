@@ -4,12 +4,14 @@ import {
 	createRootRouteWithContext,
 	HeadContent,
 	Scripts,
+	useRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { useEffect } from "react";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import NotFound from "../components/NotFound";
+import { THEME_COLORS } from "../components/ThemeToggle";
 import { Toaster } from "../components/ui/sonner";
 import { NETWORK_INIT_SCRIPT, useNetworkStore } from "../store/networkStore";
 
@@ -29,7 +31,7 @@ interface MyRouterContext {
 	queryClient: QueryClient;
 }
 
-const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
+const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;var bar=document.createElement('meta');bar.name='theme-color';bar.content=resolved==='dark'?'${THEME_COLORS.dark}':'${THEME_COLORS.light}';document.head.appendChild(bar);}catch(e){}})();`;
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
 	head: () => ({
@@ -47,21 +49,10 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			{
 				name: "description",
 				content:
-					"Read-only diagnostics for Hyperliquid developers: resolve assets, inspect signatures, decode CoreWriter actions, trace HyperEVM → HyperCore, lint orders, debug WebSockets and probe RPCs.",
+					"Tools for Hyperliquid developers, in your browser. Read-only diagnostics: resolve assets, inspect signatures, decode CoreWriter actions, trace HyperEVM → HyperCore, lint orders, debug WebSockets, probe RPCs, inspect multi-sigs. Plus a native multi-sig signer and a testnet faucet miner.",
 			},
-			{ name: "theme-color", content: "#0f1115" },
 		],
 		links: [
-			{ rel: "preconnect", href: "https://fonts.googleapis.com" },
-			{
-				rel: "preconnect",
-				href: "https://fonts.gstatic.com",
-				crossOrigin: "anonymous",
-			},
-			{
-				rel: "stylesheet",
-				href: "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600;700&display=swap",
-			},
 			{
 				rel: "icon",
 				type: "image/svg+xml",
@@ -86,13 +77,24 @@ function NetworkHydrator() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+	// the response's nonce: the security policy lets these two run and no other inline script
+	const nonce = useRouter().options.ssr?.nonce;
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
-				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: constant pre-hydration theme script */}
-				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: constant pre-hydration network script */}
-				<script dangerouslySetInnerHTML={{ __html: NETWORK_INIT_SCRIPT }} />
+				<script
+					nonce={nonce}
+					// the browser hides a nonce once read: what hydration sees differs by design
+					suppressHydrationWarning
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: constant pre-hydration theme script
+					dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+				/>
+				<script
+					nonce={nonce}
+					suppressHydrationWarning
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: constant pre-hydration network script
+					dangerouslySetInnerHTML={{ __html: NETWORK_INIT_SCRIPT }}
+				/>
 				<HeadContent />
 			</head>
 			<body className="font-sans antialiased">

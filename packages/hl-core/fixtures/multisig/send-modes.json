@@ -1,0 +1,2265 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-11. How each way of sending money behaves by the mode (`userAbstraction`) of the sender and of the receiver: 54 sends for 3 sender modes × 3 receiver modes × 6 methods, moves between an account's own balances, a spot token that is not the collateral, and the same sends through a 1-of-2 multi-sig envelope. Each action is reduced to the fields that decide the outcome; `senderChange` and `receiverChange` are the balances read before and after (perps withdrawable, spot USDC, spot HYPE). `switches` are mode changes with the balances around them. Recorded by labs/multisig/46, written by 52.",
+	"network": "testnet",
+	"sends": [
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "0.011"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.011,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.011,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.012"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.012,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.012,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.013",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.013,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.013,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.014",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.014,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.014,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.015",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.015,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.015,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.016",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.016,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.016,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "usdSend",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"amount": "0.011"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.011,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.011,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.012"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.012,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.012,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.013",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.013,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.013,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.014",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.014,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.014,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.015",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.015,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.015,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.016",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.016,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.016,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "usdSend",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"amount": "0.011"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.011,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.011,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.012"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.012,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.012,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.013",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.013,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.013,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.014",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.014,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.014,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.015",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.015,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.015,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.016",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.016,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.016,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "0.011"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.011,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.011,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.012"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.012,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.012,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.013",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.013,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.013,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.014",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.014,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.014,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.015",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.015,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.015,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.016",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.016,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.016,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "usdSend",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"amount": "0.011"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.011,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.011,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.012"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.012,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.012,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.013",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.013,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.013,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.014",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.014,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.014,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.015",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.015,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.015,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.016",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.016,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.016,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "usdSend",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"amount": "0.011"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.011,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.011,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.012"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.012,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.012,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.013",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.013,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.013,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.014",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.014,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.014,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.015",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.015,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.015,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.016",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.016,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.016,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "0.011"
+			},
+			"answer": {
+				"status": "err",
+				"response": "Action disabled when unified account is active"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.012"
+			},
+			"answer": {
+				"status": "err",
+				"response": "Action disabled when unified account is active"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.013",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Unified account only supports sending assets through spot"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.014",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Unified account only supports sending assets through spot"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.015",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.015,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.015,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.016",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.016,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.016,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "usdSend",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"amount": "0.011"
+			},
+			"answer": {
+				"status": "err",
+				"response": "Action disabled when unified account is active"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.012"
+			},
+			"answer": {
+				"status": "err",
+				"response": "Action disabled when unified account is active"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.013",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Unified account only supports sending assets through spot"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.014",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Unified account only supports sending assets through spot"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.015",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.015,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.015,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xf39873dcd7cb0dcd6840110b5ab378d483697c8d",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.016",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.016,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.016,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "usdSend",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"amount": "0.011"
+			},
+			"answer": {
+				"status": "err",
+				"response": "Action disabled when unified account is active"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.012"
+			},
+			"answer": {
+				"status": "err",
+				"response": "Action disabled when unified account is active"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.013",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Unified account only supports sending assets through spot"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.014",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Unified account only supports sending assets through spot"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.015",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.015,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.015,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "sender mode × receiver mode",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.016",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.016,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.016,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": true,
+			"action": {
+				"type": "usdClassTransfer",
+				"amount": "0.021",
+				"toPerp": false
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.021,
+				"spotUsdc": 0.021,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": -0.021,
+				"spotUsdc": 0.021,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": true,
+			"action": {
+				"type": "usdClassTransfer",
+				"amount": "0.022",
+				"toPerp": true
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0.022,
+				"spotUsdc": -0.022,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.022,
+				"spotUsdc": -0.022,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": true,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.023",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.023,
+				"spotUsdc": 0.023,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": -0.023,
+				"spotUsdc": 0.023,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": true,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xbf90955d5b93977873ec5cf624508c64e35796f2",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.024",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0.024,
+				"spotUsdc": -0.024,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.024,
+				"spotUsdc": -0.024,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": true,
+			"action": {
+				"type": "usdClassTransfer",
+				"amount": "0.021",
+				"toPerp": false
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.021,
+				"spotUsdc": 0.021,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": -0.021,
+				"spotUsdc": 0.021,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": true,
+			"action": {
+				"type": "usdClassTransfer",
+				"amount": "0.022",
+				"toPerp": true
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0.022,
+				"spotUsdc": -0.022,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.022,
+				"spotUsdc": -0.022,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": true,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.023",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.023,
+				"spotUsdc": 0.023,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": -0.023,
+				"spotUsdc": 0.023,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "disabled",
+			"senderIs": "plain",
+			"receiverMode": "disabled",
+			"toItself": true,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xd821b07fbc8f718ff1eaaf041c284c631674b0d7",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.024",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0.024,
+				"spotUsdc": -0.024,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.024,
+				"spotUsdc": -0.024,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": true,
+			"action": {
+				"type": "usdClassTransfer",
+				"amount": "0.021",
+				"toPerp": false
+			},
+			"answer": {
+				"status": "err",
+				"response": "Action disabled when unified account is active"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": true,
+			"action": {
+				"type": "usdClassTransfer",
+				"amount": "0.022",
+				"toPerp": true
+			},
+			"answer": {
+				"status": "err",
+				"response": "Action disabled when unified account is active"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": true,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.023",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Unified account only supports sending assets through spot"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "between the account's own balances",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": true,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.024",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "a spot token that is not the collateral",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0x0459f1862840f18fc3ae7f6872f4e499ad6ba8e7",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.03"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": -0.03
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0.03
+			}
+		},
+		{
+			"about": "a spot token that is not the collateral",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.011",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": -0.011
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0.011
+			}
+		},
+		{
+			"about": "a spot token that is not the collateral",
+			"senderMode": "default",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.012",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "err",
+				"response": "Invalid token"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "a spot token that is not the collateral",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.011"
+			},
+			"answer": {
+				"status": "err",
+				"response": "Action disabled when unified account is active"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "a spot token that is not the collateral",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.012",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": -0.012
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0.012
+			}
+		},
+		{
+			"about": "a spot token that is not the collateral",
+			"senderMode": "unifiedAccount",
+			"senderIs": "plain",
+			"receiverMode": "unifiedAccount",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0x67e7040fb4ea6e414b98c9dbb2f8f9621e0df105",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "HYPE:0x7317beb7cceed72ef0b346074cc8e7ab",
+				"amount": "0.013",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": -0.013
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0,
+				"spotHype": 0.013
+			}
+		},
+		{
+			"about": "through a multi-sig envelope",
+			"senderMode": "disabled",
+			"senderIs": "multi-sig",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "usdSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"amount": "0.031"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.031,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.031,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "through a multi-sig envelope",
+			"senderMode": "disabled",
+			"senderIs": "multi-sig",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "spotSend",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.032"
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.032,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.032,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "through a multi-sig envelope",
+			"senderMode": "disabled",
+			"senderIs": "multi-sig",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.033",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.033,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.033,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "through a multi-sig envelope",
+			"senderMode": "disabled",
+			"senderIs": "multi-sig",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.034",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": -0.034,
+				"spotUsdc": 0,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.034,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "through a multi-sig envelope",
+			"senderMode": "disabled",
+			"senderIs": "multi-sig",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "spot",
+				"destinationDex": "spot",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.035",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.035,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0,
+				"spotUsdc": 0.035,
+				"spotHype": 0
+			}
+		},
+		{
+			"about": "through a multi-sig envelope",
+			"senderMode": "disabled",
+			"senderIs": "multi-sig",
+			"receiverMode": "default",
+			"toItself": false,
+			"action": {
+				"type": "sendAsset",
+				"destination": "0xb0371456346fcb3f58218dece11dd77d6d8ddb15",
+				"sourceDex": "spot",
+				"destinationDex": "",
+				"token": "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+				"amount": "0.036",
+				"fromSubAccount": ""
+			},
+			"answer": {
+				"status": "ok"
+			},
+			"senderChange": {
+				"perps": 0,
+				"spotUsdc": -0.036,
+				"spotHype": 0
+			},
+			"receiverChange": {
+				"perps": 0.036,
+				"spotUsdc": 0,
+				"spotHype": 0
+			}
+		}
+	],
+	"switches": [
+		{
+			"from": "default",
+			"to": "disabled",
+			"reported": "disabled",
+			"before": {
+				"perps": 9.37,
+				"spotUsdc": 0.5
+			},
+			"after": {
+				"perps": 9.37,
+				"spotUsdc": 0.5
+			}
+		},
+		{
+			"from": "default",
+			"to": "disabled",
+			"reported": "disabled",
+			"before": {
+				"perps": 3.26,
+				"spotUsdc": 0
+			},
+			"after": {
+				"perps": 3.26,
+				"spotUsdc": 0
+			}
+		},
+		{
+			"from": "disabled",
+			"to": "unifiedAccount",
+			"reported": "unifiedAccount",
+			"before": {
+				"perps": 0,
+				"spotUsdc": 3.85
+			},
+			"after": {
+				"perps": 0,
+				"spotUsdc": 3.85
+			}
+		},
+		{
+			"from": "disabled",
+			"to": "unifiedAccount",
+			"reported": "unifiedAccount",
+			"before": {
+				"perps": 0.01,
+				"spotUsdc": 6.88
+			},
+			"after": {
+				"perps": 0,
+				"spotUsdc": 6.89
+			}
+		},
+		{
+			"from": "unifiedAccount",
+			"to": "disabled",
+			"reported": "disabled",
+			"before": {
+				"perps": 0,
+				"spotUsdc": 3.722
+			},
+			"after": {
+				"perps": 0,
+				"spotUsdc": 3.722
+			}
+		},
+		{
+			"from": "unifiedAccount",
+			"to": "disabled",
+			"reported": "disabled",
+			"before": {
+				"perps": 0,
+				"spotUsdc": 7.083
+			},
+			"after": {
+				"perps": 0,
+				"spotUsdc": 7.083
+			}
+		}
+	]
+}

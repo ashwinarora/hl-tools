@@ -1,5 +1,5 @@
 import { SIGNING_SAMPLES, stringifyJson } from "@hl-tools/core";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRightLeft, Copy, PenLine } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -57,6 +57,8 @@ function SigningTool() {
 	const network = useNetwork();
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
 	const take = useHandoffStore((s) => s.take);
+	const send = useHandoffStore((s) => s.send);
+	const navigate = useNavigate();
 	const [mode, setMode] = useState<Mode>("inspect");
 	const [a, setA] = useState<SigningInput>(() =>
 		search.sample ? (sampleInput(search.sample) ?? EMPTY_INPUT) : EMPTY_INPUT,
@@ -145,8 +147,11 @@ function SigningTool() {
 							</Panel>
 							<Callout tone="neutral" title="Scope">
 								Single-signer L1 and user-signed actions. Multi-sig envelopes
-								are out of scope. This tool never signs and has no private-key
-								field.
+								belong in the{" "}
+								<Link to="/tools/multisig" className="underline">
+									Multisig Inspector
+								</Link>
+								. This tool never signs and has no private-key field.
 							</Callout>
 						</>
 					}
@@ -182,6 +187,10 @@ function SigningTool() {
 								<InspectionView
 									inspection={inspA}
 									pastedPretty={pastedPretty}
+									onHandOff={() => {
+										send("multisig", a.text);
+										void navigate({ to: "/tools/multisig" });
+									}}
 								/>
 							</div>
 						) : (

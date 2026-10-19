@@ -25,7 +25,11 @@ import {
 	RAW_ACTION_TOPIC,
 	TIF_ENCODING,
 } from "../rules/corewriter.ts";
-import { SYSTEM_ADDRESSES, tokenSystemAddress } from "../rules/hyperevm.ts";
+import {
+	isSystemAddress,
+	SYSTEM_ADDRESSES,
+	tokenSystemAddress,
+} from "../rules/hyperevm.ts";
 import { ORDER_STATUSES } from "../rules/orders.ts";
 
 export type Evidence = "observed" | "inferred" | "unknown";
@@ -172,14 +176,6 @@ export type TxTrace =
 	  };
 
 const TRANSFER_TOPIC = keccak256(toHex("Transfer(address,address,uint256)"));
-
-function isSystemAddress(addr: string): boolean {
-	const a = addr.toLowerCase();
-	return (
-		a.startsWith("0x20000000000000000000000000000000000000") ||
-		a === "0x2222222222222222222222222222222222222222"
-	);
-}
 
 function topicAddress(topic: string | undefined): `0x${string}` {
 	return `0x${(topic ?? "").slice(-40)}` as `0x${string}`;

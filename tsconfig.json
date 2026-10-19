@@ -1,6 +1,13 @@
 {
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", ".output", ".scratch", "packages/*/scripts"],
+  "exclude": [
+    "node_modules",
+    ".output",
+    ".scratch",
+    "packages/*/scripts",
+    "labs",
+    "notes"
+  ],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

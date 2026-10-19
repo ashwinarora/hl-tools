@@ -1,0 +1,688 @@
+/**
+ * The proposal document a page is showing.
+ *
+ * It lives in this browser's history (IndexedDB, keyed by digest) and every
+ * change goes through it, merged. If the history cannot be used (IndexedDB
+ * blocked), the document is kept in memory so the page still works for as
+ * long as it stays open.
+ *
+ * With the relay in use the hook also reads the relay's copy: the stored
+ * document, re-hashed, with the signatures that verify. That copy is written
+ * through into the history (so the page keeps one source and works offline
+ * afterwards), and what this browser adds is pushed back: its own signature
+ * when the relay has the proposal, the proposal itself only when asked to,
+ * the result when this wallet is the finaliser.
+ */
+import {
+	type Address,
+	encodeProposal,
+	type Hex,
+	type Issue,
+	issue,
+	mergeProposals,
+	type Proposal,
+} from "@hl-tools/core";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { errorMessage } from "#/hooks/useHyperliquid";
+import {
+	type LoadResult,
+	loadProposal,
+	rewriteProposal,
+	saveProposal,
+} from "../model/history";
+import {
+	assembleProposal,
+	effectiveProposal,
+	type RelayProposal,
+	removedSigners,
+} from "../model/relay/assemble";
+import { relayIssue } from "../model/relay/errors";
+import type { Objection } from "../model/relay/positions";
+import {
+	planPush,
+	publishBlocker,
+	type RelayKnown,
+	settledAlready,
+} from "../model/relay/push";
+import { type CarriedOut, carriedOutOf } from "../model/relay/report";
+import type { ProposalRow } from "../model/relay/rows";
+import { queues } from "../model/relay/serial";
+import type { ViewRow } from "../model/relay/views";
+import {
+	addObjection,
+	addSignature,
+	getProposal,
+	listProposalEvents,
+	listViews,
+	type ProposalKey,
+	publishProposal,
+	recordReceipt,
+	removeObjection,
+	removeSignature,
+	withdrawProposal,
+} from "../relay/api";
+import type { RelayClient } from "../relay/client";
+import { treasuriesQuery, unwrap } from "../relay/queries";
+import { queryIssue, useRelay } from "../relay/useRelay";
+
+export interface StoreResult {
+	readonly proposal: Proposal;
+	readonly issues: readonly Issue[];
+}
+
+/** The relay's side of a proposal, as the page needs it. */
+export interface RelayView {
+	/** The relay is in use: signed in as the connected wallet. */
+	readonly active: boolean;
+	/** The relay has this proposal and this wallet may see it. */
+	readonly known: boolean;
+	readonly loading: boolean;
+	/** The relay's row (status, who proposed, how it ended); null when not known. */
+	readonly row: ProposalRow | null;
+	/** What the relay recorded when it closed the proposal as carried out outside the tool. */
+	readonly carriedOut: CarriedOut | null;
+	/** Which signers have opened it; null when the relay does not have it (or could not say). */
+	readonly views: readonly ViewRow[] | null;
+	readonly expired: boolean;
+	/** Signers whose signature is on the relay and verifies. */
+	readonly signers: readonly Address[];
+	/** Who said no, as the relay holds it (the page counts it against the live signers). */
+	readonly objections: readonly Objection[];
+	/** This wallet may share the proposal: a stored signer of its unfrozen treasury, and the document qualifies. */
+	readonly canPublish: boolean;
+	/** Why the document cannot be shared at all; null when it can. */
+	readonly blocker: string | null;
+	/** The last thing that went wrong between this page and the relay. */
+	readonly issue: Issue | null;
+	/** A write to the relay is in flight. */
+	readonly busy: boolean;
+}
+
+export interface ProposalDoc {
+	readonly proposal: Proposal | null;
+	/** Notes from decoding the stored document and from checking the relay's copy. */
+	readonly issues: readonly Issue[];
+	readonly loading: boolean;
+	/** Set when the history could not be read or written. */
+	readonly storageError: string | null;
+	readonly relay: RelayView;
+	/**
+	 * Merge a copy into the document and persist it. With the relay in use,
+	 * this wallet's own signature and result follow it there; the proposal
+	 * itself is shared only with `publish`. Never throws. With `pushLater`
+	 * the call returns once the copy is saved, and the relay is told after.
+	 */
+	store(
+		incoming: Proposal,
+		opts?: { readonly publish?: boolean; readonly pushLater?: boolean },
+	): Promise<StoreResult>;
+	/** Share the proposal as it is in this browser. */
+	publish(): Promise<void>;
+	/** Remove this wallet's signature from the relay and from this browser. */
+	takeBack(): Promise<void>;
+	/** Withdraw: the proposer ends it for everyone. */
+	withdraw(): Promise<void>;
+	/**
+	 * Say no: an objection the co-signers see, which ends nothing. This
+	 * wallet's signature is taken back with it, on the relay and in this browser.
+	 */
+	sayNo(): Promise<void>;
+	/** Take this wallet's no back. */
+	takeBackNo(): Promise<void>;
+	/** Read the relay's copy again, now; the row, or null when it has none or cannot be reached. */
+	refresh(): Promise<ProposalRow | null>;
+	/**
+	 * Drop a signer's signature from this browser's copy: after the relay took
+	 * it back some other way than through `takeBack` or `sayNo` (the one write
+	 * that covers both steps of a move).
+	 */
+	forgetSignature(signer: Address): Promise<void>;
+}
+
+interface Remote {
+	readonly found: RelayProposal | null;
+	readonly issues: readonly Issue[];
+	readonly removed: readonly Address[];
+	readonly carriedOut: CarriedOut | null;
+	/** Null when they could not be read: nothing is then said about who has seen it. */
+	readonly views: readonly ViewRow[] | null;
+}
+
+const NO_OBJECTIONS: readonly Objection[] = [];
+
+/** One push at a time per wallet and proposal, across every page of this tab that shows it. */
+const pushQueue = queues();
+
+const keyOf = (p: Proposal): ProposalKey => ({
+	network: p.payload.network,
+	treasury: p.payload.multiSigUser,
+	digest: p.digest,
+});
+
+async function readRemote(client: RelayClient, digest: Hex): Promise<Remote> {
+	const got = unwrap(await getProposal(client, digest));
+	const issues: Issue[] = [];
+	let found: RelayProposal | null = null;
+	// one row at most can verify: the digest binds the treasury it is filed under
+	for (const row of got.rows) {
+		const a = await assembleProposal(row);
+		issues.push(...a.issues);
+		if (a.assembled && !found) found = a.assembled;
+	}
+	if (got.dropped > 0) {
+		issues.push(
+			issue(
+				"relay.rows_dropped",
+				"warning",
+				"The sharing service returned something for this proposal that could not be read; it was ignored.",
+			),
+		);
+	}
+	let removed: Address[] = [];
+	let carriedOut: CarriedOut | null = null;
+	let views: readonly ViewRow[] | null = null;
+	if (found) {
+		views = (await listViews(client, keyOf(found.proposal))).data?.rows ?? null;
+		const events = await listProposalEvents(client, keyOf(found.proposal));
+		// without the events nothing is dropped: a signature that verifies stays shown
+		if (events.data) {
+			removed = [...removedSigners(events.data.rows, found.proposal.digest)];
+			carriedOut = carriedOutOf(events.data.rows);
+		}
+	}
+	return { found, issues, removed, carriedOut, views };
+}
+
+/**
+ * `arrived` is a copy the page was handed with this digest (the other step of
+ * a move that came in one link). It stands in while this browser's history
+ * has none, so a move opened where nothing can be stored is still shown
+ * whole and not as its first step alone.
+ */
+export function useProposalDoc(
+	digest: string | undefined,
+	arrived: Proposal | null = null,
+): ProposalDoc {
+	const queries = useQueryClient();
+	const relay = useRelay();
+	const client = relay.client;
+	const me = relay.wallet;
+
+	const local = useQuery({
+		queryKey: ["multisig-proposal", digest],
+		enabled: !!digest,
+		queryFn: () => loadProposal(digest as string),
+		retry: 0,
+		staleTime: Number.POSITIVE_INFINITY,
+	});
+	const [memory, setMemory] = useState<Proposal | null>(null);
+	const [storageError, setStorageError] = useState<string | null>(null);
+	const [problem, setProblem] = useState<Issue | null>(null);
+	const [syncIssues, setSyncIssues] = useState<readonly Issue[]>([]);
+	const [busy, setBusy] = useState(false);
+
+	const remoteKey = useMemo(
+		() => ["relay", me, "proposal", digest] as const,
+		[me, digest],
+	);
+	const remote = useQuery({
+		queryKey: remoteKey,
+		enabled: !!client && !!digest,
+		queryFn: () => readRemote(client as RelayClient, digest as Hex),
+		staleTime: 5_000,
+		retry: 1,
+	});
+
+	const invalidateLocal = useCallback(
+		async (d: string) => {
+			await queries.invalidateQueries({ queryKey: ["multisig-proposal", d] });
+			void queries.invalidateQueries({ queryKey: ["multisig-proposals"] });
+		},
+		[queries],
+	);
+
+	// The page shows what this browser stores, whoever stored it: this tab,
+	// another tab of this browser, or an earlier sync that was cut short. A
+	// sync that finds storage already up to date still has to say so, or the
+	// page keeps the copy it read before.
+	const showStored = useCallback(
+		async (d: string, held: Proposal) => {
+			const shown = queries.getQueryData<LoadResult>([
+				"multisig-proposal",
+				d,
+			])?.proposal;
+			if (shown && encodeProposal(shown) === encodeProposal(held)) return;
+			await invalidateLocal(d);
+		},
+		[queries, invalidateLocal],
+	);
+
+	// The page renders the same object until the document really changes, so a
+	// refetch that returns the same proposal does not restart the judgement.
+	const stored = local.data?.proposal ?? null;
+	const held =
+		memory && (!digest || memory.digest === digest)
+			? memory
+			: arrived && arrived.digest === digest
+				? arrived
+				: null;
+	const raw = stored ?? held;
+	const text = raw ? encodeProposal(raw) : null;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `text` is the document; `raw` is a fresh object on every load
+	const proposal = useMemo(() => raw, [text]);
+
+	// ---- relay → this browser
+	const remoteData = remote.data;
+	useEffect(() => {
+		if (!digest || !remoteData?.found) return;
+		const theirs = remoteData.found.proposal;
+		const removed = new Set(remoteData.removed);
+		let cancelled = false;
+		void (async () => {
+			const notes: Issue[] = [];
+			const merge = async (mine: Proposal | null) => {
+				const e = await effectiveProposal(theirs, mine, removed);
+				notes.push(...e.issues);
+				return e.proposal;
+			};
+			try {
+				const written = await rewriteProposal(digest, merge);
+				// before the cancel check: the newer run may find nothing left to write
+				if (written) await showStored(digest, written.proposal);
+				if (cancelled) return;
+				setStorageError(null);
+				setSyncIssues(notes);
+			} catch (e) {
+				// no history in this browser: hold the merged copy on the page
+				const merged = await merge(null);
+				if (cancelled) return;
+				setStorageError(errorMessage(e));
+				setSyncIssues(notes);
+				setMemory((m) => (m && m.digest === digest ? m : merged));
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [digest, remoteData, showStored]);
+
+	// ---- this browser → relay
+	// What a write here changed on the relay: this proposal, and the list that
+	// counts it. The relay's ping after the write refreshes everything else.
+	const relayChanged = useCallback(
+		async (d: string) => {
+			await Promise.all([
+				queries.invalidateQueries({ queryKey: ["relay", me, "proposal", d] }),
+				queries.invalidateQueries({ queryKey: ["relay", me, "open"] }),
+			]);
+		},
+		[queries, me],
+	);
+
+	const push = useCallback(
+		async (
+			doc: Proposal,
+			o: { publish: boolean; explicit: boolean },
+		): Promise<Issue | null> => {
+			if (!client || !me) return null;
+			let now: Remote;
+			let storedSigner = false;
+			try {
+				// what the relay has at this moment, not what the page saw a while ago:
+				// a push queued behind another one reads what that one wrote
+				now = await queries.fetchQuery({
+					queryKey: ["relay", me, "proposal", doc.digest],
+					queryFn: () => readRemote(client, doc.digest),
+					staleTime: 0,
+				});
+				if (o.publish && !now.found) {
+					const mine = await queries.fetchQuery(treasuriesQuery(client, me));
+					storedSigner = mine.rows.some(
+						(t) =>
+							t.network === doc.payload.network &&
+							t.address === doc.payload.multiSigUser &&
+							t.frozenAt === null &&
+							t.signers.includes(me),
+					);
+				}
+			} catch (e) {
+				return queryIssue(e) ?? relayIssue(e);
+			}
+			const known: RelayKnown | null = now.found
+				? {
+						status: now.found.row.status,
+						expired: now.found.row.expiresAt <= Date.now(),
+						signers: now.found.row.signatures.map((s) => s.signer),
+						receiptTimes: now.found.row.receipts.map((r) => r.submittedAt),
+					}
+				: null;
+			const ops = planPush({
+				doc,
+				me,
+				relay: known,
+				storedSigner,
+				publish: o.publish,
+				removed: new Set(now.removed),
+				explicit: o.explicit,
+			});
+			if (ops.length === 0) {
+				if (o.publish && !now.found) {
+					const blocked = publishBlocker(doc);
+					return issue(
+						"relay.not_shared",
+						"warning",
+						blocked ??
+							"Not shared: the sharing service does not list your wallet as a signer of this treasury. Add the treasury first.",
+					);
+				}
+				return null;
+			}
+			const key = keyOf(doc);
+			let failed: Issue | null = null;
+			for (const op of ops) {
+				const r =
+					op.kind === "publish"
+						? await publishProposal(client, me, op.row)
+						: op.kind === "sign"
+							? await addSignature(client, me, key, op.signature)
+							: await recordReceipt(client, me, key, op.receipt);
+				// told what an earlier push of the same result achieved: done
+				if (r.issue && !settledAlready(op, r.issue)) {
+					failed = r.issue;
+					break;
+				}
+			}
+			await relayChanged(doc.digest);
+			return failed;
+		},
+		[client, me, queries, relayChanged],
+	);
+
+	// A signature or a result made here that the relay does not have yet (signed
+	// while offline, or the first push failed): caught up in the background,
+	// once per reason, and again when the browser comes back online or the
+	// relay is reachable again. Never beside another push of this proposal.
+	const gaveUpOn = useRef<string | null>(null);
+	const [online, setOnline] = useState(0);
+	useEffect(() => {
+		const again = () => {
+			gaveUpOn.current = null;
+			setOnline((n) => n + 1);
+		};
+		window.addEventListener("online", again);
+		return () => window.removeEventListener("online", again);
+	}, []);
+	// the wallet's channel (re)joining is the relay saying it is reachable again
+	const channel = relay.channel;
+	useEffect(() => {
+		if (channel !== "joined") return;
+		gaveUpOn.current = null;
+		setOnline((n) => n + 1);
+	}, [channel]);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `online` re-runs the catch-up after a reconnect
+	useEffect(() => {
+		const found = remoteData?.found;
+		if (!client || !me || !proposal || !found) return;
+		const ops = planPush({
+			doc: proposal,
+			me,
+			relay: {
+				status: found.row.status,
+				expired: found.row.expiresAt <= Date.now(),
+				signers: found.row.signatures.map((s) => s.signer),
+				receiptTimes: found.row.receipts.map((r) => r.submittedAt),
+			},
+			storedSigner: false,
+			publish: false,
+			removed: new Set(remoteData.removed),
+			explicit: false,
+		});
+		const what = `${proposal.digest}:${ops.map((o) => o.kind).join(",")}`;
+		const queue = pushQueue(`${me}:${proposal.digest}`);
+		if (ops.length === 0 || !queue.idle || gaveUpOn.current === what) return;
+		void queue
+			.run(() => push(proposal, { publish: false, explicit: false }))
+			.then((failed) => {
+				gaveUpOn.current = failed ? what : null;
+				setProblem(failed);
+			});
+	}, [client, me, proposal, remoteData, push, online]);
+
+	const store = useCallback(
+		async (
+			incoming: Proposal,
+			opts: { readonly publish?: boolean; readonly pushLater?: boolean } = {},
+		): Promise<StoreResult> => {
+			let result: StoreResult;
+			let kept = true;
+			// held from before the save, whose re-read wakes the catch-up
+			const queue = me ? pushQueue(`${me}:${incoming.digest}`) : null;
+			const release = queue?.hold() ?? (() => {});
+			try {
+				const saved = await saveProposal(incoming);
+				setStorageError(null);
+				await invalidateLocal(saved.proposal.digest);
+				result = { proposal: saved.proposal, issues: saved.issues };
+				kept = saved.saved;
+			} catch (e) {
+				// no history: merge with what this page already holds, in memory
+				setStorageError(errorMessage(e));
+				const before = held && held.digest === incoming.digest ? held : null;
+				const merged = before ? await mergeProposals(incoming, before) : null;
+				const next = merged?.merged ?? incoming;
+				setMemory(next);
+				result = { proposal: next, issues: merged?.issues ?? [] };
+			}
+			// a copy that was refused locally (another payload under this digest) goes nowhere
+			if (!kept || !client || !me || !queue) {
+				release();
+				return result;
+			}
+			const doc = result.proposal;
+			const sending = (async () => {
+				setBusy(true);
+				try {
+					gaveUpOn.current = null;
+					setProblem(
+						await queue.run(() =>
+							push(doc, { publish: !!opts.publish, explicit: true }),
+						),
+					);
+				} finally {
+					release();
+					setBusy(false);
+				}
+			})();
+			// `push` never throws; should that change, a push sent later fails quietly
+			if (!opts.pushLater) await sending;
+			else sending.catch(() => undefined);
+			return result;
+		},
+		[client, me, held, invalidateLocal, push],
+	);
+
+	const act = useCallback(
+		async (write: (c: RelayClient, as: Address) => Promise<Issue | null>) => {
+			if (!client || !me) {
+				setProblem(
+					issue("relay.wrong_wallet", "error", "You are not signed in."),
+				);
+				return;
+			}
+			setBusy(true);
+			try {
+				setProblem(await write(client, me));
+				if (proposal) await relayChanged(proposal.digest);
+			} finally {
+				setBusy(false);
+			}
+		},
+		[client, me, proposal, relayChanged],
+	);
+
+	const publish = useCallback(async () => {
+		if (proposal) await store(proposal, { publish: true });
+	}, [proposal, store]);
+
+	/** A signature its signer took back leaves this browser too, or the next sync would hold it. */
+	const dropLocalSignature = useCallback(
+		async (digest: Hex, signer: Address) => {
+			const without = (p: Proposal | null) =>
+				p
+					? {
+							...p,
+							signatures: p.signatures.filter((s) => s.signer !== signer),
+						}
+					: null;
+			try {
+				await rewriteProposal(digest, async (p) => without(p));
+				await invalidateLocal(digest);
+			} catch {
+				// no history: the copy the page holds, which may be the one it was handed
+				setMemory((m) =>
+					without(m ?? (arrived && arrived.digest === digest ? arrived : null)),
+				);
+			}
+		},
+		[invalidateLocal, arrived],
+	);
+
+	const forgetSignature = useCallback(
+		async (signer: Address) => {
+			if (proposal?.signatures.some((x) => x.signer === signer))
+				await dropLocalSignature(proposal.digest, signer);
+		},
+		[proposal, dropLocalSignature],
+	);
+
+	const takeBack = useCallback(
+		() =>
+			act(async (c, as) => {
+				if (!proposal) return null;
+				const r = await removeSignature(c, as, keyOf(proposal));
+				if (r.issue) return r.issue;
+				await dropLocalSignature(proposal.digest, as);
+				return null;
+			}),
+		[act, proposal, dropLocalSignature],
+	);
+
+	const withdraw = useCallback(
+		() =>
+			act(async (c, as) => {
+				if (!proposal) return null;
+				return (await withdrawProposal(c, as, keyOf(proposal))).issue;
+			}),
+		[act, proposal],
+	);
+
+	const sayNo = useCallback(
+		() =>
+			act(async (c, as) => {
+				if (!proposal) return null;
+				const r = await addObjection(c, as, keyOf(proposal));
+				if (r.issue) return r.issue;
+				// one position at a time: the relay took this wallet's signature back with it
+				if (proposal.signatures.some((s) => s.signer === as))
+					await dropLocalSignature(proposal.digest, as);
+				return null;
+			}),
+		[act, proposal, dropLocalSignature],
+	);
+
+	const takeBackNo = useCallback(
+		() =>
+			act(async (c, as) => {
+				if (!proposal) return null;
+				return (await removeObjection(c, as, keyOf(proposal))).issue;
+			}),
+		[act, proposal],
+	);
+
+	const refresh = useCallback(async (): Promise<ProposalRow | null> => {
+		if (!client || !digest) return null;
+		try {
+			const now = await queries.fetchQuery({
+				queryKey: remoteKey,
+				queryFn: () => readRemote(client, digest as Hex),
+				staleTime: 0,
+			});
+			return now.found?.row ?? null;
+		} catch {
+			return null;
+		}
+	}, [client, digest, queries, remoteKey]);
+
+	const found = remoteData?.found ?? null;
+	const blocker = proposal ? publishBlocker(proposal) : null;
+	const storedSignerNow = useStoredSigner(proposal, !!client && !found);
+	const relayView: RelayView = {
+		active: !!client,
+		known: !!found,
+		loading: !!client && !!digest && remote.isPending,
+		row: found?.row ?? null,
+		carriedOut: remoteData?.carriedOut ?? null,
+		views: found ? (remoteData?.views ?? null) : null,
+		expired: !!found && found.row.expiresAt <= Date.now(),
+		signers: found?.proposal.signatures.map((s) => s.signer) ?? [],
+		objections:
+			found?.row.objections.map((o) => ({
+				signer: o.signer,
+				at: o.createdAt,
+			})) ?? NO_OBJECTIONS,
+		canPublish: !!client && !found && blocker === null && storedSignerNow,
+		blocker,
+		issue: problem ?? queryIssue(remote.error),
+		busy,
+	};
+
+	return {
+		proposal,
+		issues: [
+			...(stored ? (local.data?.issues ?? []) : []),
+			...(remoteData?.issues ?? []),
+			...syncIssues,
+		],
+		loading:
+			!!digest &&
+			(local.isPending ||
+				// the relay has it and it is on its way into this browser
+				(!proposal && !!client && (remote.isPending || !!found))),
+		storageError:
+			storageError ?? (local.isError ? errorMessage(local.error) : null),
+		relay: relayView,
+		store,
+		publish,
+		takeBack,
+		withdraw,
+		sayNo,
+		takeBackNo,
+		refresh,
+		forgetSignature,
+	};
+}
+
+/** Whether the relay lists the signed-in wallet as a signer of the proposal's (unfrozen) treasury. */
+function useStoredSigner(proposal: Proposal | null, enabled: boolean): boolean {
+	const relay = useRelay();
+	const client = relay.client;
+	const me = relay.wallet;
+	const query = useQuery({
+		...(client && me
+			? treasuriesQuery(client, me)
+			: {
+					queryKey: ["relay", me, "treasuries"] as const,
+					queryFn: async () => ({ rows: [], dropped: 0 }),
+				}),
+		enabled: enabled && !!client && !!me,
+	});
+	if (!proposal || !me) return false;
+	return (query.data?.rows ?? []).some(
+		(t) =>
+			t.network === proposal.payload.network &&
+			t.address === proposal.payload.multiSigUser &&
+			t.frozenAt === null &&
+			t.signers.includes(me),
+	);
+}

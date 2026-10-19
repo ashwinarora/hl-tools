@@ -1,0 +1,383 @@
+{
+	"description": "Hyperliquid testnet, 2026-10-13. Does Hyperliquid judge the signatures of a multi-sig request over the inner action as it was sent, or over its own writing of it? Eight requests through a 2-of-3 lab multi-sig, each a vault deposit of 1 USDC, which is under the minimum: every one is refused and nothing moves, and which refusal comes back says whether the signatures were accepted. `posted` is the form of the inner action in the body, `innerSignedOver` the form the two signers signed, `outerSignedOver` the form the leader signed the envelope over. The forms: `canonical` (type, vaultAddress, isDeposit, usd; the address in lowercase), `reordered` (the same fields in the order usd, isDeposit, vaultAddress, type), `capitals` (the canonical order with the address's hex digits in capitals). Result: signatures made over the canonical form are accepted whatever form was posted (\"Vault deposits must be at least $5.\" is the answer of a request whose signatures passed); signatures made over any other form are refused, the leader's first (\"Invalid multi-sig outer signer\"), the signers' when the leader's is canonical (\"Invalid multi-sig inner signer\"). So Hyperliquid reads the request, writes the inner action out in its own form, and hashes that. Not measured here: a number's trailing zeros (a vault action has no decimal string).",
+	"network": "testnet",
+	"account": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+	"policy": {
+		"authorizedUsers": [
+			"0x41e84a2c224151b85ef53945d5d31adcfe8955b9",
+			"0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+			"0xb70c120cd3702225fbe3657ace137ed5889f36ee"
+		],
+		"threshold": 2
+	},
+	"requests": [
+		{
+			"about": "1. control: posted canonical, signed over canonical",
+			"posted": "canonical",
+			"innerSignedOver": "canonical",
+			"outerSignedOver": "canonical",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0x3ddb765e7631876d73951ba67837b09e71a58a2a08203188b35628b50b9e6384",
+							"s": "0x4ce62afdb1d4c6ac226d3d75f66a993573e4df968cd5304b39b5aa6f20be485f",
+							"v": 28
+						},
+						{
+							"r": "0x74755aeb184be622b77b8b551c55672bfd434b69a53fb00ee49b6db64b8144c7",
+							"s": "0x77bdc01d701de7f8523c7650df71cf3f2bf21cf433fde80ec24eb8e97b84c29f",
+							"v": 27
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "vaultTransfer",
+							"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+							"isDeposit": true,
+							"usd": 1000000
+						}
+					}
+				},
+				"nonce": 1791909945063,
+				"signature": {
+					"r": "0x2aaac1ce5c1ea556048fe98cf640b262a8a010c892e792d7180cbd25e4918b45",
+					"s": "0x3f40033da98dc2a0f59cd129a1c72e7e952cc14472bfd6f777f6a3f5a962ab95",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"httpStatus": 200,
+			"answer": {
+				"status": "err",
+				"response": "Vault deposits must be at least $5."
+			}
+		},
+		{
+			"about": "2. posted with its fields in another order, signed over those bytes",
+			"posted": "reordered",
+			"innerSignedOver": "reordered",
+			"outerSignedOver": "reordered",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0x3d168045323ecb8c325d65f47b49c0cb3bad5f61072a454a5ae636d5c1e3f24c",
+							"s": "0x3e0bf5f1266adb758daf406e3fbe26918ba283567cd4b543d4226b4f799b0fcd",
+							"v": 27
+						},
+						{
+							"r": "0x82b84628aaaee5cf40ebedce2ba0b1f18a5e8855f2cf0469f0883d34964806cb",
+							"s": "0x510af82641bd1acfd6a88b834a1592c89d874205a45f468d805280c32f48c0d3",
+							"v": 27
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"usd": 1000000,
+							"isDeposit": true,
+							"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+							"type": "vaultTransfer"
+						}
+					}
+				},
+				"nonce": 1791909951058,
+				"signature": {
+					"r": "0xd4dca924f80b65e2171c11179a3ed933485b096ce87fbc8272a517e0bf56a79b",
+					"s": "0xcb6223e7faa6655d00f4dc0dfbe4e0b5732336436f126d2b77e32bd40064745",
+					"v": 28
+				},
+				"vaultAddress": null
+			},
+			"httpStatus": 200,
+			"answer": {
+				"status": "err",
+				"response": "Invalid multi-sig outer signer"
+			}
+		},
+		{
+			"about": "3. posted with its fields in another order, signed over the canonical bytes",
+			"posted": "reordered",
+			"innerSignedOver": "canonical",
+			"outerSignedOver": "canonical",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0xa54ac4b1238c0e68e06ec83cdb82f12d8d89e019ad529e75911f7d93561447ab",
+							"s": "0x890859b391958197dca709ac3da6610244fc2d03dfba395317890fbdd6f5627",
+							"v": 28
+						},
+						{
+							"r": "0xe97641a1cb3b792290a76b661f97e6d3b8386b9198a8beabb289395f70cd4936",
+							"s": "0x5eb327bb4bd6681978ee5207afe314018de726ed5de281aeea6c27c4e7ef96a",
+							"v": 28
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"usd": 1000000,
+							"isDeposit": true,
+							"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+							"type": "vaultTransfer"
+						}
+					}
+				},
+				"nonce": 1791909952738,
+				"signature": {
+					"r": "0xd2dea9703b1be9f2715fde89afa1ea78a6c2ab92ed917a6757ae1d3febe2ae63",
+					"s": "0x39fcc12784e359c69c86d22bb2e2faa18c5da706f642891515020e206401e2c1",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"httpStatus": 200,
+			"answer": {
+				"status": "err",
+				"response": "Vault deposits must be at least $5."
+			}
+		},
+		{
+			"about": "4. posted with the vault's address in capitals, signed over those bytes",
+			"posted": "capitals",
+			"innerSignedOver": "capitals",
+			"outerSignedOver": "capitals",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0xf60d42ef384f21e16ba79c4893196b49b3b97ea838a10a7102846dfccc85f54e",
+							"s": "0x1eee01ae92ea33d196897ccc1a342cfc445bd4b4644ab9a73dead259d93c7014",
+							"v": 27
+						},
+						{
+							"r": "0x633a0a031f0dcea2dda25aff3ad67ca9166f40b65e1402108853c4b57ce22b38",
+							"s": "0x62e2c033a79ce2d4d9ca58625f638d9127d56045b4edac8e40f206945c8e9e95",
+							"v": 27
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "vaultTransfer",
+							"vaultAddress": "0xA15099A30BBF2E68942D6F4C43D70D04FAEAB0A0",
+							"isDeposit": true,
+							"usd": 1000000
+						}
+					}
+				},
+				"nonce": 1791909958919,
+				"signature": {
+					"r": "0xb11bb4a1ffc7ad4d5c5a10325cbdc40313126b896a37d0063dceabbb742333e9",
+					"s": "0x3d1316fe0e5a49c3f579a3ba26bff62f9f6b963f1a926691c6fb78132a42bace",
+					"v": 28
+				},
+				"vaultAddress": null
+			},
+			"httpStatus": 200,
+			"answer": {
+				"status": "err",
+				"response": "Invalid multi-sig outer signer"
+			}
+		},
+		{
+			"about": "5. posted with the vault's address in capitals, signed over the canonical bytes",
+			"posted": "capitals",
+			"innerSignedOver": "canonical",
+			"outerSignedOver": "canonical",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0xe4c4acc152cdf1aa53b5eba75a080166bdf5bf8e9a9009244ca92c4e1e90acf2",
+							"s": "0x1bc255b56bf2a162b737d1a3326a82aec274e9d38f61f45fb4040df8e84efa08",
+							"v": 27
+						},
+						{
+							"r": "0xb032226ad6cdb9d18116a795ce26135515b48cc8cca5bcc3d9a12059994b2300",
+							"s": "0x2790f9d2a7983917a88c0e777fa8b7509e0372aadb3768459179e6f233cb04a9",
+							"v": 28
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "vaultTransfer",
+							"vaultAddress": "0xA15099A30BBF2E68942D6F4C43D70D04FAEAB0A0",
+							"isDeposit": true,
+							"usd": 1000000
+						}
+					}
+				},
+				"nonce": 1791909960600,
+				"signature": {
+					"r": "0xeea0401c9fed94c9da7869cd26eef063058bbc3eb9bef38f9167b4f16d678d1c",
+					"s": "0x6afdcd3cc7eb204730e29b58bdffa81150a614b62e9be03e804cd3b3b0287428",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"httpStatus": 200,
+			"answer": {
+				"status": "err",
+				"response": "Vault deposits must be at least $5."
+			}
+		},
+		{
+			"about": "6. fields in another order; the signers signed those bytes, the leader the canonical ones",
+			"posted": "reordered",
+			"innerSignedOver": "reordered",
+			"outerSignedOver": "canonical",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0xf66733548b3426a5482ca704b786220df55201aacef450f69d94cb2b3fa8bf7a",
+							"s": "0x2c3bdcc08aa1b88f85771dd8f19ca504f66db3181746c0a092d8adc2599beb1",
+							"v": 27
+						},
+						{
+							"r": "0x4e3d3b5307eb4fbffae8e329b255e6ed3fbfdd11dff6cf0525820ec6e338a0d6",
+							"s": "0x4546c977d91ec14f0798ad5af8736381d655fdba2d2e69e5e21c21ad5221f803",
+							"v": 28
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"usd": 1000000,
+							"isDeposit": true,
+							"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+							"type": "vaultTransfer"
+						}
+					}
+				},
+				"nonce": 1791909966691,
+				"signature": {
+					"r": "0xf48906c30894f30365f9ee7ca376e0f0f7de7256200fade1087b4bb73ecfc98a",
+					"s": "0x31c874f70ec64ae3f0c0d27c801150638a915c362f761ead5d830287960fa9a8",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"httpStatus": 200,
+			"answer": {
+				"status": "err",
+				"response": "Invalid multi-sig inner signer"
+			}
+		},
+		{
+			"about": "7. address in capitals; the signers signed those bytes, the leader the canonical ones",
+			"posted": "capitals",
+			"innerSignedOver": "capitals",
+			"outerSignedOver": "canonical",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0x93e88a4d6d59393778af4d48d55169fb161ca4cbca9c02c5f7e61cbbc599bd18",
+							"s": "0x1bd8e5882158dbad102476313c2216e335bc0ca9504c0005d53f81024f2c911b",
+							"v": 28
+						},
+						{
+							"r": "0x6d270e2ddc9d70d1475fef4342611b7dc7239cf3cc5fd969e8ae4f0ad019b29f",
+							"s": "0x7d09d24ca3ec6b19079e2e423f3d1c47fea33551dfaf727e06edac87027aca89",
+							"v": 28
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "vaultTransfer",
+							"vaultAddress": "0xA15099A30BBF2E68942D6F4C43D70D04FAEAB0A0",
+							"isDeposit": true,
+							"usd": 1000000
+						}
+					}
+				},
+				"nonce": 1791909968374,
+				"signature": {
+					"r": "0x4e3f63f46bf8a5e1106ed709a249b332383d79bb4cb6517aab0b2cc24d8b36ce",
+					"s": "0x678f24a2521c5f1e3803dca0d05efe4f7f1642d0eb93759be110f050ef35ee2f",
+					"v": 27
+				},
+				"vaultAddress": null
+			},
+			"httpStatus": 200,
+			"answer": {
+				"status": "err",
+				"response": "Invalid multi-sig inner signer"
+			}
+		},
+		{
+			"about": "8. posted canonical; the signers signed the reordered bytes, the leader the canonical ones",
+			"posted": "canonical",
+			"innerSignedOver": "reordered",
+			"outerSignedOver": "canonical",
+			"request": {
+				"action": {
+					"type": "multiSig",
+					"signatureChainId": "0x66eee",
+					"signatures": [
+						{
+							"r": "0xb3438db6871541459a05fcc52514d0a87910a14a208b0338a1a72274496febba",
+							"s": "0x3f62ed1e055589e2f9e29bb7089f752ad28197accbf6d00ef292db44abfc351f",
+							"v": 28
+						},
+						{
+							"r": "0x12adfb8121e1abf5ecca89d84d3b7720241b072ef16e9c7f2f31bea7f8f627b8",
+							"s": "0x4aa500bfc4099aa32fe355e1d9702d95fb177025436f243e5bb432745e516a47",
+							"v": 27
+						}
+					],
+					"payload": {
+						"multiSigUser": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+						"outerSigner": "0x5e7c3420160987d04db5e8ed6d5bc14f61237216",
+						"action": {
+							"type": "vaultTransfer",
+							"vaultAddress": "0xa15099a30bbf2e68942d6f4c43d70d04faeab0a0",
+							"isDeposit": true,
+							"usd": 1000000
+						}
+					}
+				},
+				"nonce": 1791909970053,
+				"signature": {
+					"r": "0x59ec5adf0b22c4dc8fbd006e5f9771143e896f1193d8cfcd9ff1ac5835115edf",
+					"s": "0x5e7ede3acbf4b731d91370a95997a1b2b767a95404a2230864792fd2c5a85959",
+					"v": 28
+				},
+				"vaultAddress": null
+			},
+			"httpStatus": 200,
+			"answer": {
+				"status": "err",
+				"response": "Invalid multi-sig inner signer"
+			}
+		}
+	]
+}

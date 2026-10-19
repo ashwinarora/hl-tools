@@ -1,0 +1,304 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
+
+export const Route = createFileRoute("/privacy")({
+	head: () => ({ meta: [{ title: "Privacy Policy — hl-tools" }] }),
+	component: PrivacyPage,
+});
+
+const UPDATED = "2026-10-19";
+const REPO = "https://github.com/ashwinarora/hl-tools";
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+	return (
+		<section className="space-y-2.5">
+			<h2 className="text-base font-semibold">{title}</h2>
+			<div className="space-y-2.5 text-sm leading-relaxed text-muted-foreground [&_b]:font-medium [&_b]:text-foreground [&_li]:ml-5 [&_li]:list-disc [&_ul]:space-y-1.5">
+				{children}
+			</div>
+		</section>
+	);
+}
+
+/**
+ * What hl-tools keeps, where, and who can read it. Written to be read: the
+ * relay stores what signers share so they can see it, and whoever operates
+ * the relay can read it too. This page says so plainly; no screen claims
+ * otherwise.
+ */
+function PrivacyPage() {
+	return (
+		<main className="page-wrap pb-16 pt-6 sm:pt-8">
+			<div className="max-w-3xl space-y-7">
+				<header className="space-y-2 border-b border-border pb-5">
+					<h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+						Privacy Policy
+					</h1>
+					<p className="text-sm text-muted-foreground">
+						Last updated <time dateTime={UPDATED}>{UPDATED}</time>. hl-tools is
+						an independent open-source project and is not affiliated with
+						Hyperliquid.
+					</p>
+				</header>
+
+				<Section title="The short version">
+					<ul>
+						<li>
+							The diagnostic tools keep nothing about you on our side. They run
+							in your browser and talk to Hyperliquid directly.
+						</li>
+						<li>
+							The Multisig section works without an account. Proposals passed on
+							as links or files stay in your browser until you hand them to
+							someone.
+						</li>
+						<li>
+							If you <b>sign in</b> to the Multisig section, what you share
+							there is stored on the hl-tools relay so your co-signers can see
+							it. <b>The operator of the relay can read it as well.</b>
+						</li>
+						<li>
+							No analytics, no advertising, no trackers and no session recording
+							of our own. One page, the faucet miner, loads a wallet picker made
+							by someone else, and that picker reports to its maker when the
+							page opens: see "Without signing in".
+						</li>
+					</ul>
+				</Section>
+
+				<Section title="Without signing in">
+					<p>
+						Nothing you paste, decode or build in a diagnostic tool is sent to
+						us. Requests go from your browser to Hyperliquid's public API and
+						WebSocket, and to the HyperEVM RPC endpoint you choose; those
+						services see your IP address and what you ask them, under their own
+						policies.
+					</p>
+					<p>
+						Your browser keeps a few things locally: the selected network and
+						theme, recorded WebSocket sessions, the multi-sig proposals you made
+						or opened, names you gave treasuries in this browser, what you typed
+						into a Multisig form and have not created yet (for a week), and, in
+						the faucet miner, the wallets it generated. They never leave the
+						browser unless you export or share them. Clearing the site's data
+						removes them.
+					</p>
+					<p>
+						Connecting a wallet uses the wallet's own software. The Multisig
+						section offers only the wallets in your browser, and its pages
+						contact nobody for it. The faucet miner is different: its wallet
+						picker can also connect a wallet through WalletConnect, and that
+						picker contacts WalletConnect as soon as the faucet miner page
+						opens, before you pick anything. It tells WalletConnect that it was
+						started and on which page, and WalletConnect sees your IP address.
+						If you pick a WalletConnect-based wallet there, the connection is
+						relayed by WalletConnect. All of that is under their policies, and
+						none of it happens on any other page. No page of this site loads a
+						font, a stylesheet or a script from another host.
+					</p>
+					<p>
+						A vault deposit or withdrawal in the Multisig section is signed
+						while your wallet is on a network added for that one purpose (the
+						page asks before it is added). While the wallet is on it, the wallet
+						itself asks that network's link what it asks of any network: which
+						chain it is, the latest block, and the balance of your address
+						there. This site serves that link itself (hltools.tech/rpc/1337), so
+						our host sees your IP address and the wallet address asked about, as
+						any network's endpoint does. The site keeps none of it; the hosting
+						provider's access log records the request's path and IP address, not
+						what was asked. The link answers with fixed values and refuses every
+						transaction; nothing is ever sent on that network, and the wallet
+						goes back to its own once it has signed.
+					</p>
+				</Section>
+
+				<Section title="When you sign in to Multisig">
+					<p>
+						Signing in means signing one message with your wallet. It proves you
+						control the address and cannot move funds. From then on the relay
+						stores:
+					</p>
+					<ul>
+						<li>
+							<b>Your wallet address</b>, and when you signed in.
+						</li>
+						<li>
+							<b>Treasuries</b> that you or a co-signer added: the account
+							address, the network, and its signer list and threshold as
+							Hyperliquid reports them.
+						</li>
+						<li>
+							<b>Proposals</b> shared for those treasuries, in full: the action
+							with its destination and amount, the title and note, who proposed
+							it and who finalises it.
+						</li>
+						<li>
+							<b>Signatures</b> added to those proposals, and when one was taken
+							back.
+						</li>
+						<li>
+							<b>A no</b> you said to a proposal, and when you said it or took
+							it back. No reason is stored with it.
+						</li>
+						<li>
+							<b>Outcomes</b>: that a proposal was withdrawn or declined, what
+							Hyperliquid answered when it was submitted, and, when a proposal
+							was carried out some other way, the transaction your browser
+							pointed the relay to.
+						</li>
+						<li>
+							<b>Nicknames</b> that you or a co-signer give to an address or to
+							a treasury, with who gave each one and when. A nickname belongs to
+							one treasury and is shown nowhere else.
+						</li>
+						<li>
+							<b>That you opened a proposal</b>: the first time you open a
+							pending proposal while signed in, the relay records it with the
+							time. Your co-signers see it next to your address ("seen 2 hours
+							ago"), and you see theirs.
+						</li>
+						<li>
+							<b>What you have marked as read</b>: for each treasury, up to
+							where you last pressed "Got it" in "While you were away", when,
+							and which API wallet addresses the page had shown you by then.
+						</li>
+						<li>
+							<b>Requests to add or re-check a treasury</b>: which wallet asked
+							about which account, when, and what came of it (for example that
+							the wallet is not one of its signers). A request is removed a week
+							after it was answered.
+						</li>
+						<li>
+							<b>A history</b> of the above: which address did what, and when.
+							Marking something as read is not part of that history.
+						</li>
+					</ul>
+					<p>
+						To keep signer lists current, and to check a transaction it was
+						pointed to, the relay itself asks Hyperliquid's public API about
+						those accounts and transactions. It sends Hyperliquid nothing about
+						you.
+					</p>
+					<p>
+						Your browser also keeps a session for each wallet you sign in with,
+						so you stay signed in when you switch between them (at most eight
+						wallets; the one unused longest is dropped). Only the wallet that is
+						connected is ever used, and "Sign out" removes that wallet's session
+						from the browser at once. The relay never receives a private key or
+						a seed phrase, and nothing on this site asks for one.
+					</p>
+				</Section>
+
+				<Section title="Who can read it">
+					<ul>
+						<li>
+							<b>The current signers of a treasury</b>, according to
+							Hyperliquid's signer list, can read everything stored for that
+							treasury. A signer added later can read its earlier history; a
+							removed signer loses access once the list is refreshed. One thing
+							is kept from co-signers: what each signer has marked as read.
+						</li>
+						<li>
+							<b>The operator of the relay</b> can read everything stored on it.
+							Proposals are stored readable so signers can review them; they are
+							protected in transit and at rest by the hosting provider, and are
+							not hidden from the operator.
+						</li>
+						<li>
+							<b>Nobody else.</b> We do not sell, rent or share this data, and
+							we do not use it for anything other than showing it to those
+							signers.
+						</li>
+					</ul>
+					<p>
+						Bear in mind that most of this becomes public anyway: once an action
+						is submitted, Hyperliquid's ledger shows it to everyone. What the
+						relay holds that the chain does not is the time before submission:
+						what is being proposed, and who has signed so far.
+					</p>
+				</Section>
+
+				<Section title="What the relay cannot do">
+					<p>
+						It cannot move funds, sign for you, or make a proposal executable.
+						Every signature is checked in your browser against the proposal you
+						are looking at, and Hyperliquid alone decides what executes. The
+						relay can be slow or wrong about who has signed; it cannot forge a
+						signature. If you would rather not use it, links and files do the
+						same job without it.
+					</p>
+				</Section>
+
+				<Section title="Where it is kept, and for how long">
+					<p>
+						The site is served by Railway, from the EU (the Netherlands). Like
+						any host it sees the IP addresses that connect to it and keeps its
+						own access logs for a limited time; the pages send it nothing else.
+					</p>
+					<p>
+						The relay runs on Supabase (a database and sign-in service), in the
+						EU (Frankfurt), which processes the data on our behalf and, like any
+						host, sees the IP addresses that connect to it and keeps its own
+						access logs for a limited time.
+					</p>
+					<p>
+						Proposals, signatures and the history of a treasury are kept until
+						they are deleted. A few records are removed by themselves: a request
+						to add or re-check a treasury a week after it was answered, a
+						transaction your browser pointed the relay to 30 days after the
+						relay checked it (that the proposal was carried out stays on
+						record), an older "marked as read" point 30 days after a newer one
+						replaced it, and the record of who changed a nickname after a year.
+						You can export a proposal or a treasury's history as a file at any
+						time. To have your data removed, open an issue at the address below
+						from an account you can link to your wallet address, or ask a
+						co-signer to; we will ask you to prove control of the address with a
+						signature.
+					</p>
+				</Section>
+
+				<Section title="Running your own">
+					<p>
+						The code is open (AGPL-3.0; the protocol core is MIT). A team that
+						wants to keep its proposals to itself can run its own relay, or use
+						links and files only. See the{" "}
+						<a
+							href={REPO}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-foreground underline underline-offset-2"
+						>
+							repository
+						</a>
+						.
+					</p>
+				</Section>
+
+				<Section title="Changes and contact">
+					<p>
+						If this policy changes, the date at the top changes with it, and a
+						material change is announced on the sign-in screen before it takes
+						effect. Questions and requests:{" "}
+						<a
+							href={`${REPO}/issues`}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-foreground underline underline-offset-2"
+						>
+							{REPO.replace("https://", "")}/issues
+						</a>
+						.
+					</p>
+					<p>
+						<Link
+							to="/"
+							className="text-foreground underline underline-offset-2"
+						>
+							Back to the tools
+						</Link>
+					</p>
+				</Section>
+			</div>
+		</main>
+	);
+}

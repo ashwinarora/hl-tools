@@ -12,3 +12,16 @@ dist-ssr
 __unconfig*
 todos.json
 demo-shots.scratch
+
+# testnet labs (throwaway keys, run logs, findings) — not part of the app for now
+labs/
+
+# private working notes (roadmaps, brainstorms) — never pushed
+notes/
+
+# vitest --coverage output
+coverage/
+
+# old test reports of the faucet miner (they name a wallet): kept on disk, not in the repository
+TEST_REPORT.md
+TEST_REPORT_v2.md

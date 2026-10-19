@@ -63,6 +63,18 @@ export function tokenSystemAddress(tokenIndex: number): `0x${string}` {
 	return `0x20${hex}` as `0x${string}`;
 }
 
+/**
+ * Whether an address is one of HyperEVM's system addresses for a token:
+ * HYPE's 0x2222…2222, or 0x20 followed by zeros and the token's index. An
+ * index fits in the last four bytes with room to spare, so the fifteen bytes
+ * before them have to be zero: an ordinary address that merely begins with
+ * 0x20 is not one.
+ */
+export function isSystemAddress(address: string): boolean {
+	const a = address.toLowerCase();
+	return a === SYSTEM_ADDRESSES.hype || /^0x200{30}[0-9a-f]{8}$/.test(a);
+}
+
 export const PUBLIC_RPC_ENDPOINTS = [
 	{
 		label: "Hyperliquid (mainnet)",

@@ -109,6 +109,21 @@ export function reduceChannel(
 			}
 			return trim(next);
 		}
+		case "userHistoricalOrders": {
+			// one entry per status an order went through: the last one read is its current status
+			const next = { ...state };
+			for (const u of arrayOf(data, "orderHistory")) {
+				const o = (u.order ?? {}) as Record<string, unknown>;
+				next[String(o.oid)] = {
+					coin: o.coin,
+					side: o.side,
+					limitPx: o.limitPx,
+					origSz: o.origSz,
+					status: u.status,
+				};
+			}
+			return trim(next);
+		}
 		case "userFundings": {
 			const next = { ...state };
 			for (const f of arrayOf(data, "fundings"))

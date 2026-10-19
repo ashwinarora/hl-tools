@@ -1,0 +1,20 @@
+{
+	"description": "Hyperliquid mainnet, 2026-10-13, from the pre-launch QA run (M-1): a bridge withdrawal (withdraw3) of 2 USDC to Arbitrum from a multi-sig in unified mode, proposed and finalised in the Multisig section. `before` and `after` are the account as Hyperliquid reported it around the request (clearinghouseState and spotClearinghouseState). The whole amount, the bridge's 1 USDC fee included, left the one balance, which Hyperliquid reports as spot USDC; perps stayed at 0. `ledger` is the account's ledger row for it (nonFundingLedgerUpdates delta), which arrived about 5.6 minutes after the request: `usdc` is what arrives on Arbitrum and `fee` the bridge's fee, so what was requested is their sum; its `nonce` is the action's `time` times 1000. Addresses are placeholders.",
+	"network": "mainnet",
+	"mode": "unifiedAccount",
+	"action": {
+		"type": "withdraw3",
+		"destination": "0x00000000000000000000000000000000000000d1",
+		"amount": "2",
+		"time": 1791980086746
+	},
+	"answer": { "status": "ok", "response": { "type": "default" } },
+	"before": { "perpsAccountValue": "0.0", "perpsWithdrawable": "0.0", "spotUsdc": "3.0" },
+	"after": { "perpsAccountValue": "0.0", "perpsWithdrawable": "0.0", "spotUsdc": "1.0" },
+	"ledger": {
+		"type": "withdraw",
+		"usdc": "1.0",
+		"nonce": 1791980086746000,
+		"fee": "1.0"
+	}
+}

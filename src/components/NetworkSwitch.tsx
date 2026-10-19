@@ -1,13 +1,16 @@
 import { NETWORKS, type Network } from "@hl-tools/core";
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { radioGroupKeyDown } from "#/lib/radioGroup";
 import { cn } from "#/lib/utils";
-import { useNetworkStore } from "#/store/networkStore";
+import { useNetworkHint } from "#/store/networkHintStore";
+import { useNetworkHydrated, useNetworkStore } from "#/store/networkStore";
 
 /**
  * Global mainnet/testnet switch. The active segment is styled from
  * <html data-network>, which an inline script sets before hydration, so the
- * persisted choice renders correctly on first paint.
+ * persisted choice renders correctly on first paint. What it tells a screen
+ * reader waits for the stored choice: until then neither segment is announced
+ * as chosen, because the server cannot know which one is.
  */
 export default function NetworkSwitch({
 	compact = false,
@@ -16,54 +19,76 @@ export default function NetworkSwitch({
 }) {
 	const network = useNetworkStore((s) => s.network);
 	const setNetwork = useNetworkStore((s) => s.setNetwork);
+	const pendingOn = useNetworkHint((s) => s.pendingOn);
+	const restored = useNetworkHydrated();
+	// the hint is a description of its segment, never part of its name ("Testnet")
+	const hintId = useId();
+	const hinted = pendingOn !== null && pendingOn !== network ? pendingOn : null;
 
 	useEffect(() => {
 		document.documentElement.setAttribute("data-network", network);
 	}, [network]);
 
 	return (
-		<div
-			role="radiogroup"
-			aria-label="Network"
-			className="inline-flex items-center rounded-md border border-border bg-surface-2 p-0.5"
-			onKeyDown={(e) => radioGroupKeyDown(e, NETWORKS, network, setNetwork)}
-		>
-			{NETWORKS.map((n: Network) => (
-				// biome-ignore lint/a11y/useSemanticElements: ARIA radio pattern on buttons keeps the segmented-control styling
-				<button
-					key={n}
-					type="button"
-					role="radio"
-					aria-checked={network === n}
-					tabIndex={network === n ? 0 : -1}
-					data-net-seg={n}
-					onClick={() => setNetwork(n)}
-					className={cn(
-						"net-seg inline-flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
-						compact ? "px-1.5" : "px-2.5",
-					)}
-				>
-					<span
+		<>
+			<div
+				role="radiogroup"
+				aria-label="Network"
+				aria-busy={!restored}
+				className="inline-flex items-center rounded-md border border-border bg-surface-2 p-0.5"
+				onKeyDown={(e) => radioGroupKeyDown(e, NETWORKS, network, setNetwork)}
+			>
+				{NETWORKS.map((n: Network) => (
+					// biome-ignore lint/a11y/useSemanticElements: ARIA radio pattern on buttons keeps the segmented-control styling
+					<button
+						key={n}
+						type="button"
+						role="radio"
+						aria-checked={restored && network === n}
+						tabIndex={network === n ? 0 : -1}
+						aria-describedby={hinted === n ? hintId : undefined}
+						data-net-seg={n}
+						onClick={() => setNetwork(n)}
 						className={cn(
-							"size-1.5 rounded-full",
-							n === "mainnet" ? "bg-mainnet" : "bg-testnet",
+							"net-seg relative inline-flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+							compact ? "px-1.5" : "px-2.5",
 						)}
-						aria-hidden
-					/>
-					{compact ? (
-						<>
-							<span className="sm:hidden" aria-hidden>
-								{n === "mainnet" ? "Main" : "Test"}
-							</span>
-							<span className="sr-only sm:not-sr-only">
-								{n === "mainnet" ? "Mainnet" : "Testnet"}
-							</span>
-						</>
-					) : (
-						<span>{n === "mainnet" ? "Mainnet" : "Testnet"}</span>
-					)}
-				</button>
-			))}
-		</div>
+					>
+						{hinted === n && (
+							<span
+								className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-warning"
+								title={`Something needs you on ${n}`}
+								aria-hidden
+							/>
+						)}
+						<span
+							className={cn(
+								"size-1.5 rounded-full",
+								n === "mainnet" ? "bg-mainnet" : "bg-testnet",
+							)}
+							aria-hidden
+						/>
+						{compact ? (
+							<>
+								<span className="sm:hidden" aria-hidden>
+									{n === "mainnet" ? "Main" : "Test"}
+								</span>
+								<span className="sr-only sm:not-sr-only">
+									{n === "mainnet" ? "Mainnet" : "Testnet"}
+								</span>
+							</>
+						) : (
+							<span>{n === "mainnet" ? "Mainnet" : "Testnet"}</span>
+						)}
+					</button>
+				))}
+			</div>
+			{hinted && (
+				// read as the radio's description only, not a second time as loose text
+				<span id={hintId} hidden>
+					{`Something needs you on ${hinted}.`}
+				</span>
+			)}
+		</>
 	);
 }

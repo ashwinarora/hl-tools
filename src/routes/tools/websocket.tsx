@@ -52,6 +52,7 @@ import {
 import { useWsWorkbench } from "#/components/tools/websocket/useWsWorkbench";
 import { Button } from "#/components/ui/button";
 import { useUniverse } from "#/hooks/useHyperliquid";
+import { download } from "#/lib/download";
 import {
 	deleteSession,
 	listSessions,
@@ -82,17 +83,6 @@ const SAMPLES: Record<
 	l2book: { channel: "l2Book", params: { coin: "BTC" } },
 	trades: { channel: "trades", params: { coin: "BTC" } },
 };
-
-function download(filename: string, text: string) {
-	const url = URL.createObjectURL(
-		new Blob([text], { type: "application/json" }),
-	);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = filename;
-	a.click();
-	setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 function WebSocketTool() {
 	const search = Route.useSearch();
