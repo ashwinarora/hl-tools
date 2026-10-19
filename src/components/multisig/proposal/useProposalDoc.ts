@@ -46,7 +46,7 @@ import {
 	settledAlready,
 } from "../model/relay/push";
 import { type CarriedOut, carriedOutOf } from "../model/relay/report";
-import type { ProposalRow } from "../model/relay/rows";
+import type { EventRow, ProposalRow } from "../model/relay/rows";
 import { queues } from "../model/relay/serial";
 import type { ViewRow } from "../model/relay/views";
 import {
@@ -90,6 +90,8 @@ export interface RelayView {
 	readonly carriedOut: CarriedOut | null;
 	/** Which signers have opened it; null when the relay does not have it (or could not say). */
 	readonly views: readonly ViewRow[] | null;
+	/** Who did what to it, when (the timeline); null when the relay does not have it (or could not say). */
+	readonly history: readonly EventRow[] | null;
 	readonly expired: boolean;
 	/** Signers whose signature is on the relay and verifies. */
 	readonly signers: readonly Address[];
@@ -157,6 +159,8 @@ interface Remote {
 	readonly carriedOut: CarriedOut | null;
 	/** Null when they could not be read: nothing is then said about who has seen it. */
 	readonly views: readonly ViewRow[] | null;
+	/** The proposal's history; null when it could not be read. */
+	readonly history: readonly EventRow[] | null;
 }
 
 const NO_OBJECTIONS: readonly Objection[] = [];
@@ -192,16 +196,18 @@ async function readRemote(client: RelayClient, digest: Hex): Promise<Remote> {
 	let removed: Address[] = [];
 	let carriedOut: CarriedOut | null = null;
 	let views: readonly ViewRow[] | null = null;
+	let history: readonly EventRow[] | null = null;
 	if (found) {
 		views = (await listViews(client, keyOf(found.proposal))).data?.rows ?? null;
 		const events = await listProposalEvents(client, keyOf(found.proposal));
 		// without the events nothing is dropped: a signature that verifies stays shown
 		if (events.data) {
+			history = events.data.rows;
 			removed = [...removedSigners(events.data.rows, found.proposal.digest)];
 			carriedOut = carriedOutOf(events.data.rows);
 		}
 	}
-	return { found, issues, removed, carriedOut, views };
+	return { found, issues, removed, carriedOut, views, history };
 }
 
 /**
@@ -645,6 +651,7 @@ export function useProposalDoc(
 		row: found?.row ?? null,
 		carriedOut: remoteData?.carriedOut ?? null,
 		views: found ? (remoteData?.views ?? null) : null,
+		history: found ? (remoteData?.history ?? null) : null,
 		expired: !!found && found.row.expiresAt <= Date.now(),
 		signers: found?.proposal.signatures.map((s) => s.signer) ?? [],
 		objections:

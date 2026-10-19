@@ -29,9 +29,11 @@ import { useNetwork } from "#/store/networkStore";
 import { useChainMatch, useTxLookups } from "../live/useChainMatch";
 import { CONTROL_REFRESH_MS } from "../live/useControl";
 import { useReceiver } from "../live/useReceiver";
+import { useRecord } from "../live/useRecord";
 import { explorerTxUrl } from "../model/chain/columns";
 import { ledgerEvidence } from "../model/chain/match";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
+import { recordQuestion } from "../model/chain/record";
 import { CHANGE } from "../model/change";
 import { receiptOk } from "../model/history";
 import {
@@ -41,6 +43,7 @@ import {
 	planNotices,
 } from "../model/notices";
 import { labelledLine } from "../model/parts";
+import { proposalTimeline, recordEntries } from "../model/proposalTimeline";
 import { refusalNote } from "../model/refusal";
 import { RELAY_COPY } from "../model/relay/copy";
 import { costLine, modeRefusal, standingRefusals } from "../model/send";
@@ -48,6 +51,7 @@ import { changeSummary } from "../model/signerSet";
 import { signingNetwork } from "../model/signingNetwork";
 import {
 	deriveStage,
+	FINISHED,
 	type Phase,
 	shortAddress,
 	type WalletRole,
@@ -90,6 +94,7 @@ import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
 import { StageCallout } from "./StageCallout";
 import { TellCoSigners } from "./TellCoSigners";
+import { TimelineCard } from "./TimelineCard";
 import type { ProposalDoc } from "./useProposalDoc";
 import { useStakingStep } from "./useStakingStep";
 import { useVaultStep } from "./useVaultStep";
@@ -485,6 +490,28 @@ export function ProposalView({
 	// the relay's word, never the copy's: who proposed it is not signed
 	const proposer = row?.createdBy ?? null;
 	const ready = judged;
+	// who did what, when: the sharing service's history, or the copy itself;
+	// Hyperliquid's record only where the page already reads it (once sent)
+	const recordAsk = useMemo(
+		() => (stage.phase === "submitted" ? recordQuestion(proposal) : null),
+		[stage.phase, proposal],
+	);
+	const record = useRecord(target.network, recordAsk);
+	const timeline = useMemo(
+		() =>
+			proposalTimeline(
+				[
+					{
+						proposal,
+						events: doc.relay.history,
+						counted: ready?.counted ?? null,
+					},
+				],
+				me,
+				recordEntries(record),
+			),
+		[proposal, doc.relay.history, ready, me, record],
+	);
 	const repropose = (
 		<Link
 			to="/multisig/propose"
@@ -1064,11 +1091,13 @@ export function ProposalView({
 									objected={stage.standing?.objected}
 									now={clock}
 								/>
+								<TimelineCard timeline={timeline} network={target.network} />
 								<TellCoSigners proposal={proposal} doc={doc} />
 								<SharePanel
 									proposal={proposal}
 									store={doc.store}
 									secondary={doc.relay.known}
+									finished={FINISHED.has(stage.phase)}
 								/>
 							</>
 						}

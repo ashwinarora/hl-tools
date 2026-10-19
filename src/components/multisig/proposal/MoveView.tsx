@@ -7,9 +7,11 @@ import { useMemo, useRef, useState } from "react";
 import { Callout, IssueList, type Tone } from "#/components/hub/status";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useNetwork } from "#/store/networkStore";
+import { useRecord } from "../live/useRecord";
 import { refreshStaking } from "../live/useStaking";
 import { refreshVaults } from "../live/useVaults";
 import { explorerTxUrl } from "../model/chain/columns";
+import { recordQuestion } from "../model/chain/record";
 import {
 	deriveMoveStage,
 	leftOpenNote,
@@ -17,6 +19,7 @@ import {
 	moveSentence,
 } from "../model/move";
 import { copyNotesShown, nextStepLabel } from "../model/notices";
+import { proposalTimeline, recordEntries } from "../model/proposalTimeline";
 import { refusalNote } from "../model/refusal";
 import { cancelNote, RELAY_COPY, signHint } from "../model/relay/copy";
 import { relayActions } from "../model/relay/status";
@@ -82,6 +85,7 @@ import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
 import { TellCoSigners } from "./TellCoSigners";
+import { TimelineCard } from "./TimelineCard";
 import { type MoveStepState, useMoveStep } from "./useMoveStep";
 import type { ProposalDoc } from "./useProposalDoc";
 import { Restated, StopLines } from "./YourPart";
@@ -195,6 +199,53 @@ export function MoveView({
 	const two = useMoveStep(second, issues[1], docs[1], shared);
 	const steps = [one, two] as const;
 	const stage = deriveMoveStage([one, two]);
+	// both steps in one timeline; Hyperliquid's record only where the page reads it already
+	const recordOne = useRecord(
+		target.network,
+		useMemo(
+			() => (one.stage.phase === "submitted" ? recordQuestion(first) : null),
+			[one.stage.phase, first],
+		),
+	);
+	const recordTwo = useRecord(
+		target.network,
+		useMemo(
+			() => (two.stage.phase === "submitted" ? recordQuestion(second) : null),
+			[two.stage.phase, second],
+		),
+	);
+	const timeline = useMemo(
+		() =>
+			proposalTimeline(
+				[
+					{
+						proposal: first,
+						step: 1,
+						events: docs[0].relay.history,
+						counted: one.ready?.counted ?? null,
+					},
+					{
+						proposal: second,
+						step: 2,
+						events: docs[1].relay.history,
+						counted: two.ready?.counted ?? null,
+					},
+				],
+				me,
+				[...recordEntries(recordOne, 1), ...recordEntries(recordTwo, 2)],
+			),
+		[
+			first,
+			second,
+			docs[0].relay.history,
+			docs[1].relay.history,
+			one.ready,
+			two.ready,
+			me,
+			recordOne,
+			recordTwo,
+		],
+	);
 
 	const validators =
 		one.staking.staking.validators ?? two.staking.staking.validators;
@@ -489,6 +540,7 @@ export function MoveView({
 										/>
 									</div>
 								))}
+								<TimelineCard timeline={timeline} network={target.network} />
 								<TellCoSigners
 									proposal={first}
 									doc={docs[0]}
@@ -499,6 +551,7 @@ export function MoveView({
 									store={docs[0].store}
 									also={[{ proposal: second, store: docs[1].store }]}
 									secondary={docs[0].relay.known && docs[1].relay.known}
+									finished={stage.settled}
 								/>
 							</>
 						}

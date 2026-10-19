@@ -110,6 +110,10 @@ export const RELAY_COPY = {
 	awayOthers:
 		"API wallets and transfers were checked for your first ten treasuries. The others are checked when you open them.",
 	addExisting: "Add an existing one",
+	// a proposal that can no longer be signed or sent: its copy is a record now
+	recordCopy:
+		"Nothing more can be signed or sent here. A copy keeps who signed it, as a file.",
+	downloadCopy: "Download a copy",
 	// Creating a treasury: the account that was converted registers itself.
 	createSignIn:
 		"Sign in with the wallet whose account you want to convert into a treasury.",

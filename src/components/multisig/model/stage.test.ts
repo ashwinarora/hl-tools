@@ -21,8 +21,10 @@ import {
 } from "#/test/keys";
 import { partsText } from "./parts";
 import {
+	CANNOT_BE_SENT,
 	changeInEffect,
 	deriveStage,
+	FINISHED,
 	finaliserLeft,
 	refusedForGood,
 	type StageInput,
@@ -1188,5 +1190,34 @@ describe("a proposal somebody said no to", () => {
 		expect(
 			(await stage({ ...p, receipt: ERR }, { objections: all })).phase,
 		).toBe("refused");
+	});
+});
+
+describe("a finished proposal: its copy is a record", () => {
+	it("is one that was sent, ended, or can no longer be sent", () => {
+		for (const phase of [
+			"submitted",
+			"carried-out",
+			"in-effect",
+			"closed",
+			"withdrawn",
+			"declined",
+			...CANNOT_BE_SENT,
+		] as const)
+			expect(FINISHED.has(phase), phase).toBe(true);
+	});
+
+	it("is never one that can still be signed, sent or let go of a no", () => {
+		for (const phase of [
+			"judging",
+			"unknown",
+			"unsupported",
+			"collecting",
+			"ready",
+			"not-yet-valid",
+			"cannot-pass",
+			"finaliser-no",
+		] as const)
+			expect(FINISHED.has(phase), phase).toBe(false);
 	});
 });

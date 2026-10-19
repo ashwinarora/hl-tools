@@ -144,6 +144,7 @@ export function SharePanel({
 	proposal,
 	store,
 	secondary = false,
+	finished = false,
 	also = NO_MORE,
 }: {
 	proposal: Proposal;
@@ -162,6 +163,11 @@ export function SharePanel({
 	 * rather than the way: folded away under "Export / Import".
 	 */
 	secondary?: boolean;
+	/**
+	 * Nothing can be signed or sent any more: there is nothing to pass on or
+	 * merge, and the panel is one quiet "Download a copy", a record of who signed.
+	 */
+	finished?: boolean;
 }) {
 	const navigate = useNavigate();
 	const send = useHandoffStore((s) => s.send);
@@ -248,6 +254,23 @@ export function SharePanel({
 			issues: stored.issues,
 		});
 	};
+
+	if (finished)
+		return (
+			<div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-[10px] border border-border bg-surface px-4 py-2.5">
+				<span className="text-xs text-muted-foreground">
+					{RELAY_COPY.recordCopy}
+				</span>
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => fileTransport(download).publish(proposal, others)}
+				>
+					<Download className="size-3.5" aria-hidden />{" "}
+					{RELAY_COPY.downloadCopy}
+				</Button>
+			</div>
+		);
 
 	const body = (
 		<div className="space-y-4">
