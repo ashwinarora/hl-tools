@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Panel } from "#/components/hub/layout";
 import { Callout, NetworkBadge, Pill } from "#/components/hub/status";
 import { short } from "#/components/tools/multisig/AddressLine";
 import { errorMessage } from "#/hooks/useHyperliquid";
@@ -16,6 +15,7 @@ import { moveSentence, pairMoves } from "./model/move";
 import { RELAY_COPY } from "./model/relay/copy";
 import { actionLine } from "./model/staking";
 import { useRelay } from "./relay/useRelay";
+import { Panel } from "./shell/kit";
 import { When } from "./shell/live";
 
 /** One line of the list: a proposal, or the two steps of a move as one. */

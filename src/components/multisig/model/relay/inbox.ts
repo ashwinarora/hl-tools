@@ -96,7 +96,8 @@ export function moveEntry(
 /**
  * finish   you are the finaliser and can submit now (your own signature may be the last one missing)
  * sign     your signature is still wanted
- * waiting  nothing for you to do: you signed, or it is already ready and someone else finalises
+ * waiting  nothing for you to do: you signed, it is already ready and someone else finalises,
+ *          or you are the treasury account itself, which signs nothing
  * dead     it cannot be submitted any more, or cannot go ahead as things stand (enough
  *          signers, or its finaliser, said no): it waits to be withdrawn, for a change
  *          of mind, or for its signing window to close
@@ -110,6 +111,8 @@ export function inboxGroup(e: InboxEntry, me: Address): InboxGroup | null {
 	if (e.stuck) return "dead";
 	// nor as things stand, while those who said no stand by it
 	if (e.blocked) return "dead";
+	// the treasury account itself reads its proposals and signs none of them
+	if (e.treasury === me) return "waiting";
 	const signed = e.counted.includes(me);
 	const ready = e.counted.length >= e.threshold;
 	const completes = !signed && e.counted.length === e.threshold - 1;

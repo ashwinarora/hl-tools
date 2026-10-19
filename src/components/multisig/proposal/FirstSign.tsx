@@ -2,14 +2,14 @@ import { useMultisigPrefs, usePrefsHydrated } from "#/store/multisigPrefsStore";
 import { FIRST_SIGN } from "../model/guide";
 
 /**
- * One line above a proposal the reader can sign, for someone who has not
- * hidden the first-run card: usually a co-signer who came by a shared link.
- * "Got it" hides both.
+ * One line above a proposal the reader can sign, until it is read: usually
+ * for a co-signer who came by a shared link. "Got it" also folds the
+ * first-run card.
  */
 export function FirstSign({ canSign }: { canSign: boolean }) {
 	const hydrated = usePrefsHydrated();
-	const seen = useMultisigPrefs((s) => s.walkthroughSeen);
-	const dismiss = useMultisigPrefs((s) => s.dismissWalkthrough);
+	const seen = useMultisigPrefs((s) => s.firstSignSeen);
+	const dismiss = useMultisigPrefs((s) => s.dismissFirstSign);
 	if (!canSign || !hydrated || seen) return null;
 	return (
 		<p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border bg-surface-2 px-3.5 py-2 text-[13px]">

@@ -106,7 +106,8 @@ export function SmallPrint({ className }: { className?: string }) {
 
 /**
  * Said under the wallet when it is itself a treasury on the header's network:
- * its own key cannot act for it there. One read per wallet and network.
+ * its own key cannot act for it there. The tag leads to that treasury's page,
+ * where the account can follow it. One read per wallet and network.
  */
 function SelfTag({ address }: { address: string }) {
 	const network = useNetwork();
@@ -115,7 +116,13 @@ function SelfTag({ address }: { address: string }) {
 	if (!self.policy) return null;
 	return (
 		<span className="flex items-center gap-1">
-			<Tag>{selfTag(self.policy)}</Tag>
+			<Link
+				to="/multisig/t/$network/$address"
+				params={{ network, address: address.toLowerCase() }}
+				className="rounded no-underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+			>
+				<Tag>{selfTag(self.policy)}</Tag>
+			</Link>
 			<Help k="treasuryAccount" />
 		</span>
 	);

@@ -7,9 +7,11 @@ import { useMemo, useRef, useState } from "react";
 import { Callout, IssueList, type Tone } from "#/components/hub/status";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useNetwork } from "#/store/networkStore";
+import { useRecord } from "../live/useRecord";
 import { refreshStaking } from "../live/useStaking";
 import { refreshVaults } from "../live/useVaults";
 import { explorerTxUrl } from "../model/chain/columns";
+import { recordQuestion } from "../model/chain/record";
 import {
 	deriveMoveStage,
 	leftOpenNote,
@@ -17,12 +19,21 @@ import {
 	moveSentence,
 } from "../model/move";
 import { copyNotesShown, nextStepLabel } from "../model/notices";
+import { proposalTimeline, recordEntries } from "../model/proposalTimeline";
 import { refusalNote } from "../model/refusal";
 import { cancelNote, RELAY_COPY, signHint } from "../model/relay/copy";
 import { relayActions } from "../model/relay/status";
 import { type Phase, shortAddress } from "../model/stage";
 import { actionLine } from "../model/staking";
 import { untilWords } from "../model/time";
+import {
+	done as doneToast,
+	failed as failedToast,
+	stepAccepted,
+	stepNotSent,
+	TOAST_LINES,
+	TOAST_TITLES,
+} from "../model/toasts";
 import { TreasuryNames, Who } from "../names/Names";
 import { Sentence } from "../names/Sentence";
 import {
@@ -50,6 +61,7 @@ import {
 	Tag,
 } from "../shell/kit";
 import { useNow, When } from "../shell/live";
+import { notify } from "../shell/notify";
 import { ShellPage } from "../shell/ShellPage";
 import { Split } from "../shell/Split";
 import { TreasuryStrip } from "../TreasuryStrip";
@@ -73,6 +85,7 @@ import { RecordNote } from "./RecordNote";
 import { SharePanel } from "./SharePanel";
 import { SignaturesPanel } from "./SignaturesPanel";
 import { TellCoSigners } from "./TellCoSigners";
+import { TimelineCard } from "./TimelineCard";
 import { type MoveStepState, useMoveStep } from "./useMoveStep";
 import type { ProposalDoc } from "./useProposalDoc";
 import { Restated, StopLines } from "./YourPart";
@@ -186,6 +199,53 @@ export function MoveView({
 	const two = useMoveStep(second, issues[1], docs[1], shared);
 	const steps = [one, two] as const;
 	const stage = deriveMoveStage([one, two]);
+	// both steps in one timeline; Hyperliquid's record only where the page reads it already
+	const recordOne = useRecord(
+		target.network,
+		useMemo(
+			() => (one.stage.phase === "submitted" ? recordQuestion(first) : null),
+			[one.stage.phase, first],
+		),
+	);
+	const recordTwo = useRecord(
+		target.network,
+		useMemo(
+			() => (two.stage.phase === "submitted" ? recordQuestion(second) : null),
+			[two.stage.phase, second],
+		),
+	);
+	const timeline = useMemo(
+		() =>
+			proposalTimeline(
+				[
+					{
+						proposal: first,
+						step: 1,
+						events: docs[0].relay.history,
+						counted: one.ready?.counted ?? null,
+					},
+					{
+						proposal: second,
+						step: 2,
+						events: docs[1].relay.history,
+						counted: two.ready?.counted ?? null,
+					},
+				],
+				me,
+				[...recordEntries(recordOne, 1), ...recordEntries(recordTwo, 2)],
+			),
+		[
+			first,
+			second,
+			docs[0].relay.history,
+			docs[1].relay.history,
+			one.ready,
+			two.ready,
+			me,
+			recordOne,
+			recordTwo,
+		],
+	);
 
 	const validators =
 		one.staking.staking.validators ?? two.staking.staking.validators;
@@ -480,6 +540,7 @@ export function MoveView({
 										/>
 									</div>
 								))}
+								<TimelineCard timeline={timeline} network={target.network} />
 								<TellCoSigners
 									proposal={first}
 									doc={docs[0]}
@@ -490,6 +551,7 @@ export function MoveView({
 									store={docs[0].store}
 									also={[{ proposal: second, store: docs[1].store }]}
 									secondary={docs[0].relay.known && docs[1].relay.known}
+									finished={stage.settled}
 								/>
 							</>
 						}
@@ -773,6 +835,7 @@ function MovePart({
 	/** One write that covers every step named: the relay takes all of them or none. */
 	const act = async (
 		write: (c: RelayClient, as: Address) => Promise<Result<true>>,
+		title: string,
 		forget = false,
 	) => {
 		const client = relay.client;
@@ -784,8 +847,13 @@ function MovePart({
 			const r = await write(client, as);
 			setFailure(
 				r.issue
-					? { title: "The sharing service did not take it", issues: [r.issue] }
+					? { title: TOAST_TITLES.sharingRefused, issues: [r.issue] }
 					: null,
+			);
+			notify(
+				r.issue
+					? failedToast(TOAST_TITLES.sharingRefused, r.issue)
+					: doneToast(title),
 			);
 			// the relay took this wallet's signatures back with it: this browser's copies follow
 			if (!r.issue && forget)
@@ -827,6 +895,16 @@ function MovePart({
 		else {
 			setNeedsNetwork(false);
 			setOutcome(done.outcome);
+			notify(
+				done.outcome.ok
+					? doneToast(
+							toSign.length === 2
+								? TOAST_TITLES.moveSigned
+								: TOAST_TITLES.signed,
+							TOAST_LINES.signedOnly,
+						)
+					: failedToast(TOAST_TITLES.moveNotSigned, done.outcome.issues),
+			);
 		}
 	};
 	const sign = () => void wallet.run("Waiting for the wallet…", doSign);
@@ -854,14 +932,26 @@ function MovePart({
 			return;
 		}
 		setNeedsNetwork(false);
-		if (!result.ok)
-			setFailure({
-				title:
-					result.sent > 0
-						? `Step ${(stage.toSend[result.index] ?? 0) + 1} was not sent`
-						: "Nothing was sent",
-				issues: result.issues,
-			});
+		if (!result.ok) {
+			const title =
+				result.sent > 0
+					? stepNotSent((stage.toSend[result.index] ?? 0) + 1)
+					: TOAST_TITLES.nothingSent;
+			setFailure({ title, issues: result.issues });
+			notify(failedToast(title, result.issues));
+		} else
+			notify(
+				!result.accepted
+					? failedToast(TOAST_TITLES.refused, TOAST_LINES.refused)
+					: result.sent >= 2
+						? doneToast(TOAST_TITLES.moveAccepted, TOAST_LINES.final)
+						: doneToast(
+								stepAccepted((stage.toSend[0] ?? 0) + 1),
+								stage.toSend.length < 2 && (stage.toSend[0] ?? 0) === 0
+									? TOAST_LINES.secondStepLater
+									: TOAST_LINES.final,
+							),
+			);
 		// what the treasury has in staking, or in vaults, changed with every step that went through
 		if (result.sent > 0) {
 			void refreshStaking(queries, network, multiSigUser);
@@ -1042,7 +1132,11 @@ function MovePart({
 							variant="outline"
 							disabled={off}
 							onClick={() =>
-								void act((c, as) => removeSignatures(c, as, can.takeBack), true)
+								void act(
+									(c, as) => removeSignatures(c, as, can.takeBack),
+									TOAST_TITLES.takenBack,
+									true,
+								)
 							}
 						>
 							Take back my{" "}
@@ -1054,7 +1148,10 @@ function MovePart({
 							variant="outline"
 							disabled={off}
 							onClick={() =>
-								void act((c, as) => removeObjections(c, as, can.takeBackNo))
+								void act(
+									(c, as) => removeObjections(c, as, can.takeBackNo),
+									TOAST_TITLES.noTakenBack,
+								)
 							}
 						>
 							{RELAY_COPY.takeBackNo}
@@ -1071,7 +1168,11 @@ function MovePart({
 									: undefined
 							}
 							onClick={() =>
-								void act((c, as) => addObjections(c, as, can.sayNo), true)
+								void act(
+									(c, as) => addObjections(c, as, can.sayNo),
+									TOAST_TITLES.saidNo,
+									true,
+								)
 							}
 						>
 							{RELAY_COPY.sayNo}
@@ -1134,7 +1235,10 @@ function MovePart({
 								disabled={off}
 								onClick={() => {
 									setConfirm(false);
-									void act((c, as) => withdrawMove(c, as, can.withdraw));
+									void act(
+										(c, as) => withdrawMove(c, as, can.withdraw),
+										TOAST_TITLES.cancelled,
+									);
 								}}
 							>
 								Yes, cancel it

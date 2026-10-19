@@ -146,10 +146,10 @@ select results_eq(
 	$$ values ('treasury_added', tests.addr(6)::text) $$, 'the history says the account registered itself');
 set local role authenticated;
 select tests.claims(6);
-select is_empty($$ select 1 from public.treasuries where address = tests.addr(6) $$, 'the account itself still reads nothing of its treasury');
-select is_empty($$ select 1 from public.treasury_signers where treasury = tests.addr(6) $$, 'not even who signs for it');
-select is_empty($$ select 1 from public.events where treasury = tests.addr(6) $$, 'nor its history');
-select isnt_empty($$ select 1 from public.treasury_requests where address = tests.addr(6) $$, 'only its own request');
+select isnt_empty($$ select 1 from public.treasuries where address = tests.addr(6) $$, 'the account itself reads its treasury');
+select isnt_empty($$ select 1 from public.treasury_signers where treasury = tests.addr(6) $$, 'and who signs for it');
+select isnt_empty($$ select 1 from public.events where treasury = tests.addr(6) $$, 'and its history');
+select isnt_empty($$ select 1 from public.treasury_requests where address = tests.addr(6) $$, 'and its own request');
 select tests.claims(1);
 select isnt_empty($$ select 1 from public.treasuries where address = tests.addr(6) $$, 'its signers see it without asking');
 reset role;

@@ -62,7 +62,7 @@ set local role authenticated;
 select lives_ok($$ select tests.view(2, 10, 1) $$, 'a signer''s first look at a proposal is recorded');
 select results_eq($$ select signer::text, seen_at = now() from public.proposal_views $$,
 	$$ values (tests.addr(2)::text, true) $$, 'under its own name, now');
-select is(tests.pinged(), tests.addrs(1, 2, 3)::text[], 'and every signer of that treasury is told');
+select is(tests.pinged(), tests.addrs(1, 2, 3, 10)::text[], 'and every signer of that treasury and the account itself is told');
 select tests.forget_pings();
 
 select lives_ok($$ select tests.view(2, 10, 1) $$, 'looking again is not an error');

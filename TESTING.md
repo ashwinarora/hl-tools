@@ -1973,6 +1973,31 @@ To check on the staging copy, where localhost cannot show it: the headers as Rai
 
 134 files, 3,382 unit tests after it (`max.test.ts` with the fee grid; the mainnet vault figures in `vault.test.ts`; the core's coverage stays at 100%).
 
+## 24. Multisig: the owner's first review of the live site (2026-10-19)
+
+Branch `ui/review-fixes`, off `main` after the launch. Dev server on `http://localhost:3000` with the local relay (the new migration applied with `supabase migration up --local`), Brave with Rabby, testnet only: the 2-of-3 test treasury "Audit testnet B" (T) with signers S1, S2, S3.
+
+| Check | Result |
+|---|---|
+| pgTAP `190_treasury_itself.sql` | signed in as the account: reads its treasury, signers, proposals, signatures, nos, endings, results, nicknames and views; reads no signer's read marks or reports, and no other treasury; every insert refused (`42501`); pinged with its signers. The ping assertions of 040/110/120/130/140 name it too. 19 files, 1,047 assertions pass; `supabase db advisors --local` clean |
+| Relay itest | the account lists its treasury and history; a nickname and a re-check as the account are refused (`relay.not_allowed`); 79 pass |
+| As T itself (Rabby switched to the treasury's own address) | its treasury in the rail, "Needs you 0"; its page: the line naming the signers to switch to, no "Propose an action", no "While you were away", the Signing log in full; a sent proposal's page: "you: the treasury itself", no Sign or Send, the timeline, "Download a copy" |
+| A 2-of-3 round as S1 and S2 (1 USDC from T to S2) | toasts, in order: "Proposal created", "Signature taken back", "Signature added · Nothing is sent until the finaliser sends it.", S2's "Your no is recorded", "Your no is taken back", "Signature added", S1's "Accepted by Hyperliquid · It cannot be undone."; a second proposal: "Proposal created", "Cancelled for everyone" |
+| The timeline of that proposal | proposed and signed, took back, signed, S2 said no, took back the no, signed, "Sent by …; accepted by Hyperliquid", "On Hyperliquid's record" with its transaction. The first run read "signed, in place of their no" for a no taken back a minute before signing, and put the record before the send: both fixed (one step within ten seconds; the record after the send) |
+| A cancelled proposal | its timeline, and "Export / Import" replaced by "Download a copy" |
+| Overview | one panel: "Balances 2 · Positions · Outcomes · Open orders", the account mode beside Balances only, one header height for every tab; empty tabs say so. None of the user's testnet treasuries held an outcome share that day: the names are checked against Hyperliquid's own lists (`fixtures/outcomes/meta-*.json`, 19 mainnet and 38 testnet outcomes, every one named with nothing left to fill), including "+102251" as "June Fed rate change · No Change" |
+| Hide, Undo, Show, × | "Hide from my list" in the "⋯" menu: the rail drops the treasury, the page tags "hidden in this browser", the toast offers Undo; Undo puts it back; "Show in my list again" too; × closes the "added by" note |
+| Name yourself | beside "you" in the signer list, in place of the small icon |
+| Propose form | Destination, "Taken from", Amount with Max, "Arrives in"; "Advanced · signed for HyperEVM testnet · 2 days to sign", folded, opening on "2 days / 3 days" with "Either way, it can be sent as soon as enough have signed." |
+| Wizard | "What converting does" / "What it does not do", two short lists in the brand's tint, dark and light |
+| Glossary | "How this works" with the six steps above the terms; the start page's banner gone |
+| Phone (375 px) | the Overview's tabs scroll inside their row, the page itself never sideways |
+| Teal titles (variant B, the owner's pick) | every card and panel title of the section, the treasury strip and "While you were away" in `oklch(0.83 0.12 175)` dark and `oklch(0.45 0.1 178)` light; the inspector's panels unchanged |
+| Console | the wallet extensions' own warnings only |
+| Production build (`bun run build`, Node on :3111) | the policy header on every page; no violation on the glossary or the treasury page |
+
+138 test files, 3,427 unit tests (the core's coverage stays at 100%), Biome and `tsc` clean, both builds pass.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).

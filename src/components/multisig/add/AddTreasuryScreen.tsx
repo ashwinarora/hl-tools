@@ -1,7 +1,7 @@
 import type { Address, Issue } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Field, TextInput } from "#/components/hub/layout";
 import { Callout } from "#/components/hub/status";
 import {
@@ -12,11 +12,17 @@ import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
 import { RELAY_COPY } from "../model/relay/copy";
 import { requestRefusal } from "../model/relay/signers";
 import { shortAddress } from "../model/stage";
+import {
+	done as doneToast,
+	failed as failedToast,
+	TOAST_TITLES,
+} from "../model/toasts";
 import { requestTreasury } from "../relay/api";
 import { useRequest, useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
 import { Help } from "../shell/Help";
 import { Btn, Card, linkButtonSm } from "../shell/kit";
+import { notify } from "../shell/notify";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
 import { useMounted } from "../shell/WalletBox";
@@ -67,7 +73,19 @@ export function AddTreasuryScreen() {
 	const isSelf = !!me && !!current && current.address === me;
 	const who = (a: Address) => (a === me ? "you" : shortAddress(a));
 
-	// the worker answered
+	// the worker answered: said once in a toast, whatever the page then shows
+	const toasted = useRef<string | null>(null);
+	useEffect(() => {
+		if (!request || request.status === "pending") return;
+		const key = `${request.id}:${request.status}`;
+		if (toasted.current === key) return;
+		toasted.current = key;
+		notify(
+			request.status === "done"
+				? doneToast(TOAST_TITLES.added)
+				: failedToast(TOAST_TITLES.notAdded, requestRefusal(request)),
+		);
+	}, [request]);
 	useEffect(() => {
 		if (!request || !current) return;
 		if (request.status === "done") {
@@ -107,6 +125,7 @@ export function AddTreasuryScreen() {
 		setSending(false);
 		if (!r.data) {
 			setIssue(r.issue);
+			notify(failedToast(TOAST_TITLES.notAdded, r.issue));
 			return;
 		}
 		queries.setQueryData(["relay", me, "request", r.data.id], r.data);

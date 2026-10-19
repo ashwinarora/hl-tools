@@ -75,7 +75,7 @@ select results_eq(
 	$$ select name, name_key, set_by::text, set_at = now() from public.nicknames where treasury = tests.addr(10) $$,
 	$$ values ('The Auditor', 'the auditor', tests.addr(1)::text, true) $$,
 	'it is stored tidied, with who gave it and when');
-select is(tests.pinged(), tests.addrs(1, 2, 3)::text[], 'every signer of that treasury is told, and nobody else');
+select is(tests.pinged(), tests.addrs(1, 2, 3, 10)::text[], 'every signer of that treasury and the account itself is told, and nobody else');
 
 select lives_ok($$ select tests.nick(2, 10, tests.addr(50), 'Auditor') $$, 'any signer may change it');
 select results_eq($$ select name, set_by::text from public.nicknames where treasury = tests.addr(10) and address = tests.addr(50) $$,

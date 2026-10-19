@@ -7,14 +7,14 @@ import type {
 } from "@hl-tools/core";
 import { visibleText } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink } from "lucide-react";
-import { type ReactNode, useMemo } from "react";
-import { useMultisigDrafts } from "#/store/multisigDraftsStore";
+import { ExternalLink, X } from "lucide-react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import {
 	treasuryKey,
 	useMultisigPrefs,
 	usePrefsHydrated,
 } from "#/store/multisigPrefsStore";
+import { useOutcomeLists } from "../live/useOutcomeLists";
 import { API_WALLET_FORMER, API_WALLET_SENTENCE } from "../model/apiWallet";
 import {
 	amountText,
@@ -32,15 +32,28 @@ import {
 import { approvalOf } from "../model/chain/match";
 import { CHANGE } from "../model/change";
 import { balanceView, modeLabel } from "../model/mode";
+import {
+	isOutcomeShare,
+	type OutcomeRow,
+	splitHoldings,
+} from "../model/outcomes";
 import { RELAY_COPY } from "../model/relay/copy";
 import { type LastSigned, lastSignedText } from "../model/relay/lastSigned";
 import type { TreasuryRow } from "../model/relay/rows";
 import { fromNow, localDateTime } from "../model/time";
-import { Who } from "../names/Names";
+import { PROVENANCE_CLOSE } from "../model/toasts";
+import { useNames, Who } from "../names/Names";
 import { Checked } from "../shell/Checked";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
-import { Btn, Card, linkButtonSm, PersonRow, Tag } from "../shell/kit";
+import {
+	Card,
+	linkButtonSm,
+	PersonRow,
+	TabList,
+	TabPanel,
+	Tag,
+} from "../shell/kit";
 import { toneOf, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
 import type { KnownProposal } from "./useKnownProposals";
@@ -87,6 +100,47 @@ const SPOT: readonly DataColumn<SpotBalanceRow>[] = [
 		cell: (r) => amountText(r.available),
 	},
 ];
+
+const OUTCOMES: readonly DataColumn<OutcomeRow>[] = [
+	{
+		id: "outcome",
+		header: "Outcome",
+		sort: (a, b) => compareText(a.fullTitle, b.fullTitle),
+		// a market somebody else named: the whole name and the share's own name on hover
+		cell: (r) => (
+			<span
+				className="[overflow-wrap:anywhere]"
+				title={`${r.fullTitle} (${r.coin})`}
+			>
+				<bdi>{r.title}</bdi>
+			</span>
+		),
+	},
+	{
+		id: "side",
+		header: "Side",
+		sort: (a, b) => compareText(a.side, b.side),
+		cell: (r) => <bdi>{r.side}</bdi>,
+	},
+	{
+		id: "shares",
+		header: "Shares",
+		numeric: true,
+		sort: (a, b) => compareAmount(a.total, b.total),
+		cell: (r) => amountText(r.total),
+	},
+	{
+		id: "hold",
+		header: "On hold",
+		headerExtra: <Help k="onHold" />,
+		numeric: true,
+		sort: (a, b) => compareAmount(a.hold, b.hold),
+		cell: (r) => amountText(r.hold),
+	},
+];
+
+/** The four tabs of what a treasury holds, in Hyperliquid's own order. */
+type HoldingsTab = "balances" | "positions" | "outcomes" | "orders";
 
 const POSITIONS: readonly DataColumn<PositionRow>[] = [
 	{
@@ -221,12 +275,31 @@ export function OverviewTab({
 }) {
 	const now = useNow();
 	const live = state.live;
-	const spot = useMemo(
-		() => live.spot?.filter((b) => isNonZero(b.total)) ?? [],
+	// outcome shares are named from Hyperliquid's lists, read only when one is held
+	const sharesHeld = useMemo(
+		() =>
+			live.spot?.some((b) => isOutcomeShare(b) && isNonZero(b.total)) ?? false,
 		[live.spot],
+	);
+	const outcomeLists = useOutcomeLists(network, sharesHeld);
+	const { balances, outcomes } = useMemo(
+		() => splitHoldings(live.spot, outcomeLists),
+		[live.spot, outcomeLists],
 	);
 	const positions = live.perp?.positions ?? [];
 	const orders = live.openOrders ?? [];
+	const holdingsId = useId();
+	const [holdingsTab, setHoldingsTab] = useState<HoldingsTab>("balances");
+	const holdingTabs = [
+		{ value: "balances" as const, label: "Balances", count: balances.length },
+		{
+			value: "positions" as const,
+			label: "Positions",
+			count: positions.length,
+		},
+		{ value: "outcomes" as const, label: "Outcomes", count: outcomes.length },
+		{ value: "orders" as const, label: "Open orders", count: orders.length },
+	];
 	const mode = state.mode ? modeLabel(state.mode) : null;
 	const reading = "Reading from Hyperliquid…";
 	// which figures there are depends on the mode (the figures themselves are
@@ -253,8 +326,14 @@ export function OverviewTab({
 
 	const hydrated = usePrefsHydrated();
 	const prefsKey = treasuryKey(network, address);
-	const hidden = useMultisigPrefs((s) => s.hidden.includes(prefsKey));
-	const setHidden = useMultisigPrefs((s) => s.setHidden);
+	const provenanceClosed = useMultisigPrefs((s) =>
+		s.provenanceClosed.includes(prefsKey),
+	);
+	const closeProvenance = useMultisigPrefs((s) => s.closeProvenance);
+	// a signer with no nickname here yet is offered one in words, beside "you"
+	const names = useNames();
+	const nameYourself =
+		!!me && !!names && names.canName(me) && names.of(me) === null;
 
 	return (
 		// From 1280 px: what it holds on the left, who controls it beside it.
@@ -280,15 +359,21 @@ export function OverviewTab({
 					</div>
 				)}
 
-				<Card
-					title={
-						<span className="inline-flex items-center gap-1.5">
-							Balances {view?.kind === "two" && <Help k="perpsSpot" />}
-						</span>
-					}
-					actions={
-						mode ? (
-							<span className="inline-flex items-center gap-1.5">
+				{/* what it holds, one panel with Hyperliquid's own tabs */}
+				<Card flush>
+					{/* one height for every tab: the mode and its button sit beside Balances only */}
+					<div className="flex min-h-[45px] flex-wrap items-center justify-between gap-x-3 border-b border-border pl-1.5 pr-4">
+						<TabList
+							id={holdingsId}
+							label="What the treasury holds"
+							value={holdingsTab}
+							tabs={holdingTabs}
+							onChange={setHoldingsTab}
+							className="mb-0 self-end border-b-0"
+						/>
+						{holdingsTab === "balances" && mode && (
+							<span className="inline-flex items-center gap-1.5 py-2">
+								{view?.kind === "two" && <Help k="perpsSpot" />}
 								<Tag tone={mode.caution ? "warn" : "gray"} title={mode.text}>
 									{mode.tag}
 								</Tag>
@@ -304,56 +389,55 @@ export function OverviewTab({
 									</Link>
 								)}
 							</span>
-						) : null
-					}
-					flush
-				>
-					<DataTable
-						label="Spot balances"
-						columns={SPOT}
-						rows={spot}
-						rowKey={key}
-						initialSort={{ id: "total", desc: true }}
-						empty={live.spot === null ? reading : "No spot balances."}
-					/>
-				</Card>
-
-				{positions.length > 0 && (
-					<Card title="Positions" actions={<Tag>{positions.length}</Tag>} flush>
-						<DataTable
-							label="Open positions"
-							columns={POSITIONS}
-							rows={positions}
-							rowKey={key}
-							initialSort={{ id: "value", desc: true }}
-							empty="No positions."
-						/>
-					</Card>
-				)}
-				{orders.length > 0 && (
-					<Card title="Open orders" actions={<Tag>{orders.length}</Tag>} flush>
-						<DataTable
-							label="Open orders"
-							columns={ORDERS}
-							rows={orders}
-							rowKey={key}
-							initialSort={{ id: "placed", desc: true }}
-							empty="No open orders."
-						/>
-					</Card>
-				)}
-				{positions.length > 0 || orders.length > 0 ? (
-					<p className="mx-0.5 -mt-2 text-xs text-subtle-foreground">
-						Positions and orders are placed by an API wallet, not through
-						proposals. They can only be read here.
-					</p>
-				) : (
-					<div className="rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm text-muted-foreground">
-						{live.perp === null || live.openOrders === null
-							? reading
-							: "No positions and no open orders."}
+						)}
 					</div>
-				)}
+					<TabPanel id={holdingsId} value={holdingsTab}>
+						{holdingsTab === "balances" ? (
+							<DataTable
+								label="Spot balances"
+								columns={SPOT}
+								rows={balances}
+								rowKey={key}
+								initialSort={{ id: "total", desc: true }}
+								empty={live.spot === null ? reading : "No spot balances."}
+							/>
+						) : holdingsTab === "positions" ? (
+							<DataTable
+								label="Open positions"
+								columns={POSITIONS}
+								rows={positions}
+								rowKey={key}
+								initialSort={{ id: "value", desc: true }}
+								empty={live.perp === null ? reading : "No positions."}
+							/>
+						) : holdingsTab === "outcomes" ? (
+							<DataTable
+								label="Outcome shares"
+								columns={OUTCOMES}
+								rows={outcomes}
+								rowKey={key}
+								initialSort={{ id: "shares", desc: true }}
+								empty={live.spot === null ? reading : "No outcome shares."}
+							/>
+						) : (
+							<DataTable
+								label="Open orders"
+								columns={ORDERS}
+								rows={orders}
+								rowKey={key}
+								initialSort={{ id: "placed", desc: true }}
+								empty={live.openOrders === null ? reading : "No open orders."}
+							/>
+						)}
+						{holdingsTab !== "balances" && (
+							<p className="border-t border-border px-4 py-2 text-xs text-subtle-foreground">
+								{holdingsTab === "outcomes"
+									? "Outcome shares are bought and sold by an API wallet, not through proposals. They can only be read here."
+									: "Positions and orders are placed by an API wallet, not through proposals. They can only be read here."}
+							</p>
+						)}
+					</TabPanel>
+				</Card>
 			</div>
 
 			<div className="grid min-w-0 grid-cols-1 items-start gap-4 min-[861px]:grid-cols-2 xl:grid-cols-1">
@@ -415,9 +499,30 @@ export function OverviewTab({
 						signers.map((a) => (
 							<PersonRow
 								key={a}
-								trailing={a === me ? <Tag tone="you">you</Tag> : null}
+								trailing={
+									a === me ? (
+										<span className="inline-flex items-center gap-1.5">
+											{nameYourself && (
+												<button
+													type="button"
+													onClick={() => names?.edit(a)}
+													title={RELAY_COPY.nameYourselfTitle}
+													className="inline-flex min-h-11 items-center rounded px-1 text-xs font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:min-h-0"
+												>
+													{RELAY_COPY.nameYourself}
+												</button>
+											)}
+											<Tag tone="you">you</Tag>
+										</span>
+									) : null
+								}
 							>
-								<Who address={a} editable className="text-[13px]" />
+								{/* your own row offers the words "Name yourself" instead of the small icon */}
+								<Who
+									address={a}
+									editable={!(a === me && nameYourself)}
+									className="text-[13px]"
+								/>
 								{lastSignedText(signed?.get(a), now) && (
 									<span
 										className="block text-xs text-subtle-foreground"
@@ -548,9 +653,9 @@ export function OverviewTab({
 				</Card>
 			</div>
 
-			{treasury && (
-				<div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3.5 py-3 text-xs text-muted-foreground xl:col-span-2">
-					<span>
+			{treasury && hydrated && !provenanceClosed && (
+				<div className="flex items-start gap-2 rounded-lg border border-border bg-surface-2 py-2 pr-1.5 pl-3.5 text-xs text-muted-foreground xl:col-span-2">
+					<span className="min-w-0 flex-1 py-1">
 						{treasury.addedBy === address ? (
 							`${RELAY_COPY.registeredByAccount}, `
 						) : (
@@ -571,29 +676,20 @@ export function OverviewTab({
 								Its signers last changed on <When at={treasury.changedAt} />.
 							</>
 						)}
-						{treasury.addedBy !== me && ` ${RELAY_COPY.addedByOther}`}
+						{/* a lure is about a signer's address: the account itself is not one */}
+						{treasury.addedBy !== me &&
+							me !== address &&
+							` ${RELAY_COPY.addedByOther}`}
 					</span>
-					{hydrated && (
-						<div className="flex flex-wrap items-center gap-2">
-							<Btn
-								size="sm"
-								variant="outline"
-								onClick={() => {
-									// taken out of this browser's list: what was half-filled for it goes too
-									if (!hidden)
-										useMultisigDrafts.getState().dropFor(network, address);
-									setHidden(network, address, !hidden);
-								}}
-							>
-								{hidden ? "Show in my list again" : "Hide from my list"}
-							</Btn>
-							<span>
-								{hidden
-									? "Hidden in this browser. It stays reachable by its address."
-									: "Hiding is for this browser only; nothing changes for your co-signers."}
-							</span>
-						</div>
-					)}
+					<button
+						type="button"
+						onClick={() => closeProvenance(network, address)}
+						aria-label={PROVENANCE_CLOSE}
+						title={PROVENANCE_CLOSE}
+						className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-subtle-foreground transition-colors hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:size-7"
+					>
+						<X className="size-3.5" aria-hidden />
+					</button>
 				</div>
 			)}
 		</div>

@@ -46,7 +46,7 @@ import {
 	settledAlready,
 } from "../model/relay/push";
 import { type CarriedOut, carriedOutOf } from "../model/relay/report";
-import type { ProposalRow } from "../model/relay/rows";
+import type { EventRow, ProposalRow } from "../model/relay/rows";
 import { queues } from "../model/relay/serial";
 import type { ViewRow } from "../model/relay/views";
 import {
@@ -69,6 +69,12 @@ import { queryIssue, useRelay } from "../relay/useRelay";
 export interface StoreResult {
 	readonly proposal: Proposal;
 	readonly issues: readonly Issue[];
+	/**
+	 * What the sharing service answered to the push, once it was awaited:
+	 * null when it took it, an issue when it did not; absent when nothing was
+	 * pushed or the push goes on later.
+	 */
+	readonly shared?: Issue | null;
 }
 
 /** The relay's side of a proposal, as the page needs it. */
@@ -84,6 +90,8 @@ export interface RelayView {
 	readonly carriedOut: CarriedOut | null;
 	/** Which signers have opened it; null when the relay does not have it (or could not say). */
 	readonly views: readonly ViewRow[] | null;
+	/** Who did what to it, when (the timeline); null when the relay does not have it (or could not say). */
+	readonly history: readonly EventRow[] | null;
 	readonly expired: boolean;
 	/** Signers whose signature is on the relay and verifies. */
 	readonly signers: readonly Address[];
@@ -117,19 +125,23 @@ export interface ProposalDoc {
 		incoming: Proposal,
 		opts?: { readonly publish?: boolean; readonly pushLater?: boolean },
 	): Promise<StoreResult>;
-	/** Share the proposal as it is in this browser. */
-	publish(): Promise<void>;
-	/** Remove this wallet's signature from the relay and from this browser. */
-	takeBack(): Promise<void>;
+	/** Share the proposal as it is in this browser; what the sharing service answered. */
+	publish(): Promise<Issue | null>;
+	/**
+	 * Remove this wallet's signature from the relay and from this browser.
+	 * This and the three below answer with what went wrong, or null: the
+	 * click that asked is told (a toast), a push in the background is not.
+	 */
+	takeBack(): Promise<Issue | null>;
 	/** Withdraw: the proposer ends it for everyone. */
-	withdraw(): Promise<void>;
+	withdraw(): Promise<Issue | null>;
 	/**
 	 * Say no: an objection the co-signers see, which ends nothing. This
 	 * wallet's signature is taken back with it, on the relay and in this browser.
 	 */
-	sayNo(): Promise<void>;
+	sayNo(): Promise<Issue | null>;
 	/** Take this wallet's no back. */
-	takeBackNo(): Promise<void>;
+	takeBackNo(): Promise<Issue | null>;
 	/** Read the relay's copy again, now; the row, or null when it has none or cannot be reached. */
 	refresh(): Promise<ProposalRow | null>;
 	/**
@@ -147,6 +159,8 @@ interface Remote {
 	readonly carriedOut: CarriedOut | null;
 	/** Null when they could not be read: nothing is then said about who has seen it. */
 	readonly views: readonly ViewRow[] | null;
+	/** The proposal's history; null when it could not be read. */
+	readonly history: readonly EventRow[] | null;
 }
 
 const NO_OBJECTIONS: readonly Objection[] = [];
@@ -182,16 +196,18 @@ async function readRemote(client: RelayClient, digest: Hex): Promise<Remote> {
 	let removed: Address[] = [];
 	let carriedOut: CarriedOut | null = null;
 	let views: readonly ViewRow[] | null = null;
+	let history: readonly EventRow[] | null = null;
 	if (found) {
 		views = (await listViews(client, keyOf(found.proposal))).data?.rows ?? null;
 		const events = await listProposalEvents(client, keyOf(found.proposal));
 		// without the events nothing is dropped: a signature that verifies stays shown
 		if (events.data) {
+			history = events.data.rows;
 			removed = [...removedSigners(events.data.rows, found.proposal.digest)];
 			carriedOut = carriedOutOf(events.data.rows);
 		}
 	}
-	return { found, issues, removed, carriedOut, views };
+	return { found, issues, removed, carriedOut, views, history };
 }
 
 /**
@@ -480,40 +496,50 @@ export function useProposalDoc(
 				return result;
 			}
 			const doc = result.proposal;
+			let shared: Issue | null | undefined;
 			const sending = (async () => {
 				setBusy(true);
 				try {
 					gaveUpOn.current = null;
-					setProblem(
-						await queue.run(() =>
-							push(doc, { publish: !!opts.publish, explicit: true }),
-						),
+					shared = await queue.run(() =>
+						push(doc, { publish: !!opts.publish, explicit: true }),
 					);
+					setProblem(shared);
 				} finally {
 					release();
 					setBusy(false);
 				}
 			})();
 			// `push` never throws; should that change, a push sent later fails quietly
-			if (!opts.pushLater) await sending;
-			else sending.catch(() => undefined);
+			if (!opts.pushLater) {
+				await sending;
+				return shared === undefined ? result : { ...result, shared };
+			}
+			sending.catch(() => undefined);
 			return result;
 		},
 		[client, me, held, invalidateLocal, push],
 	);
 
 	const act = useCallback(
-		async (write: (c: RelayClient, as: Address) => Promise<Issue | null>) => {
+		async (
+			write: (c: RelayClient, as: Address) => Promise<Issue | null>,
+		): Promise<Issue | null> => {
 			if (!client || !me) {
-				setProblem(
-					issue("relay.wrong_wallet", "error", "You are not signed in."),
+				const out = issue(
+					"relay.wrong_wallet",
+					"error",
+					"You are not signed in.",
 				);
-				return;
+				setProblem(out);
+				return out;
 			}
 			setBusy(true);
 			try {
-				setProblem(await write(client, me));
+				const problem = await write(client, me);
+				setProblem(problem);
 				if (proposal) await relayChanged(proposal.digest);
+				return problem;
 			} finally {
 				setBusy(false);
 			}
@@ -521,8 +547,9 @@ export function useProposalDoc(
 		[client, me, proposal, relayChanged],
 	);
 
-	const publish = useCallback(async () => {
-		if (proposal) await store(proposal, { publish: true });
+	const publish = useCallback(async (): Promise<Issue | null> => {
+		if (!proposal) return null;
+		return (await store(proposal, { publish: true })).shared ?? null;
 	}, [proposal, store]);
 
 	/** A signature its signer took back leaves this browser too, or the next sync would hold it. */
@@ -624,6 +651,7 @@ export function useProposalDoc(
 		row: found?.row ?? null,
 		carriedOut: remoteData?.carriedOut ?? null,
 		views: found ? (remoteData?.views ?? null) : null,
+		history: found ? (remoteData?.history ?? null) : null,
 		expired: !!found && found.row.expiresAt <= Date.now(),
 		signers: found?.proposal.signatures.map((s) => s.signer) ?? [],
 		objections:

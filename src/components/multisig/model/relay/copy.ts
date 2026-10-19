@@ -46,12 +46,6 @@ export const RELAY_COPY = {
 	connectOneOf:
 		"Connect a wallet that is signed in here to continue, or sign in with another one.",
 	signOutAll: "Sign out all wallets",
-	firstUseTitle: "This section signs and sends real transactions",
-	firstUseBody:
-		"You approve every signature in your own wallet, and once Hyperliquid accepts an action it cannot be undone. Read the destination and amount in the wallet prompt each time, and rehearse on testnet first.",
-	// the same notice in a build without a relay: how a proposal travels there
-	firstUseBodySolo:
-		"Proposals are signed with your wallet and sent to Hyperliquid from this browser. A proposal travels as a link or a file, and every signature is checked here before anything is sent. Rehearse on testnet first.",
 	underSign:
 		"Your wallet will show the treasury, the finaliser, the destination and the amount. Check them there.",
 	shareOnlyHere:
@@ -79,6 +73,9 @@ export const RELAY_COPY = {
 	// so none of this may call them the reader's own secret.
 	nicknameScope:
 		"Used only in this treasury: its signers see it, and it is shown nowhere else. The address stays visible next to it.",
+	// beside "you" in a treasury's signer list, while your address has no nickname there
+	nameYourself: "Name yourself",
+	nameYourselfTitle: "Give your own address a nickname in this treasury",
 	nicknameOwn:
 		"This is your own address: nobody else can choose its nickname here.",
 	nicknameTreasury: "Any signer of this treasury can change it.",
@@ -107,6 +104,10 @@ export const RELAY_COPY = {
 	awayOthers:
 		"API wallets and transfers were checked for your first ten treasuries. The others are checked when you open them.",
 	addExisting: "Add an existing one",
+	// a proposal that can no longer be signed or sent: its copy is a record now
+	recordCopy:
+		"Nothing more can be signed or sent here. A copy keeps who signed it, as a file.",
+	downloadCopy: "Download a copy",
 	// Creating a treasury: the account that was converted registers itself.
 	createSignIn:
 		"Sign in with the wallet whose account you want to convert into a treasury.",
@@ -118,10 +119,10 @@ export const RELAY_COPY = {
 		"Registered by the account itself when it was first converted",
 	registerSelfTitle: "this is the wallet you are signed in with",
 	registerSelfBody:
-		"Register it so that its signers find it in their list. You will not see it here yourself: sign in as one of its signers for that.",
+		"Register it so that its signers find it in their list. You can then follow its proposals here too; signing them is for its signers.",
 	registerSelfButton: "Register it",
 	selfSeesNothing:
-		"Its proposals and its signing log are shown to its signers, not to the account itself. If they do not find it in their list:",
+		"The sharing service does not hold this treasury yet. Once it is registered, its signers find it in their list and you can follow its proposals here:",
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;

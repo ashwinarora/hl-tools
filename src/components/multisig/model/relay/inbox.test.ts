@@ -66,6 +66,32 @@ describe("a treasury that is no longer a multi-sig", () => {
 	});
 });
 
+describe("the treasury account itself, reading its own proposals", () => {
+	const mine = [
+		entry({ finaliser: B }),
+		entry({ finaliser: B, counted: [A, B] }),
+		entry({ finaliser: TREASURY, counted: [A] }),
+	];
+
+	it("is never asked to sign or to send", () => {
+		for (const e of mine) {
+			expect(inboxGroup(e, TREASURY)).toBe("waiting");
+			expect(needsMe(e, TREASURY)).toBe(false);
+		}
+		expect(countNeeds(mine, TREASURY, "testnet")).toBe(0);
+		expect(groupInbox(mine, TREASURY, "testnet").waiting).toHaveLength(3);
+	});
+
+	it("still sees a proposal that cannot go ahead for what it is", () => {
+		expect(inboxGroup(entry({ stuck: true }), TREASURY)).toBe("dead");
+	});
+
+	it("leaves its signers' groups as they were", () => {
+		expect(inboxGroup(mine[0], A)).toBe("sign");
+		expect(inboxGroup(mine[1], B)).toBe("finish");
+	});
+});
+
 describe("inboxGroup", () => {
 	it("asks a signer who has not signed for a signature", () => {
 		expect(inboxGroup(entry({ finaliser: C }), A)).toBe("sign");

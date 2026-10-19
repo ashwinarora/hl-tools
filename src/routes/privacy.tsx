@@ -199,6 +199,11 @@ function PrivacyPage() {
 							is kept from co-signers: what each signer has marked as read.
 						</li>
 						<li>
+							<b>The treasury account itself</b>, signed in with its own wallet,
+							can read the same as its signers. It cannot sign or add anything
+							there.
+						</li>
+						<li>
 							<b>The operator of the relay</b> can read everything stored on it.
 							Proposals are stored readable so signers can review them; they are
 							protected in transit and at rest by the hosting provider, and are

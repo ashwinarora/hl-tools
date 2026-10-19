@@ -40,9 +40,14 @@ export function AwayKeeper() {
 	const known = marks.data;
 	useEffect(() => {
 		if (!client || !me || !known) return;
+		// a treasury account reading its own treasury keeps no markers: it signs nothing
 		const missing = rows.filter((t) => {
 			const key = `${t.network}:${t.address}`;
-			return !known.has(key) && !started.current.has(`${me}:first:${key}`);
+			return (
+				t.signers.includes(me) &&
+				!known.has(key) &&
+				!started.current.has(`${me}:first:${key}`)
+			);
 		});
 		if (missing.length === 0) return;
 		for (const t of missing)

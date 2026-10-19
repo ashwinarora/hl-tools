@@ -190,11 +190,14 @@ describe("the wizard's sentences", () => {
 			"3 signer addresses and the threshold, 2",
 		);
 		expect(CREATE.inWallet(1, 1)).toContain("1 signer address and");
-		expect(CREATE.info).toHaveLength(5);
-		// said on every conversion, whatever the signers and the number
-		expect(CREATE.info[0]).toContain("own key cannot act alone any more");
-		expect(CREATE.info[1]).toContain("Hyperliquid's trading side only");
-		expect(CREATE.info[3]).toContain("Keep this account's key");
+		// said on every conversion, whatever the signers and the number: short lines, two lists
+		expect(CREATE.does.items[0]).toContain("own key can no longer act alone");
+		expect(CREATE.doesNot.items.join(" ")).toContain(
+			"HyperEVM or other chains",
+		);
+		expect(CREATE.doesNot.items.join(" ")).toContain("Keep it");
+		for (const line of [...CREATE.does.items, ...CREATE.doesNot.items])
+			expect(line.length).toBeLessThanOrEqual(160);
 	});
 });
 

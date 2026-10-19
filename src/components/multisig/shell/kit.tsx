@@ -13,6 +13,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { Panel as HubPanel } from "#/components/hub/layout";
 import { Button } from "#/components/ui/button";
 import { tabsKeyDown } from "#/lib/tabs";
 import { cn } from "#/lib/utils";
@@ -198,7 +199,21 @@ export function GroupTitle({
 	);
 }
 
-/** A bordered card; `Rows` inside it makes a list. */
+/**
+ * The hub's panel with the section's own title colour: a heading in the
+ * Multisig section is the brand's teal, so the eye finds each card's
+ * title at a glance (the owner's choice, 2026-10-19).
+ */
+export function Panel(props: ComponentProps<typeof HubPanel>) {
+	return (
+		<HubPanel
+			{...props}
+			titleClassName={cn(BRAND_TEXT, props.titleClassName)}
+		/>
+	);
+}
+
+/** A bordered card, its title in the brand's teal; `Rows` inside it makes a list. */
 export function Card({
 	title,
 	actions,
@@ -227,7 +242,9 @@ export function Card({
 		>
 			{(title || actions) && (
 				<header className="flex flex-wrap items-center justify-between gap-2.5 border-b border-border px-4 py-3">
-					{title && <h2 className="text-sm font-semibold">{title}</h2>}
+					{title && (
+						<h2 className={cn("text-sm font-semibold", BRAND_TEXT)}>{title}</h2>
+					)}
 					{actions && (
 						<div className="flex flex-wrap items-center gap-2">{actions}</div>
 					)}
@@ -335,6 +352,7 @@ export function TabList<T extends string>({
 	value,
 	tabs,
 	onChange,
+	className,
 }: {
 	/** The base of the tabs' and panels' ids, shared with `TabPanel`. */
 	id: string;
@@ -342,6 +360,8 @@ export function TabList<T extends string>({
 	value: T;
 	tabs: readonly { value: T; label: ReactNode; count?: number }[];
 	onChange: (value: T) => void;
+	/** For a row inside a card's header: no margin and no line of its own. */
+	className?: string;
 }) {
 	const row = useRef<HTMLDivElement>(null);
 	const [more, setMore] = useState({ left: false, right: false });
@@ -388,7 +408,10 @@ export function TabList<T extends string>({
 				)
 			}
 			style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
-			className="mb-4 flex gap-0.5 overflow-x-auto overflow-y-hidden border-b border-border [scrollbar-width:none]"
+			className={cn(
+				"mb-4 flex gap-0.5 overflow-x-auto overflow-y-hidden border-b border-border [scrollbar-width:none]",
+				className,
+			)}
 		>
 			{tabs.map((t) => {
 				const ids = tabIds(id, t.value);

@@ -34,12 +34,19 @@ import {
 	shortAddress,
 } from "../model/stage";
 import { untilWords } from "../model/time";
+import {
+	done as doneToast,
+	failed as failedToast,
+	TOAST_LINES,
+	TOAST_TITLES,
+} from "../model/toasts";
 import { Sentence } from "../names/Sentence";
 import { Headline } from "../shell/Headline";
 import { Heard } from "../shell/Heard";
 import { Help } from "../shell/Help";
 import { Btn, Card, NetTag, Tag } from "../shell/kit";
 import { When } from "../shell/live";
+import { notify } from "../shell/notify";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
 import type { WalletSigner } from "../useWalletSigner";
 import {
@@ -155,9 +162,21 @@ export function YourPart({
 		else {
 			setNeedsNetwork(false);
 			setOutcome(done);
+			notify(
+				done.ok
+					? doneToast(TOAST_TITLES.signed, TOAST_LINES.signedOnly)
+					: failedToast(TOAST_TITLES.notSigned, done.issues),
+			);
 		}
 	};
 	const sign = () => void wallet.run("Waiting for the wallet…", doSign);
+	/** A sharing-service button's result, in a toast. */
+	const said = (title: string) => (problem: { message: string } | null) =>
+		notify(
+			problem
+				? failedToast(TOAST_TITLES.sharingRefused, problem)
+				: doneToast(title),
+		);
 
 	const doSubmit = async () => {
 		setOutcome(null);
@@ -180,9 +199,15 @@ export function YourPart({
 		setNeedsNetwork(false);
 		if (!result.ok) {
 			setFailure(result.issues);
+			notify(failedToast(TOAST_TITLES.notSent, result.issues));
 			return;
 		}
 		setSent(result.accepted);
+		notify(
+			result.accepted
+				? doneToast(TOAST_TITLES.accepted, TOAST_LINES.final)
+				: failedToast(TOAST_TITLES.refused, TOAST_LINES.refused),
+		);
 		// a staking step that went through changed what the treasury has in staking
 		if (result.accepted && stakingActionOf(proposal.payload.action))
 			void refreshStaking(
@@ -401,7 +426,7 @@ export function YourPart({
 							title={RELAY_COPY.takeBackHint}
 							onClick={() => {
 								setOutcome(null);
-								void doc.takeBack();
+								void doc.takeBack().then(said(TOAST_TITLES.takenBack));
 							}}
 						>
 							Take back my signature
@@ -413,7 +438,7 @@ export function YourPart({
 							disabled={doc.relay.busy || wallet.busy}
 							onClick={() => {
 								setOutcome(null);
-								void doc.takeBackNo();
+								void doc.takeBackNo().then(said(TOAST_TITLES.noTakenBack));
 							}}
 						>
 							{RELAY_COPY.takeBackNo}
@@ -429,7 +454,7 @@ export function YourPart({
 							}
 							onClick={() => {
 								setOutcome(null);
-								void doc.sayNo();
+								void doc.sayNo().then(said(TOAST_TITLES.saidNo));
 							}}
 						>
 							{RELAY_COPY.sayNo}
@@ -509,7 +534,7 @@ export function YourPart({
 								disabled={doc.relay.busy}
 								onClick={() => {
 									setConfirm(false);
-									void doc.withdraw();
+									void doc.withdraw().then(said(TOAST_TITLES.cancelled));
 								}}
 							>
 								Yes, cancel it

@@ -64,6 +64,7 @@ import { OverviewTab } from "./OverviewTab";
 import { PendingTab } from "./PendingTab";
 import { SigningLogTab } from "./SigningLogTab";
 import { StakingTab } from "./StakingTab";
+import { HiddenTag, TreasuryMenu } from "./TreasuryMenu";
 import { useKnownProposals } from "./useKnownProposals";
 import { VaultsTab } from "./VaultsTab";
 
@@ -224,19 +225,22 @@ export function TreasuryScreen({
 	// relay out of reach): said in the notice, never passed over
 	const [refused, setRefused] = useState<string | null>(null);
 	const [gaveUp, setGaveUp] = useState(false);
+	// only a signer in the relay's copy may ask: the treasury account itself
+	// reads this page and asks for nothing
+	const asks = !!me && !!treasury && treasury.signers.includes(me);
 	const check = useCallback(async () => {
-		if (!client || !me || !network0 || !address0) return;
+		if (!client || !me || !network0 || !address0 || !asks) return;
 		const r = await requestTreasury(client, me, network0, address0, "check");
 		setRefused(r.issue?.message ?? null);
 		if (r.data) {
 			queries.setQueryData(["relay", me, "request", r.data.id], r.data);
 			setRequestId(r.data.id);
 		}
-	}, [client, me, network0, address0, queries]);
+	}, [client, me, network0, address0, queries, asks]);
 
 	// While the live list differs from the copy, keep asking (see `nextRecheck`):
 	// a change that lands just after a lookup must not be left standing.
-	const differs = !!diff && !diff.same;
+	const differs = asks && !!diff && !diff.same;
 	const asked = useRef<{ at: number | null; n: number }>({ at: null, n: 0 });
 	useEffect(() => {
 		if (!differs) {
@@ -485,19 +489,23 @@ export function TreasuryScreen({
 							<Help k="threshold" />
 						</span>
 						{frozen && <Tag tone="warn">no longer a multi-sig</Tag>}
+						<HiddenTag network={network} address={address} />
 						<SignsTag />
 					</>
 				}
 				actions={
-					noSignerSet ? null : (
-						<Link
-							to="/multisig/propose"
-							search={{ treasury: address, network }}
-							className="inline-flex h-[34px] items-center justify-center whitespace-nowrap rounded-md bg-brand px-3.5 text-[13px] font-medium text-brand-foreground no-underline transition-colors hover:bg-brand/90"
-						>
-							Propose an action
-						</Link>
-					)
+					<>
+						{!(noSignerSet || itself) && (
+							<Link
+								to="/multisig/propose"
+								search={{ treasury: address, network }}
+								className="inline-flex h-[34px] items-center justify-center whitespace-nowrap rounded-md bg-brand px-3.5 text-[13px] font-medium text-brand-foreground no-underline transition-colors hover:bg-brand/90"
+							>
+								Propose an action
+							</Link>
+						)}
+						<TreasuryMenu network={network} address={address} />
+					</>
 				}
 			>
 				{/* what it holds first, on every section: the figures pushed live */}
@@ -508,6 +516,7 @@ export function TreasuryScreen({
 					holdings={tab === "overview"}
 					linked
 				/>
+				{itself && <SwitchToSigner signers={signersNow} className="mb-4" />}
 				{frozen && (
 					<Callout
 						tone="warning"

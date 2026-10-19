@@ -6,9 +6,11 @@ import { AddressLine, short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
 import { API_WALLET_ROW } from "./model/apiWallet";
+import { isNonZero } from "./model/chain/columns";
 import { balanceView, modeLabel } from "./model/mode";
+import { isOutcomeShare } from "./model/outcomes";
 import { useTreasuries } from "./relay/queries";
-import { Tag } from "./shell/kit";
+import { BRAND_TEXT, Tag } from "./shell/kit";
 import { When } from "./shell/live";
 import type { TreasuryState } from "./useTreasuryState";
 
@@ -102,8 +104,9 @@ export function TreasuryStrip({
 	if (!target) return null;
 	const me = wallet?.toLowerCase();
 	const otherTokens =
-		state.spot?.filter((b) => b.coin !== "USDC" && Number(b.total) !== 0)
-			.length ?? 0;
+		state.spot?.filter(
+			(b) => b.coin !== "USDC" && isNonZero(b.total) && !isOutcomeShare(b),
+		).length ?? 0;
 	const now = Date.now();
 	const mode = state.mode ? modeLabel(state.mode) : null;
 	// which balances there are depends on the mode: none are listed before it is known
@@ -116,7 +119,12 @@ export function TreasuryStrip({
 	return (
 		<section className="min-w-0 overflow-hidden rounded-[10px] border border-border bg-surface shadow-[var(--shadow-card)]">
 			<header className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border px-4 py-2.5">
-				<h2 className="flex items-center gap-2 text-sm font-semibold">
+				<h2
+					className={cn(
+						"flex items-center gap-2 text-sm font-semibold",
+						BRAND_TEXT,
+					)}
+				>
 					Treasury <NetworkBadge network={target.network} />
 				</h2>
 				<div className="min-w-0 text-xs text-muted-foreground">

@@ -17,7 +17,13 @@ import {
 	nicknameRefusal,
 	nicknameText,
 } from "../model/relay/nicknames";
+import {
+	done as doneToast,
+	failed as failedToast,
+	TOAST_TITLES,
+} from "../model/toasts";
 import { OFF_LOOK } from "../shell/kit";
+import { notify } from "../shell/notify";
 import { useSetNickname } from "./useNicknames";
 
 /**
@@ -61,6 +67,15 @@ export function NicknameDialog({
 		setRefused(null);
 		const issue = await save({ network, treasury, address, name });
 		setBusy(false);
+		notify(
+			issue
+				? failedToast(TOAST_TITLES.nicknameNotSaved, issue)
+				: doneToast(
+						name === null
+							? TOAST_TITLES.nicknameRemoved
+							: TOAST_TITLES.nicknameSaved,
+					),
+		);
 		if (issue) setRefused(issue.message);
 		else onClose();
 	};

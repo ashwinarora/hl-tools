@@ -33,7 +33,7 @@ export const HELP = {
 	},
 	signingWindow: {
 		title: "Signing window",
-		body: "How long a proposal can still be sent: two days from when it was made, or almost three for one dated ahead (the form's “Give signers 3 days”). After that Hyperliquid refuses it and its signatures are worth nothing. It can then be proposed again.",
+		body: "How long a proposal can still be sent: two days from when it was made, or almost three with the form's “3 days” (under Advanced). Either can be sent as soon as enough have signed. After that Hyperliquid refuses it and its signatures are worth nothing.",
 	},
 	signingChain: {
 		title: "Signed under a chain",
@@ -45,7 +45,7 @@ export const HELP = {
 	},
 	treasuryAccount: {
 		title: "Treasury account",
-		body: "The wallet you are connected with is itself a treasury. Its own key can no longer act for it on Hyperliquid. To use that treasury, switch to one of its signers in your wallet.",
+		body: "The wallet you are connected with is itself a treasury. Its own key can no longer act for it on Hyperliquid, so here it can follow the treasury but not sign. To sign or propose, switch to one of its signers in your wallet.",
 	},
 	ownKey: {
 		title: "The account's own key",

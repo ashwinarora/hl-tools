@@ -192,7 +192,7 @@ async function checkNewSigners(
 		if (role === "missing")
 			out.push({
 				code: "multisig-signer-missing",
-				message: `${shortAddress(a)} has never been used on Hyperliquid, and a signer has to have received something there first.`,
+				message: `${shortAddress(a)} has never been used on Hyperliquid, so it cannot be a signer yet. Deposit or send funds to that address first.`,
 			});
 		else if (role === "vault" || role === "subAccount")
 			out.push({

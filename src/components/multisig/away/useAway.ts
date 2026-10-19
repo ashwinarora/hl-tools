@@ -327,18 +327,21 @@ export function useAway(scope: AwayScope): Away {
 
 	const network = typeof scope === "object" ? scope.network : header;
 	const only = typeof scope === "object" ? scope.address : null;
+	// what the signers decided: told to its signers, not to the account itself
 	const here = useMemo(
 		() =>
 			rows.filter(
 				(t) =>
 					t.network === network &&
+					!!me &&
+					t.signers.includes(me) &&
 					(only
 						? t.address === only
 						: !(
 								hydrated && hidden.includes(treasuryKey(t.network, t.address))
 							)),
 			),
-		[rows, network, only, hydrated, hidden],
+		[rows, network, only, hydrated, hidden, me],
 	);
 
 	const marks = useQuery({

@@ -294,6 +294,20 @@ export const CANNOT_BE_SENT: ReadonlySet<Phase> = new Set<Phase>([
 	"not-multisig",
 ]);
 
+/**
+ * Phases after which a proposal's page has nothing left to sign, send or
+ * merge: it was sent, ended, or can no longer be sent. Its copy is a record.
+ */
+export const FINISHED: ReadonlySet<Phase> = new Set<Phase>([
+	"submitted",
+	"carried-out",
+	"in-effect",
+	"closed",
+	"withdrawn",
+	"declined",
+	...CANNOT_BE_SENT,
+]);
+
 export function deriveStage(input: StageInput): Stage {
 	const { proposal: p, readiness: r, policy } = input;
 	const now = input.now ?? Date.now();

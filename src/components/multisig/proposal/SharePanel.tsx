@@ -6,9 +6,9 @@ import {
 } from "@hl-tools/core";
 import { useNavigate } from "@tanstack/react-router";
 import { Download, Link2, Search, ShieldAlert, Upload } from "lucide-react";
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { CopyButton } from "#/components/hub/CopyButton";
-import { Field, Panel, TextArea } from "#/components/hub/layout";
+import { Field, TextArea } from "#/components/hub/layout";
 import { Callout, IssueList } from "#/components/hub/status";
 import { Button } from "#/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import {
 import { download } from "#/lib/download";
 import { useHandoffStore } from "#/store/handoffStore";
 import { RELAY_COPY } from "../model/relay/copy";
+import { mergeToast } from "../model/toasts";
 import {
 	fileTransport,
 	linkTransport,
@@ -30,7 +31,8 @@ import {
 	openText,
 	type Published,
 } from "../model/transport";
-import { OFF_LOOK } from "../shell/kit";
+import { OFF_LOOK, Panel } from "../shell/kit";
+import { notify } from "../shell/notify";
 import type { StoreResult } from "./useProposalDoc";
 
 const NO_MORE: readonly {
@@ -142,6 +144,7 @@ export function SharePanel({
 	proposal,
 	store,
 	secondary = false,
+	finished = false,
 	also = NO_MORE,
 }: {
 	proposal: Proposal;
@@ -160,6 +163,11 @@ export function SharePanel({
 	 * rather than the way: folded away under "Export / Import".
 	 */
 	secondary?: boolean;
+	/**
+	 * Nothing can be signed or sent any more: there is nothing to pass on or
+	 * merge, and the panel is one quiet "Download a copy", a record of who signed.
+	 */
+	finished?: boolean;
 }) {
 	const navigate = useNavigate();
 	const send = useHandoffStore((s) => s.send);
@@ -207,6 +215,11 @@ export function SharePanel({
 		setResult({ kind: "merged", added, total, issues });
 	};
 
+	// every merge's result, also in a toast
+	useEffect(() => {
+		if (result) notify(mergeToast(result));
+	}, [result]);
+
 	const merge = async (source: string) => {
 		if (also.length > 0) {
 			const all = openAll(source);
@@ -241,6 +254,23 @@ export function SharePanel({
 			issues: stored.issues,
 		});
 	};
+
+	if (finished)
+		return (
+			<div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-[10px] border border-border bg-surface px-4 py-2.5">
+				<span className="text-xs text-muted-foreground">
+					{RELAY_COPY.recordCopy}
+				</span>
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => fileTransport(download).publish(proposal, others)}
+				>
+					<Download className="size-3.5" aria-hidden />{" "}
+					{RELAY_COPY.downloadCopy}
+				</Button>
+			</div>
+		);
 
 	const body = (
 		<div className="space-y-4">

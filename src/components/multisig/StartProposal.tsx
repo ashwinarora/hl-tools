@@ -1,7 +1,7 @@
 import { LAB_TREASURY } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Field, Panel, TextInput } from "#/components/hub/layout";
+import { Field, TextInput } from "#/components/hub/layout";
 import {
 	type AccountTarget,
 	ADDRESS_RE,
@@ -12,7 +12,7 @@ import {
 	useNetworkHydrated,
 	useNetworkStore,
 } from "#/store/networkStore";
-import { OFF_LOOK } from "./shell/kit";
+import { OFF_LOOK, Panel } from "./shell/kit";
 import { TreasuryStrip } from "./TreasuryStrip";
 import { useTreasuryState } from "./useTreasuryState";
 

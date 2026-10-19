@@ -89,6 +89,7 @@ export function Panel({
 	children,
 	className,
 	bodyClassName,
+	titleClassName,
 	id,
 }: {
 	title?: ReactNode;
@@ -97,6 +98,8 @@ export function Panel({
 	children: ReactNode;
 	className?: string;
 	bodyClassName?: string;
+	/** For a section that tints its titles (the Multisig section's own `Panel`). */
+	titleClassName?: string;
 	id?: string;
 }) {
 	return (
@@ -110,7 +113,11 @@ export function Panel({
 			{(title || actions) && (
 				<div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3">
 					<div className="min-w-0 space-y-0.5">
-						{title && <h2 className="text-sm font-semibold">{title}</h2>}
+						{title && (
+							<h2 className={cn("text-sm font-semibold", titleClassName)}>
+								{title}
+							</h2>
+						)}
 						{description && (
 							<p className="text-xs leading-relaxed text-muted-foreground">
 								{description}
