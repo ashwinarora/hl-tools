@@ -10,6 +10,12 @@ import { type Part, say } from "../parts";
  */
 export const RELAY_COPY = {
 	signInButton: "Sign in with your wallet",
+	// a failed sign-in is one short line in a toast; the exact reason waits under "Details"
+	signInFailed: "Sign-in didn't go through. Please try again.",
+	signInCancelled: "Sign-in cancelled in your wallet.",
+	signInTooMany:
+		"Too many sign-ins from this network. Try again in a few minutes.",
+	signInDetails: "Details",
 	smallPrintBefore: "By signing in you agree to the ",
 	smallPrintLink: "Privacy Policy",
 	signedOutRail:

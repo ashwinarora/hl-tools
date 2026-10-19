@@ -1942,7 +1942,19 @@ Branch `launch/phase-7`, stacked on PR #9. Checked on a production build served 
 
 To check on the staging copy, where localhost cannot show it: the headers as Railway's edge serves them over HTTPS, sign-in from a real domain, Rabby's phishing check on a page that is no longer `localhost`, adding the 1337 network from an internet address, and the hosted relay's gate, jobs and look-ups.
 
-132 files, 3,349 unit tests after it (`securityHeaders.test.ts`, and the HTTP exchange in `signingRpc.test.ts`).
+**On the staging copy** (`hl-tools-hl-tools-pr-10.up.railway.app`, Railway, the hosted relay HLTools after its 12 migrations were pushed; testnet, Rabby):
+
+| Check | Result |
+|---|---|
+| Headers over HTTPS from Railway's edge | the same policy, HSTS and the rest; the policy names HLTools and the staging address, so the build took its variables; `/rpc/1337` answers `0x539`; the mock worker 404 |
+| Rabby on a real domain | the connect prompt showed no warning ("Site popularity: High"); its window closed itself before an automated click three times, so the owner connected by hand |
+| First sign-in | refused: "Signed Ethereum message is using a Domain that does not match the one in URI which is not allowed on this server". Supabase checks the domain as `https://<domain>/` and the list held the address without the slash; with both forms listed, signed in · live |
+| A treasury added | checked by HLTools itself against Hyperliquid (2 of 3, three signers), in 3 s; no scheduled job failed |
+| A proposal | created and signed by S1 (Rabby showed the send in full), stored on HLTools with its signature, then cancelled for everyone; no policy violation on any page |
+
+**The sign-in toast** (dev server, a stub returning that same refusal for one page load): one toast "Sign-in didn't go through. Please try again." with "Details" folded, nothing beside the buttons; a decline in Rabby replaced it with "Sign-in cancelled in your wallet."; a real sign-in afterwards left no toast. The error toast's background was see-through (the page's text ran through its title) and is now solid under the tint.
+
+133 files, 3,357 unit tests after it (`securityHeaders.test.ts`, the HTTP exchange in `signingRpc.test.ts`, `signInNotice.test.ts`).
 
 ## Feedback round 1 (2026-10-04)
 

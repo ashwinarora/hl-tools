@@ -422,6 +422,10 @@ Non-obvious choices made while turning hl-tools into a developer tooling hub, an
 
 **The live site is watched from outside, and no visitor's browser reports to anyone.** An outside uptime check calls the site, `/rpc/1337` and the relay's address (which also catches a Free-plan pause); the relay's scheduled jobs get a weekly look at their run history. There is no error tracking in the browser: it would send visitors' data to a third party, which the Multisig's pages never contact. The production build leaves out the dev-only mock service worker, and the template's unused Sentry setting is gone.
 
+**A sign-in that did not finish is one short toast.** (2026-10-19, the owner's call after the first staging sign-in.) The refusal used to be written beside both sign-in buttons as the server's own sentence plus advice about the device's clock, which was wrong for that refusal. Now `signInNotice` makes one line: "Sign-in didn't go through. Please try again.", "Sign-in cancelled in your wallet." for a decline, or a wait for too many attempts; the exact reason stays under "Details" for whoever reports a problem. The toast stays until closed or replaced by the next attempt (a decline fades), so it is not missed while the wallet window is in front. Toasts also got a solid background under their tint: a see-through one let the page's text run through its own.
+
+**A staging address needs two entries in Supabase's allowed list.** Supabase checks a sign-in message's URI as written and, separately, its domain rebuilt as `https://<domain>/`; the second check is skipped for `localhost`, so the local stack never showed it. The staging address is listed without and with the trailing slash. hltools.tech needs neither, being the site URL's own host.
+
 ## Testing
 
 **Browser testing uses the Chrome DevTools MCP.** Viewport emulation (`emulate`) gives exact desktop (1440×900) and mobile (375×812, DPR 2) sizes and light/dark `prefers-color-scheme`. The faucet miner is exercised with the Rabby wallet in that browser; mining itself is only run under the existing MSW mock harness so no real funds move.
