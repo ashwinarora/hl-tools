@@ -305,7 +305,7 @@ describe("a withdrawal", () => {
 		const over = plan(wd("100.01"), held("100"));
 		expect(codes(over.issues)).toEqual(["error:vault.vault-equity"]);
 		expect(over.issues[0]?.message).toBe(
-			"This withdraws more USDC than the treasury's deposit in that vault is worth now. It is worth 100 USDC, and this withdraws 100.01 USDC.",
+			"This withdraws more USDC than can come out of the treasury's deposit in that vault now. It is worth 100 USDC, and this withdraws 100.01 USDC.",
 		);
 		expect(over.steps).toBeNull();
 		// also while it is locked: the amount is judged as of the lockup's end
@@ -327,7 +327,37 @@ describe("a withdrawal", () => {
 				}),
 			}),
 		);
-		expect(capped.issues[0]?.message).toContain("It is worth 90 USDC");
+		expect(capped.issues[0]?.message).toContain(
+			"Hyperliquid releases 90 USDC from it now, and this withdraws 95 USDC",
+		);
+	});
+
+	it("is held to what Hyperliquid releases, not the deposit's higher worth (mainnet, 2026-10-19)", () => {
+		// the deposit's worth read 10.005691 while Hyperliquid released 10.005689:
+		// a withdrawal of the worth was refused ("Insufficient vault equity for withdrawal")
+		const asked = plan(
+			wd("10.005691"),
+			read({
+				deposits: [{ vault: V, equity: "10.005691", lockedUntil: 0 }],
+				vault: detail({
+					followerState: { vaultEquity: "10.0056892", allTimePnl: "0" },
+					maxWithdrawable: 10.005689,
+				}),
+			}),
+		);
+		expect(asked.issues.map((i) => i.code)).toContain("vault.vault-equity");
+		// what Max fills, exactly what Hyperliquid releases, passes
+		const max = plan(
+			wd("10.005689"),
+			read({
+				deposits: [{ vault: V, equity: "10.005691", lockedUntil: 0 }],
+				vault: detail({
+					followerState: { vaultEquity: "10.0056892", allTimePnl: "0" },
+					maxWithdrawable: 10.005689,
+				}),
+			}),
+		);
+		expect(max.issues.filter((i) => i.severity === "error")).toEqual([]);
 	});
 
 	it("says in one amber line that an amount close to all of it may be refused later", () => {

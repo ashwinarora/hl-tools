@@ -375,7 +375,8 @@ function spotFree(ctx: BuildContext, coin: string): string | undefined {
 	if (!b) return ctx.balances?.spot ? "0" : undefined;
 	const total = Decimal.tryParse(b.total);
 	const hold = Decimal.tryParse(b.hold ?? "0");
-	return total && hold ? total.sub(hold).toString() : b.total;
+	// unreadable: not known, rather than the total, which may be more than can move
+	return total && hold ? total.sub(hold).toString() : undefined;
 }
 
 const positive = (v: string | undefined): boolean =>

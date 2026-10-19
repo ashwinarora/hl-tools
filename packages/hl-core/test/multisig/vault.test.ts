@@ -509,6 +509,26 @@ describe("what Hyperliquid reports", () => {
 			},
 		});
 	});
+	it("reads the withdrawable figure as Hyperliquid wrote it, cut down, never rounded", () => {
+		const max = (maxWithdrawable: unknown) => {
+			const read = parseVaultDetails({ ...raw, maxWithdrawable });
+			return read.kind === "vault" ? read.vault.maxWithdrawable : null;
+		};
+		// what Hyperliquid sends today: at most 6 decimals, kept exactly
+		expect(max(10.005689)).toBe("10.005689");
+		expect(max(0.00569)).toBe("0.00569");
+		// more than 6 decimals is cut down: rounding would release more than there is
+		expect(max(4.9999995)).toBe("4.999999");
+		expect(max(10.0056899)).toBe("10.005689");
+		// a number JavaScript writes in exponent form
+		expect(max(5e-7)).toBe("0");
+		expect(max(1.5e-5)).toBe("0.000015");
+		expect(max(1e21)).toBe("1000000000000000000000");
+		// a figure given as text is taken as it is
+		expect(max("10.005689")).toBe("10.005689");
+		expect(max(Number.NaN)).toBeNull();
+		expect(max(null)).toBeNull();
+	});
 	it("a vault's name is its leader's own word: what does not show is dropped", () => {
 		const rlo = String.fromCodePoint(0x202e);
 		const named = (name: string) => {
@@ -610,6 +630,15 @@ describe("planDeposit", () => {
 		expect(plan()).toEqual([deposit]);
 		expect(plan({ perps: "50" })).toEqual([deposit]);
 		expect(plan({ unified: true, perps: "0", spot: "100" })).toEqual([deposit]);
+	});
+	it("moves a shortfall that a move can carry: 6 decimals, never less than missing", () => {
+		// a perps figure with 8 decimals: the move covers it to the millionth
+		expect(plan({ perps: "4.12345678", spot: "100" })).toEqual([
+			{ kind: "toPerps", amount: "45.876544" },
+			deposit,
+		]);
+		// and the typed deposit is never touched
+		expect(plan({ perps: "4.12345678", spot: "100" })[1]).toEqual(deposit);
 	});
 	it("moves the missing part from spot first in a manual account", () => {
 		expect(plan({ perps: "20", spot: "100" })).toEqual([

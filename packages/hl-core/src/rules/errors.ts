@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.12.0",
-	verifiedAt: "2026-10-13",
+	version: "1.13.0",
+	verifiedAt: "2026-10-19",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
 	sources: [
@@ -85,6 +85,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.12.0",
 			date: "2026-10-13",
 			note: 'Vaults, recorded on testnet through a multi-sig (fixtures/multisig/vaults.json): "Vault deposits must be at least $5.", "Vault is closed.", "This vault does not accept deposits.", "Vault not registered: <address>", "Cannot withdraw during lockup period after depositing." and "Insufficient vault equity for withdrawal". "Insufficient funds available to deposit." is also what a vault deposit gets when the perps balance cannot release that much, so its entry no longer speaks of staking alone (id `deposit-funds`, before `staking-deposit-funds`).',
+		},
+		{
+			version: "1.13.0",
+			date: "2026-10-19",
+			note: "\"Insufficient vault equity for withdrawal\" was also the answer to a mainnet withdrawal of exactly the deposit's worth as `userVaultEquities` reported it (10.005691 USDC, while `vaultDetails` with the depositor's address said `maxWithdrawable` 10.005689). That worth sat above the deposit's precise value for 22 of 25 HLP depositors read the same day, while `maxWithdrawable` was always the precise value cut down to 6 decimals. The entry now names `maxWithdrawable` as the limit; it no longer advises reading `userVaultEquities`.",
 		},
 	],
 });
@@ -696,8 +701,8 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		example: "Insufficient vault equity for withdrawal",
 		category: "account",
 		cause:
-			"A withdrawal of more than the account's deposit in that vault is worth now, or from a vault it has nothing in (recorded on testnet).",
-		fix: "Read the deposit again (userVaultEquities) and withdraw that much or less.",
+			"A withdrawal of more than Hyperliquid releases from the account's deposit in that vault now, or from a vault it has nothing in (recorded on testnet and on mainnet). The deposit's worth as userVaultEquities reports it can be above what is released.",
+		fix: "Read what can be withdrawn (vaultDetails with the depositor's address: maxWithdrawable) and withdraw that much or less; a vault's worth moves until the withdrawal is sent.",
 		documented: false,
 	},
 	{
