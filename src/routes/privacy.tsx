@@ -236,10 +236,10 @@ function PrivacyPage() {
 						own access logs for a limited time; the pages send it nothing else.
 					</p>
 					<p>
-						The relay runs on Supabase (a database and sign-in service), which
-						processes the data on our behalf and, like any host, sees the IP
-						addresses that connect to it and keeps its own access logs for a
-						limited time.
+						The relay runs on Supabase (a database and sign-in service), in the
+						EU (Frankfurt), which processes the data on our behalf and, like any
+						host, sees the IP addresses that connect to it and keeps its own
+						access logs for a limited time.
 					</p>
 					<p>
 						Proposals, signatures and the history of a treasury are kept until
