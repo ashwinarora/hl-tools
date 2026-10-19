@@ -37,6 +37,7 @@ import {
 	touchWallet,
 	walletOfSlot,
 } from "../model/relay/wallets";
+import { TOAST_MS } from "../model/toasts";
 import {
 	browserSlots,
 	endStoredSession,
@@ -74,9 +75,10 @@ const SESSION_RECHECK_MS = 60_000;
 const SIGN_IN_TOAST = "relay-sign-in";
 
 /**
- * A sign-in that did not finish: one line in a toast, staying until it is
- * closed or replaced when something failed; the exact reason folded under
- * "Details". Never written next to the button, and never twice.
+ * A sign-in that did not finish: one line in a toast, which closes by itself
+ * like every result's (it stays while the pointer is on it, to read the
+ * exact reason folded under "Details"). Never written next to the button,
+ * and never twice.
  */
 function showSignInNotice(n: SignInNotice) {
 	const description = n.details ? (
@@ -91,7 +93,7 @@ function showSignInNotice(n: SignInNotice) {
 		toast.error(n.title, {
 			id: SIGN_IN_TOAST,
 			description,
-			duration: Number.POSITIVE_INFINITY,
+			duration: TOAST_MS.failed,
 		});
 	else toast(n.title, { id: SIGN_IN_TOAST, description });
 }

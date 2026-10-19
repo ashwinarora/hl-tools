@@ -6,7 +6,7 @@ import {
 } from "@hl-tools/core";
 import { useNavigate } from "@tanstack/react-router";
 import { Download, Link2, Search, ShieldAlert, Upload } from "lucide-react";
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { CopyButton } from "#/components/hub/CopyButton";
 import { Field, Panel, TextArea } from "#/components/hub/layout";
 import { Callout, IssueList } from "#/components/hub/status";
@@ -23,6 +23,7 @@ import {
 import { download } from "#/lib/download";
 import { useHandoffStore } from "#/store/handoffStore";
 import { RELAY_COPY } from "../model/relay/copy";
+import { mergeToast } from "../model/toasts";
 import {
 	fileTransport,
 	linkTransport,
@@ -31,6 +32,7 @@ import {
 	type Published,
 } from "../model/transport";
 import { OFF_LOOK } from "../shell/kit";
+import { notify } from "../shell/notify";
 import type { StoreResult } from "./useProposalDoc";
 
 const NO_MORE: readonly {
@@ -206,6 +208,11 @@ export function SharePanel({
 		setText("");
 		setResult({ kind: "merged", added, total, issues });
 	};
+
+	// every merge's result, also in a toast
+	useEffect(() => {
+		if (result) notify(mergeToast(result));
+	}, [result]);
 
 	const merge = async (source: string) => {
 		if (also.length > 0) {

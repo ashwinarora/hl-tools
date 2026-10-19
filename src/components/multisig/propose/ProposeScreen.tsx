@@ -90,6 +90,12 @@ import {
 	signingNetwork,
 } from "../model/signingNetwork";
 import { isStakingKind, planStaking, STAKING } from "../model/staking";
+import {
+	done as doneToast,
+	failed as failedToast,
+	TOAST_LINES,
+	TOAST_TITLES,
+} from "../model/toasts";
 import { linkTransport } from "../model/transport";
 import {
 	isVaultKind,
@@ -114,6 +120,7 @@ import {
 	backLink as shellBack,
 } from "../shell/kit";
 import { useNow } from "../shell/live";
+import { notify } from "../shell/notify";
 import { ShellPage } from "../shell/ShellPage";
 import { Split } from "../shell/Split";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
@@ -767,6 +774,11 @@ function ProposeForm({
 		}
 	};
 	const createOnce = async (sign: boolean) => {
+		// on the page and in a toast: the button may be far below what it says
+		const fail = (f: { title: string; issues: readonly Issue[] }) => {
+			setFailure(f);
+			notify(failedToast(f.title, f.issues));
+		};
 		setAttempted(true);
 		setFailure(null);
 		setSigningCodes([]);
@@ -779,7 +791,7 @@ function ProposeForm({
 		const created = fresh.inputs.map((input) => createProposal(input, { now }));
 		const made = created.flatMap((c) => (c.proposal ? [c.proposal] : []));
 		if (made.length !== created.length) {
-			setFailure({
+			fail({
 				title: "The proposal could not be created",
 				issues: created.flatMap((c) => c.issues),
 			});
@@ -806,7 +818,7 @@ function ProposeForm({
 					// not a failure: the wallet has to be given the signing network first
 					if (got.needsNetwork) setNeedsNetwork(true);
 					else
-						setFailure({
+						fail({
 							title: "The wallet did not sign",
 							issues: [
 								{ code: "wallet", severity: "error", message: got.error },
@@ -818,7 +830,7 @@ function ProposeForm({
 					expectedSigner: wallet.address ?? undefined,
 				});
 				if (!signed.signature) {
-					setFailure({
+					fail({
 						title: "The wallet did not sign",
 						issues: signerFailure(signed.issues, "Nothing was created."),
 					});
@@ -845,6 +857,12 @@ function ProposeForm({
 				await shareMove(relay.client, relay.wallet, saved);
 				void client.invalidateQueries({ queryKey: ["relay", relay.wallet] });
 			}
+			notify(
+				doneToast(
+					TOAST_TITLES.created,
+					sign ? TOAST_LINES.signedOnly : undefined,
+				),
+			);
 			void navigate({
 				to: "/multisig/proposal",
 				search: { digest: (saved[0] ?? first).digest },
@@ -857,7 +875,7 @@ function ProposeForm({
 			).url;
 			if (url) globalThis.location.assign(url);
 			else
-				setFailure({
+				fail({
 					title: "The proposal could not be kept",
 					issues: [
 						{ code: "history", severity: "error", message: errorMessage(e) },

@@ -5,10 +5,16 @@ import { useState } from "react";
 import { download } from "#/lib/download";
 import { RELAY_COPY } from "../model/relay/copy";
 import { coSignerMessage } from "../model/relay/message";
+import {
+	done as doneToast,
+	failed as failedToast,
+	TOAST_TITLES,
+} from "../model/toasts";
 import { fileTransport } from "../model/transport";
 import { shareMove } from "../relay/api";
 import { useRelay } from "../relay/useRelay";
 import { Btn, Card, linkButtonSm } from "../shell/kit";
+import { notify } from "../shell/notify";
 import type { ProposalDoc } from "./useProposalDoc";
 
 /**
@@ -92,7 +98,12 @@ export function TellCoSigners({
 	const busy = sharing || all.some((x) => x.doc.relay.busy);
 	const share = async () => {
 		if (!also) {
-			await doc.publish();
+			const problem = await doc.publish();
+			notify(
+				problem
+					? failedToast(TOAST_TITLES.notShared, problem)
+					: doneToast(TOAST_TITLES.shared),
+			);
 			return;
 		}
 		const client = relay.client;
@@ -106,6 +117,11 @@ export function TellCoSigners({
 				all.map((x) => x.proposal),
 			);
 			setFailed(done.issue);
+			notify(
+				done.issue
+					? failedToast(TOAST_TITLES.notShared, done.issue)
+					: doneToast(TOAST_TITLES.shared),
+			);
 			await queries.invalidateQueries({ queryKey: ["relay", as] });
 		} finally {
 			setSharing(false);

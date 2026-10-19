@@ -55,6 +55,11 @@ import {
 	toLookUp,
 } from "../model/signerSet";
 import { submitUserAction } from "../model/submit";
+import {
+	done as doneToast,
+	failed as failedToast,
+	unsure as unsureToast,
+} from "../model/toasts";
 import { requestTreasury } from "../relay/api";
 import { useRequest } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -68,6 +73,7 @@ import {
 	StepTitle,
 } from "../shell/kit";
 import { useNow } from "../shell/live";
+import { notify } from "../shell/notify";
 import { ShellPage } from "../shell/ShellPage";
 import { SignInGate } from "../shell/SignInGate";
 import { Split } from "../shell/Split";
@@ -422,6 +428,14 @@ function Wizard({
 			);
 			setStep(null);
 			setOutcome(result);
+			const said = outcomeText(result, account);
+			notify(
+				said.tone === "success"
+					? doneToast(said.title)
+					: said.tone === "warning"
+						? unsureToast(said.title, said.body)
+						: failedToast(said.title, said.body),
+			);
 			if (result.kind === "converted") succeed(result.policy);
 			else if (result.kind === "unanswered" && result.policy)
 				succeed(result.policy);
