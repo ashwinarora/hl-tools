@@ -19,7 +19,7 @@ select tests.seed_treasury('testnet', 11, 1, array[4]);
 
 -- ----------------------------------------------------------------------- pings
 select tests.propose(1, 10, 2, 1);
-select is(tests.pinged(), tests.addrs(1, 2, 3)::text[], 'a new proposal pings every signer of that treasury, and nobody else');
+select is(tests.pinged(), tests.addrs(1, 2, 3, 10)::text[], 'a new proposal pings every signer of that treasury and the account itself, and nobody else');
 select results_eq(
 	$$ select distinct event, private, extension, payload - 'id' from realtime.messages where topic = 'wallet:' || tests.addr(2) $$,
 	$$ values ('changed', true, 'broadcast', '{}'::jsonb) $$,
@@ -27,23 +27,23 @@ select results_eq(
 select tests.forget_pings();
 
 select tests.sign(3, 10, 1);
-select is(tests.pinged(), tests.addrs(1, 2, 3)::text[], 'a signature pings them');
+select is(tests.pinged(), tests.addrs(1, 2, 3, 10)::text[], 'a signature pings them');
 select tests.forget_pings();
 select tests.end_it(1, 10, 1, 'withdrawn');
-select is(tests.pinged(), tests.addrs(1, 2, 3)::text[], 'an ending pings them');
+select is(tests.pinged(), tests.addrs(1, 2, 3, 10)::text[], 'an ending pings them');
 select tests.forget_pings();
 select tests.propose(1, 10, 2, 2);
 select tests.forget_pings();
 select tests.receipt(2, 10, 2, '{"status":"ok","response":{"type":"default"}}');
-select is(tests.pinged(), tests.addrs(1, 2, 3)::text[], 'a recorded result pings them');
+select is(tests.pinged(), tests.addrs(1, 2, 3, 10)::text[], 'a recorded result pings them');
 select tests.forget_pings();
 
 -- a signer change reaches the newcomer and the one removed
 select private.apply_lookup('testnet', tests.addr(10), 'policy', tests.addrs(1, 2, 5), 2);
-select is(tests.pinged(), tests.addrs(1, 2, 3, 5)::text[], 'a signer change pings the current signers and the one just removed');
+select is(tests.pinged(), tests.addrs(1, 2, 3, 5, 10)::text[], 'a signer change pings the current signers, the one just removed and the account itself');
 select tests.forget_pings();
 select tests.propose(1, 10, 2, 3);
-select is(tests.pinged(), tests.addrs(1, 2, 5)::text[], 'after that the removed signer hears nothing more');
+select is(tests.pinged(), tests.addrs(1, 2, 5, 10)::text[], 'after that the removed signer hears nothing more');
 select tests.forget_pings();
 
 -- adding a treasury: the asker hears the answer; every signer hears the addition
@@ -51,8 +51,8 @@ select tests.request(4, 'add', 'testnet', 20);
 select tests.request(5, 'add', 'testnet', 20);
 select is(tests.pinged(), '{}', 'asking pings nobody');
 select private.apply_lookup('testnet', tests.addr(20), 'policy', tests.addrs(1, 5), 1);
-select is(tests.pinged(), tests.addrs(1, 4, 5)::text[],
-	'the answer pings both askers (one accepted, one refused) and the co-signer who never asked');
+select is(tests.pinged(), tests.addrs(1, 4, 5, 20)::text[],
+	'the answer pings both askers (one accepted, one refused), the co-signer who never asked and the account itself');
 select tests.forget_pings();
 
 -- a treasury registered by the account itself: its signers hear of it

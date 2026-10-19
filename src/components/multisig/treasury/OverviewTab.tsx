@@ -571,7 +571,10 @@ export function OverviewTab({
 								Its signers last changed on <When at={treasury.changedAt} />.
 							</>
 						)}
-						{treasury.addedBy !== me && ` ${RELAY_COPY.addedByOther}`}
+						{/* a lure is about a signer's address: the account itself is not one */}
+						{treasury.addedBy !== me &&
+							me !== address &&
+							` ${RELAY_COPY.addedByOther}`}
 					</span>
 					{hydrated && (
 						<div className="flex flex-wrap items-center gap-2">

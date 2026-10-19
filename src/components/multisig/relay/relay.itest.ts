@@ -903,16 +903,46 @@ describe("an account that registers itself", () => {
 		}
 	});
 
-	it("still reads nothing of its treasury itself", async () => {
-		expect((await listTreasuries(own.client)).data?.rows).toEqual([]);
-		expect((await listEvents(own.client, NET, own.address)).data?.rows).toEqual(
-			[],
-		);
-		// its signers read the first history entry, which names the account
-		const seen = (await listEvents(a.client, NET, own.address)).data?.rows;
-		expect(seen?.map((e) => [e.kind, e.actor])).toEqual([
-			["treasury_added", own.address],
+	it("reads its treasury and its history as its signers do", async () => {
+		const mine = (await listTreasuries(own.client)).data?.rows ?? [];
+		expect(mine.map((t) => [t.address, t.signers])).toEqual([
+			[own.address, [a.address, b.address].sort()],
 		]);
+		// the first history entry names the account, for it and for its signers
+		for (const w of [own, a]) {
+			const seen = (await listEvents(w.client, NET, own.address)).data?.rows;
+			expect(seen?.map((e) => [e.kind, e.actor])).toEqual([
+				["treasury_added", own.address],
+			]);
+		}
+	});
+
+	it("writes nothing for it", async () => {
+		expect(
+			codes(
+				(
+					await setNickname(own.client, own.address, {
+						network: NET,
+						treasury: own.address,
+						address: own.address,
+						name: "Itself",
+					})
+				).issue,
+			),
+		).toBe("relay.not_allowed");
+		expect(
+			codes(
+				(
+					await requestTreasury(
+						own.client,
+						own.address,
+						NET,
+						own.address,
+						"check",
+					)
+				).issue,
+			),
+		).toBe("relay.not_allowed");
 	});
 
 	it("is refused while Hyperliquid does not show it as a multi-sig", async () => {

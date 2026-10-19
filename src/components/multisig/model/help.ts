@@ -45,7 +45,7 @@ export const HELP = {
 	},
 	treasuryAccount: {
 		title: "Treasury account",
-		body: "The wallet you are connected with is itself a treasury. Its own key can no longer act for it on Hyperliquid. To use that treasury, switch to one of its signers in your wallet.",
+		body: "The wallet you are connected with is itself a treasury. Its own key can no longer act for it on Hyperliquid, so here it can follow the treasury but not sign. To sign or propose, switch to one of its signers in your wallet.",
 	},
 	ownKey: {
 		title: "The account's own key",

@@ -160,7 +160,7 @@ select results_eq(
 	$$ values ('proposal_carried_out', null::public.address,
 		jsonb_build_object('tx_hash', tests.tx_hash(1), 'tx_time', 1791400180792, 'reported_by', tests.addr(3))) $$,
 	'the history names the transaction and who noticed; nobody is named as having sent it');
-select is(tests.pinged(), tests.addrs(1, 2, 3)::text[], 'every signer of the treasury is told');
+select is(tests.pinged(), tests.addrs(1, 2, 3, 10)::text[], 'every signer of the treasury is told, and the account itself');
 select results_eq($$ select kind, units, outcome from private.lookup_log order by id desc limit 1 $$,
 	$$ values ('tx', 2, 'tx') $$, 'the call is logged as an explorer call, counting double');
 select is((select last_kind from private.worker_state), 'tx', 'and the worker remembers what it did last');

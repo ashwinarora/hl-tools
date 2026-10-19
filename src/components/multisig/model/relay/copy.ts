@@ -118,10 +118,10 @@ export const RELAY_COPY = {
 		"Registered by the account itself when it was first converted",
 	registerSelfTitle: "this is the wallet you are signed in with",
 	registerSelfBody:
-		"Register it so that its signers find it in their list. You will not see it here yourself: sign in as one of its signers for that.",
+		"Register it so that its signers find it in their list. You can then follow its proposals here too; signing them is for its signers.",
 	registerSelfButton: "Register it",
 	selfSeesNothing:
-		"Its proposals and its signing log are shown to its signers, not to the account itself. If they do not find it in their list:",
+		"The sharing service does not hold this treasury yet. Once it is registered, its signers find it in their list and you can follow its proposals here:",
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;
