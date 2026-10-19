@@ -66,7 +66,7 @@ flowchart TB
 - **`supabase/`** is the optional relay for the Multisig Signer: hand-written migrations (tables with row-level security, the look-up worker, live pings, schedules) and their pgTAP tests. It stores and gates; it is never trusted. Every browser verifies each document and signature itself and judges readiness against the chain, so a relay can delay or hide but cannot forge or move funds. With its two environment variables unset, the app does not contain a sign-in at all.
 - **Live account data** comes straight from Hyperliquid to the browser: one WebSocket per network for the treasury on screen (the core's `ws/hub.ts`), a few HTTP reads a minute for its signers, API wallets and account mode, and for its staking and vault figures while those are shown, two reads about an address a send names (is it new, and its mode), and the explorer only to tie a transfer to a proposal (one request for the account's newest transactions; a single transaction only when that list cannot have it); and for the "while you were away" notice, the transfers of each of the wallet's treasuries since it was last marked read, at most once in five minutes. None of it passes through the relay or is stored.
 - **Browser storage.** IndexedDB holds recorded WebSocket sessions and the multi-sig proposals you made or opened. It is this browser's memory, not chain data: a proposal exists for the chain only once it is submitted, and the document (link, file or the relay's copy) is the whole proposal. localStorage holds preferences (network, theme, treasuries hidden or named in this browser), the sessions of the wallets signed in to a relay, and, under `hl-tools:multisig-drafts`, what was typed into a Multisig form and not yet created (one draft per treasury, the newest twenty, for a week).
-- **The signing network.** A vault action is signed as a code under chain id 1337. The network the wallet adds for that points at a stand-in ([`src/lib/signingRpc.ts`](src/lib/signingRpc.ts)) that answers which chain it is, a block number and zero balances, refuses every transaction and keeps nothing. A build without `VITE_CHAIN_1337_RPC_URL` has no vault forms.
+- **The signing network.** A vault action is signed as a code under chain id 1337. The network the wallet adds for that points at `/rpc/1337` on the site itself, a stand-in ([`src/lib/signingRpc.ts`](src/lib/signingRpc.ts)) that answers which chain it is, a block number and zero balances, refuses every transaction and keeps nothing. A build without `VITE_CHAIN_1337_RPC_URL` has no vault forms.
 - Why things are built the way they are: [DECISIONS.md](DECISIONS.md). What was tested, with which inputs, plus screenshots of every page: [TESTING.md](TESTING.md).
 
 ## Run it
@@ -97,7 +97,7 @@ VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
 | `bun run db:reset` | Rebuild the local relay database from `supabase/migrations/` |
 | `bun run db:test` | pgTAP: the relay's access rules, guards and worker (1,015 assertions) |
 | `bun run test:relay` | Integration tests of the relay client against the local stack (78 tests) |
-| `bun run rpc:1337` | Serve the signing network's stand-in on `http://localhost:3337/rpc` (for vault forms) |
+| `bun run rpc:1337` | Serve the signing network's stand-in on its own, on `http://localhost:3337/rpc` (the app also serves it at `/rpc/1337`) |
 
 ### Run your own relay (optional)
 
@@ -118,19 +118,21 @@ Open the app as `http://localhost:3000`, not `127.0.0.1`: signing in with a wall
 
 ### Vault forms (optional)
 
-Vault deposits and withdrawals in the Multisig Signer are signed as a code under chain id 1337, and a wallet signs one only while it is on a network with that id. Serve the stand-in and name its link in `.env`, then restart the dev server:
-
-```bash
-bun run rpc:1337         # http://localhost:3337/rpc
-```
+Vault deposits and withdrawals in the Multisig Signer are signed as a code under chain id 1337, and a wallet signs one only while it is on a network with that id. The app serves that network's stand-in at `/rpc/1337`; name the link in `.env` and restart the dev server:
 
 ```
-VITE_CHAIN_1337_RPC_URL=http://localhost:3337/rpc
+VITE_CHAIN_1337_RPC_URL=http://localhost:3000/rpc/1337
 ```
+
+In production the link is `https://<your site>/rpc/1337`, and it must never change: a wallet keeps the link it added. (`bun run rpc:1337` serves the same answers on its own, on `http://localhost:3337/rpc`.)
 
 The page then offers "Add the signing network" where a vault action is signed. Without the line the vault forms are absent, and a vault proposal that arrives as a link or a file can be read and checked but not signed.
 
-Dev-only helpers: `?devtools=1` shows the TanStack devtools, and `/faucet-miner?mock=1` runs the faucet miner against an MSW mock of the Hyperliquid API, so no funds move.
+Dev-only helpers: `?devtools=1` shows the TanStack devtools, and `/faucet-miner?mock=1` runs the faucet miner against an MSW mock of the Hyperliquid API, so no funds move (the mock's service worker is left out of the production build).
+
+### Production
+
+`bun run build`, then `bun run start` (a Node server; `PORT` sets the port), as the host runs it. (`bun --bun run build` makes a server for Bun instead: start it with `bun .output/server/index.mjs`.) Every response carries the site's security headers ([`src/lib/securityHeaders.ts`](src/lib/securityHeaders.ts), set in [`src/start.ts`](src/start.ts)): in production a Content-Security-Policy lets only the site's own scripts run, plus the inline ones the server writes with that response's nonce. Check a change against a production build: the development server sends no policy.
 
 ## Contributing fixtures
 
@@ -177,4 +179,4 @@ Independent open-source project, not affiliated with Hyperliquid. The diagnostic
 
 ## License
 
-MIT
+The app is licensed under the [GNU Affero General Public License v3.0](LICENSE): you may use, change and host it, and whoever runs a changed version as a website must publish their changes under the same license. The protocol core, [`packages/hl-core`](packages/hl-core), is [MIT](packages/hl-core/LICENSE).
