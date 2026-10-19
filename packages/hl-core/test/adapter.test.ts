@@ -350,3 +350,30 @@ describe("InfoClient staking methods", () => {
 		expect(seen).toHaveLength(3);
 	});
 });
+
+describe("InfoClient outcome lists", () => {
+	it("reads the outcomes and the templates their names are written with, each kept for a while", async () => {
+		const { seen, transport } = fakeTransport({
+			outcomeMeta: { outcomes: [], questions: [] },
+			outcomeTemplates: [{ id: "binaryPrice", role: "x", name: "{perp}" }],
+		});
+		let now = 0;
+		const client = new InfoClient("testnet", { transport, now: () => now });
+		expect((await client.outcomeMeta()).data).toEqual({
+			outcomes: [],
+			questions: [],
+		});
+		expect((await client.outcomeTemplates()).data).toHaveLength(1);
+		now = 59_000;
+		await client.outcomeMeta();
+		await client.outcomeTemplates();
+		expect(seen).toEqual([
+			{ type: "outcomeMeta" },
+			{ type: "outcomeTemplates" },
+		]);
+		now = 61_000;
+		await client.outcomeMeta();
+		await client.outcomeTemplates();
+		expect(seen).toHaveLength(3);
+	});
+});

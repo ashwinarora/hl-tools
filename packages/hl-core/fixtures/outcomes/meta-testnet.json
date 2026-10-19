@@ -1,0 +1,1984 @@
+{
+	"network": "testnet",
+	"recordedAt": 1792426724323,
+	"requests": [
+		"outcomeMeta",
+		"outcomeTemplates"
+	],
+	"outcomeMeta": {
+		"outcomes": [
+			{
+				"outcome": 10217,
+				"name": "Fallback",
+				"description": "",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC"
+			},
+			{
+				"outcome": 10225,
+				"name": "June Fed rate change",
+				"description": "The market resolves to Change if the upper bound of the target federal funds rate range in the Federal Open Market Committee (FOMC) statement for the meeting currently scheduled for June 16-17, 2026 differs from the upper bound of the target range set by the most recent prior FOMC statement. Otherwise, the market resolves to No Change. The market also resolves to No Change if the June 16-17, 2026 meeting is canceled, or if no FOMC statement containing a rate decision for that meeting is released by 23:59 ET on July 29, 2026. The target range stated in the FOMC statement for the June 16-17, 2026 meeting determines the result. If that statement is unavailable or does not clearly state the target range, the post-meeting target range upper bound shown on the Federal Reserve's open market operations page determines the result. Resolution uses the initially released decision; later revisions after resolution are not considered. Scheduled meeting dates and source references are provided for convenience and are not binding terms of resolution.",
+				"sideSpecs": [
+					{
+						"name": "Change"
+					},
+					{
+						"name": "No Change"
+					}
+				],
+				"quoteToken": "USDC"
+			},
+			{
+				"outcome": 11014,
+				"name": "template:binaryPrice",
+				"description": "perp:PURR|threshold:1.5225|time:20260731-1912",
+				"sideSpecs": [
+					{
+						"name": "template:Yes"
+					},
+					{
+						"name": "template:No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "aw"
+			},
+			{
+				"outcome": 11274,
+				"name": "template:binaryPrice2",
+				"description": "perp:BTC|threshold:123456|time:20261201-0010",
+				"sideSpecs": [
+					{
+						"name": "template:Yes"
+					},
+					{
+						"name": "template:No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "ad"
+			},
+			{
+				"outcome": 11276,
+				"name": "template:sportsContestParticipant",
+				"description": "participant:Cats",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "ad"
+			},
+			{
+				"outcome": 11277,
+				"name": "template:sportsContestDraw",
+				"description": "",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "ad"
+			},
+			{
+				"outcome": 11850,
+				"name": "template:policyRateDecrease",
+				"description": "",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "mkr"
+			},
+			{
+				"outcome": 11851,
+				"name": "template:policyRateIncrease",
+				"description": "",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "mkr"
+			},
+			{
+				"outcome": 12393,
+				"name": "template:scalePrice",
+				"description": "high:1250|low:1100|perp:xyz:SKHX|priceDescription:Hyperliquid SKHX-Perp mark|seconds:4000|time:20260815-1126",
+				"sideSpecs": [
+					{
+						"name": "template:Long"
+					},
+					{
+						"name": "template:Short"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "aa",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 12562,
+				"name": "template:sportsContestWinner2",
+				"description": "competition:MLB|contestType:game|officialSource:MLB|participantA:Arsenal|participantB:Chelsea|resolutionDeadline:20260822-0812|scheduledStart:20260822-0313|season:2026|sport:baseball|stage:Regular season",
+				"sideSpecs": [
+					{
+						"name": "template:{shortNameA}"
+					},
+					{
+						"name": "template:{shortNameB}"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "mig",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 12566,
+				"name": "template:sportsScalarMarket",
+				"description": "high:1.5|low:1.5|measure:Goals",
+				"sideSpecs": [
+					{
+						"name": "template:Over"
+					},
+					{
+						"name": "template:Under"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "mig",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 13779,
+				"name": "template:binaryPrice4",
+				"description": "perp:xyz:SKHX|priceDescription:xyz:SPCX|seconds:30|threshold:148.72|time:20260822-2048",
+				"sideSpecs": [
+					{
+						"name": "template:Yes"
+					},
+					{
+						"name": "template:No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "hehe",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 15358,
+				"name": "template:sportsContestParticipant3",
+				"description": "participant:Bsain",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "yeet",
+				"deployerFeeScale": "0.75"
+			},
+			{
+				"outcome": 15383,
+				"name": "template:sportsScalarMarket3",
+				"description": "event:Lontong|high:2|low:1|measure:Lontong|officialSource:Lontong Inc.|resolutionDeadline:20261212-1212|scheduledStart:20261212-1212|sport:Lontong",
+				"sideSpecs": [
+					{
+						"name": "template:Over"
+					},
+					{
+						"name": "template:Under"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "lo",
+				"deployerFeeScale": "3.0"
+			},
+			{
+				"outcome": 15384,
+				"name": "template:sportsContestWinner6",
+				"description": "competition:Lontong making|contestType:cooking contest|officialSource:MasterCef|participantA:Ibu Basmati|participantB:Pak Nasi|resolutionDeadline:20260923-1656|scheduledStart:20260831-1656|season:26/27|shortNameA:Ibu|shortNameB:Pak|sport:cooking|stage:finals",
+				"sideSpecs": [
+					{
+						"name": "template:{shortNameA}"
+					},
+					{
+						"name": "template:{shortNameB}"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "lo",
+				"deployerFeeScale": "4.85"
+			},
+			{
+				"outcome": 15718,
+				"name": "template:priceTouch2",
+				"description": "perp:MATIC|priceDescription:mark|seconds:30|target:1000|time:20260829-1600",
+				"sideSpecs": [
+					{
+						"name": "template:Yes"
+					},
+					{
+						"name": "template:No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "momo",
+				"deployerFeeScale": "3.0"
+			},
+			{
+				"outcome": 16157,
+				"name": "template:policyRateNoChange3",
+				"description": "",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "ai"
+			},
+			{
+				"outcome": 16158,
+				"name": "template:policyRateDecrease3",
+				"description": "",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "ai"
+			},
+			{
+				"outcome": 16159,
+				"name": "template:policyRateIncrease3",
+				"description": "",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "ai"
+			},
+			{
+				"outcome": 16289,
+				"name": "template:sportsContestWinner",
+				"description": "competition:SMOKE|contestType:game|officialSource:smoke.test|participantA:Smoke Team A|participantB:Smoke Team B|resolutionDeadline:20260910-1200|scheduledStart:20260907-1700|season:2026|sport:football|stage:1",
+				"sideSpecs": [
+					{
+						"name": "template:Yes"
+					},
+					{
+						"name": "template:No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "au"
+			},
+			{
+				"outcome": 17575,
+				"name": "template:sportsTournamentParticipant4",
+				"description": "participant:Japan",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "spcl"
+			},
+			{
+				"outcome": 18446,
+				"name": "template:sportsContestWinner3",
+				"description": "competition:MLB|contestType:game|officialSource:MLB.com|participantA:Texas Rangers|participantB:Seattle Mariners|resolutionDeadline:20260917-2010|scheduledStart:20260910-2010|season:2026|shortNameA:tex|shortNameB:sea|sport:Baseball|stage:Regular Season",
+				"sideSpecs": [
+					{
+						"name": "template:{shortNameA}"
+					},
+					{
+						"name": "template:{shortNameB}"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "txya"
+			},
+			{
+				"outcome": 20086,
+				"name": "template:awardOther",
+				"description": "",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "ao"
+			},
+			{
+				"outcome": 20115,
+				"name": "template:binaryPriceExternal",
+				"description": "feed:Coinbase Exchange trades API: api.exchange.coinbase.com/products/BTC-USD/trades|instrument:Coinbase Exchange BTC-USD spot pair|priceDescription:USD per BTC spot (latest trade at or before each instant)|seconds:300|shortName:BTC-USD|threshold:100000|time:20261001-1600",
+				"sideSpecs": [
+					{
+						"name": "template:Yes"
+					},
+					{
+						"name": "template:No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "ao"
+			},
+			{
+				"outcome": 20354,
+				"name": "template:scalarPrice3",
+				"description": "high:5.5|low:5.25|perp:frce:US10Y|priceDescription:the frce:US10Y mark|seconds:3600|time:20261015-1600",
+				"sideSpecs": [
+					{
+						"name": "template:Long"
+					},
+					{
+						"name": "template:Short"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "of",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 20691,
+				"name": "template:awardCandidate",
+				"description": "candidate:Lionel Messi |subject:Lionel Messi (Inter Miami, Argentina)",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "sdn"
+			},
+			{
+				"outcome": 22496,
+				"name": "template:aiModelHeadToHead",
+				"description": "dateTime:20261002-1700|modelA:gemini-4-argon-high|modelB:claude-opus-5.5-high|shortNameA:Gemini|shortNameB:Opus",
+				"sideSpecs": [
+					{
+						"name": "template:{shortNameA}"
+					},
+					{
+						"name": "template:{shortNameB}"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "at",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 22498,
+				"name": "template:sportsTotal",
+				"description": "countedPlay:full game including overtime|line:54.5|measure:points|officialSource:espn.com|participantA:Pittsburgh Panthers|participantB:Virginia Tech Hokies|resolutionDeadline:20261003-2300|scheduledStart:20261002-2300|sport:american football",
+				"sideSpecs": [
+					{
+						"name": "template:Over"
+					},
+					{
+						"name": "template:Under"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "at",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 22499,
+				"name": "template:sportsSpread",
+				"description": "countedPlay:full game including overtime|measure:points|officialSource:espn.com|participantA:Pittsburgh Panthers|participantB:Virginia Tech Hokies|resolutionDeadline:20261003-2300|scheduledStart:20261002-2300|shortNameA:Pitt|sport:american football|spread:+2.5",
+				"sideSpecs": [
+					{
+						"name": "template:Yes"
+					},
+					{
+						"name": "template:No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "at",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 22989,
+				"name": "template:binaryPrice6",
+				"description": "perp:BTC|priceDescription:the Hyperliquid BTC perp trade|seconds:90|threshold:86000|time:20261006-2300",
+				"sideSpecs": [
+					{
+						"name": "template:Yes"
+					},
+					{
+						"name": "template:No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "kelp",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 24274,
+				"name": "template:sportsContestWinner7",
+				"description": "competition:NBA|contestType:game|officialSource:ESPN|participantA:Atlanta Hawks|participantB:Dallas Mavericks|resolutionDeadline:20261017-0600|scheduledStart:20261017-0000|season:2027|shortNameA:Hawks|shortNameB:Mavericks|sport:basketball|stage:Preseason",
+				"sideSpecs": [
+					{
+						"name": "template:{shortNameA}"
+					},
+					{
+						"name": "template:{shortNameB}"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "wren",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 24496,
+				"name": "template:policyRateNoChange",
+				"description": "",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "dorn",
+				"deployerFeeScale": "1.0"
+			},
+			{
+				"outcome": 24590,
+				"name": "template:sportsContestDraw5",
+				"description": "",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "beat"
+			},
+			{
+				"outcome": 24591,
+				"name": "template:sportsContestParticipant5",
+				"description": "participant:RB Leipzig",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "beat"
+			},
+			{
+				"outcome": 24731,
+				"name": "Recurring",
+				"description": "class:priceBinary|underlying:ZEC|expiry:20261020-0300|targetPrice:138.65|period:1d",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC"
+			},
+			{
+				"outcome": 24750,
+				"name": "Recurring Fallback",
+				"description": "other",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC"
+			},
+			{
+				"outcome": 24753,
+				"name": "Recurring Named Outcome",
+				"description": "index:2",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC"
+			},
+			{
+				"outcome": 24788,
+				"name": "template fallback",
+				"description": "other",
+				"sideSpecs": [
+					{
+						"name": "Yes"
+					},
+					{
+						"name": "No"
+					}
+				],
+				"quoteToken": "USDC",
+				"venue": "ag"
+			}
+		],
+		"questions": [
+			{
+				"question": 820,
+				"name": "May CPI year-over-year",
+				"description": "The question resolves by assigning Yes to exactly one of Below 4.3%, Exactly 4.3%, or Above 4.3% based on the Bureau of Labor Statistics Consumer Price Index news release for May 2026, currently scheduled for June 10, 2026 at 8:30 AM ET. The relevant value is the non-seasonally adjusted all items Consumer Price Index for All Urban Consumers (CPI-U) percent change over the 12 months ending May 2026, as reported to one decimal place in the official monthly CPI news release. If BLS has not published the May 2026 all items CPI-U figure by July 15, 2026, or if BLS announces that it will not publish the May 2026 all items CPI-U figure, the question instead resolves to the most recently published month's non-seasonally adjusted all items CPI-U 12-month percent change available at that time. If the May 2026 release occurs on a date other than the scheduled date, the rescheduled release is still used for resolution, provided the figure is published by July 15, 2026. Resolution uses the initial published value, not subsequent revisions.",
+				"fallbackOutcome": 10217,
+				"namedOutcomes": [
+					10218,
+					10219,
+					10220
+				],
+				"settledNamedOutcomes": []
+			},
+			{
+				"question": 927,
+				"name": "template:sportsContestResult",
+				"description": "competition:Hypurr Dodgeball League|contestType:match|officialSource:Hypurr Dodgeball League|participantA:Cats|participantB:Humans|resolutionDeadline:20260908-2359|scheduledStart:20260901-1800|season:2026|sport:dodgeball|stage:Final",
+				"fallbackOutcome": 11275,
+				"namedOutcomes": [
+					11276,
+					11277,
+					11278
+				],
+				"settledNamedOutcomes": []
+			},
+			{
+				"question": 965,
+				"name": "template:policyRateDecision",
+				"description": "decisionDeadline:20261016-1800|decisionLabel:September 2026|institution:Federal Reserve|officialSource:federalreserve.gov|policyMeasure:the federal funds target range upper bound|scheduledDecision:20260916-1800",
+				"fallbackOutcome": 11848,
+				"namedOutcomes": [
+					11849,
+					11850,
+					11851
+				],
+				"settledNamedOutcomes": []
+			},
+			{
+				"question": 1144,
+				"name": "template:sportsContestResult3",
+				"description": "competition:0.75 Mile|contestType:Parkrun|officialSource:Leinegen|participantA:Mionel Lessi|participantB:Bsain Uolt|resolutionDeadline:20260910-1537|scheduledStart:20260924-1535|season:2026|sport:running|stage:Finals",
+				"fallbackOutcome": 15356,
+				"namedOutcomes": [
+					15357,
+					15358
+				],
+				"settledNamedOutcomes": [
+					15408
+				]
+			},
+			{
+				"question": 1245,
+				"name": "template:policyRateDecision3",
+				"description": "decisionDeadline:20261028-2359|decisionLabel:September 2026|institution:Federal Reserve's Open Market Committee|officialSource:realityArbSepolia: 0x05ce5359 213f8d53 31133de9 fc2cfd23 c056a1c4 5ee4256c 1541d4ef 250b36a6|policyMeasure:the upper bound target range for the federal funds rate|scheduledDecision:20260916-1800",
+				"fallbackOutcome": 16156,
+				"namedOutcomes": [
+					16157,
+					16158,
+					16159
+				],
+				"settledNamedOutcomes": []
+			},
+			{
+				"question": 1306,
+				"name": "template:sportsTournamentWinner4",
+				"description": "competition:Asian Men's Volleyball Championship|officialSource:asianvolleyball.net|resolutionDeadline:20260920-0000|season:2026|sport:Volleyball",
+				"fallbackOutcome": 17574,
+				"namedOutcomes": [
+					17575
+				],
+				"settledNamedOutcomes": []
+			},
+			{
+				"question": 1376,
+				"name": "template:awardWinner",
+				"description": "award:Booker Prize|awardingBody:Booker Prize Foundation|field:literature|period:2026|resolutionDeadline:20261116-0000",
+				"fallbackOutcome": 20083,
+				"namedOutcomes": [
+					20084,
+					20085,
+					20086
+				],
+				"settledNamedOutcomes": []
+			},
+			{
+				"question": 1382,
+				"name": "template:awardWinner",
+				"description": "award:Ballon d'or|awardingBody:France football|field:soccer|period:2026|resolutionDeadline:20261031-2359",
+				"fallbackOutcome": 20686,
+				"namedOutcomes": [
+					20687,
+					20688,
+					20689,
+					20690,
+					20691,
+					20692,
+					20693
+				],
+				"settledNamedOutcomes": []
+			},
+			{
+				"question": 1463,
+				"name": "template:policyRateDecision",
+				"description": "decisionDeadline:20261028-0000|decisionLabel:week of 2026-10-25|institution:TRUF.NETWORK|officialSource:TRUF.NETWORK|policyMeasure:the US CPI year-on-year rate, rounded to one decimal place|scheduledDecision:20261025-0000",
+				"fallbackOutcome": 24493,
+				"namedOutcomes": [
+					24494,
+					24495,
+					24496
+				],
+				"settledNamedOutcomes": []
+			},
+			{
+				"question": 1472,
+				"name": "template:sportsContestResult5",
+				"description": "competition:UEFA Champions League|contestType:Match|officialSource:Union of European Football Associations|participantA:Real Madrid|participantB:RB Leipzig|resolutionDeadline:20261022-1900|scheduledStart:20261021-1900|season:2026/27|sport:Soccer|stage:Matchday 3",
+				"fallbackOutcome": 24588,
+				"namedOutcomes": [
+					24589,
+					24590,
+					24591
+				],
+				"settledNamedOutcomes": []
+			},
+			{
+				"question": 1488,
+				"name": "Recurring",
+				"description": "class:priceBucket|underlying:BTC|expiry:20261020-0600|priceThresholds:81099,84410|period:1d",
+				"fallbackOutcome": 24750,
+				"namedOutcomes": [
+					24751,
+					24752,
+					24753
+				],
+				"settledNamedOutcomes": []
+			},
+			{
+				"question": 1489,
+				"name": "template:policyRateDecision",
+				"description": "decisionDeadline:20261102-1800|decisionLabel:November 2026|institution:Federal Reserve|officialSource:federalreserve.gov|policyMeasure:target federal funds rate|scheduledDecision:20261101-1800",
+				"fallbackOutcome": 24788,
+				"namedOutcomes": [],
+				"settledNamedOutcomes": [
+					24789,
+					24790,
+					24791
+				]
+			}
+		]
+	},
+	"outcomeTemplates": [
+		{
+			"id": "aiModelHeadToHead",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"{shortNameA}",
+						"{shortNameB}"
+					]
+				}
+			},
+			"name": "{shortNameA} v {shortNameB} on {dateTime}",
+			"description": "This market compares {modelA} ({shortNameA}) and {modelB} ({shortNameB}) on {dateTime} using Arena's Text Overall leaderboard at https://arena.ai/leaderboard/text/overall-no-style-control, with style control and factuality adjustments off and all models included. Each model is the exact version and configuration identified by its leaderboard name. Renames count only if Arena identifies the same model; replacements and other configurations do not. A relocated or renamed leaderboard counts only if Arena identifies the same Text Overall evaluation. The Snapshot is the latest official leaderboard version public at or before {dateTime}. Proof requires official publication metadata identifying that version or a verifiable timestamped capture of its contents by then. A date alone suffices only if the entire date precedes the deadline in an established timezone. Later captures qualify only if official metadata or earlier captures prove identical contents public by the deadline. Official version order prevails; capture order alone does not order versions. Unresolved conflicts over version selection or required facts leave them unestablished. Comparison favors lower optimistic rank, then higher displayed Arena Score, then more votes. Later criteria apply only if earlier ones are equal. Optimistic rank uses Arena's lower Rank Spread endpoint, or Rank (UB) if absent. If either model has neither, both ranks are one plus the number of other included models whose lower 95% score bound exceeds that model's upper bound, using displayed intervals and precision across all included models. Published ranks otherwise prevail; row rank is no substitute. Scores use displayed point estimates. Optimistic rank can favor a lower score with greater uncertainty. The market resolves to 0.5 if either model is absent, both names identify the same model, the Snapshot or a required fact is unestablished by the evidence cutoff, or the leaderboard was discontinued without a qualifying successor by {dateTime}. Otherwise, it resolves to {shortNameA} if comparison favors {modelA}, to {shortNameB} if it favors {modelB}, and to 0.5 if tied after votes. A resolution to 0.5 pays $0.50 per token on either side. Unused tiebreak values are unnecessary. Evidence is limited to Arena's official records and verifiable timestamped leaderboard captures public by 24 hours after {dateTime}; resolution occurs only after that cutoff. Evidence may authenticate the Snapshot as published, including model identities; corrections, reassignments, and versions first public after {dateTime} are excluded even if their data covers an earlier period. All comparisons use the same Snapshot. This market is not sponsored by, endorsed by, or affiliated with Arena or any model developer referenced. Names and trademarks are descriptive only. metadata=category:technology|subCategory:N/A|semanticRestriction:This market must compare two specific AI language models on a public performance leaderboard.",
+			"keywords": [
+				[
+					"dateTime",
+					"dateTime"
+				],
+				[
+					"modelA",
+					"string"
+				],
+				[
+					"modelB",
+					"string"
+				],
+				[
+					"shortNameA",
+					"shortString"
+				],
+				[
+					"shortNameB",
+					"shortString"
+				]
+			]
+		},
+		{
+			"id": "awardCandidate",
+			"role": {
+				"questionOutcome": {
+					"parent": "awardWinner"
+				}
+			},
+			"name": "{candidate}",
+			"description": "This outcome resolves to Yes if, under the parent question's rules, it is the earliest registered candidate not otherwise resolved to No that identifies the one winning entry of the Award, and otherwise resolves to No. Its Subject is {subject}. A Subject that identifies a work, group, or named person on more than one entry, or that {candidate} does not name in full or in short form, identifies no entry. Resolution follows the parent question's timing and source rules. {candidate} is a display label.",
+			"keywords": [
+				[
+					"candidate",
+					"string"
+				],
+				[
+					"subject",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "awardOther",
+			"role": {
+				"questionOutcome": {
+					"parent": "awardWinner"
+				}
+			},
+			"name": "Other",
+			"description": "This outcome resolves to Yes if the parent question's Other conditions apply, and otherwise resolves to No.",
+			"keywords": []
+		},
+		{
+			"id": "awardWinner",
+			"role": "question",
+			"name": "{period} {award} winner",
+			"description": "This {field} market covers the {period} {award} (the \"Award\"). Among editions of one award that {awardingBody} confers or administers with a winner due by {resolutionDeadline}, {period} identifies one by {awardingBody}'s labeling or, failing that, by the year its winner is due; otherwise the Award Result is unestablished. It has one named outcome per listed candidate plus one called Other, which may be registered at any time. Exactly one outcome resolves to Yes; all others resolve to No. An entry is one nominee, finalist, or winner of the Award as official channels record it, including a group recorded as one, with every work and person named on it as its nominee or recipient, even jointly, not as a member or representative of a group. A candidate identifies an entry if its Subject unambiguously identifies a work, group, or named person on that entry and no other entry of the Award. Official channels are the publications, events, and broadcasts of {awardingBody} and the Award's conferring body and administrator. The trigger is the earliest verifiable announcement on an official channel of the result: a winner, winners, or that the Award is withheld or not conferred; an announcement is not a trigger if, within one hour after it and before {resolutionDeadline}, it is withdrawn or removed or an official channel contradicts it. Fixing is the earlier of one hour after the trigger and {resolutionDeadline}, or {resolutionDeadline} without a trigger. The Award Result is the winner official channels have named as of fixing; a verifiably later statement supersedes earlier ones on the same channel or made at an event or broadcast, an explicit correction by fixing prevails across channels, other conflicts leave it unestablished, and omission is not a conflict. A candidate registered after the earliest official-channel announcement of a winner of the Award, whether or not it is a trigger, or that identifies no entry at fixing, resolves to No. A candidate finally resolves to No once official channels publish final nominees or finalists none of which it identifies or show it identifies the same entry as an earlier registered candidate. Of the remaining candidates, the earliest registered identifying the one winning entry the Award Result names resolves to Yes; all others resolve to No. Other resolves to Yes if no candidate resolves to Yes, including if the Award Result is unestablished at fixing, names no winner, or names more than one winning entry, such as a tie. Only evidence public by 24 hours after fixing establishes the trigger and the Award Result at fixing; timestamps must prove when contents were public; a Yes resolution occurs only after that cutoff. This market is not sponsored by, endorsed by, or affiliated with any entity referenced. Names and trademarks are descriptive only. metadata=category:culture|subCategory:{field}|semanticRestriction:This market must refer to the single winner of an award or honor, not a selection for office or candidacy.",
+			"keywords": [
+				[
+					"award",
+					"string"
+				],
+				[
+					"awardingBody",
+					"string"
+				],
+				[
+					"field",
+					"string"
+				],
+				[
+					"period",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "binaryPrice",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Yes",
+						"No"
+					]
+				}
+			},
+			"name": "{perp} above {threshold} at {time}?",
+			"description": "If the {perp} mark price at time of settlement is above {threshold} at {time}, Yes tokens pay out $1 each. Otherwise, No tokens pay out $1 each.",
+			"keywords": [
+				[
+					"perp",
+					"hlPerp"
+				],
+				[
+					"threshold",
+					"string"
+				],
+				[
+					"time",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "binaryPrice2",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Yes",
+						"No"
+					]
+				}
+			},
+			"name": "{perp} above {threshold} at {time}?",
+			"description": "If the {perp} mark price at time of settlement is above {threshold} at {time}, Yes tokens pay out $1 each. Otherwise, No tokens pay out $1 each.",
+			"keywords": [
+				[
+					"perp",
+					"hlPerp"
+				],
+				[
+					"threshold",
+					"uDecimal"
+				],
+				[
+					"time",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "binaryPrice4",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Yes",
+						"No"
+					]
+				}
+			},
+			"name": "{perp} above {threshold} at {time}?",
+			"description": "If the {perp} price at time of settlement is above {threshold} at {time}, Yes tokens pay out $1 each. Otherwise, No tokens pay out $1 each. Settlement is according to the {seconds}-second TWAP of {priceDescription} price before settlement time.",
+			"keywords": [
+				[
+					"perp",
+					"hlPerp"
+				],
+				[
+					"priceDescription",
+					"string"
+				],
+				[
+					"seconds",
+					"uInt"
+				],
+				[
+					"threshold",
+					"uDecimal"
+				],
+				[
+					"time",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "binaryPrice6",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Yes",
+						"No"
+					]
+				}
+			},
+			"name": "{perp} above {threshold} at {time}?",
+			"description": "If the {perp} price is above {threshold} at {time}, Yes tokens pay out $1 each. Otherwise, No tokens pay out $1 each. Settlement is according to the {seconds}-second TWAP of {priceDescription} price before settlement time. metadata=category:price|subCategory:N/A|semanticRestriction:This market must refer to the price of a Hyperliquid perp.",
+			"keywords": [
+				[
+					"perp",
+					"hlPerp"
+				],
+				[
+					"priceDescription",
+					"string"
+				],
+				[
+					"seconds",
+					"uInt"
+				],
+				[
+					"threshold",
+					"uDecimal"
+				],
+				[
+					"time",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "binaryPriceExternal",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Yes",
+						"No"
+					]
+				}
+			},
+			"name": "{shortName} above {threshold} on {time}?",
+			"description": "The market resolves to Yes if the {instrument} price is above {threshold} on {time}. Otherwise, the market resolves to No. Settlement is according to the {seconds}-second TWAP of {priceDescription} price from {feed} ending on {time}. If {feed}'s authority permanently stops publishing a qualifying price for {instrument} before this market settles, settlement is instead according to that authority's official final or delisting price for {instrument}. metadata=category:price|subCategory:N/A|semanticRestriction:This market must refer to a publicly verifiable price from an authoritative external feed.",
+			"keywords": [
+				[
+					"feed",
+					"string"
+				],
+				[
+					"instrument",
+					"string"
+				],
+				[
+					"priceDescription",
+					"string"
+				],
+				[
+					"seconds",
+					"uInt"
+				],
+				[
+					"shortName",
+					"shortString"
+				],
+				[
+					"threshold",
+					"uDecimal"
+				],
+				[
+					"time",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "policyRateDecision",
+			"role": "question",
+			"name": "{institution} {decisionLabel} rate decision",
+			"description": "This market has three possible results: No change, Decrease, or Increase. Exactly one corresponding named outcome resolves to Yes; the other two and the protocol-created fallback resolve to No. It covers the {decisionLabel} {institution} decision concerning {policyMeasure}, scheduled for {scheduledDecision} UTC (the \"Decision\"). The Decision Value is the numeric value of {policyMeasure} announced by {officialSource}. The Prior Value is the value of that same measure in effect immediately before the Decision. No change resolves to Yes if the Decision Value equals the Prior Value. Decrease resolves to Yes if the Decision Value is lower. Increase resolves to Yes if the Decision Value is higher. If the Decision is rescheduled, the rescheduled decision applies if {officialSource} publishes it by {decisionDeadline} UTC. If the Decision is canceled or postponed without a replacement decision, or no official Decision Value is published by {decisionDeadline} UTC, No change resolves to Yes. Policy changes outside the scheduled Decision are ignored except when establishing the Prior Value. If {institution} replaces {policyMeasure}, the closest official successor measure identified by {officialSource} is used. Resolution uses the initially published decision; later revisions do not change the resolution. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the relevant decision. metadata=category:economics|subCategory:N/A",
+			"keywords": [
+				[
+					"decisionDeadline",
+					"dateTime"
+				],
+				[
+					"decisionLabel",
+					"string"
+				],
+				[
+					"institution",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"policyMeasure",
+					"string"
+				],
+				[
+					"scheduledDecision",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "policyRateDecision3",
+			"role": "question",
+			"name": "{institution} {decisionLabel} rate decision",
+			"description": "This market has three possible results: No change, Decrease, or Increase. Exactly one corresponding named outcome resolves to Yes; the other two and the protocol-created fallback resolve to No. It covers the {decisionLabel} {institution} decision concerning {policyMeasure}, scheduled for {scheduledDecision} UTC (the \"Decision\"). The Decision Value is the numeric value of {policyMeasure} announced by {officialSource}. The Prior Value is the value of that same measure in effect immediately before the Decision. No change resolves to Yes if the Decision Value equals the Prior Value. Decrease resolves to Yes if the Decision Value is lower. Increase resolves to Yes if the Decision Value is higher. If the Decision is rescheduled, the rescheduled decision applies if {officialSource} publishes it by {decisionDeadline} UTC. If the Decision is canceled or postponed without a replacement decision, or no official Decision Value is published by {decisionDeadline} UTC, No change resolves to Yes. Policy changes outside the scheduled Decision are ignored except when establishing the Prior Value. If {institution} replaces {policyMeasure}, the closest official successor measure identified by {officialSource} is used. Resolution uses the initially published decision; later revisions do not change the resolution. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the relevant decision. No change resolves to Yes under the deadline rule above only if neither {officialSource} nor independent reputable reporting establishes a Decision Value by {decisionDeadline} UTC. metadata=category:economics|subCategory:N/A|semanticRestriction:This market must refer to a scheduled policy rate decision by an official institution.",
+			"keywords": [
+				[
+					"decisionDeadline",
+					"dateTime"
+				],
+				[
+					"decisionLabel",
+					"string"
+				],
+				[
+					"institution",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"policyMeasure",
+					"string"
+				],
+				[
+					"scheduledDecision",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "policyRateDecrease",
+			"role": {
+				"questionOutcome": {
+					"parent": "policyRateDecision"
+				}
+			},
+			"name": "Decrease",
+			"description": "This outcome resolves to Yes if the Decision Value is lower than the Prior Value under the parent question's rules.",
+			"keywords": []
+		},
+		{
+			"id": "policyRateDecrease3",
+			"role": {
+				"questionOutcome": {
+					"parent": "policyRateDecision3"
+				}
+			},
+			"name": "Decrease",
+			"description": "This outcome resolves to Yes if the Decision Value is lower than the Prior Value under the parent question's rules.",
+			"keywords": []
+		},
+		{
+			"id": "policyRateIncrease",
+			"role": {
+				"questionOutcome": {
+					"parent": "policyRateDecision"
+				}
+			},
+			"name": "Increase",
+			"description": "This outcome resolves to Yes if the Decision Value is higher than the Prior Value under the parent question's rules.",
+			"keywords": []
+		},
+		{
+			"id": "policyRateIncrease3",
+			"role": {
+				"questionOutcome": {
+					"parent": "policyRateDecision3"
+				}
+			},
+			"name": "Increase",
+			"description": "This outcome resolves to Yes if the Decision Value is higher than the Prior Value under the parent question's rules.",
+			"keywords": []
+		},
+		{
+			"id": "policyRateNoChange",
+			"role": {
+				"questionOutcome": {
+					"parent": "policyRateDecision"
+				}
+			},
+			"name": "No change",
+			"description": "This outcome resolves to Yes if the Decision Value equals the Prior Value, or if the parent question's cancellation, postponement, or decision-deadline rule applies.",
+			"keywords": []
+		},
+		{
+			"id": "policyRateNoChange3",
+			"role": {
+				"questionOutcome": {
+					"parent": "policyRateDecision3"
+				}
+			},
+			"name": "No change",
+			"description": "This outcome resolves to Yes if the Decision Value equals the Prior Value, or if the parent question's cancellation, postponement, or decision-deadline rule applies.",
+			"keywords": []
+		},
+		{
+			"id": "priceTouch2",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Yes",
+						"No"
+					]
+				}
+			},
+			"name": "{perp} touches {target} by {time}",
+			"description": "The market resolves to Yes once the {perp} price touches {target}, and resolves to No at {time} if the price has not touched {target} by then. The price counts as touched once the {seconds}-second TWAP of {priceDescription} price equals or crosses {target} at any time after this market is deployed and before {time}. If the market resolves to Yes, Yes tokens pay out $1 each and No tokens pay out $0 each. If the market resolves to No, No tokens pay out $1 each and Yes tokens pay out $0 each. metadata=category:price|subCategory:N/A|semanticRestriction:This market must refer to the price of a Hyperliquid perp.",
+			"keywords": [
+				[
+					"perp",
+					"hlPerp"
+				],
+				[
+					"priceDescription",
+					"string"
+				],
+				[
+					"seconds",
+					"uInt"
+				],
+				[
+					"target",
+					"uDecimal"
+				],
+				[
+					"time",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "scalarPrice3",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Long",
+						"Short"
+					]
+				}
+			},
+			"name": "{perp} from {low} to {high} at {time}",
+			"description": "If the {perp} price is at or above {high} at {time}, Long tokens pay out $1 each. If the price is at or below {low}, Long tokens pay out $0 each. Otherwise, Long tokens pay out $1 times (price - {low}) / ({high} - {low}) each. In each case, Short tokens pay out $1 minus the Long payout each. Settlement is according to the {seconds}-second TWAP of {priceDescription} price before settlement time. metadata=category:price|subCategory:N/A|semanticRestriction:This market must refer to the price of a Hyperliquid perp.",
+			"keywords": [
+				[
+					"high",
+					"uDecimal"
+				],
+				[
+					"low",
+					"uDecimal"
+				],
+				[
+					"perp",
+					"hlPerp"
+				],
+				[
+					"priceDescription",
+					"string"
+				],
+				[
+					"seconds",
+					"uInt"
+				],
+				[
+					"time",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "scalePrice",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Long",
+						"Short"
+					]
+				}
+			},
+			"name": "{perp} from {low} to {high} at {time}",
+			"description": "If the {perp} price at time of settlement is at or above {high} at {time}, Long tokens pay out $1 each. If the price is at or below {low}, Long tokens pay out $0 each. Otherwise, Long tokens pay out $1 times (price - {low}) / ({high} - {low}) each. In each case, Short tokens pay out $1 minus the Long payout each. Settlement is according to the {seconds}-second TWAP of {priceDescription} price before settlement time. metadata=category:price|subCategory:N/A",
+			"keywords": [
+				[
+					"high",
+					"uDecimal"
+				],
+				[
+					"low",
+					"uDecimal"
+				],
+				[
+					"perp",
+					"hlPerp"
+				],
+				[
+					"priceDescription",
+					"string"
+				],
+				[
+					"seconds",
+					"uInt"
+				],
+				[
+					"time",
+					"dateTime"
+				]
+			]
+		},
+		{
+			"id": "sportsContestDraw",
+			"role": {
+				"questionOutcome": {
+					"parent": "sportsContestResult"
+				}
+			},
+			"name": "Draw",
+			"description": "This outcome resolves to Yes if the Contest Result is a draw or tie or names co-winners, or if the official source records no contest or no winner, names an unlisted winner, cancels the Contest without a replacement, or does not publish a result by the deadline defined in the parent question.",
+			"keywords": []
+		},
+		{
+			"id": "sportsContestDraw5",
+			"role": {
+				"questionOutcome": {
+					"parent": "sportsContestResult5"
+				}
+			},
+			"name": "Draw",
+			"description": "This outcome resolves to Yes if the Contest Result is a draw or tie or names co-winners, including co-winners that include a listed participant, or if the official source records no contest or no winner, names an unlisted winner, cancels the Contest without a replacement, or if the parent question's deadline rule applies.",
+			"keywords": []
+		},
+		{
+			"id": "sportsContestParticipant",
+			"role": {
+				"questionOutcome": {
+					"parent": "sportsContestResult"
+				}
+			},
+			"name": "{participant}",
+			"description": "This outcome resolves to Yes if {participant} is the winner under the Contest Result or administrative-decision provisions of the parent question.",
+			"keywords": [
+				[
+					"participant",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsContestParticipant3",
+			"role": {
+				"questionOutcome": {
+					"parent": "sportsContestResult3"
+				}
+			},
+			"name": "{participant}",
+			"description": "This outcome resolves to Yes if {participant} is named the sole winner under the Contest Result or administrative-decision provisions of the parent question; a result naming co-winners resolves the Draw outcome instead.",
+			"keywords": [
+				[
+					"participant",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsContestParticipant5",
+			"role": {
+				"questionOutcome": {
+					"parent": "sportsContestResult5"
+				}
+			},
+			"name": "{participant}",
+			"description": "This outcome resolves to Yes if {participant} is named the sole winner under the Contest Result or administrative-decision provisions of the parent question; a result naming co-winners resolves the Draw outcome instead.",
+			"keywords": [
+				[
+					"participant",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsContestResult",
+			"role": "question",
+			"name": "{competition} {stage}: {participantA} v {participantB}",
+			"description": "This {sport} market has three possible results: {participantA}, Draw, or {participantB}. Exactly one corresponding named outcome resolves to Yes; the other two and the protocol-created fallback resolve to No. It covers the {contestType} between {participantA} and {participantB} in the {season} {competition} {stage}, scheduled for {scheduledStart} UTC (the \"Contest\"). The Contest Result is the official final result published by {officialSource}, including every period and tiebreak procedure that {officialSource} treats as part of the Contest. {participantA} resolves to Yes if the Contest Result names {participantA} the winner; {participantB} resolves to Yes if it names {participantB} the winner; Draw resolves to Yes if it records a draw, tie, or co-winners. If the Contest is postponed, delayed, or suspended, the Contest Result as ultimately completed applies if published by {resolutionDeadline} UTC. If {officialSource} names a listed participant the winner without a completed Contest after abandonment, walkover, forfeit, disqualification, retirement, withdrawal, or an administrative decision, that participant resolves to Yes. If no named outcome otherwise applies, Draw resolves to Yes if {officialSource} records a no contest or no winner, names anyone other than the listed participants the winner, the Contest is canceled without a replacement, or no Contest Result is published by {resolutionDeadline} UTC.  {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the result. Once resolved, later appeals, corrections, reversals, or result reassignments do not change the resolution. This market is not endorsed by or affiliated with {officialSource}; names and marks are descriptive only. metadata=category:sports|subCategory:{sport}",
+			"keywords": [
+				[
+					"competition",
+					"string"
+				],
+				[
+					"contestType",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"participantA",
+					"string"
+				],
+				[
+					"participantB",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"season",
+					"string"
+				],
+				[
+					"sport",
+					"string"
+				],
+				[
+					"stage",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsContestResult3",
+			"role": "question",
+			"name": "{competition} {stage}: {participantA} v {participantB}",
+			"description": "This {sport} market has three possible results: {participantA}, Draw, or {participantB}. Exactly one corresponding named outcome resolves to Yes; the other two and the protocol-created fallback resolve to No. It covers the {contestType} between {participantA} and {participantB} in the {season} {competition} {stage}, scheduled for {scheduledStart} UTC (the \"Contest\"). The Contest Result is the official final result published by {officialSource}, including every period and tiebreak procedure that {officialSource} treats as part of the Contest. {participantA} resolves to Yes if the Contest Result names {participantA} the sole winner; {participantB} resolves to Yes if it names {participantB} the sole winner; Draw resolves to Yes if it records a draw, tie, or co-winners, even if a listed participant is among the co-winners. If the Contest is postponed, delayed, or suspended, the Contest Result as ultimately completed applies if published by {resolutionDeadline} UTC. If {officialSource} names a listed participant the sole winner without a completed Contest after abandonment, walkover, forfeit, disqualification, retirement, withdrawal, or an administrative decision, that participant resolves to Yes. If no named outcome otherwise applies, Draw resolves to Yes if {officialSource} records a no contest or no winner, names anyone other than the listed participants the winner, the Contest is canceled without a replacement, or no Contest Result is published by {resolutionDeadline} UTC. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the result. Once resolved, later appeals, corrections, reversals, or result reassignments do not change the resolution. This market is not endorsed by or affiliated with {officialSource}; names and marks are descriptive only. metadata=category:sports|subCategory:{sport}|semanticRestriction:This market must refer to a single scheduled sports contest.",
+			"keywords": [
+				[
+					"competition",
+					"string"
+				],
+				[
+					"contestType",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"participantA",
+					"string"
+				],
+				[
+					"participantB",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"season",
+					"string"
+				],
+				[
+					"sport",
+					"string"
+				],
+				[
+					"stage",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsContestResult5",
+			"role": "question",
+			"name": "{competition} {stage}: {participantA} v {participantB}",
+			"description": "This {sport} market has three possible results: {participantA}, Draw, or {participantB}. Exactly one corresponding named outcome resolves to Yes; the other two and the fallback resolve to No. It covers the {contestType} between {participantA} and {participantB} in the {season} {competition} {stage}, scheduled for {scheduledStart} UTC (the \"Contest\"). The Contest Result is the official final result published by {officialSource}, including every period and tiebreak procedure that {officialSource} treats as part of the Contest. {participantA} resolves to Yes if the Contest Result names {participantA} the sole winner; {participantB} resolves to Yes if it names {participantB} the sole winner; Draw resolves to Yes if it records a draw, tie, or co-winners, even if a listed participant is among the co-winners. If the Contest is postponed, delayed, or suspended, the Contest Result as ultimately completed applies if published by {resolutionDeadline} UTC. If {officialSource} names a listed participant the sole winner without a completed Contest after abandonment, walkover, forfeit, disqualification, retirement, withdrawal, or an administrative decision, that participant resolves to Yes. If no named outcome otherwise applies, Draw resolves to Yes if {officialSource} records a no contest or no winner, names anyone other than the listed participants the winner, the Contest is canceled without a replacement, or no Contest Result is published by {resolutionDeadline} UTC. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the result. Draw resolves to Yes under the deadline rule above only if neither {officialSource} nor independent reputable reporting establishes the Contest Result by {resolutionDeadline} UTC. Once resolved, later appeals, corrections, reversals, or result reassignments do not change the resolution. This market is not sponsored by, endorsed by, or affiliated with {officialSource} or with any competition, league, governing body, organizer, team, club, participant, or other person or entity referenced in this market. All names and trademarks are the property of the respective rights holders and are descriptive only. metadata=category:sports|subCategory:{sport}|semanticRestriction:This market must refer to a single scheduled sports contest.",
+			"keywords": [
+				[
+					"competition",
+					"string"
+				],
+				[
+					"contestType",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"participantA",
+					"string"
+				],
+				[
+					"participantB",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"season",
+					"string"
+				],
+				[
+					"sport",
+					"string"
+				],
+				[
+					"stage",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsContestWinner",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Yes",
+						"No"
+					]
+				}
+			},
+			"name": "{competition} {stage}: {participantA} v {participantB}",
+			"description": "This {sport} market covers the {contestType} between {participantA} and {participantB} in the {season} {competition} {stage}, scheduled for {scheduledStart} UTC (the \"Contest\"). It resolves to Yes if {officialSource}'s official result names {participantA} the winner, and to No if that result names {participantB} the winner. The official result includes all periods and tiebreak procedures that {officialSource} treats as part of the Contest. If the Contest is postponed, delayed, or suspended, the result of the Contest as ultimately completed applies if a listed participant is named the winner by {resolutionDeadline} UTC. A listed participant named the winner after an abandonment, walkover, forfeit, disqualification, retirement, withdrawal, or administrative decision also applies. The market resolves to 0.5 if {officialSource} records a draw, tie, co-winners, no contest, or no winner; names anyone other than the listed participants as the winner; cancels the Contest without a replacement; or has not named a listed participant the winner by {resolutionDeadline} UTC. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the relevant result. Once resolved, later appeals, corrections, reversals, or result reassignments do not change the resolution. This market is not endorsed by or affiliated with {officialSource}; names and marks are descriptive only. metadata=category:sports|subCategory:{sport}",
+			"keywords": [
+				[
+					"competition",
+					"string"
+				],
+				[
+					"contestType",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"participantA",
+					"string"
+				],
+				[
+					"participantB",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"season",
+					"string"
+				],
+				[
+					"sport",
+					"string"
+				],
+				[
+					"stage",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsContestWinner2",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"{shortNameA}",
+						"{shortNameB}"
+					]
+				}
+			},
+			"name": "{competition} {stage}: {participantA} v {participantB}",
+			"description": "This {sport} market covers the {contestType} between {participantA} (short name: {shortNameA}) and {participantB} (short name: {shortNameB}) in the {season} {competition} {stage}, scheduled for {scheduledStart} UTC (the \"Contest\"). It resolves to Yes if {officialSource}'s official result names {participantA} the winner, and to No if that result names {participantB} the winner. The official result includes all periods and tiebreak procedures that {officialSource} treats as part of the Contest. If the Contest is postponed, delayed, or suspended, the result of the Contest as ultimately completed applies if a listed participant is named the winner by {resolutionDeadline} UTC. A listed participant named the winner after an abandonment, walkover, forfeit, disqualification, retirement, withdrawal, or administrative decision also applies. The market resolves to 0.5 if {officialSource} records a draw, tie, co-winners, no contest, or no winner; names anyone other than the listed participants as the winner; cancels the Contest without a replacement; or has not named a listed participant the winner by {resolutionDeadline} UTC. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the relevant result. Once resolved, later appeals, corrections, reversals, or result reassignments do not change the resolution. This market is not endorsed by or affiliated with {officialSource}; names and marks are descriptive only. metadata=category:sports|subCategory:{sport}",
+			"keywords": [
+				[
+					"competition",
+					"string"
+				],
+				[
+					"contestType",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"participantA",
+					"string"
+				],
+				[
+					"participantB",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"season",
+					"string"
+				],
+				[
+					"sport",
+					"string"
+				],
+				[
+					"stage",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsContestWinner3",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"{shortNameA}",
+						"{shortNameB}"
+					]
+				}
+			},
+			"name": "{competition} {stage}: {participantA} v {participantB}",
+			"description": "This {sport} market covers the {contestType} between {participantA} (short name: {shortNameA}) and {participantB} (short name: {shortNameB}) in the {season} {competition} {stage}, scheduled for {scheduledStart} UTC (the \"Contest\"). It resolves to Yes if {officialSource}'s official result names {participantA} the winner, and to No if that result names {participantB} the winner. The official result includes all periods and tiebreak procedures that {officialSource} treats as part of the Contest. If the Contest is postponed, delayed, or suspended, the result of the Contest as ultimately completed applies if a listed participant is named the winner by {resolutionDeadline} UTC. A listed participant named the winner after an abandonment, walkover, forfeit, disqualification, retirement, withdrawal, or administrative decision also applies. The market resolves to 0.5 if {officialSource} records a draw, tie, co-winners, no contest, or no winner; names anyone other than the listed participants as the winner; cancels the Contest without a replacement; or has not named a listed participant the winner by {resolutionDeadline} UTC. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the relevant result. Once resolved, later appeals, corrections, reversals, or result reassignments do not change the resolution. This market is not endorsed by or affiliated with {officialSource}; names and marks are descriptive only. metadata=category:sports|subCategory:{sport}",
+			"keywords": [
+				[
+					"competition",
+					"string"
+				],
+				[
+					"contestType",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"participantA",
+					"string"
+				],
+				[
+					"participantB",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"season",
+					"string"
+				],
+				[
+					"shortNameA",
+					"shortString"
+				],
+				[
+					"shortNameB",
+					"shortString"
+				],
+				[
+					"sport",
+					"string"
+				],
+				[
+					"stage",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsContestWinner6",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"{shortNameA}",
+						"{shortNameB}"
+					]
+				}
+			},
+			"name": "{competition} {stage}: {participantA} v {participantB}",
+			"description": "This {sport} market has two sides, {shortNameA} for {participantA} and {shortNameB} for {participantB}. It covers the {contestType} between {participantA} and {participantB} in the {season} {competition} {stage}, scheduled for {scheduledStart} UTC (the \"Contest\"). The market resolves to {shortNameA} if {officialSource}'s official result names {participantA} the sole winner of the Contest, and resolves to {shortNameB} if that result names {participantB} the sole winner. Tokens of the side the market resolves to pay out $1 each and tokens of the other side pay out $0 each. The official result includes all periods and tiebreak procedures that {officialSource} treats as part of the Contest. If the Contest is postponed, delayed, or suspended, the result of the Contest as ultimately completed applies if a listed participant is named the sole winner by {resolutionDeadline} UTC. A listed participant named the sole winner after an abandonment, walkover, forfeit, disqualification, retirement, withdrawal, or administrative decision also applies. The market resolves to 0.5, with {shortNameA} and {shortNameB} tokens each paying out $0.50, if {officialSource} records a draw, tie, co-winners (even if a listed participant is among them), no contest, or no winner; names anyone other than the listed participants as the winner; cancels the Contest without a replacement; or has not named a listed participant the sole winner by {resolutionDeadline} UTC. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the relevant result. Once resolved, later appeals, corrections, reversals, or result reassignments do not change the resolution. This market is not sponsored by, endorsed by, or affiliated with {officialSource} or with any competition, league, governing body, organizer, team, club, participant, or other person or entity referenced in this market. All names and trademarks are the property of the respective rights holders and are descriptive only. metadata=category:sports|subCategory:{sport}|semanticRestriction:This market must refer to a single scheduled sports contest.",
+			"keywords": [
+				[
+					"competition",
+					"string"
+				],
+				[
+					"contestType",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"participantA",
+					"string"
+				],
+				[
+					"participantB",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"season",
+					"string"
+				],
+				[
+					"shortNameA",
+					"shortString"
+				],
+				[
+					"shortNameB",
+					"shortString"
+				],
+				[
+					"sport",
+					"string"
+				],
+				[
+					"stage",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsContestWinner7",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"{shortNameA}",
+						"{shortNameB}"
+					]
+				}
+			},
+			"name": "{competition} {stage}: {participantA} v {participantB}",
+			"description": "This {sport} market has two sides, {shortNameA} for {participantA} and {shortNameB} for {participantB}. It covers the {contestType} between {participantA} and {participantB} in the {season} {competition} {stage}, scheduled for {scheduledStart} UTC (the \"Contest\"). The market resolves to {shortNameA} if {officialSource}'s official result names {participantA} the sole winner of the Contest, and resolves to {shortNameB} if that result names {participantB} the sole winner. Tokens of the side the market resolves to pay out $1 each and tokens of the other side pay out $0 each. The official result includes all periods and tiebreak procedures that {officialSource} treats as part of the Contest. If the Contest is postponed, delayed, or suspended, the result of the Contest as ultimately completed applies if a listed participant is named the sole winner by {resolutionDeadline} UTC. A listed participant named the sole winner after an abandonment, walkover, forfeit, disqualification, retirement, withdrawal, or administrative decision also applies. The market resolves to 0.5, with {shortNameA} and {shortNameB} tokens each paying out $0.50, if {officialSource} records a draw, tie, co-winners (even if a listed participant is among them), no contest, or no winner; names anyone other than the listed participants as the winner; cancels the Contest without a replacement; or has not named a listed participant the sole winner by {resolutionDeadline} UTC. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the relevant result. The market resolves to 0.5 under the deadline rule above only if neither {officialSource} nor independent reputable reporting names a listed participant the sole winner by {resolutionDeadline} UTC. Once resolved, later appeals, corrections, reversals, or result reassignments do not change the resolution. This market is not sponsored by, endorsed by, or affiliated with {officialSource} or with any competition, league, governing body, organizer, team, club, participant, or other person or entity referenced in this market. All names and trademarks are the property of the respective rights holders and are descriptive only. metadata=category:sports|subCategory:{sport}|semanticRestriction:This market must refer to a single scheduled sports contest.",
+			"keywords": [
+				[
+					"competition",
+					"string"
+				],
+				[
+					"contestType",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"participantA",
+					"string"
+				],
+				[
+					"participantB",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"season",
+					"string"
+				],
+				[
+					"shortNameA",
+					"shortString"
+				],
+				[
+					"shortNameB",
+					"shortString"
+				],
+				[
+					"sport",
+					"string"
+				],
+				[
+					"stage",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsScalarMarket",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Over",
+						"Under"
+					]
+				}
+			},
+			"name": "{measure} from {low} to {high}",
+			"description": "If the value of {measure} at time of settlement is at or above {high}, Over tokens pay out $1 each. If the value is at or below {low}, Over tokens pay out $0 each. Otherwise, Over tokens pay out $1 times (value - {low}) / ({high} - {low}) each. In each case, Under tokens pay out $1 minus the Over payout each. Settlement is according to the official final value of {measure}. metadata=category:sports|subCategory:N/A",
+			"keywords": [
+				[
+					"high",
+					"uDecimal"
+				],
+				[
+					"low",
+					"uDecimal"
+				],
+				[
+					"measure",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsScalarMarket3",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Over",
+						"Under"
+					]
+				}
+			},
+			"name": "{measure} from {low} to {high}",
+			"description": "This {sport} market has two sides, Over and Under. It covers {measure} in the {event}, scheduled for {scheduledStart} UTC (the \"Contest\"). The Final Value is the official final value of {measure} published by {officialSource}, including every period and tiebreak procedure that {officialSource} treats as part of the Contest. If the Final Value is at or above {high}, Over tokens pay out $1 each. If the Final Value is at or below {low}, Over tokens pay out $0 each. Otherwise, Over tokens pay out $1 times (Final Value - {low}) / ({high} - {low}) each. In each case, Under tokens pay out $1 minus the Over payout each. If the Contest is postponed, delayed, or suspended, the Final Value of the Contest as ultimately completed applies if published by {resolutionDeadline} UTC. If the Contest is shortened or abandoned but {officialSource} publishes an official final value of {measure} for the Contest, that value is the Final Value. The market resolves to 0.5, with Over and Under tokens each paying out $0.50, if {measure} refers to an individual participant who does not take part in the Contest, the Contest is canceled without a replacement, {officialSource} records no official value of {measure}, or no Final Value is published by {resolutionDeadline} UTC. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the relevant value. The market resolves to 0.5 under the deadline rule above only if neither {officialSource} nor independent reputable reporting establishes a Final Value by {resolutionDeadline} UTC. Once resolved, later appeals, corrections, reversals, or result reassignments do not change the resolution. This market is not sponsored by, endorsed by, or affiliated with {officialSource} or with any competition, league, governing body, organizer, team, club, participant, or other person or entity referenced in this market. All names and trademarks are the property of the respective rights holders and are descriptive only. metadata=category:sports|subCategory:{sport}|semanticRestriction:This market must refer to an officially reported statistic from a single scheduled sports contest.",
+			"keywords": [
+				[
+					"event",
+					"string"
+				],
+				[
+					"high",
+					"uDecimal"
+				],
+				[
+					"low",
+					"uDecimal"
+				],
+				[
+					"measure",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"sport",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsSpread",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Yes",
+						"No"
+					]
+				}
+			},
+			"name": "{participantA} v {participantB}: {shortNameA} {spread}",
+			"description": "This {sport} market covers the contest between {participantA} ({shortNameA}) and {participantB} scheduled for {scheduledStart} (the \"Contest\"). Counted Play is {countedPlay}; extra time, overtime, shoot-outs, and tiebreaks count only if expressly included. The Final Value is {participantA}'s {measure} plus {spread} minus {participantB}'s {measure}, each {measure} taken over Counted Play only. {spread} is a + or - sign followed by a decimal in {measure}'s units and scale. Reported values use published precision. Derived measures are calculated from underlying statistics without rounding. Unclear units or calculations leave the Final Value unestablished. Completion requires all Counted Play to conclude. For full-contest scopes, normal endings under rules in force at scheduled start, including mercy rules and unneeded periods, count. Abandonment, retirement, weather-shortening, forfeits, and awarded results do not complete unfinished Counted Play. Postponement, suspension, rescheduling, or replay after incomplete Counted Play retains the participants and deadline; lineups may change. Resumed play continues the record; a full replay replaces it. An individual participates only by entering Counted Play. The market resolves to 0.5 if completion, the Final Value, or any individual participant's participation is unestablished at fixing. Otherwise, it resolves to Yes if the Final Value exceeds 0, to No if below, and to 0.5 if equal. Only evidence public by {resolutionDeadline} establishes trigger time and source contents at fixing; resolution occurs only after that deadline. The trigger is the earliest verifiable official publication time for a record establishing completion, final statistics, and whether each relevant individual participated; absent that, its earliest verifiable capture time. Timestamps must prove contents existed then. Fixing is the earlier of one hour after the trigger and {resolutionDeadline}, or that deadline without a trigger. {officialSource}'s record establishes the facts. A verifiably newer version supersedes older versions of that record. Across official channels, an explicit correction or designation of authority prevails; other conflicts leave facts unestablished. Only versions public by fixing determine facts. Only if fixing is on {resolutionDeadline} may at least two independent reputable news organizations' original reports establish missing facts, with no unresolved material contradiction in reputable reporting. Syndicated copies count as one. Reporting cannot override official facts or resolve official conflicts. Changes after fixing and evidence after the deadline do not affect resolution. This market is not sponsored by, endorsed by, or affiliated with any entity referenced. Names and trademarks are descriptive only. metadata=category:sports|subCategory:{sport}|semanticRestriction:This market must refer to a spread in a single scheduled sports contest.",
+			"keywords": [
+				[
+					"countedPlay",
+					"string"
+				],
+				[
+					"measure",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"participantA",
+					"string"
+				],
+				[
+					"participantB",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"shortNameA",
+					"shortString"
+				],
+				[
+					"sport",
+					"string"
+				],
+				[
+					"spread",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsTotal",
+			"role": {
+				"standaloneOutcome": {
+					"sideNames": [
+						"Over",
+						"Under"
+					]
+				}
+			},
+			"name": "{participantA} v {participantB}: total {line}",
+			"description": "This {sport} market covers the contest between {participantA} and {participantB} scheduled for {scheduledStart} (the \"Contest\"). Counted Play is {countedPlay}; extra time, overtime, shoot-outs, and tiebreaks count only if expressly included. The Final Value is {participantA}'s {measure} plus {participantB}'s {measure}, each taken over Counted Play only. It and {line} use {measure}'s units and scale. Reported values use published precision. Derived measures are calculated from underlying statistics without rounding. Unclear units or calculations leave the Final Value unestablished. Completion requires all Counted Play to conclude. For full-contest scopes, normal endings under rules in force at scheduled start, including mercy rules and unneeded periods, count. Abandonment, retirement, weather-shortening, forfeits, and awarded results do not complete unfinished Counted Play. Postponement, suspension, rescheduling, or replay after incomplete Counted Play retains the participants and deadline; lineups may change. Resumed play continues the record; a full replay replaces it. An individual participates only by entering Counted Play. The market resolves to 0.5 if completion, the Final Value, or any individual participant's participation is unestablished at fixing. Otherwise, it resolves to Over if the Final Value exceeds {line}, to Under if below, and to 0.5 if equal. Only evidence public by {resolutionDeadline} establishes trigger time and source contents at fixing; resolution occurs only after that deadline. The trigger is the earliest verifiable official publication time for a record establishing completion, final statistics, and whether each relevant individual participated; absent that, its earliest verifiable capture time. Timestamps must prove contents existed then. Fixing is the earlier of one hour after the trigger and {resolutionDeadline}, or that deadline without a trigger. {officialSource}'s record establishes the facts. A verifiably newer version supersedes older versions of that record. Across official channels, an explicit correction or designation of authority prevails; other conflicts leave facts unestablished. Only versions public by fixing determine facts. Only if fixing is on {resolutionDeadline} may at least two independent reputable news organizations' original reports establish missing facts, with no unresolved material contradiction in reputable reporting. Syndicated copies count as one. Reporting cannot override official facts or resolve official conflicts. Changes after fixing and evidence after the deadline do not affect resolution. This market is not sponsored by, endorsed by, or affiliated with any entity referenced. Names and trademarks are descriptive only. metadata=category:sports|subCategory:{sport}|semanticRestriction:This market must refer to a combined total in a single scheduled sports contest.",
+			"keywords": [
+				[
+					"countedPlay",
+					"string"
+				],
+				[
+					"line",
+					"uDecimal"
+				],
+				[
+					"measure",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"participantA",
+					"string"
+				],
+				[
+					"participantB",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"scheduledStart",
+					"dateTime"
+				],
+				[
+					"sport",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsTournamentParticipant4",
+			"role": {
+				"questionOutcome": {
+					"parent": "sportsTournamentWinner4"
+				}
+			},
+			"name": "{participant}",
+			"description": "This outcome resolves to Yes if {participant} is named the sole winner of the Tournament under the parent question's rules, and resolves to No once {participant} can no longer win the Tournament or once the parent question's rules resolve the fallback to Yes.",
+			"keywords": [
+				[
+					"participant",
+					"string"
+				]
+			]
+		},
+		{
+			"id": "sportsTournamentWinner4",
+			"role": "question",
+			"name": "{season} {competition} Winner",
+			"description": "This {sport} market has one named outcome per listed participant in the {season} {competition} (the \"Tournament\") plus the fallback. Exactly one outcome resolves to Yes; every other outcome resolves to No. The Tournament Result is the official final winner of the Tournament published by {officialSource}, including every contest, period, and tiebreak procedure that {officialSource} treats as part of the Tournament. A named outcome resolves to Yes if the Tournament Result names the corresponding participant the sole winner. A named outcome resolves to No once it becomes impossible under the Tournament rules for the corresponding participant to win the Tournament, including but not limited to upon elimination from the Tournament. If any part of the Tournament is postponed, delayed, or suspended, the Tournament Result as ultimately completed applies if published by {resolutionDeadline} UTC. If {officialSource} names a listed participant the sole winner without a completed Tournament, including but not limited to following abandonment, walkover, forfeit, disqualification, withdrawal, or an administrative decision, that participant's outcome resolves to Yes. The fallback resolves to Yes and every named outcome not already resolved resolves to No if {officialSource} records no winner, names co-winners, names anyone other than a listed participant the winner, the Tournament is canceled without a replacement, or no Tournament Result is published by {resolutionDeadline} UTC. The fallback resolves to Yes via a named outcome called No winner that is registered after every other named outcome is settled to No. {officialSource} is the primary resolution source; independent reputable reporting may be used if it has not published the result. The fallback resolves to Yes under the deadline rule above only if neither {officialSource} nor independent reputable reporting establishes the Tournament Result by {resolutionDeadline} UTC. Once resolved, later appeals, corrections, reversals, or title reassignments do not change the resolution. This market is not sponsored by, endorsed by, or affiliated with {officialSource} or with any competition, league, governing body, organizer, team, club, participant, or other person or entity referenced in this market. All names and trademarks are the property of the respective rights holders and are descriptive only. metadata=category:sports|subCategory:{sport}|semanticRestriction:This market must refer to the overall winner of a sports tournament.",
+			"keywords": [
+				[
+					"competition",
+					"string"
+				],
+				[
+					"officialSource",
+					"string"
+				],
+				[
+					"resolutionDeadline",
+					"dateTime"
+				],
+				[
+					"season",
+					"string"
+				],
+				[
+					"sport",
+					"string"
+				]
+			]
+		}
+	]
+}

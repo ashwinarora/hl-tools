@@ -37,7 +37,9 @@ import {
 	type AssetUniverse,
 	buildUniverse,
 	type RawMetadata,
+	type RawOutcomeMeta,
 } from "../resolver/metadata.ts";
+import type { RawOutcomeTemplate } from "../resolver/outcomes.ts";
 
 export type InfoBody = { readonly type: string } & Record<string, unknown>;
 
@@ -48,6 +50,8 @@ export const DEFAULT_TTLS: Readonly<Record<string, number>> = {
 	meta: 5 * 60_000,
 	spotMeta: 5 * 60_000,
 	outcomeMeta: 60_000,
+	// the templates outcome names are written with change only when a kind of market is added
+	outcomeTemplates: 10 * 60_000,
 	allMids: 3_000,
 	l2Book: 1_000,
 	// A settled outcome never changes again.
@@ -256,6 +260,16 @@ export class InfoClient<N extends Network> {
 			},
 			observedAt,
 		);
+	}
+
+	/** HIP-4 outcomes and their questions: names, descriptions, sides (`outcomeName`). */
+	outcomeMeta(): Promise<Observed<RawOutcomeMeta, N>> {
+		return this.info<RawOutcomeMeta>({ type: "outcomeMeta" });
+	}
+
+	/** The templates outcome names are written with: "{perp} above {threshold} at {time}?". */
+	outcomeTemplates(): Promise<Observed<RawOutcomeTemplate[], N>> {
+		return this.info<RawOutcomeTemplate[]>({ type: "outcomeTemplates" });
 	}
 
 	/** Normalised asset universe, cached with the metadata TTL. */

@@ -16,6 +16,7 @@ export * from "./orders/explain.ts";
 export * from "./orders/lint.ts";
 export * from "./resolver/identifiers.ts";
 export * from "./resolver/metadata.ts";
+export * from "./resolver/outcomes.ts";
 export * from "./resolver/resolve.ts";
 export * from "./resolver/snippets.ts";
 export * from "./rpc/client.ts";

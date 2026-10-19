@@ -207,6 +207,8 @@ export const TOOLS: readonly ToolDef[] = [
 			"staking",
 			"vaults",
 			"errors",
+			// outcome shares among a treasury's balances, and their names
+			"asset-ids",
 		],
 		primarySource: {
 			label: "Multi-sig",

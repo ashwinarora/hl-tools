@@ -8,13 +8,14 @@ import type {
 import { visibleText } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import { useMultisigDrafts } from "#/store/multisigDraftsStore";
 import {
 	treasuryKey,
 	useMultisigPrefs,
 	usePrefsHydrated,
 } from "#/store/multisigPrefsStore";
+import { useOutcomeLists } from "../live/useOutcomeLists";
 import { API_WALLET_FORMER, API_WALLET_SENTENCE } from "../model/apiWallet";
 import {
 	amountText,
@@ -32,6 +33,11 @@ import {
 import { approvalOf } from "../model/chain/match";
 import { CHANGE } from "../model/change";
 import { balanceView, modeLabel } from "../model/mode";
+import {
+	isOutcomeShare,
+	type OutcomeRow,
+	splitHoldings,
+} from "../model/outcomes";
 import { RELAY_COPY } from "../model/relay/copy";
 import { type LastSigned, lastSignedText } from "../model/relay/lastSigned";
 import type { TreasuryRow } from "../model/relay/rows";
@@ -40,7 +46,15 @@ import { Who } from "../names/Names";
 import { Checked } from "../shell/Checked";
 import { type DataColumn, DataTable } from "../shell/DataTable";
 import { Help } from "../shell/Help";
-import { Btn, Card, linkButtonSm, PersonRow, Tag } from "../shell/kit";
+import {
+	Btn,
+	Card,
+	linkButtonSm,
+	PersonRow,
+	TabList,
+	TabPanel,
+	Tag,
+} from "../shell/kit";
 import { toneOf, useNow, When } from "../shell/live";
 import type { LiveTreasuryState } from "../useTreasuryState";
 import type { KnownProposal } from "./useKnownProposals";
@@ -87,6 +101,47 @@ const SPOT: readonly DataColumn<SpotBalanceRow>[] = [
 		cell: (r) => amountText(r.available),
 	},
 ];
+
+const OUTCOMES: readonly DataColumn<OutcomeRow>[] = [
+	{
+		id: "outcome",
+		header: "Outcome",
+		sort: (a, b) => compareText(a.fullTitle, b.fullTitle),
+		// a market somebody else named: the whole name and the share's own name on hover
+		cell: (r) => (
+			<span
+				className="[overflow-wrap:anywhere]"
+				title={`${r.fullTitle} (${r.coin})`}
+			>
+				<bdi>{r.title}</bdi>
+			</span>
+		),
+	},
+	{
+		id: "side",
+		header: "Side",
+		sort: (a, b) => compareText(a.side, b.side),
+		cell: (r) => <bdi>{r.side}</bdi>,
+	},
+	{
+		id: "shares",
+		header: "Shares",
+		numeric: true,
+		sort: (a, b) => compareAmount(a.total, b.total),
+		cell: (r) => amountText(r.total),
+	},
+	{
+		id: "hold",
+		header: "On hold",
+		headerExtra: <Help k="onHold" />,
+		numeric: true,
+		sort: (a, b) => compareAmount(a.hold, b.hold),
+		cell: (r) => amountText(r.hold),
+	},
+];
+
+/** The four tabs of what a treasury holds, in Hyperliquid's own order. */
+type HoldingsTab = "balances" | "positions" | "outcomes" | "orders";
 
 const POSITIONS: readonly DataColumn<PositionRow>[] = [
 	{
@@ -221,12 +276,31 @@ export function OverviewTab({
 }) {
 	const now = useNow();
 	const live = state.live;
-	const spot = useMemo(
-		() => live.spot?.filter((b) => isNonZero(b.total)) ?? [],
+	// outcome shares are named from Hyperliquid's lists, read only when one is held
+	const sharesHeld = useMemo(
+		() =>
+			live.spot?.some((b) => isOutcomeShare(b) && isNonZero(b.total)) ?? false,
 		[live.spot],
+	);
+	const outcomeLists = useOutcomeLists(network, sharesHeld);
+	const { balances, outcomes } = useMemo(
+		() => splitHoldings(live.spot, outcomeLists),
+		[live.spot, outcomeLists],
 	);
 	const positions = live.perp?.positions ?? [];
 	const orders = live.openOrders ?? [];
+	const holdingsId = useId();
+	const [holdingsTab, setHoldingsTab] = useState<HoldingsTab>("balances");
+	const holdingTabs = [
+		{ value: "balances" as const, label: "Balances", count: balances.length },
+		{
+			value: "positions" as const,
+			label: "Positions",
+			count: positions.length,
+		},
+		{ value: "outcomes" as const, label: "Outcomes", count: outcomes.length },
+		{ value: "orders" as const, label: "Open orders", count: orders.length },
+	];
 	const mode = state.mode ? modeLabel(state.mode) : null;
 	const reading = "Reading from Hyperliquid…";
 	// which figures there are depends on the mode (the figures themselves are
@@ -280,15 +354,21 @@ export function OverviewTab({
 					</div>
 				)}
 
-				<Card
-					title={
-						<span className="inline-flex items-center gap-1.5">
-							Balances {view?.kind === "two" && <Help k="perpsSpot" />}
-						</span>
-					}
-					actions={
-						mode ? (
-							<span className="inline-flex items-center gap-1.5">
+				{/* what it holds, one panel with Hyperliquid's own tabs */}
+				<Card flush>
+					{/* one height for every tab: the mode and its button sit beside Balances only */}
+					<div className="flex min-h-[45px] flex-wrap items-center justify-between gap-x-3 border-b border-border pl-1.5 pr-4">
+						<TabList
+							id={holdingsId}
+							label="What the treasury holds"
+							value={holdingsTab}
+							tabs={holdingTabs}
+							onChange={setHoldingsTab}
+							className="mb-0 self-end border-b-0"
+						/>
+						{holdingsTab === "balances" && mode && (
+							<span className="inline-flex items-center gap-1.5 py-2">
+								{view?.kind === "two" && <Help k="perpsSpot" />}
 								<Tag tone={mode.caution ? "warn" : "gray"} title={mode.text}>
 									{mode.tag}
 								</Tag>
@@ -304,56 +384,55 @@ export function OverviewTab({
 									</Link>
 								)}
 							</span>
-						) : null
-					}
-					flush
-				>
-					<DataTable
-						label="Spot balances"
-						columns={SPOT}
-						rows={spot}
-						rowKey={key}
-						initialSort={{ id: "total", desc: true }}
-						empty={live.spot === null ? reading : "No spot balances."}
-					/>
-				</Card>
-
-				{positions.length > 0 && (
-					<Card title="Positions" actions={<Tag>{positions.length}</Tag>} flush>
-						<DataTable
-							label="Open positions"
-							columns={POSITIONS}
-							rows={positions}
-							rowKey={key}
-							initialSort={{ id: "value", desc: true }}
-							empty="No positions."
-						/>
-					</Card>
-				)}
-				{orders.length > 0 && (
-					<Card title="Open orders" actions={<Tag>{orders.length}</Tag>} flush>
-						<DataTable
-							label="Open orders"
-							columns={ORDERS}
-							rows={orders}
-							rowKey={key}
-							initialSort={{ id: "placed", desc: true }}
-							empty="No open orders."
-						/>
-					</Card>
-				)}
-				{positions.length > 0 || orders.length > 0 ? (
-					<p className="mx-0.5 -mt-2 text-xs text-subtle-foreground">
-						Positions and orders are placed by an API wallet, not through
-						proposals. They can only be read here.
-					</p>
-				) : (
-					<div className="rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm text-muted-foreground">
-						{live.perp === null || live.openOrders === null
-							? reading
-							: "No positions and no open orders."}
+						)}
 					</div>
-				)}
+					<TabPanel id={holdingsId} value={holdingsTab}>
+						{holdingsTab === "balances" ? (
+							<DataTable
+								label="Spot balances"
+								columns={SPOT}
+								rows={balances}
+								rowKey={key}
+								initialSort={{ id: "total", desc: true }}
+								empty={live.spot === null ? reading : "No spot balances."}
+							/>
+						) : holdingsTab === "positions" ? (
+							<DataTable
+								label="Open positions"
+								columns={POSITIONS}
+								rows={positions}
+								rowKey={key}
+								initialSort={{ id: "value", desc: true }}
+								empty={live.perp === null ? reading : "No positions."}
+							/>
+						) : holdingsTab === "outcomes" ? (
+							<DataTable
+								label="Outcome shares"
+								columns={OUTCOMES}
+								rows={outcomes}
+								rowKey={key}
+								initialSort={{ id: "shares", desc: true }}
+								empty={live.spot === null ? reading : "No outcome shares."}
+							/>
+						) : (
+							<DataTable
+								label="Open orders"
+								columns={ORDERS}
+								rows={orders}
+								rowKey={key}
+								initialSort={{ id: "placed", desc: true }}
+								empty={live.openOrders === null ? reading : "No open orders."}
+							/>
+						)}
+						{holdingsTab !== "balances" && (
+							<p className="border-t border-border px-4 py-2 text-xs text-subtle-foreground">
+								{holdingsTab === "outcomes"
+									? "Outcome shares are bought and sold by an API wallet, not through proposals. They can only be read here."
+									: "Positions and orders are placed by an API wallet, not through proposals. They can only be read here."}
+							</p>
+						)}
+					</TabPanel>
+				</Card>
 			</div>
 
 			<div className="grid min-w-0 grid-cols-1 items-start gap-4 min-[861px]:grid-cols-2 xl:grid-cols-1">

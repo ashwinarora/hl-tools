@@ -6,7 +6,9 @@ import { AddressLine, short } from "#/components/tools/multisig/AddressLine";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
 import { API_WALLET_ROW } from "./model/apiWallet";
+import { isNonZero } from "./model/chain/columns";
 import { balanceView, modeLabel } from "./model/mode";
+import { isOutcomeShare } from "./model/outcomes";
 import { useTreasuries } from "./relay/queries";
 import { Tag } from "./shell/kit";
 import { When } from "./shell/live";
@@ -102,8 +104,9 @@ export function TreasuryStrip({
 	if (!target) return null;
 	const me = wallet?.toLowerCase();
 	const otherTokens =
-		state.spot?.filter((b) => b.coin !== "USDC" && Number(b.total) !== 0)
-			.length ?? 0;
+		state.spot?.filter(
+			(b) => b.coin !== "USDC" && isNonZero(b.total) && !isOutcomeShare(b),
+		).length ?? 0;
 	const now = Date.now();
 	const mode = state.mode ? modeLabel(state.mode) : null;
 	// which balances there are depends on the mode: none are listed before it is known

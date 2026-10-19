@@ -58,6 +58,7 @@ import {
 	formFromProposal,
 	sourcePocket,
 } from "../model/actions";
+import { isNonZero } from "../model/chain/columns";
 import { type InnerChain, innerChain } from "../model/chains";
 import { CHANGE } from "../model/change";
 import {
@@ -75,6 +76,7 @@ import {
 	NUMBERED_AFTER,
 	proposalNonce,
 } from "../model/nonce";
+import { isOutcomeShare } from "../model/outcomes";
 import { RELAY_COPY } from "../model/relay/copy";
 import { reproposeSource } from "../model/repropose";
 import { isItself } from "../model/selfTreasury";
@@ -1043,7 +1045,9 @@ function ProposeForm({
 													tokens={universe.data?.tokens ?? null}
 													held={
 														state.spot
-															?.filter((b) => Number(b.total) !== 0)
+															?.filter(
+																(b) => isNonZero(b.total) && !isOutcomeShare(b),
+															)
 															.map((b) => b.token)
 															.filter((t): t is number => t !== null) ?? []
 													}

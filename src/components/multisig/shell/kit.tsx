@@ -335,6 +335,7 @@ export function TabList<T extends string>({
 	value,
 	tabs,
 	onChange,
+	className,
 }: {
 	/** The base of the tabs' and panels' ids, shared with `TabPanel`. */
 	id: string;
@@ -342,6 +343,8 @@ export function TabList<T extends string>({
 	value: T;
 	tabs: readonly { value: T; label: ReactNode; count?: number }[];
 	onChange: (value: T) => void;
+	/** For a row inside a card's header: no margin and no line of its own. */
+	className?: string;
 }) {
 	const row = useRef<HTMLDivElement>(null);
 	const [more, setMore] = useState({ left: false, right: false });
@@ -388,7 +391,10 @@ export function TabList<T extends string>({
 				)
 			}
 			style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
-			className="mb-4 flex gap-0.5 overflow-x-auto overflow-y-hidden border-b border-border [scrollbar-width:none]"
+			className={cn(
+				"mb-4 flex gap-0.5 overflow-x-auto overflow-y-hidden border-b border-border [scrollbar-width:none]",
+				className,
+			)}
 		>
 			{tabs.map((t) => {
 				const ids = tabIds(id, t.value);
