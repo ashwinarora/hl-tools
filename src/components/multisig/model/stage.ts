@@ -590,7 +590,12 @@ export function deriveStage(input: StageInput): Stage {
 		phase === "not-yet-valid" ||
 		phase === "cannot-pass" ||
 		phase === "finaliser-no";
-	const refused = input.refusal ? `${input.refusal}.` : null;
+	// a reason in a few words gets its full stop; a whole sentence has its own
+	const refused = input.refusal
+		? /[.!?]$/.test(input.refusal)
+			? input.refusal
+			: `${input.refusal}.`
+		: null;
 	const signReason =
 		phase === "judging"
 			? "Checking signatures…"

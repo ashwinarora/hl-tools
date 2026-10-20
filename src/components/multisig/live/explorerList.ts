@@ -85,12 +85,24 @@ export function timeLimited(
 	return both.signal;
 }
 
-/** Whether a failed explorer request is worth asking again by itself: never a refusal for the day, a rest, or a rate limit (audit F-065). */
+/** The request ran out of its time limit: the explorer held it, and would hold the next. */
+function timedOut(error: Error): boolean {
+	const cause = (error as { readonly cause?: unknown }).cause;
+	return cause instanceof Error && cause.name === "TimeoutError";
+}
+
+/**
+ * Whether a failed explorer request is worth asking again by itself: never a
+ * refusal for the day, a rest or a rate limit (audit F-065), and never one
+ * that ran out of time, which would only keep its row at "checking…" for
+ * another half minute.
+ */
 export function askAgain(error: Error): boolean {
 	return !(
 		error instanceof ExplorerAllowanceError ||
 		error instanceof Resting ||
-		(error instanceof InfoRequestError && error.status === 429)
+		(error instanceof InfoRequestError && error.status === 429) ||
+		timedOut(error)
 	);
 }
 

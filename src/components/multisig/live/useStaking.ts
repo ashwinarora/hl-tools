@@ -205,7 +205,10 @@ export function useStaking(
 		summary: summary.data?.data ?? null,
 		delegations: delegations.data?.data ?? null,
 		history: history.data?.data ?? null,
-		validators: validators.data?.data ?? null,
+		// keyed by network alone, so a query that is off still holds another
+		// page's list, of the default network when there is no target
+		validators:
+			target && wants.validators ? (validators.data?.data ?? null) : null,
 		pending: !!target && summary.data === undefined && summary.isPending,
 		checkedAt: read.length === used.length ? Math.min(...read) : null,
 		checking: used.some((q) => q.isFetching),

@@ -834,6 +834,11 @@ describe("an action Hyperliquid would refuse as things stand", () => {
 		const asC = await stage(open, { wallet: C, refusal: WHY });
 		expect(asC.canSign).toBe(false);
 		expect(asC.signReason).toBe(`${WHY}.`);
+		// a whole sentence keeps its one full stop
+		const sentence =
+			"This asks for 3 of 2 signers, which Hyperliquid cannot take.";
+		const whole = await stage(open, { wallet: C, refusal: sentence });
+		expect(whole.signReason).toBe(sentence);
 	});
 
 	it("leaves a closed proposal's own reason in place", async () => {
