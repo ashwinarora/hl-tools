@@ -18,6 +18,12 @@ export interface KnownReads {
 	readonly enabled: boolean;
 	/** A relay is in use: its list is part of the record. */
 	readonly relay: boolean;
+	/**
+	 * The relay's session is still being checked: its list may be part of
+	 * the record in a moment, so nothing is numbered from this browser's
+	 * copies alone yet (audit F-083). The check gives up after its own limit.
+	 */
+	readonly checking?: boolean;
 	readonly shared: "pending" | "read" | "failed";
 	/** This browser's own copies. */
 	readonly local: "pending" | "read" | "failed";
@@ -25,6 +31,7 @@ export interface KnownReads {
 
 export function knownStateOf(r: KnownReads): KnownState {
 	if (!r.enabled) return "loading";
+	if (!r.relay && r.checking) return "loading";
 	if (!r.relay)
 		// no relay to ask: this browser's copies are all there is to go by
 		return r.local === "pending" ? "loading" : "unavailable";

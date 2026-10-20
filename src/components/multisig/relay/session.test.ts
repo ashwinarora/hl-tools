@@ -20,7 +20,13 @@ interface Held {
 }
 
 /** As much of the Supabase client as signing in touches, with one session slot like a browser's. */
-function relay(o: { held?: Held; refuses?: boolean; opensFor?: string }) {
+function relay(o: {
+	held?: Held;
+	refuses?: boolean;
+	opensFor?: string;
+	/** "Who am I" answers this HTTP error after the sign-in. */
+	whoamiFails?: number;
+}) {
 	let held: Held | null = o.held ?? null;
 	const ended: string[] = [];
 	const client = {
@@ -52,7 +58,10 @@ function relay(o: { held?: Held; refuses?: boolean; opensFor?: string }) {
 				},
 			},
 		},
-		rpc: async () => ({ data: held?.wallet ?? null, error: null }),
+		rpc: async () =>
+			o.whoamiFails
+				? { data: null, error: { message: "outage" }, status: o.whoamiFails }
+				: { data: held?.wallet ?? null, error: null, status: 200 },
 	};
 	return {
 		client: client as unknown as RelayClient,
@@ -101,6 +110,14 @@ describe("signing in while another wallet is signed in (audit F-002)", () => {
 		expect(out).toEqual({ ok: true, wallet: NEW });
 		expect(r.held()?.access_token).toBe("token-new");
 		expect(r.ended).toEqual(["token-old"]);
+	});
+
+	it("says an outage right after signing in as one, and keeps the new session to look at again (decision D7)", async () => {
+		const r = relay({ whoamiFails: 503 });
+		const out = await signIn(r.client, signs, deps);
+		expect(out.ok).toBe(false);
+		expect(out.ok ? null : out.issue.code).toBe("relay.unreachable");
+		expect(r.held()?.access_token).toBe("token-new");
 	});
 
 	it("ends nothing when nobody was signed in", async () => {
@@ -171,6 +188,8 @@ function probed(o: {
 	held?: boolean;
 	speaksFor?: string | null;
 	down?: boolean;
+	/** "Who am I" answered with an error and this HTTP status. */
+	whoamiFails?: number;
 }) {
 	let signedOut = 0;
 	const client = {
@@ -197,7 +216,15 @@ function probed(o: {
 				return { error: null };
 			},
 		},
-		rpc: async () => ({ data: o.speaksFor ?? null, error: null }),
+		rpc: async () =>
+			o.whoamiFails
+				? {
+						data: null,
+						// what postgrest-js hands back for any answer that is not 2xx
+						error: { message: "injected outage" },
+						status: o.whoamiFails,
+					}
+				: { data: o.speaksFor ?? null, error: null, status: 200 },
 	};
 	return {
 		client: client as unknown as RelayClient,
@@ -233,9 +260,27 @@ describe("what a wallet's slot is worth", () => {
 		// a session that speaks for no wallet at all is of no use either
 		const mute = browser({ [slotKey(N)]: "x" });
 		expect(await probeFor(probed({ speaksFor: null }).client, N, mute)).toBe(
-			"none",
+			"ended",
 		);
 		expect(storedWallets(mute)).toEqual([]);
+	});
+
+	it('keeps the session through an outage: a 5xx or a 429 is not "signed out" (decision D7, audit F-064)', async () => {
+		for (const status of [500, 502, 503, 504, 520, 429, 404]) {
+			const slots = browser({ [slotKey(N)]: "session" });
+			const c = probed({ whoamiFails: status });
+			expect(await probeFor(c.client, N, slots)).toBe("unreachable");
+			expect(storedWallets(slots)).toEqual([N]);
+			expect(c.signedOut()).toBe(0);
+		}
+	});
+
+	it("ends it only when the relay refuses the session itself, and says so", async () => {
+		const slots = browser({ [slotKey(N)]: "session" });
+		const c = probed({ whoamiFails: 401 });
+		expect(await probeFor(c.client, N, slots)).toBe("ended");
+		expect(storedWallets(slots)).toEqual([]);
+		expect(c.signedOut()).toBe(1);
 	});
 
 	it("discards nothing while the relay does not answer", async () => {

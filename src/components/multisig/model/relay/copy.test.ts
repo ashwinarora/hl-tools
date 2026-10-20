@@ -6,6 +6,7 @@ import {
 	FORBIDDEN_CLAIMS,
 	finishHint,
 	gateOthers,
+	NUMBERED_HERE,
 	othersSummary,
 	RELAY_COPY,
 	SHARE_FIRST,
@@ -65,6 +66,7 @@ describe("relay copy", () => {
 		["cancel note", partsText(cancelNote(Date.UTC(2026, 9, 16, 2, 48)))],
 		...REFUSAL_TEXTS.map((t, i): [string, string] => [`refusal ${i}`, t]),
 		["share first", SHARE_FIRST],
+		["numbered here", NUMBERED_HERE],
 		// what the page says when it refuses a nickname before asking the relay
 		...["", "0xabc", "You", "x".repeat(41), `a${String.fromCodePoint(0x200b)}b`]
 			.map((name) => nicknameProblem(name))

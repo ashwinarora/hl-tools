@@ -363,7 +363,7 @@ export function TreasuryScreen({
 				{selfSigners && (
 					<SwitchToSigner signers={selfSigners} className="mb-4" />
 				)}
-				<SignInGate what="this treasury" />
+				<SignInGate what="this treasury" account={address} />
 			</ShellPage>
 		);
 	}

@@ -1,7 +1,7 @@
 import type { Address, Network } from "@hl-tools/core";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { usePersistHydrated } from "./hydrated";
+import { followOtherTabs, usePersistHydrated } from "./hydrated";
 
 /**
  * What the Multisig section remembers in this browser only: that the
@@ -126,6 +126,9 @@ export const useMultisigPrefs = create<PrefsState>()(
 		},
 	),
 );
+
+// a nickname, a hidden treasury or a card put away in another tab holds here too (audit F-080)
+followOtherTabs(useMultisigPrefs);
 
 /** True once the stored preferences are in; until then nothing depending on them is shown. */
 export function usePrefsHydrated(): boolean {

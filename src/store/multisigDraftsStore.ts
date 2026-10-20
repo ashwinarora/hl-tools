@@ -5,7 +5,7 @@ import {
 	restoredDrafts,
 	type StoredDraft,
 } from "#/components/multisig/model/drafts";
-import { usePersistHydrated } from "./hydrated";
+import { followOtherTabs, usePersistHydrated } from "./hydrated";
 
 /**
  * Half-filled forms of the Multisig section (the propose form of a treasury,
@@ -62,9 +62,19 @@ export const useMultisigDrafts = create<DraftsState>()(
 					Date.now(),
 				),
 			}),
+			// and written back at once, so a draft dropped on reading leaves
+			// storage then, not with the next keystroke (audit F-085)
+			onRehydrateStorage: () => () => {
+				queueMicrotask(() =>
+					useMultisigDrafts.setState((s) => ({ drafts: s.drafts })),
+				);
+			},
 		},
 	),
 );
+
+// another tab's draft is kept, never written over with this tab's old copy (audit F-080)
+followOtherTabs(useMultisigDrafts);
 
 /** True once the stored drafts are in; until then no form is filled from them. */
 export function useDraftsHydrated(): boolean {

@@ -41,3 +41,33 @@ export function usePersistHydrated(api: PersistApi | undefined): boolean {
 	}, [api]);
 	return hydrated;
 }
+
+/** What following another tab needs of a store's `persist` API. */
+export interface FollowedStore {
+	readonly persist?: {
+		rehydrate(): Promise<void> | void;
+		getOptions(): { readonly name?: string };
+	};
+}
+
+/**
+ * Follows another tab's writes to a persisted store. zustand's `persist`
+ * keeps no watch on localStorage: without this, a tab writes its whole old
+ * copy over what another tab just kept, and a draft or a hidden treasury of
+ * the other tab is gone (audit F-080). The store is read again from storage
+ * whenever another tab changes its key (or clears storage). Browser only.
+ */
+export function followOtherTabs(
+	store: FollowedStore,
+	target: Pick<Window, "addEventListener"> | undefined = typeof window ===
+	"undefined"
+		? undefined
+		: window,
+): void {
+	const api = store.persist;
+	const name = api?.getOptions().name;
+	if (!api || !name || !target) return;
+	target.addEventListener("storage", (ev: StorageEvent) => {
+		if (ev.key === name || ev.key === null) void api.rehydrate();
+	});
+}

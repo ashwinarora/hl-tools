@@ -1128,7 +1128,7 @@ export function ProposalView({
 										// a refused write is a stop: co-signers may not see what was done here
 										[doc.relay.issue?.severity === "error"
 											? "sharing-refused"
-											: "sharing"]: doc.relay.issue && (
+											: "sharing"]: doc.relay.issue ? (
 											<Callout
 												tone={
 													doc.relay.issue.severity === "error"
@@ -1139,7 +1139,11 @@ export function ProposalView({
 											>
 												{doc.relay.issue.fix}
 											</Callout>
-										),
+										) : relay.mode === "unreachable" ? (
+											// what is shown is this browser's copy: said on the page,
+											// not only in the rail a phone folds away (audit F-121)
+											<Callout tone="warning" title={RELAY_COPY.copyOnly} />
+										) : null,
 										// what this browser refused to take from the relay's copy
 										"sharing-notes": relayNotes.map((n) => (
 											<Callout

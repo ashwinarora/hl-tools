@@ -39,6 +39,7 @@ export const TOAST_TITLES = {
 	noTakenBack: "Your no is taken back",
 	cancelled: "Cancelled for everyone",
 	sharingRefused: "The hl-tools server did not take it",
+	signedOut: "Signed out of the hl-tools server",
 	created: "Proposal created",
 	notCreated: "Not created",
 	converted: "Your treasury is set up",
@@ -91,6 +92,9 @@ export const TOAST_LINES = {
 	refused: "This page says why.",
 	secondStepLater: "Step 2 is sent once its time comes.",
 	keptOther: "It was kept in this browser; this page offers to open it.",
+	/** A session that ended without this page asking (audit F-069). */
+	signedOut:
+		"This wallet's sign-in here has ended. Sign in again to see your co-signers' updates.",
 } as const;
 
 /** A result the page cannot call either way yet. */

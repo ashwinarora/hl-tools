@@ -9,6 +9,9 @@ import { type Part, say } from "../parts";
  * sign-in small print links to.
  */
 export const RELAY_COPY = {
+	/** On a proposal page while the hl-tools server cannot be reached (audit F-121). */
+	copyOnly:
+		"The hl-tools server can't be reached, so this is this browser's copy: newer signatures, a no or a cancel may be missing from it.",
 	signInButton: "Sign in with your wallet",
 	// a failed sign-in is one short line in a toast; the exact reason waits under "Details"
 	signInFailed: "Sign-in didn't go through. Please try again.",
@@ -136,6 +139,15 @@ export const RELAY_COPY = {
 export function cancelNote(until: number): Part[] {
 	return say`This cannot be undone. It leaves everyone's list, but it does not stop the proposal on Hyperliquid: the signatures already given stay valid until ${{ text: `${new Date(until).toISOString().slice(0, 16).replace("T", " ")} UTC`, when: until }}, and the finaliser could still send it.`;
 }
+
+/**
+ * Beside Create, for a USDC send or a withdrawal while the hl-tools server's
+ * list could not be read: its number is worked out from this browser's
+ * copies only (audit F-083). Nothing is blocked: a read that fails stops
+ * nothing.
+ */
+export const NUMBERED_HERE =
+	"The hl-tools server could not be read, so this is numbered after this browser's copies only: a send a co-signer proposed elsewhere may be missed, and Hyperliquid takes sends only in order.";
 
 /**
  * Under "Your part" of a proposal only this browser holds: nobody else signs

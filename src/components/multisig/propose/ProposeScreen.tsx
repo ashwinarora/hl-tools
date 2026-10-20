@@ -80,7 +80,7 @@ import {
 	WINDOW_EITHER,
 } from "../model/nonce";
 import { isOutcomeShare } from "../model/outcomes";
-import { RELAY_COPY } from "../model/relay/copy";
+import { NUMBERED_HERE, RELAY_COPY } from "../model/relay/copy";
 import { reproposeSource } from "../model/repropose";
 import { isItself } from "../model/selfTreasury";
 import { costLine, spotAvailable } from "../model/send";
@@ -1397,6 +1397,18 @@ function ProposeForm({
 									</Panel>
 									<Panel title="Create" bodyClassName="p-3.5">
 										<div className="space-y-3">
+											{ordered &&
+												known.state === "unavailable" &&
+												(relay.mode === "on" ||
+													relay.mode === "unreachable") && (
+													<p className="flex items-start gap-1.5 text-[13px] text-warning">
+														<span
+															className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+															aria-hidden
+														/>
+														<span>{NUMBERED_HERE}</span>
+													</p>
+												)}
 											{!hydrated || state.loading ? (
 												<p
 													className="flex items-center gap-2 text-sm text-muted-foreground"

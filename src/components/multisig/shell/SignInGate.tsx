@@ -15,10 +15,13 @@ import { SmallPrint, useShellWallet } from "./WalletBox";
 export function SignInGate({
 	what,
 	say,
+	account,
 }: {
 	what: ReactNode;
 	/** In place of "Sign in with your wallet to see …", for a screen that does something. */
 	say?: string;
+	/** An account that can be read without signing in: the way there is offered (audit F-104). */
+	account?: string;
 }) {
 	const relay = useRelay();
 	const busy = useWalletBusy((b) => b.busy);
@@ -78,6 +81,16 @@ export function SignInGate({
 					<Link to="/multisig/open" className={linkButton}>
 						Open or start a proposal
 					</Link>
+					{account && (
+						// what Hyperliquid itself reports, with no wallet: signers, balances, history
+						<Link
+							to="/tools/multisig"
+							search={{ view: "account", address: account }}
+							className={linkButton}
+						>
+							Read it without signing in
+						</Link>
+					)}
 				</div>
 				{relay.mode !== "unreachable" && <SmallPrint />}
 			</div>

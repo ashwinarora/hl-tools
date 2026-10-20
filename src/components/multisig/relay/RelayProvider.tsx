@@ -37,7 +37,8 @@ import {
 	touchWallet,
 	walletOfSlot,
 } from "../model/relay/wallets";
-import { TOAST_MS } from "../model/toasts";
+import { TOAST_LINES, TOAST_MS, TOAST_TITLES, unsure } from "../model/toasts";
+import { notify } from "../shell/notify";
 import {
 	browserSlots,
 	endStoredSession,
@@ -73,6 +74,10 @@ const SESSION_RECHECK_MS = 60_000;
 
 /** One toast for sign-in at a time: a new attempt or a success replaces it. */
 const SIGN_IN_TOAST = "relay-sign-in";
+
+/** A session that ended without the reader asking: one toast says why (audit F-069). */
+const sayEnded = () =>
+	notify(unsure(TOAST_TITLES.signedOut, TOAST_LINES.signedOut));
 
 /**
  * A sign-in that did not finish: one line in a toast, which closes by itself
@@ -171,6 +176,8 @@ function RelaySession({
 		setUnanswered(0);
 	}, [mounted, connected, slots]);
 
+	/** Wallets signed out here by hand: no "your sign-in has ended" for them. */
+	const byHand = useRef(new Set<Address>());
 	const asking = useRef(new Set<string>());
 	const probe = useCallback(
 		async (wallet: Address, turn: number) => {
@@ -181,7 +188,10 @@ function RelaySession({
 			let result: "ready" | "none" | "unreachable";
 			try {
 				const client = await getRelayClient(config, wallet);
-				result = await probeFor(client, wallet, slots);
+				const probed = await probeFor(client, wallet, slots);
+				// the relay said this session is over: the reader is told why (audit F-069)
+				if (probed === "ended") sayEnded();
+				result = probed === "ended" ? "none" : probed;
 				if (result === "ready") confirmed.current.set(wallet, client);
 				else if (result === "none") confirmed.current.delete(wallet);
 			} catch {
@@ -285,6 +295,15 @@ function RelaySession({
 		},
 		[config, slots, letGo],
 	);
+	/** The reader's own sign-out: nothing to tell them about it afterwards. */
+	const endByHand = useCallback(
+		(gone: Address) => {
+			byHand.current.add(gone);
+			setTimeout(() => byHand.current.delete(gone), 10_000);
+			end(gone);
+		},
+		[end],
+	);
 
 	// The relay says a wallet's session has ended (signed out elsewhere, or
 	// ended by whoever runs the relay): what its slot holds is dead. The wallet
@@ -296,7 +315,10 @@ function RelaySession({
 			const wasInUse = now.wallet === gone && now.slot !== "none";
 			forgetWallet(slots, gone);
 			letGo(gone);
-			if (wasInUse) setIssue(relayIssue({ message: SESSION_ENDED }));
+			if (wasInUse) {
+				setIssue(relayIssue({ message: SESSION_ENDED }));
+				sayEnded();
+			}
 		});
 	}, [slots, letGo]);
 
@@ -304,7 +326,10 @@ function RelaySession({
 	useEffect(() => {
 		if (!active || !wallet) return;
 		const { data } = active.auth.onAuthStateChange((event) => {
-			if (event === "SIGNED_OUT") end(wallet);
+			if (event !== "SIGNED_OUT") return;
+			// not asked for here: the reader is told why they are signed out
+			if (!byHand.current.delete(wallet)) sayEnded();
+			end(wallet);
 		});
 		return () => data.subscription.unsubscribe();
 	}, [active, wallet, end]);
@@ -478,13 +503,13 @@ function RelaySession({
 			signOut: () => {
 				setIssue(null);
 				wantsSignIn.current = false;
-				if (connected) end(connected);
+				if (connected) endByHand(connected);
 			},
-			signOutWallet: (gone) => end(gone),
+			signOutWallet: (gone) => endByHand(gone),
 			signOutAll: () => {
 				setIssue(null);
 				wantsSignIn.current = false;
-				for (const gone of slots ? storedWallets(slots) : []) end(gone);
+				for (const gone of slots ? storedWallets(slots) : []) endByHand(gone);
 			},
 			retry: () => dispatch({ type: "retry" }),
 		}),
@@ -501,7 +526,7 @@ function RelaySession({
 			slots,
 			doSignIn,
 			openConnectModal,
-			end,
+			endByHand,
 		],
 	);
 
