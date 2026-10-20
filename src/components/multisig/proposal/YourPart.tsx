@@ -382,7 +382,10 @@ export function YourPart({
 										? "You signed this, but a no holds it up: it cannot pass as things stand. The top of this page says what would change that."
 										: stage.phase === "ready"
 											? isFinaliser
-												? "You signed this. It is waiting for you to send it."
+												? stage.networkMismatch && stage.executeReason
+													? // the header is on the other network: say why there is no button (audit F-108)
+														`You signed this. ${stage.executeReason}`
+													: "You signed this. It is waiting for you to send it."
 												: `You signed this. Only ${shortAddress(outerSigner)}, the finaliser, can send it. ${FINALISER_AWAY}`
 											: waiting
 												? `You signed this. It needs ${waiting} more ${waiting === 1 ? "signature" : "signatures"}; then ${isFinaliser ? "you send" : `${shortAddress(outerSigner)} sends`} it. ${shareFirst ? SHARE_FIRST : "You can close this page."}`

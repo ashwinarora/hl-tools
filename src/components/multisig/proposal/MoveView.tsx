@@ -1,5 +1,5 @@
 import type { Address, Issue, Move, Network, Proposal } from "@hl-tools/core";
-import { cutTo } from "@hl-tools/core";
+import { cutTo, shownNote } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, ExternalLink } from "lucide-react";
@@ -67,6 +67,7 @@ import { useNow, When } from "../shell/live";
 import { notify } from "../shell/notify";
 import { ShellPage } from "../shell/ShellPage";
 import { Split } from "../shell/Split";
+import { TitleHeading } from "../shell/TitleHeading";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useTreasuryNames } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
@@ -343,7 +344,13 @@ export function MoveView({
 			signers={signersNow}
 		>
 			<ShellPage
-				title={first.meta.title ?? sentence}
+				title={
+					first.meta.title ? (
+						<TitleHeading title={first.meta.title} />
+					) : (
+						sentence
+					)
+				}
 				back={
 					listed ? (
 						<Link
@@ -438,7 +445,12 @@ export function MoveView({
 											{finaliser === me ? " (you)" : ""}
 										</AddressFact>
 										{first.meta.note && (
-											<Fact label="Note">{first.meta.note}</Fact>
+											<Fact label="Note">
+												{/* its own line breaks kept, at most one blank line (`shownNote`, audit F-127) */}
+												<span className="whitespace-pre-line">
+													{shownNote(first.meta.note)}
+												</span>
+											</Fact>
 										)}
 									</Facts>
 									{(first.meta.title || first.meta.note) && (

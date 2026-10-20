@@ -10,6 +10,7 @@ import {
 	parseSignersString,
 	type SignerSet,
 	sendShape,
+	shownNote,
 	vaultActionOf,
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
@@ -82,6 +83,7 @@ import {
 import { useNow, When } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { Split } from "../shell/Split";
+import { TitleHeading } from "../shell/TitleHeading";
 import { AffectedList } from "../signers/AffectedList";
 import { useAffected } from "../signers/useAffected";
 import { TreasuryStrip } from "../TreasuryStrip";
@@ -634,7 +636,13 @@ export function ProposalView({
 			signers={signersNow}
 		>
 			<ShellPage
-				title={proposal.meta.title ?? description.headline}
+				title={
+					proposal.meta.title ? (
+						<TitleHeading title={proposal.meta.title} />
+					) : (
+						description.headline
+					)
+				}
 				back={
 					listed ? (
 						<Link
@@ -848,7 +856,12 @@ export function ProposalView({
 											{proposal.payload.outerSigner === me ? " (you)" : ""}
 										</AddressFact>
 										{proposal.meta.note && (
-											<Fact label="Note">{proposal.meta.note}</Fact>
+											<Fact label="Note">
+												{/* its own line breaks kept, at most one blank line (`shownNote`, audit F-127) */}
+												<span className="whitespace-pre-line">
+													{shownNote(proposal.meta.note)}
+												</span>
+											</Fact>
 										)}
 									</Facts>
 									<CostNote line={cost} />

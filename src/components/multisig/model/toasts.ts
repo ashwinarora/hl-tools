@@ -52,7 +52,7 @@ export const TOAST_TITLES = {
 	notShared: "Not shared",
 	merged: "Signatures added from the copy",
 	nothingNew: "Nothing new in that copy",
-	otherCopy: "That copy is another proposal",
+	otherCopy: "That copy is not this proposal",
 	nothingSent: "Nothing was sent",
 	notMerged: "Nothing was added from the copy",
 } as const;
@@ -97,7 +97,8 @@ export const TOAST_LINES = {
 	final: "It cannot be undone.",
 	refused: "This page says why.",
 	secondStepLater: "Step 2 is sent once its time comes.",
-	keptOther: "It was kept in this browser; this page offers to open it.",
+	keptOther:
+		"What it asks everyone to sign is different. Compare it before opening it.",
 	/** A session that ended without this page asking (audit F-069). */
 	signedOut:
 		"This wallet's sign-in here has ended. Sign in again to see your co-signers' updates.",
