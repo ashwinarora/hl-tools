@@ -8,6 +8,7 @@ import {
 	gateOthers,
 	othersSummary,
 	RELAY_COPY,
+	SHARE_FIRST,
 	SIGN_HINT_TEXTS,
 	signHint,
 } from "./copy";
@@ -63,6 +64,7 @@ describe("relay copy", () => {
 		// a function of its date, so it is not among the plain entries
 		["cancel note", partsText(cancelNote(Date.UTC(2026, 9, 16, 2, 48)))],
 		...REFUSAL_TEXTS.map((t, i): [string, string] => [`refusal ${i}`, t]),
+		["share first", SHARE_FIRST],
 		// what the page says when it refuses a nickname before asking the relay
 		...["", "0xabc", "You", "x".repeat(41), `a${String.fromCodePoint(0x200b)}b`]
 			.map((name) => nicknameProblem(name))

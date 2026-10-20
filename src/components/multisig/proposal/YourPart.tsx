@@ -22,6 +22,7 @@ import {
 	cancelNote,
 	finishHint,
 	RELAY_COPY,
+	SHARE_FIRST,
 	signHint,
 } from "../model/relay/copy";
 import { objectionNote, ownPosition } from "../model/relay/positions";
@@ -29,6 +30,7 @@ import { relayActions } from "../model/relay/status";
 import { CODE_COPY } from "../model/signingNetwork";
 import {
 	CANNOT_BE_SENT,
+	FINALISER_AWAY,
 	heldWhat,
 	type Stage,
 	shortAddress,
@@ -346,6 +348,13 @@ export function YourPart({
 	}
 
 	const waiting = need !== null ? Math.max(0, need - have) : null;
+	// only this browser holds it, as far as this page can tell: nobody else
+	// will sign before it is passed on (audit F-125); while the hl-tools server
+	// cannot be reached the page cannot tell, and says nothing either way
+	const shareFirst =
+		!doc.relay.known &&
+		!doc.relay.loading &&
+		!(doc.relay.active && doc.relay.issue);
 	const note = unclear
 		? SEND_ANSWER.tryAgainNote
 		: stage.phase === "stuck"
@@ -365,11 +374,18 @@ export function YourPart({
 						: stage.canSign
 							? `${signHint(proposal.payload.action)}${stage.signsCode ? ` ${CODE_COPY.signedUnder}` : chain ? ` Your wallet may ask to switch to ${chain.label} first, then to sign. Nothing is sent or paid there.` : ""}`
 							: stage.hasSigned
-								? stage.phase === "ready"
-									? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to send it.`
-									: waiting
-										? `You signed this. It needs ${waiting} more ${waiting === 1 ? "signature" : "signatures"}; then ${isFinaliser ? "you send" : `${shortAddress(outerSigner)} sends`} it. You can close this page.`
-										: "You signed this."
+								? stage.phase === "finaliser-no"
+									? // the status above says the finaliser said no: this part follows it (audit F-120)
+										`You signed this, but ${isFinaliser ? "you" : shortAddress(outerSigner)}, the finaliser, said no: it will not be sent unless that no is taken back. ${isFinaliser ? "" : FINALISER_AWAY}`.trim()
+									: stage.phase === "cannot-pass"
+										? "You signed this, but a no holds it up: it cannot pass as things stand. The top of this page says what would change that."
+										: stage.phase === "ready"
+											? isFinaliser
+												? "You signed this. It is waiting for you to send it."
+												: `You signed this. Only ${shortAddress(outerSigner)}, the finaliser, can send it. ${FINALISER_AWAY}`
+											: waiting
+												? `You signed this. It needs ${waiting} more ${waiting === 1 ? "signature" : "signatures"}; then ${isFinaliser ? "you send" : `${shortAddress(outerSigner)} sends`} it. ${shareFirst ? SHARE_FIRST : "You can close this page."}`
+												: "You signed this."
 								: (stage.signReason ?? stage.executeReason ?? "");
 	// the wallet is the treasury account: the same sentence as on its own page
 	const itself = stage.role === "treasury" && note === stage.signReason;

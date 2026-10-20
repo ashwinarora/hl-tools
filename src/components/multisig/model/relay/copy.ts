@@ -138,6 +138,13 @@ export function cancelNote(until: number): Part[] {
 }
 
 /**
+ * Under "Your part" of a proposal only this browser holds: nobody else signs
+ * before it is passed on (audit F-125).
+ */
+export const SHARE_FIRST =
+	"Your co-signers see it only once you pass it on: share it below.";
+
+/**
  * What can be said after "Hyperliquid did not accept …" from the history
  * entry alone, which carries only the HTTP status. An answer from Hyperliquid
  * itself (200) is a refusal or "already used" (most likely sent before, the

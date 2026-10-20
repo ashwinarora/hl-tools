@@ -302,13 +302,17 @@ export function MoveView({
 		) : (
 			again(first, "Propose it again")
 		);
-	// a refused step stays open on the relay until it is withdrawn or lapses
-	const leftOpen = steps.some(
-		(s) =>
-			s.doc.relay.known &&
-			s.doc.relay.row?.status === "open" &&
-			!s.doc.relay.expired,
-	);
+	// a refused step stays open on the relay until it is withdrawn or lapses;
+	// a move carried out in full has nothing left to offer, whatever the relay
+	// still holds open (audit F-048)
+	const leftOpen =
+		stage.phase !== "done" &&
+		steps.some(
+			(s) =>
+				s.doc.relay.known &&
+				s.doc.relay.row?.status === "open" &&
+				!s.doc.relay.expired,
+		);
 	// on a phone, the bar at the bottom brings this wallet's part into view
 	const partRef = useRef<HTMLDivElement>(null);
 	// whom the two steps name (a validator, a vault), each once

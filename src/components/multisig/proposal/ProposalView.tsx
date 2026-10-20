@@ -35,6 +35,7 @@ import { ledgerEvidence } from "../model/chain/match";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
 import { recordQuestion } from "../model/chain/record";
 import { CHANGE } from "../model/change";
+import { likeWaiting, paymentOf } from "../model/duplicates";
 import { receiptOk } from "../model/history";
 import {
 	copyNotesShown,
@@ -87,6 +88,7 @@ import { useWalletSigner } from "../useWalletSigner";
 import { ActionBar } from "./ActionBar";
 import { CopyNotes } from "./CopyNotes";
 import { FirstSign } from "./FirstSign";
+import { LikeWaiting } from "./LikeWaiting";
 import { Notices } from "./Notices";
 import { OlderSends, useOlderSends } from "./OlderSends";
 import { PARTY } from "./parties";
@@ -301,10 +303,15 @@ export function ProposalView({
 		const asked = parseSignersString(proposal.payload.action.signers);
 		return asked.revert ? "revert" : asked.set;
 	}, [proposal.payload.action]);
+	// a payment: is a like one still waiting? (decision D4)
+	const pays = useMemo(
+		() => paymentOf(proposal.payload.action, target.address) !== null,
+		[proposal.payload.action, target.address],
+	);
 	const known = useKnownProposals(
 		target.network,
 		target.address as Address,
-		(ordered || changeTo !== null) && !settled,
+		(ordered || pays || changeTo !== null) && !settled,
 	);
 	const overtakenOnRecord = useMemo(
 		() =>
@@ -800,6 +807,19 @@ export function ProposalView({
 										)}
 									</Facts>
 									<CostNote line={cost} />
+									{COSTED.has(stage.phase) && (
+										<LikeWaiting
+											like={likeWaiting(
+												proposal.payload.action,
+												known.proposals,
+												{
+													self: target.address,
+													except: proposal.digest,
+													now: clock,
+												},
+											)}
+										/>
+									)}
 									{COSTED.has(stage.phase) && stakingStep.noPay && (
 										// read from Hyperliquid for every signer who opens this
 										<p className="mt-3 flex items-start gap-1.5 text-[13px] text-warning">

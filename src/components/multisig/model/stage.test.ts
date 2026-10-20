@@ -98,7 +98,7 @@ describe("deriveStage", () => {
 		]);
 		// C's signature would complete the threshold, but C is not the finaliser
 		expect(asC.executeReason).toBe(
-			`Only the finaliser ${shortAddress(B)} can send it.`,
+			`Only the finaliser ${shortAddress(B)} can send it. If they can't, the proposer can cancel it and propose it again with another finaliser.`,
 		);
 		expect(asC.executeAddsSignature).toBe(false);
 
@@ -142,7 +142,7 @@ describe("deriveStage", () => {
 		]);
 		const asA = await stage(p, { wallet: A });
 		expect(asA.executeReason).toBe(
-			`Only the finaliser ${shortAddress(B)} can send it.`,
+			`Only the finaliser ${shortAddress(B)} can send it. If they can't, the proposer can cancel it and propose it again with another finaliser.`,
 		);
 		expect((await stage(p)).executeReason).toBe(
 			"Connect the finaliser's wallet to send it.",

@@ -66,6 +66,7 @@ import {
 	formWorthKeeping,
 	proposeDraftFor,
 } from "../model/drafts";
+import { likeWaiting } from "../model/duplicates";
 import { loadProposal, saveProposal } from "../model/history";
 import { maxFor } from "../model/max";
 import {
@@ -107,6 +108,7 @@ import { signerFailure } from "../model/walletErrors";
 import { TreasuryNames, useNames } from "../names/Names";
 import { Sentence } from "../names/Sentence";
 import { CodePanel } from "../proposal/CodePanel";
+import { LikeWaiting } from "../proposal/LikeWaiting";
 import { shareMove } from "../relay/api";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -147,6 +149,14 @@ const FIELD_NOTES: ReadonlySet<string> = new Set([
 
 /** Shown only once the user has tried to create: an untouched form is not an error. */
 const REQUIRED = new Set(["field.required", "finaliser.required"]);
+
+/** The kinds that can pay another account: a like proposal still waiting is said (decision D4). */
+const PAYS: ReadonlySet<string> = new Set([
+	"sendUsdc",
+	"sendToken",
+	"withdraw3",
+	"raw",
+]);
 
 /** The field behind an input's id, for "required" said once the field was left. */
 const FIELD_OF_ID: Readonly<Record<string, keyof ActionForm>> = {
@@ -412,10 +422,14 @@ function ProposeForm({
 	const known = useKnownProposals(
 		network,
 		(address ?? ZERO_ADDRESS) as Address,
-		// a change of signers, and a switch of mode, say which waiting proposals they touch
+		// a change of signers, and a switch of mode, say which waiting proposals
+		// they touch; a payment, whether a like one is already waiting
 		hydrated &&
 			!!address &&
-			(ordered || form.kind === "changeSigners" || form.kind === "accountMode"),
+			(ordered ||
+				PAYS.has(form.kind) ||
+				form.kind === "changeSigners" ||
+				form.kind === "accountMode"),
 	);
 	const floor =
 		ordered && actionType ? orderFloor(actionType, known.proposals) : null;
@@ -580,6 +594,11 @@ function ProposeForm({
 	const previews = drafts.inputs?.map((input) =>
 		createProposal(input, { now: previewNow }),
 	);
+	// the same payment proposed twice is paid twice: say so when one is still waiting
+	const like =
+		draft.action && address
+			? likeWaiting(draft.action, known.proposals, { self: address, now })
+			: null;
 	// The canonical action and its risk flags do not depend on the finaliser, so show them
 	// as soon as the action itself builds.
 	const prepared = draft.action
@@ -1363,6 +1382,7 @@ function ProposeForm({
 												<IssueList plain issues={otherIssues} />
 											</div>
 										)}
+										<LikeWaiting like={like} />
 									</Panel>
 									<Panel title="Create" bodyClassName="p-3.5">
 										<div className="space-y-3">

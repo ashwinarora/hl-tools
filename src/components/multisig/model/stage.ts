@@ -299,6 +299,10 @@ const heldWhen = (at: number): Part => ({
 	when: at,
 });
 
+/** What the others can do when the finaliser cannot send (audit F-122). */
+export const FINALISER_AWAY =
+	"If they can't, the proposer can cancel it and propose it again with another finaliser.";
+
 /** Phases in which nothing can send the proposal any more: only ending it is left. */
 export const CANNOT_BE_SENT: ReadonlySet<Phase> = new Set<Phase>([
 	"refused",
@@ -606,7 +610,7 @@ export function deriveStage(input: StageInput): Stage {
 							: role === "disconnected"
 								? "Connect the finaliser's wallet to send it."
 								: !isLeader
-									? `Only the finaliser ${shortAddress(leader)} can send it.`
+									? `Only the finaliser ${shortAddress(leader)} can send it. ${FINALISER_AWAY}`
 									: lockedUntil
 										? `The ${heldWhat(p.payload.action)} this takes from is still locked, and Hyperliquid would refuse it until the lockup has ended.`
 										: null;
