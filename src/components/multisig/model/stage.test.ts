@@ -30,6 +30,7 @@ import {
 	refusedForGood,
 	type StageInput,
 	shortAddress,
+	stillCounts,
 } from "./stage";
 
 const DAY = 86_400_000;
@@ -1227,5 +1228,42 @@ describe("a finished proposal: its copy is a record", () => {
 			"finaliser-no",
 		] as const)
 			expect(FINISHED.has(phase), phase).toBe(false);
+	});
+});
+
+describe("which proposals a new send is numbered after (audit F-103)", () => {
+	const p = makeProposal();
+	const known = (over: {
+		status?: string | null;
+		accepted?: boolean;
+		proposal?: Proposal;
+	}) => ({ proposal: p, status: "open", accepted: false, ...over });
+
+	it("leaves out one cancelled before anyone signed, one past its window, one refused", async () => {
+		expect(stillCounts(known({ status: "withdrawn" }), NOW)).toBe(false);
+		expect(stillCounts(known({}), NONCE + 3 * 86_400_000)).toBe(false);
+		const refused = {
+			...p,
+			receipt: {
+				submittedAt: NOW,
+				signatureChainId: "0x3e6",
+				outerSignature: { r: "0x1", s: "0x1", v: 27 },
+				httpStatus: 200,
+				response: { status: "err", response: "Insufficient balance" },
+			},
+		} as unknown as Proposal;
+		expect(stillCounts(known({ proposal: refused }), NOW)).toBe(false);
+	});
+
+	it("keeps one that may still go through, and every one Hyperliquid took", async () => {
+		expect(stillCounts(known({}), NOW)).toBe(true);
+		// cancelled after a signature: whoever holds the signatures could still send it
+		const signed = await signAs(p, 1);
+		expect(
+			stillCounts(known({ status: "withdrawn", proposal: signed }), NOW),
+		).toBe(true);
+		expect(stillCounts(known({ accepted: true }), NONCE + 3 * 86_400_000)).toBe(
+			true,
+		);
 	});
 });

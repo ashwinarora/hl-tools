@@ -68,6 +68,7 @@ import {
 	proposeDraftFor,
 } from "../model/drafts";
 import { likeWaiting } from "../model/duplicates";
+
 import { loadProposal, saveProposal } from "../model/history";
 import { maxFor } from "../model/max";
 import {
@@ -90,6 +91,7 @@ import {
 	signingChainOf,
 	signingNetwork,
 } from "../model/signingNetwork";
+import { stillCounts } from "../model/stage";
 import { isStakingKind, planStaking, STAKING } from "../model/staking";
 import {
 	done as doneToast,
@@ -431,8 +433,14 @@ function ProposeForm({
 				form.kind === "changeSigners" ||
 				form.kind === "accountMode"),
 	);
+	// a proposal that can never be carried out numbers nothing (audit F-103)
 	const floor =
-		ordered && actionType ? orderFloor(actionType, known.proposals) : null;
+		ordered && actionType
+			? orderFloor(
+					actionType,
+					known.proposals.filter((k) => stillCounts(k, previewNow)),
+				)
+			: null;
 	const orderUnknown = ordered && known.state === "loading";
 
 	// Who is being paid: new to Hyperliquid (the first send costs 1 USDC) or in

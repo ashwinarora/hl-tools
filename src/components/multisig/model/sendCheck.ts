@@ -14,6 +14,7 @@ import {
 	judgeStakingSteps,
 	judgeVaultSteps,
 	type Network,
+	nonceWindow,
 	type PlainObject,
 	parseSignersString,
 	type StakingAction,
@@ -82,6 +83,36 @@ interface Checked {
 	readonly network: Network;
 	readonly multiSigUser: string;
 	readonly action: PlainObject;
+	/** The proposal's number: its signing window is judged by Hyperliquid's clock. */
+	readonly nonce?: number;
+	readonly expiresAfter?: number | null;
+}
+
+/** What is said when the window has closed by Hyperliquid's clock (audit F-028). */
+export const WINDOW_CLOSED =
+	"The signing window has closed by Hyperliquid's clock, so Hyperliquid would refuse it. Propose it again.";
+
+/**
+ * Whether Hyperliquid would refuse the proposal's number as too old: judged
+ * by its own clock, and by this device's when it does not answer, so a
+ * computer whose clock is slow does not send a proposal whose window has
+ * closed (audit F-028).
+ */
+async function windowClosed(
+	payloads: readonly Checked[],
+	reads: SendReads,
+	now: number,
+): Promise<Refusal | null> {
+	const dated = payloads.filter((p) => typeof p.nonce === "number");
+	if (dated.length === 0) return null;
+	const theirs = await orNull(reads.clock());
+	const at = typeof theirs === "number" ? theirs : now;
+	const closed = dated.some(
+		(p) =>
+			at >= nonceWindow(p.nonce as number).validUntil ||
+			(typeof p.expiresAfter === "number" && at >= p.expiresAfter),
+	);
+	return closed ? { code: "window-closed", message: WINDOW_CLOSED } : null;
 }
 
 const orNull = <T>(p: Promise<T>): Promise<T | null> => p.catch(() => null);
@@ -92,6 +123,8 @@ export async function checkBeforeSubmit(
 	/** The moment it is asked: a stake's lockup is a matter of time. */
 	now: number = Date.now(),
 ): Promise<Refusal[]> {
+	const closed = await windowClosed([payload], reads, now);
+	if (closed) return [closed];
 	const { action, multiSigUser } = payload;
 	if (action.type === "convertToMultiSigUser")
 		return checkNewSigners(action, multiSigUser, reads);
@@ -215,6 +248,8 @@ export async function checkMoveBeforeSubmit(
 	reads: SendReads,
 	now: number = Date.now(),
 ): Promise<Refusal[]> {
+	const closed = await windowClosed(payloads, reads, now);
+	if (closed) return [closed];
 	if (payloads.every((p) => stakingActionOf(p.action)))
 		return checkStaking(payloads, reads, now);
 	// a vault action among them: the steps are judged in order, each against

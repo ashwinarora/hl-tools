@@ -11,6 +11,7 @@ import {
 	type Hex,
 	isoTime,
 	type Network,
+	nonceWindow,
 	numberSpent,
 	type PlainObject,
 	type Policy,
@@ -258,6 +259,31 @@ export function refusedForGood(p: Proposal): boolean {
 		!!p.receipt &&
 		numberSpent(explainExchangeError(p.receipt.response, p.receipt.httpStatus))
 	);
+}
+
+/**
+ * Whether a proposal on record can still be carried out, or was: a new USDC
+ * send or withdrawal is numbered after every one that can (`orderFloor`).
+ * Never again: one cancelled before anyone signed, one whose window has
+ * closed, one Hyperliquid refused (audit F-103, decision D10). A proposal
+ * Hyperliquid took always counts.
+ */
+export function stillCounts(
+	k: {
+		readonly proposal: Proposal;
+		readonly status: string | null;
+		readonly accepted: boolean;
+	},
+	now: number,
+): boolean {
+	if (k.accepted) return true;
+	if (
+		(k.status === "withdrawn" || k.status === "declined") &&
+		k.proposal.signatures.length === 0
+	)
+		return false;
+	if (now >= nonceWindow(k.proposal.payload.nonce).validUntil) return false;
+	return !refusedForGood(k.proposal);
 }
 
 /**
