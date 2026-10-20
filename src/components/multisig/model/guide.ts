@@ -134,8 +134,8 @@ export const GLOSSARY: readonly Term[] = [
 		body: "What happened here: who proposed, signed, said no and sent.",
 	},
 	{
-		term: "Sharing service",
-		body: "The optional sign-in that shows proposals to your co-signers as they are made. Without it, proposals travel as links or files.",
+		term: "hl-tools server",
+		body: "Stores proposals and signatures you share, so your co-signers see them. Optional: links and files work without it.",
 		expert: "relay", // jargon: the glossary names the code's word
 	},
 	{

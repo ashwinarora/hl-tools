@@ -34,15 +34,15 @@ export const RELAY_COPY = {
 	recentHere:
 		"Proposals you made or opened here, saved in this browser. Hyperliquid sees nothing until one is sent. Clearing this site's data removes them.",
 	unreachable:
-		"Can't reach the sharing service. Your co-signers' updates will not show until it is back. You can still share by link or file.",
+		"Can't reach the hl-tools server. Your co-signers' updates will not show until it is back. You can still share by link or file.",
 	// Several wallets can stay signed in in one browser; only the connected one is in use.
 	othersHow:
 		"Choose one of them in your wallet to use it, with no new signature. While another wallet is connected, nothing is read or sent for these.",
-	// a proposal made while the sharing service is not in use stays where it was made
+	// a proposal made while the hl-tools server is not in use stays where it was made
 	notSignedInLocal:
 		"You are not signed in, so it stays in this browser until you pass it on: your co-signers do not see it in their lists.",
 	unreachableLocal:
-		"The sharing service cannot be reached, so it stays in this browser until you pass it on.",
+		"The hl-tools server cannot be reached, so it stays in this browser until you pass it on.",
 	connectOneOf:
 		"Connect a wallet that is signed in here to continue, or sign in with another one.",
 	signOutAll: "Sign out all wallets",
@@ -122,7 +122,7 @@ export const RELAY_COPY = {
 		"Register it so that its signers find it in their list. You can then follow its proposals here too; signing them is for its signers.",
 	registerSelfButton: "Register it",
 	selfSeesNothing:
-		"The sharing service does not hold this treasury yet. Once it is registered, its signers find it in their list and you can follow its proposals here:",
+		"The hl-tools server does not hold this treasury yet. Once it is registered, its signers find it in their list and you can follow its proposals here:",
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;

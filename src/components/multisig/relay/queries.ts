@@ -17,7 +17,7 @@ export function unwrap<T>(r: Result<T>): T {
 			r.issue ?? {
 				code: "relay.error",
 				severity: "error",
-				message: "The sharing service returned nothing.",
+				message: "The hl-tools server returned nothing.",
 			},
 		);
 	}

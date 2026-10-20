@@ -490,7 +490,7 @@ export function ProposalView({
 	// the relay's word, never the copy's: who proposed it is not signed
 	const proposer = row?.createdBy ?? null;
 	const ready = judged;
-	// who did what, when: the sharing service's history, or the copy itself;
+	// who did what, when: the hl-tools server's history, or the copy itself;
 	// Hyperliquid's record only where the page already reads it (once sent)
 	const recordAsk = useMemo(
 		() => (stage.phase === "submitted" ? recordQuestion(proposal) : null),

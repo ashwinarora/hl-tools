@@ -3,7 +3,7 @@ import { RELAY_COPY } from "./copy";
 
 /**
  * What a sign-in that did not finish says: one short line, shown as a toast.
- * The exact reason (the sharing service's own words, or the wallet's) is kept
+ * The exact reason (the hl-tools server's own words, or the wallet's) is kept
  * for "Details", where it helps when someone reports a problem, and is never
  * the line itself.
  */

@@ -6,7 +6,7 @@ export const Route = createFileRoute("/privacy")({
 	component: PrivacyPage,
 });
 
-const UPDATED = "2026-10-19";
+const UPDATED = "2026-10-20";
 const REPO = "https://github.com/ashwinarora/hl-tools";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -54,8 +54,9 @@ function PrivacyPage() {
 						</li>
 						<li>
 							If you <b>sign in</b> to the Multisig section, what you share
-							there is stored on the hl-tools relay so your co-signers can see
-							it. <b>The operator of the relay can read it as well.</b>
+							there is stored on the hl-tools server so your co-signers can see
+							it.{" "}
+							<b>The operator of the hl-tools server can read it as well.</b>
 						</li>
 						<li>
 							No analytics, no advertising, no trackers and no session recording
@@ -115,8 +116,8 @@ function PrivacyPage() {
 				<Section title="When you sign in to Multisig">
 					<p>
 						Signing in means signing one message with your wallet. It proves you
-						control the address and cannot move funds. From then on the relay
-						stores:
+						control the address and cannot move funds. From then on the hl-tools
+						server stores:
 					</p>
 					<ul>
 						<li>
@@ -144,7 +145,7 @@ function PrivacyPage() {
 							<b>Outcomes</b>: that a proposal was withdrawn or declined, what
 							Hyperliquid answered when it was submitted, and, when a proposal
 							was carried out some other way, the transaction your browser
-							pointed the relay to.
+							pointed the server to.
 						</li>
 						<li>
 							<b>Nicknames</b> that you or a co-signer give to an address or to
@@ -153,7 +154,7 @@ function PrivacyPage() {
 						</li>
 						<li>
 							<b>That you opened a proposal</b>: the first time you open a
-							pending proposal while signed in, the relay records it with the
+							pending proposal while signed in, the server records it with the
 							time. Your co-signers see it next to your address ("seen 2 hours
 							ago"), and you see theirs.
 						</li>
@@ -175,7 +176,7 @@ function PrivacyPage() {
 					</ul>
 					<p>
 						To keep signer lists current, and to check a transaction it was
-						pointed to, the relay itself asks Hyperliquid's public API about
+						pointed to, the server itself asks Hyperliquid's public API about
 						those accounts and transactions. It sends Hyperliquid nothing about
 						you.
 					</p>
@@ -184,7 +185,7 @@ function PrivacyPage() {
 						so you stay signed in when you switch between them (at most eight
 						wallets; the one unused longest is dropped). Only the wallet that is
 						connected is ever used, and "Sign out" removes that wallet's session
-						from the browser at once. The relay never receives a private key or
+						from the browser at once. The server never receives a private key or
 						a seed phrase, and nothing on this site asks for one.
 					</p>
 				</Section>
@@ -204,10 +205,10 @@ function PrivacyPage() {
 							there.
 						</li>
 						<li>
-							<b>The operator of the relay</b> can read everything stored on it.
-							Proposals are stored readable so signers can review them; they are
-							protected in transit and at rest by the hosting provider, and are
-							not hidden from the operator.
+							<b>The operator of the hl-tools server</b> can read everything
+							stored on it. Proposals are stored readable so signers can review
+							them; they are protected in transit and at rest by the hosting
+							provider, and are not hidden from the operator.
 						</li>
 						<li>
 							<b>Nobody else.</b> We do not sell, rent or share this data, and
@@ -218,17 +219,17 @@ function PrivacyPage() {
 					<p>
 						Bear in mind that most of this becomes public anyway: once an action
 						is submitted, Hyperliquid's ledger shows it to everyone. What the
-						relay holds that the chain does not is the time before submission:
+						server holds that the chain does not is the time before submission:
 						what is being proposed, and who has signed so far.
 					</p>
 				</Section>
 
-				<Section title="What the relay cannot do">
+				<Section title="What the hl-tools server cannot do">
 					<p>
 						It cannot move funds, sign for you, or make a proposal executable.
 						Every signature is checked in your browser against the proposal you
 						are looking at, and Hyperliquid alone decides what executes. The
-						relay can be slow or wrong about who has signed; it cannot forge a
+						server can be slow or wrong about who has signed; it cannot forge a
 						signature. If you would rather not use it, links and files do the
 						same job without it.
 					</p>
@@ -241,17 +242,17 @@ function PrivacyPage() {
 						own access logs for a limited time; the pages send it nothing else.
 					</p>
 					<p>
-						The relay runs on Supabase (a database and sign-in service), in the
-						EU (Frankfurt), which processes the data on our behalf and, like any
-						host, sees the IP addresses that connect to it and keeps its own
-						access logs for a limited time.
+						The hl-tools server runs on Supabase (a database and sign-in
+						service), in the EU (Frankfurt), which processes the data on our
+						behalf and, like any host, sees the IP addresses that connect to it
+						and keeps its own access logs for a limited time.
 					</p>
 					<p>
 						Proposals, signatures and the history of a treasury are kept until
 						they are deleted. A few records are removed by themselves: a request
 						to add or re-check a treasury a week after it was answered, a
-						transaction your browser pointed the relay to 30 days after the
-						relay checked it (that the proposal was carried out stays on
+						transaction your browser pointed the server to 30 days after the
+						server checked it (that the proposal was carried out stays on
 						record), an older "marked as read" point 30 days after a newer one
 						replaced it, and the record of who changed a nickname after a year.
 						You can export a proposal or a treasury's history as a file at any
@@ -265,7 +266,7 @@ function PrivacyPage() {
 				<Section title="Running your own">
 					<p>
 						The code is open (AGPL-3.0; the protocol core is MIT). A team that
-						wants to keep its proposals to itself can run its own relay, or use
+						wants to keep its proposals to itself can run its own server, or use
 						links and files only. See the{" "}
 						<a
 							href={REPO}

@@ -1,7 +1,7 @@
 /**
  * A proposal's timeline, oldest first: who proposed it, who signed, who said
  * no or took it back, how it ended, and what Hyperliquid's record says. Read
- * from the sharing service's history of the proposal when there is one (who
+ * from the hl-tools server's history of the proposal when there is one (who
  * did what, and when); otherwise from the copy itself, which can say only
  * when it was made, which signatures it carries (and when, as written in
  * it) and when it was sent. Who proposed a copy is not signed, so a copy's
@@ -17,7 +17,7 @@ import { shortAddress } from "./stage";
 /** One proposal of the timeline: alone, or one step of a move. */
 export interface TimelineStep {
 	readonly proposal: Proposal;
-	/** The sharing service's history of this proposal; null when it has none to give. */
+	/** The hl-tools server's history of this proposal; null when it has none to give. */
 	readonly events: readonly EventRow[] | null;
 	/** The signers whose signature on the copy verifies; null while not judged. */
 	readonly counted: readonly Address[] | null;

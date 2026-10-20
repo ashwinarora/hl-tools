@@ -158,8 +158,8 @@ export async function signIn(
 				"relay.signin_mismatch",
 				"error",
 				seen
-					? `The sharing service opened a session for ${seen}, not for the wallet that signed.`
-					: "The sharing service opened a session but could not say which wallet it is for.",
+					? `The hl-tools server opened a session for ${seen}, not for the wallet that signed.`
+					: "The hl-tools server opened a session but could not say which wallet it is for.",
 				{ fix: "Sign in again." },
 			),
 		);

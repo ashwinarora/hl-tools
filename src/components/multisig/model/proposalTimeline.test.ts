@@ -48,7 +48,7 @@ const texts = (steps: readonly TimelineStep[], me: Address | null = null) =>
 	]);
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
-describe("a proposal's timeline, from the sharing service's history", () => {
+describe("a proposal's timeline, from the hl-tools server's history", () => {
 	const p = makeProposal();
 	const d = p.digest;
 

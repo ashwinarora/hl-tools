@@ -170,7 +170,7 @@ export function YourPart({
 		}
 	};
 	const sign = () => void wallet.run("Waiting for the wallet…", doSign);
-	/** A sharing-service button's result, in a toast. */
+	/** A relay button's result, in a toast. */
 	const said = (title: string) => (problem: { message: string } | null) =>
 		notify(
 			problem

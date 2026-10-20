@@ -70,7 +70,7 @@ export interface StoreResult {
 	readonly proposal: Proposal;
 	readonly issues: readonly Issue[];
 	/**
-	 * What the sharing service answered to the push, once it was awaited:
+	 * What the hl-tools server answered to the push, once it was awaited:
 	 * null when it took it, an issue when it did not; absent when nothing was
 	 * pushed or the push goes on later.
 	 */
@@ -125,7 +125,7 @@ export interface ProposalDoc {
 		incoming: Proposal,
 		opts?: { readonly publish?: boolean; readonly pushLater?: boolean },
 	): Promise<StoreResult>;
-	/** Share the proposal as it is in this browser; what the sharing service answered. */
+	/** Share the proposal as it is in this browser; what the hl-tools server answered. */
 	publish(): Promise<Issue | null>;
 	/**
 	 * Remove this wallet's signature from the relay and from this browser.
@@ -189,7 +189,7 @@ async function readRemote(client: RelayClient, digest: Hex): Promise<Remote> {
 			issue(
 				"relay.rows_dropped",
 				"warning",
-				"The sharing service returned something for this proposal that could not be read; it was ignored.",
+				"The hl-tools server returned something for this proposal that could not be read; it was ignored.",
 			),
 		);
 	}
@@ -389,7 +389,7 @@ export function useProposalDoc(
 						"relay.not_shared",
 						"warning",
 						blocked ??
-							"Not shared: the sharing service does not list your wallet as a signer of this treasury. Add the treasury first.",
+							"Not shared: the hl-tools server does not list your wallet as a signer of this treasury. Add the treasury first.",
 					);
 				}
 				return null;

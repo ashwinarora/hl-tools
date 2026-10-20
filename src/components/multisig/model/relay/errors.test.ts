@@ -98,7 +98,7 @@ describe("relayIssue", () => {
 			const i = relayIssue(e);
 			expect(i.code).toBe("relay.unreachable");
 			expect(i.message).toBe(
-				"Can't reach the sharing service. Your co-signers' updates will not show until it is back; you can still share by link or file.",
+				"Can't reach the hl-tools server. Your co-signers' updates will not show until it is back; you can still share by link or file.",
 			);
 		}
 		expect(isUnreachable(pg("42501", "permission denied"))).toBe(false);
@@ -138,13 +138,13 @@ describe("relayIssue", () => {
 		expect(relayIssue(undefined).code).toBe("relay.error");
 		expect(relayIssue(null).code).toBe("relay.error");
 		expect(relayIssue("boom").message).toBe(
-			"The sharing service answered with an error: boom",
+			"The hl-tools server answered with an error: boom",
 		);
 		expect(relayIssue({}).message).toBe(
-			"The sharing service answered with an error.",
+			"The hl-tools server answered with an error.",
 		);
 		expect(relayIssue(pg("XX000", "internal error")).message).toBe(
-			"The sharing service answered with an error: internal error",
+			"The hl-tools server answered with an error: internal error",
 		);
 	});
 });

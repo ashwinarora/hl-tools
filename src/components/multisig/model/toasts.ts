@@ -36,7 +36,7 @@ export const TOAST_TITLES = {
 	saidNo: "Your no is recorded",
 	noTakenBack: "Your no is taken back",
 	cancelled: "Cancelled for everyone",
-	sharingRefused: "The sharing service did not take it",
+	sharingRefused: "The hl-tools server did not take it",
 	created: "Proposal created",
 	notCreated: "Not created",
 	converted: "Your treasury is set up",

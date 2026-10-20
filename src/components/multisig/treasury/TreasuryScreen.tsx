@@ -315,7 +315,7 @@ export function TreasuryScreen({
 			>
 				<Callout
 					tone="warning"
-					title="Can't reach the sharing service"
+					title="Can't reach the hl-tools server"
 					className="mb-4"
 					action={
 						<Button size="sm" variant="outline" onClick={relay.retry}>
@@ -439,8 +439,8 @@ export function TreasuryScreen({
 						<div className="flex flex-col gap-3">
 							<p className="text-sm text-muted-foreground">
 								This treasury is not in your list. Either nobody has added it
-								yet, or your wallet is not one of its signers in the sharing
-								service's copy of the signer list.
+								yet, or your wallet is not one of its signers in the hl-tools
+								server's copy of the signer list.
 							</p>
 							<div>
 								<Link to="/multisig/add" className={linkButton}>

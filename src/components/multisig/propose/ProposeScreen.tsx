@@ -1458,7 +1458,7 @@ function ProposeForm({
 													{sharing
 														? RELAY_COPY.createdShared
 														: relay.mode === "on"
-															? "The sharing service does not list your wallet as a signer of this treasury yet, so it stays in this browser until you pass it on."
+															? "The hl-tools server does not list your wallet as a signer of this treasury yet, so it stays in this browser until you pass it on."
 															: relay.mode === "signed-out"
 																? RELAY_COPY.notSignedInLocal
 																: relay.mode === "unreachable"

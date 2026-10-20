@@ -400,7 +400,7 @@ export function SharePanel({
 				<div className="border-t border-border p-4">
 					<p className="mb-4 text-xs text-muted-foreground">
 						The document is the whole proposal. A link or a file carries it to a
-						signer who does not use the sharing service; what they send back is
+						signer who does not use the hl-tools server; what they send back is
 						merged here, with every signature checked first.
 					</p>
 					{body}
