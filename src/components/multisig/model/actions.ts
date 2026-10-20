@@ -46,7 +46,12 @@ import {
 } from "@hl-tools/core";
 import { ADDRESS_RE } from "#/components/tools/multisig/model";
 import { chainChoiceFor, type InnerChain } from "./chains";
-import { addressField, amountField } from "./fields";
+import {
+	addressField,
+	amountField,
+	paysZeroAddress,
+	ZERO_RECEIVES,
+} from "./fields";
 import {
 	judgeSwitch,
 	MODE_NAME,
@@ -446,6 +451,13 @@ function warnAboutSend(
 		);
 		return;
 	}
+	// Raw JSON has no address field to say it: once only (audit F-018)
+	if (paysZeroAddress(action) && !issues.some((i) => i.code === "address.zero"))
+		issues.push(
+			issue("address.zero", "warning", ZERO_RECEIVES, {
+				path: "action.destination",
+			}),
+		);
 	const toItself = selfRefusal(treasury, action);
 	if (toItself) {
 		issues.push(
@@ -1199,8 +1211,9 @@ export function destinationOf(
 		if (o && ["usdSend", "spotSend", "sendAsset"].includes(str(o.type)))
 			value = str(o.destination);
 	}
-	const address = value.trim().toLowerCase();
-	return ADDRESS_RE.test(address) ? address : null;
+	// tested as typed: "0X…" is no address to the field, so it is not looked up either (audit F-077)
+	const typed = value.trim();
+	return ADDRESS_RE.test(typed) ? typed.toLowerCase() : null;
 }
 
 export interface Draft {

@@ -30,12 +30,14 @@ import { useChainMatch, useTxLookups } from "../live/useChainMatch";
 import { CONTROL_REFRESH_MS } from "../live/useControl";
 import { useReceiver } from "../live/useReceiver";
 import { useRecord } from "../live/useRecord";
+import { useSignerChecks } from "../live/useSignerChecks";
 import { explorerTxUrl } from "../model/chain/columns";
 import { ledgerEvidence } from "../model/chain/match";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
 import { recordQuestion } from "../model/chain/record";
-import { CHANGE } from "../model/change";
+import { CHANGE, changeLines } from "../model/change";
 import { likeWaiting, paymentOf } from "../model/duplicates";
+import { paysZeroAddress, ZERO_RECEIVES } from "../model/fields";
 import { receiptOk } from "../model/history";
 import {
 	copyNotesShown,
@@ -363,6 +365,34 @@ export function ProposalView({
 		proposal.payload.action,
 		target.address,
 	);
+	// A change of signers, judged as the form judges it, against the signers
+	// Hyperliquid reports now: every co-signer reads what its proposer was told
+	// (decision D3, audit F-092), and Sign is off only for a change Hyperliquid
+	// would not take.
+	const nextSet = changeTo === null || changeTo === "revert" ? null : changeTo;
+	const added = useMemo(
+		() =>
+			nextSet
+				? nextSet.authorizedUsers.filter(
+						(a) => !state.policy?.authorizedUsers.includes(a),
+					)
+				: NO_SIGNERS,
+		[nextSet, state.policy],
+	);
+	const signerChecks = useSignerChecks(target.network, added);
+	const changeJudged =
+		changeTo !== null && state.policy && state.policy.authorizedUsers.length > 0
+			? changeLines({
+					next: nextSet,
+					current: state.policy,
+					self: target.address,
+					checks: signerChecks.checks,
+					me,
+					leader: proposal.payload.outerSigner,
+					agents: treasury.agents,
+					now: clock,
+				})
+			: null;
 	const stage = deriveStage({
 		proposal,
 		readiness: judged,
@@ -390,7 +420,7 @@ export function ProposalView({
 		objections: doc.relay.objections,
 		// one clock for the page: the same event reads the same age wherever it is said
 		now: clock,
-		refusal: refusal?.title ?? null,
+		refusal: refusal?.title ?? changeJudged?.blockedBy ?? null,
 	});
 	const role = ROLE[stage.role];
 	const description = useMemo(
@@ -807,6 +837,16 @@ export function ProposalView({
 										)}
 									</Facts>
 									<CostNote line={cost} />
+									{paysZeroAddress(proposal.payload.action) && (
+										// what the proposer was told, said to every co-signer (audit F-018)
+										<p className="mt-3 flex items-start gap-1.5 text-[13px] text-warning">
+											<span
+												className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+												aria-hidden
+											/>
+											<span>{ZERO_RECEIVES}</span>
+										</p>
+									)}
 									{COSTED.has(stage.phase) && (
 										<LikeWaiting
 											like={likeWaiting(
@@ -942,6 +982,23 @@ export function ProposalView({
 													)}
 												/>
 											</p>
+											{changeJudged?.blockedBy && (
+												<p className="text-[13px] text-danger">
+													{changeJudged.blockedBy}
+												</p>
+											)}
+											{changeJudged?.lines.map((l) => (
+												<p
+													key={l.code}
+													className="flex items-start gap-1.5 text-[13px] text-warning"
+												>
+													<span
+														className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+														aria-hidden
+													/>
+													<span>{l.text}</span>
+												</p>
+											))}
 											<p className="text-xs text-muted-foreground">
 												{CHANGE.againstNow}
 											</p>

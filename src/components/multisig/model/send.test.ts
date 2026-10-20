@@ -334,6 +334,18 @@ describe("costLine: what sending to this address costs", () => {
 			),
 		).toBeNull();
 	});
+	it("never calls the zero address in use: the line about it says money sent there is lost (audit F-018)", () => {
+		const IN_USE = { status: "active", mode: null } as unknown as Receiver;
+		expect(
+			line(
+				{
+					...asset("perps", "perps"),
+					destination: "0x0000000000000000000000000000000000000000",
+				},
+				IN_USE,
+			),
+		).toBeNull();
+	});
 	it("is silent for what pays nobody", () => {
 		expect(line(null, FRESH)).toBeNull();
 		expect(

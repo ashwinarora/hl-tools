@@ -24,6 +24,7 @@ import {
 	withdrawalOutcome,
 } from "@hl-tools/core";
 import type { Receiver } from "./actions";
+import { paysZeroAddress } from "./fields";
 import { selfRefusal } from "./selfSend";
 
 export interface SendFacts {
@@ -373,6 +374,9 @@ export function costLine(input: {
 	if (!action || !shape || shape.destination === null) return null;
 	// not an account: the form says so under the destination, and nothing is paid
 	if (multiSigEvmRefusal(action)) return null;
+	// nobody to describe: the line about the zero address says what it is,
+	// never "in use, costs nothing" (audit F-018)
+	if (paysZeroAddress(action)) return null;
 	if (receiver === "loading")
 		return {
 			tone: "muted",

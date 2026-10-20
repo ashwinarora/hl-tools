@@ -916,6 +916,10 @@ describe("destinationOf: the account whose being new decides the fee", () => {
 		expect(of({ kind: "sendUsdc", destination: ` ${UPPER} ` })).toBe(RECIPIENT);
 		expect(of({ kind: "sendToken", destination: RECIPIENT })).toBe(RECIPIENT);
 		expect(of({ kind: "sendUsdc", destination: "0x1234" })).toBeNull();
+		// "0X…" is no address to the field, so it is not looked up either (audit F-077)
+		expect(
+			of({ kind: "sendUsdc", destination: `0X${RECIPIENT.slice(2)}` }),
+		).toBeNull();
 		expect(of({ kind: "sendUsdc", destination: "" })).toBeNull();
 		for (const type of ["usdSend", "spotSend", "sendAsset"])
 			expect(
@@ -1125,6 +1129,20 @@ describe("what the audit found the form letting through", () => {
 		expect(codes(send.issues)).toEqual(["address.zero"]);
 		expect(send.issues[0]?.message).toContain("whatever is sent to it is lost");
 		expect(send.action).not.toBeNull();
+		// Raw JSON says it too, as a warning that blocks nothing (decision D2)
+		const raw = buildAction(
+			form({
+				kind: "raw",
+				raw: JSON.stringify({
+					type: "usdSend",
+					destination: ZERO,
+					amount: "1",
+				}),
+			}),
+			ctx(),
+		);
+		expect(codes(raw.issues)).toContain("address.zero");
+		expect(raw.issues.filter((i) => i.code === "address.zero")).toHaveLength(1);
 		// an approval of the zero address is a removal: the approve form does not build one
 		const agent = buildAction(
 			form({ kind: "approveAgent", agentAddress: ZERO, agentName: "lab" }),

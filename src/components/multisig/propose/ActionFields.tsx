@@ -307,7 +307,7 @@ export function ActionFields({
 			return (
 				<>
 					{destination(
-						`The address that receives USDC on Arbitrum${network === "testnet" ? " Sepolia" : ""}.`,
+						`The address that receives USDC on Arbitrum${network === "testnet" ? " Sepolia" : ""}. Whoever holds its key there controls the money: not a contract or an exchange that does not credit USDC on Arbitrum.`,
 					)}
 					{amount(
 						"USDC",

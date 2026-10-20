@@ -5,6 +5,7 @@ import {
 	fromPlain,
 	type Issue,
 	infoClient,
+	isZeroAddress,
 	type Network,
 	nonceWindow,
 	ORDERED_ACTION_TYPES,
@@ -649,7 +650,8 @@ function ProposeForm({
 	const otherIssues = issues.filter(
 		(i) =>
 			(i.severity !== "error" || fieldOf(i) === null) &&
-			!FIELD_NOTES.has(i.code) &&
+			// Raw JSON has no field to put a note under: its notes join the others
+			(form.kind === "raw" || !FIELD_NOTES.has(i.code)) &&
 			!saidByForm.has(i.code),
 	);
 	const action = prepared?.action ?? null;
@@ -1603,16 +1605,19 @@ function SignerOptions({
 	const names = useNames();
 	return (
 		<>
-			{signers.map((a) => {
-				const nick = names?.of(a)?.name;
-				return (
-					<option key={a} value={a}>
-						{nick ? `${nick} · ` : ""}
-						{a}
-						{a === me ? " (you)" : ""}
-					</option>
-				);
-			})}
+			{signers
+				// nobody holds the zero address's key: it could never send (audit F-088)
+				.filter((a) => !isZeroAddress(a))
+				.map((a) => {
+					const nick = names?.of(a)?.name;
+					return (
+						<option key={a} value={a}>
+							{nick ? `${nick} · ` : ""}
+							{a}
+							{a === me ? " (you)" : ""}
+						</option>
+					);
+				})}
 		</>
 	);
 }

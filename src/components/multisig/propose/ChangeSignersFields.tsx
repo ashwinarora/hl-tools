@@ -2,7 +2,7 @@ import type { Address, AgentInfo, Policy, SignerSet } from "@hl-tools/core";
 import { Check, Loader2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "#/lib/utils";
-import { CHANGE, convertBackLines } from "../model/change";
+import { agentsStayLine, CHANGE, convertBackLines } from "../model/change";
 import { CREATE } from "../model/create";
 import {
 	addEntries,
@@ -373,12 +373,18 @@ export function ChangeSignersFields({
 					</p>
 				) : null}
 				<Lines
-					lines={judged.lines.filter(
-						(l) =>
-							l.level !== "blocked" &&
-							// said with the number, a few lines up
-							l.code !== "lockout.all_keys_required",
-					)}
+					lines={[
+						...judged.lines.filter(
+							(l) =>
+								l.level !== "blocked" &&
+								// said with the number, a few lines up
+								l.code !== "lockout.all_keys_required",
+						),
+						// approved API wallets are not touched by a signer change (audit F-023)
+						...(change ? [agentsStayLine(agents, openedAt)] : []).filter(
+							(l): l is NonNullable<typeof l> => l !== null,
+						),
+					]}
 				/>
 				{change && !judged.blockedBy && (
 					<AffectedList
