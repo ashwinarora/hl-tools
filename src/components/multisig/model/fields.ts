@@ -13,6 +13,23 @@ import {
 } from "@hl-tools/core";
 import { ADDRESS_RE } from "#/components/tools/multisig/model";
 
+/** Under a destination that is the zero address: money sent there is gone (decision D2). */
+export const ZERO_RECEIVES =
+	"This is the zero address. Nobody holds its key: whatever is sent to it is lost.";
+
+/** Whether an action pays the zero address: a send or a bridge withdrawal. */
+export function paysZeroAddress(action: unknown): boolean {
+	if (!action || typeof action !== "object") return false;
+	const a = action as Record<string, unknown>;
+	return (
+		["usdSend", "spotSend", "sendAsset", "withdraw3"].includes(
+			String(a.type),
+		) &&
+		typeof a.destination === "string" &&
+		isZeroAddress(a.destination)
+	);
+}
+
 export function addressField(
 	value: string,
 	path: string,
@@ -56,7 +73,7 @@ export function addressField(
 				"address.zero",
 				"warning",
 				receives
-					? "This is the zero address. Nobody holds its key: whatever is sent to it is lost."
+					? ZERO_RECEIVES
 					: "This is the zero address. Nobody holds its key.",
 				{ path },
 			),

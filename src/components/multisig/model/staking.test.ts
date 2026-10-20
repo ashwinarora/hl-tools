@@ -25,6 +25,7 @@ import {
 	type StakingInput,
 	type StakingRead,
 	stakingActions,
+	stakingPageOrder,
 	stakingSummaryLine,
 	stakingView,
 	stepSentence,
@@ -673,6 +674,50 @@ describe("what the Staking section shows", () => {
 			any: false,
 		});
 	});
+	it("lists validators in the order of Hyperliquid's own staking page", () => {
+		const listed = [
+			validator(X, "big", { stake: "6475454" }),
+			validator(JAILED, "jailed, the largest", {
+				stake: "99742056",
+				isJailed: true,
+				isActive: false,
+			}),
+			validator(KEEPS, "keeps all rewards", {
+				stake: "11056",
+				commission: "1",
+				month: NOTHING,
+			}),
+			validator(Y, "small", { stake: "10063" }),
+			validator(OUTSIDE, "not active", { stake: "500", isActive: false }),
+			// jailed and still in the set is not among the ones listed first
+			validator(QUIET, "jailed, active", { stake: "1", isJailed: true }),
+		];
+		expect([...listed].sort(stakingPageOrder).map((x) => x.name)).toEqual([
+			// the active set by stake, smallest first: paying nothing moves nobody
+			"small",
+			"keeps all rewards",
+			"big",
+			// then the rest, the same way
+			"jailed, active",
+			"not active",
+			"jailed, the largest",
+		]);
+		// two with the same stake keep one order whatever order they came in
+		const twins = [
+			validator(Y, "y", { stake: "5" }),
+			validator(X, "x", { stake: "5" }),
+		];
+		expect(twins.sort(stakingPageOrder).map((x) => x.name)).toEqual(["x", "y"]);
+		// read as amounts, never as text
+		expect(
+			[
+				validator(X, "ten", { stake: "10" }),
+				validator(Y, "nine", { stake: "9.5" }),
+			]
+				.sort(stakingPageOrder)
+				.map((x) => x.name),
+		).toEqual(["nine", "ten"]);
+	});
 	it("a validator's state in a word", () => {
 		expect(VALIDATORS.map((x) => validatorState(x))).toEqual([
 			{ text: "active", idle: false },
@@ -699,5 +744,17 @@ describe("what the Staking section shows", () => {
 			}),
 		).toBeNull();
 		expect(stakingSummaryLine(null)).toBeNull();
+	});
+});
+
+describe("an amount no action can carry (audit F-114)", () => {
+	it("is refused in the form: the wallet signs a 64-bit whole number", () => {
+		const big = plan({ amount: "200000000000" });
+		expect(codes(big.issues)).toContain("amount.too_large");
+		expect(big.steps).toBeNull();
+		// the largest that fits still builds
+		expect(
+			codes(plan({ amount: "184467440737.09551615" }).issues),
+		).not.toContain("amount.too_large");
 	});
 });

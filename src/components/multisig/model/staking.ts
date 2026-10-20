@@ -48,6 +48,7 @@ import {
 	validatorPays,
 	waitWords,
 } from "@hl-tools/core";
+import { compareAmount } from "./chain/columns";
 import { addressField, amountField } from "./fields";
 import { shortAddress } from "./parts";
 import { vaultActionLine } from "./vault";
@@ -192,8 +193,24 @@ export const STAKING = {
 	validatorsUnread:
 		"The list of validators could not be read from Hyperliquid, so this address was not checked against it.",
 	noRecommendation:
-		"Every validator is listed as Hyperliquid reports it. Which one to stake with is the signers' choice.",
+		"Every validator is listed as Hyperliquid reports it, in the order of Hyperliquid's own staking page. Which one to stake with is the signers' choice.",
 } as const;
+
+/**
+ * The order of Hyperliquid's own staking page (read on testnet 2026-10-20,
+ * audit F-075): the active validators that are not jailed first, then the
+ * rest, each group by total stake, smallest first. Paying nothing does not
+ * move a validator down: its row says so instead. Never an order of this
+ * page's own, which would be a ranking.
+ */
+export function stakingPageOrder(a: Validator, b: Validator): number {
+	const group = (v: Validator) => (v.isActive && !v.isJailed ? 0 : 1);
+	return (
+		group(a) - group(b) ||
+		compareAmount(a.stake, b.stake) ||
+		a.address.localeCompare(b.address)
+	);
+}
 
 /** Why a stake with a validator earns nothing, as a clause after its name. */
 const NO_PAY: Readonly<Record<NoPay, string>> = {
@@ -265,13 +282,28 @@ export function planStaking(
 		validators?.find((v) => v.address === address) ?? null;
 	const label = (address: string) => validatorLabel(address, validators);
 
-	const amount = amountField(
+	const typed = amountField(
 		form.amount,
 		HYPE_WEI_DECIMALS,
 		"HYPE",
 		issues,
 		AMOUNT,
-	)?.toString();
+	);
+	// what the wallet signs is a 64-bit whole number of units: a larger
+	// amount cannot be signed at all (audit F-114)
+	if (typed && typed.toScaledBigInt(HYPE_WEI_DECIMALS) > UINT64_MAX)
+		issues.push(
+			issue(
+				"amount.too_large",
+				"error",
+				"That is more HYPE than an action can carry.",
+				{ path: AMOUNT },
+			),
+		);
+	const amount =
+		typed && typed.toScaledBigInt(HYPE_WEI_DECIMALS) <= UINT64_MAX
+			? typed.toString()
+			: undefined;
 	/** A validator HYPE is staked with: it has to be one, where the list was read. */
 	const target = (value: string, path: string): string | null => {
 		const address = addressField(value, path, "The validator", issues, false);
@@ -401,6 +433,9 @@ function wouldRefuseDetail(
 	}
 	return "";
 }
+
+/** The largest whole number an action's 64-bit field holds. */
+const UINT64_MAX = 2n ** 64n - 1n;
 
 /**
  * The actions of a plan as Hyperliquid takes them: each with the chain fields

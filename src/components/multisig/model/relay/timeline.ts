@@ -267,7 +267,7 @@ export function buildTimeline(
 								...(e.digest ? { accepted: [e.digest] } : {}),
 							}
 						: entry(
-								say`Hyperliquid rejected ${action(e.digest, false)}. Sent by ${object(e.actor)}. ${afterRejection(e.data.http_status)}`,
+								say`Hyperliquid did not accept ${action(e.digest, false)}. Sent by ${object(e.actor)}. ${afterRejection(e.data.http_status)}`,
 							),
 				);
 				break;
@@ -310,6 +310,26 @@ export function historyFilename(
 }
 
 /**
+ * Writes the short form of each address given ("0x49d0…0e18") whole, where
+ * only one of them has that short form. A short form two of them share is
+ * left as it is: the file never names the wrong one.
+ */
+export function wholeAddresses(
+	addresses: readonly string[],
+): (text: string) => string {
+	const byShort = new Map<string, string | null>();
+	for (const a of new Set(addresses.map((x) => x.toLowerCase()))) {
+		const short = shortAddress(a);
+		byShort.set(short, byShort.has(short) ? null : a);
+	}
+	return (text) =>
+		text.replace(
+			/0x[0-9a-f]{4}…[0-9a-f]{4}/gi,
+			(m) => byShort.get(m.toLowerCase()) ?? m,
+		);
+}
+
+/**
  * The Signing log as CSV, oldest first: when (UTC), what happened with every
  * address whole, the proposal it is about, and, for an accepted send, what
  * Hyperliquid's record said when it was exported (`record`).
@@ -317,7 +337,13 @@ export function historyFilename(
 export function historyCsv(
 	entries: readonly TimelineEntry[],
 	record: (e: TimelineEntry) => string | null,
+	/**
+	 * Addresses the entries name inside their words (a vault, a validator):
+	 * written whole in the file, as every other address is (audit F-050).
+	 */
+	named: readonly string[] = [],
 ): { readonly columns: readonly string[]; readonly rows: CsvCell[][] } {
+	const whole = wholeAddresses(named);
 	return {
 		columns: [
 			"Time (UTC)",
@@ -329,7 +355,7 @@ export function historyCsv(
 			.sort((a, b) => a.at - b.at || a.id - b.id)
 			.map((e) => [
 				csvTime(e.at),
-				e.parts.map((p) => p.who ?? p.text).join(""),
+				whole(e.parts.map((p) => p.who ?? p.text).join("")),
 				e.digest,
 				e.accepted ? record(e) : null,
 			]),

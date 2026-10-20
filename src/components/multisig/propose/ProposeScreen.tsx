@@ -4,7 +4,7 @@ import {
 	describeAction,
 	fromPlain,
 	type Issue,
-	infoClient,
+	isZeroAddress,
 	type Network,
 	nonceWindow,
 	ORDERED_ACTION_TYPES,
@@ -18,7 +18,7 @@ import {
 	tieSteps,
 	ZERO_ADDRESS,
 } from "@hl-tools/core";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FileSignature, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -44,6 +44,7 @@ import { useNetworkHydrated } from "#/store/networkStore";
 import { useReceiver } from "../live/useReceiver";
 import { useSignerChecks } from "../live/useSignerChecks";
 import { useStaking } from "../live/useStaking";
+import { useTokenList } from "../live/useTokenList";
 import { useVault, useVaultDetails, useVaults } from "../live/useVaults";
 import {
 	ACTION_KINDS,
@@ -66,6 +67,8 @@ import {
 	formWorthKeeping,
 	proposeDraftFor,
 } from "../model/drafts";
+import { likeWaiting } from "../model/duplicates";
+
 import { loadProposal, saveProposal } from "../model/history";
 import { maxFor } from "../model/max";
 import {
@@ -77,10 +80,10 @@ import {
 	WINDOW_EITHER,
 } from "../model/nonce";
 import { isOutcomeShare } from "../model/outcomes";
-import { RELAY_COPY } from "../model/relay/copy";
+import { NUMBERED_HERE, RELAY_COPY } from "../model/relay/copy";
 import { reproposeSource } from "../model/repropose";
 import { isItself } from "../model/selfTreasury";
-import { costLine, spotAvailable } from "../model/send";
+import { costLine, shownFlags, spotAvailable } from "../model/send";
 import { toLookUp, waitingProposals, wantedSet } from "../model/signerSet";
 import {
 	CODE_COPY,
@@ -88,6 +91,7 @@ import {
 	signingChainOf,
 	signingNetwork,
 } from "../model/signingNetwork";
+import { stillCounts } from "../model/stage";
 import { isStakingKind, planStaking, STAKING } from "../model/staking";
 import {
 	done as doneToast,
@@ -107,6 +111,7 @@ import { signerFailure } from "../model/walletErrors";
 import { TreasuryNames, useNames } from "../names/Names";
 import { Sentence } from "../names/Sentence";
 import { CodePanel } from "../proposal/CodePanel";
+import { LikeWaiting } from "../proposal/LikeWaiting";
 import { shareMove } from "../relay/api";
 import { useTreasuries } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -147,6 +152,14 @@ const FIELD_NOTES: ReadonlySet<string> = new Set([
 
 /** Shown only once the user has tried to create: an untouched form is not an error. */
 const REQUIRED = new Set(["field.required", "finaliser.required"]);
+
+/** The kinds that can pay another account: a like proposal still waiting is said (decision D4). */
+const PAYS: ReadonlySet<string> = new Set([
+	"sendUsdc",
+	"sendToken",
+	"withdraw3",
+	"raw",
+]);
 
 /** The field behind an input's id, for "required" said once the field was left. */
 const FIELD_OF_ID: Readonly<Record<string, keyof ActionForm>> = {
@@ -393,15 +406,14 @@ function ProposeForm({
 		};
 	}, [supersedes, hydrated, network, address]);
 
-	const universe = useQuery({
-		queryKey: ["universe", network],
-		queryFn: () => infoClient(network).universe(),
-		staleTime: 5 * 60_000,
-		retry: 1,
-		// both sends name their token by its id
-		enabled:
-			hydrated && (form.kind === "sendUsdc" || form.kind === "sendToken"),
-	});
+	// both sends name their token by its id; Raw JSON is checked against it too
+	const universe = useTokenList(
+		network,
+		hydrated &&
+			(form.kind === "sendUsdc" ||
+				form.kind === "sendToken" ||
+				form.kind === "raw"),
+	);
 
 	// Hyperliquid carries out an account's sends and withdrawals only in the
 	// order of their numbers, so a new one is numbered after every one on record
@@ -412,13 +424,23 @@ function ProposeForm({
 	const known = useKnownProposals(
 		network,
 		(address ?? ZERO_ADDRESS) as Address,
-		// a change of signers, and a switch of mode, say which waiting proposals they touch
+		// a change of signers, and a switch of mode, say which waiting proposals
+		// they touch; a payment, whether a like one is already waiting
 		hydrated &&
 			!!address &&
-			(ordered || form.kind === "changeSigners" || form.kind === "accountMode"),
+			(ordered ||
+				PAYS.has(form.kind) ||
+				form.kind === "changeSigners" ||
+				form.kind === "accountMode"),
 	);
+	// a proposal that can never be carried out numbers nothing (audit F-103)
 	const floor =
-		ordered && actionType ? orderFloor(actionType, known.proposals) : null;
+		ordered && actionType
+			? orderFloor(
+					actionType,
+					known.proposals.filter((k) => stillCounts(k, previewNow)),
+				)
+			: null;
 	const orderUnknown = ordered && known.state === "loading";
 
 	// Who is being paid: new to Hyperliquid (the first send costs 1 USDC) or in
@@ -580,6 +602,11 @@ function ProposeForm({
 	const previews = drafts.inputs?.map((input) =>
 		createProposal(input, { now: previewNow }),
 	);
+	// the same payment proposed twice is paid twice: say so when one is still waiting
+	const like =
+		draft.action && address
+			? likeWaiting(draft.action, known.proposals, { self: address, now })
+			: null;
 	// The canonical action and its risk flags do not depend on the finaliser, so show them
 	// as soon as the action itself builds.
 	const prepared = draft.action
@@ -630,7 +657,8 @@ function ProposeForm({
 	const otherIssues = issues.filter(
 		(i) =>
 			(i.severity !== "error" || fieldOf(i) === null) &&
-			!FIELD_NOTES.has(i.code) &&
+			// Raw JSON has no field to put a note under: its notes join the others
+			(form.kind === "raw" || !FIELD_NOTES.has(i.code)) &&
 			!saidByForm.has(i.code),
 	);
 	const action = prepared?.action ?? null;
@@ -640,7 +668,11 @@ function ProposeForm({
 	const secondDescribed = secondAction
 		? describeAction(secondAction, { network })
 		: null;
-	const flags = prepared?.flags ?? [];
+	const flags = shownFlags(
+		prepared?.flags ?? [],
+		prepared?.action ?? null,
+		address ?? "",
+	);
 	const unified = state.mode?.kind === "unified";
 	const movable = {
 		perps: state.perp?.withdrawable ?? null,
@@ -681,7 +713,9 @@ function ProposeForm({
 				? null
 				: lookup.state === "loading"
 					? "loading"
-					: (lookup.receiver?.status ?? null),
+					: lookup.state === "failed"
+						? "failed"
+						: (lookup.receiver?.status ?? null),
 		token:
 			form.kind === "sendToken" && coin
 				? {
@@ -966,8 +1000,11 @@ function ProposeForm({
 												? "HYPE between spot, the staking balance and a validator."
 												: vaultOn
 													? "USDC into a vault, or back out of one."
-													: ACTION_KINDS.find((k) => k.kind === form.kind)
-															?.description
+													: converting
+														? // its own line, not Change signers' (audit F-079)
+															CHANGE.backDescription
+														: ACTION_KINDS.find((k) => k.kind === form.kind)
+																?.description
 										}
 									>
 										<div className="space-y-4">
@@ -1075,6 +1112,8 @@ function ProposeForm({
 															.filter((t): t is number => t !== null) ?? []
 													}
 													tokensLoading={universe.isFetching}
+													tokensFailed={universe.isError && !universe.data}
+													onRetryTokens={() => void universe.refetch()}
 													mode={state.mode}
 													receiver={lookup.receiver}
 													cost={cost}
@@ -1082,6 +1121,7 @@ function ProposeForm({
 													movable={movable}
 													agents={state.agents}
 													agentsFailed={!!state.agentsError}
+													modeFailed={state.modeFailed}
 													now={now}
 													max={amountMax}
 												/>
@@ -1363,9 +1403,22 @@ function ProposeForm({
 												<IssueList plain issues={otherIssues} />
 											</div>
 										)}
+										<LikeWaiting like={like} />
 									</Panel>
 									<Panel title="Create" bodyClassName="p-3.5">
 										<div className="space-y-3">
+											{ordered &&
+												known.state === "unavailable" &&
+												(relay.mode === "on" ||
+													relay.mode === "unreachable") && (
+													<p className="flex items-start gap-1.5 text-[13px] text-warning">
+														<span
+															className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+															aria-hidden
+														/>
+														<span>{NUMBERED_HERE}</span>
+													</p>
+												)}
 											{!hydrated || state.loading ? (
 												<p
 													className="flex items-center gap-2 text-sm text-muted-foreground"
@@ -1458,7 +1511,7 @@ function ProposeForm({
 													{sharing
 														? RELAY_COPY.createdShared
 														: relay.mode === "on"
-															? "The sharing service does not list your wallet as a signer of this treasury yet, so it stays in this browser until you pass it on."
+															? "The hl-tools server does not list your wallet as a signer of this treasury yet, so it stays in this browser until you pass it on."
 															: relay.mode === "signed-out"
 																? RELAY_COPY.notSignedInLocal
 																: relay.mode === "unreachable"
@@ -1583,16 +1636,19 @@ function SignerOptions({
 	const names = useNames();
 	return (
 		<>
-			{signers.map((a) => {
-				const nick = names?.of(a)?.name;
-				return (
-					<option key={a} value={a}>
-						{nick ? `${nick} · ` : ""}
-						{a}
-						{a === me ? " (you)" : ""}
-					</option>
-				);
-			})}
+			{signers
+				// nobody holds the zero address's key: it could never send (audit F-088)
+				.filter((a) => !isZeroAddress(a))
+				.map((a) => {
+					const nick = names?.of(a)?.name;
+					return (
+						<option key={a} value={a}>
+							{nick ? `${nick} · ` : ""}
+							{a}
+							{a === me ? " (you)" : ""}
+						</option>
+					);
+				})}
 		</>
 	);
 }

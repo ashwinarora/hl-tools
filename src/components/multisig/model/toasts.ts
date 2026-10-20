@@ -27,6 +27,8 @@ export const TOAST_TITLES = {
 	notSigned: "Not signed",
 	accepted: "Accepted by Hyperliquid",
 	refused: "Refused by Hyperliquid",
+	unclear: "No clear answer from Hyperliquid",
+	used: "Already used: it most likely went through",
 	notSent: "Not sent",
 	moveSigned: "Both steps signed",
 	moveNotSigned: "Not everything was signed",
@@ -36,7 +38,8 @@ export const TOAST_TITLES = {
 	saidNo: "Your no is recorded",
 	noTakenBack: "Your no is taken back",
 	cancelled: "Cancelled for everyone",
-	sharingRefused: "The sharing service did not take it",
+	sharingRefused: "The hl-tools server did not take it",
+	signedOut: "Signed out of the hl-tools server",
 	created: "Proposal created",
 	notCreated: "Not created",
 	converted: "Your treasury is set up",
@@ -49,10 +52,39 @@ export const TOAST_TITLES = {
 	notShared: "Not shared",
 	merged: "Signatures added from the copy",
 	nothingNew: "Nothing new in that copy",
-	otherCopy: "That copy is another proposal",
+	otherCopy: "That copy is not this proposal",
 	nothingSent: "Nothing was sent",
 	notMerged: "Nothing was added from the copy",
 } as const;
+
+/**
+ * What the page says after a send whose answer is not "accepted"
+ * (`sendAnswer` in `model/submit.ts`). An unclear answer stores nothing and
+ * offers to send the very same proposal again, which cannot pay twice: only
+ * a new proposal, with a new number, could.
+ */
+export const SEND_ANSWER = {
+	unclear:
+		"We don't know whether this went through. Trying again is safe: Hyperliquid carries out a proposal at most once, and says so if it already did.",
+	/** In a move, when the step before was accepted. */
+	unclearStep: (n: number) =>
+		`Step ${n - 1} was accepted and stands. We don't know whether step ${n} went through. Trying again is safe: Hyperliquid carries out a proposal at most once, and says so if it already did.`,
+	tryAgain: "Try again",
+	/** Under the button: what it does, and does not. */
+	tryAgainNote:
+		"Try again posts the same signed request once more: no wallet prompt, and Hyperliquid carries it out at most once.",
+	tryingAgain: "Sending to Hyperliquid again…",
+	used: "Hyperliquid says this proposal was already used, so it most likely went through. Check Hyperliquid's record.",
+	usedStep: (n: number) =>
+		`Hyperliquid says step ${n} was already used, so it most likely went through. Check Hyperliquid's record.`,
+	checkRecord: "Check Hyperliquid's record",
+} as const;
+
+/**
+ * While a send is on its way: Hyperliquid is asked first whether it would
+ * refuse, then the wallet (audit F-003: no wallet prompt may follow at all).
+ */
+export const SENDING = "Checking with Hyperliquid, then asking your wallet…";
 
 /** One step of a move, accepted. */
 export const stepAccepted = (n: number) => `Step ${n} accepted by Hyperliquid`;
@@ -65,7 +97,11 @@ export const TOAST_LINES = {
 	final: "It cannot be undone.",
 	refused: "This page says why.",
 	secondStepLater: "Step 2 is sent once its time comes.",
-	keptOther: "It was kept in this browser; this page offers to open it.",
+	keptOther:
+		"What it asks everyone to sign is different. Compare it before opening it.",
+	/** A session that ended without this page asking (audit F-069). */
+	signedOut:
+		"This wallet's sign-in here has ended. Sign in again to see your co-signers' updates.",
 } as const;
 
 /** A result the page cannot call either way yet. */

@@ -613,6 +613,44 @@ describe("refusals", () => {
 		]);
 		expect(talking.status()).toBe("live");
 	});
+	it("does not call a stall a refusal: a silent socket keeps waiting, and is closed as dead (audit F-062, F-068)", () => {
+		const { hub, last, clock, sockets } = setup();
+		const a = ear();
+		hub.subscribe(ch("spotState"), { user: A }, a.listener);
+		last().open();
+		// nothing at all comes back: no acknowledgement, no data, no pong
+		clock.advance(HUB_DEFAULTS.ackMs + 1);
+		expect(a.status()).toBe(undefined);
+		// the liveness check closes it, and the next socket asks again
+		clock.advance(HUB_DEFAULTS.quietMs + HUB_DEFAULTS.pongMs + 1);
+		expect(sockets[0]?.closed).toBe(true);
+		expect(a.status()).toBe(undefined);
+		clock.advance(HUB_DEFAULTS.backoffMaxMs);
+		expect(sockets).toHaveLength(2);
+		last().open();
+		last().ack({ type: "spotState", user: A });
+		expect(a.status()).toBe("live");
+	});
+	it("refuses what a socket that answers never acknowledges, and takes it back once its data arrives", () => {
+		const { hub, last, clock } = setup();
+		const a = ear();
+		hub.subscribe(ch("spotState"), { user: A }, a.listener);
+		last().open();
+		clock.advance(1_000);
+		// the socket is alive: it answers
+		last().say({ channel: "pong" });
+		clock.advance(HUB_DEFAULTS.ackMs);
+		expect(a.states).toEqual([
+			{
+				status: "refused",
+				reason: "Hyperliquid did not acknowledge the subscription.",
+			},
+		]);
+		// the acknowledgement was lost, not the subscription: its data says so
+		last().say({ channel: "spotState", data: { user: A } });
+		expect(a.status()).toBe("live");
+		expect(a.messages).toHaveLength(1);
+	});
 	it("asks again for what was refused: on retryNow, and on every reconnect", () => {
 		const { hub, last, clock } = setup();
 		const a = ear();

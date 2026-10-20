@@ -248,7 +248,13 @@ describe("the finaliser's click on a move of two steps", () => {
 			wallet: walletOfB(),
 			mark: m.mark,
 		});
-		expect(result).toEqual({ ok: true, accepted: true, sent: 2 });
+		expect(result).toEqual({
+			ok: true,
+			accepted: true,
+			sent: 2,
+			answer: "accepted",
+			reason: null,
+		});
 		const prompts = log.filter((l) => l.startsWith("sign"));
 		const posts = log.filter((l) => l.startsWith("post"));
 		expect(prompts).toHaveLength(4);
@@ -282,7 +288,13 @@ describe("the finaliser's click on a move of two steps", () => {
 			wallet: walletOfB(),
 			mark: marks().mark,
 		});
-		expect(result).toEqual({ ok: true, accepted: false, sent: 1 });
+		expect(result).toEqual({
+			ok: true,
+			accepted: false,
+			sent: 1,
+			answer: "refused",
+			reason: "Insufficient funds available to deposit.",
+		});
 		expect(log.filter((l) => l.startsWith("post"))).toEqual(["post cDeposit"]);
 		expect((await stored(one)).receipt?.response).toMatchObject({
 			status: "err",
@@ -299,7 +311,13 @@ describe("the finaliser's click on a move of two steps", () => {
 			wallet: walletOfB(),
 			mark: marks().mark,
 		});
-		expect(result).toEqual({ ok: true, accepted: false, sent: 2 });
+		expect(result).toEqual({
+			ok: true,
+			accepted: false,
+			sent: 2,
+			answer: "refused",
+			reason: "Unknown validator",
+		});
 		expect((await stored(one)).receipt?.response).toMatchObject({
 			status: "ok",
 		});
@@ -309,7 +327,7 @@ describe("the finaliser's click on a move of two steps", () => {
 		});
 	});
 
-	it('a request for step 2 that does not get there is not called "nothing was submitted"', async () => {
+	it("a request for step 2 with no answer is said as unknown, stores nothing, and can be posted again", async () => {
 		const [one, two] = await move();
 		exchange = [null, new TypeError("Failed to fetch")];
 		const result = await finaliseMove({
@@ -321,13 +339,28 @@ describe("the finaliser's click on a move of two steps", () => {
 		expect(result).toMatchObject({ ok: false, index: 1, sent: 1 });
 		const said = result.ok ? "" : (result.issues[0]?.message ?? "");
 		expect(said).toBe(
-			"The request for this step did not reach Hyperliquid. The step before it was accepted and stands. This step was not sent; it is safe to try again.",
+			"Step 1 was accepted and stands. We don't know whether step 2 went through. Trying again is safe: Hyperliquid carries out a proposal at most once, and says so if it already did. No answer reached this page.",
 		);
-		expect(said).not.toContain("Nothing was submitted");
+		expect(said).not.toMatch(/nothing was (sent|submitted)/i);
 		expect((await stored(one)).receipt?.response).toMatchObject({
 			status: "ok",
 		});
+		// nothing is stored for an answer nobody saw
 		expect((await stored(two)).receipt).toBeNull();
+		// the same request again, with no wallet prompt: this time it is answered
+		const posts = log.filter((l) => /^post/.test(l)).length;
+		const signs = log.filter((l) => /^sign/.test(l)).length;
+		exchange = [null];
+		const again = result.ok ? null : await result.retry?.();
+		expect(again).toEqual({
+			ok: true,
+			accepted: true,
+			sent: 2,
+			answer: "accepted",
+			reason: null,
+		});
+		expect(log.filter((l) => /^post/.test(l)).length).toBe(posts + 1);
+		expect(log.filter((l) => /^sign/.test(l)).length).toBe(signs);
 		// the first request not getting there is still "nothing was submitted"
 		globalThis.indexedDB = new IDBFactory();
 		const [three, four] = await move();
@@ -338,9 +371,10 @@ describe("the finaliser's click on a move of two steps", () => {
 			mark: marks().mark,
 		});
 		expect(none).toMatchObject({ ok: false, index: 0, sent: 0 });
-		expect(none.ok ? "" : none.issues[0]?.message).toContain(
-			"Nothing was sent; it is safe to try again.",
+		expect(none.ok ? "" : none.issues[0]?.message).toBe(
+			"We don't know whether this went through. Trying again is safe: Hyperliquid carries out a proposal at most once, and says so if it already did. No answer reached this page.",
 		);
+		expect(none.ok ? undefined : typeof none.retry).toBe("function");
 	});
 
 	it("stops before any wallet prompt when Hyperliquid would refuse a step as things stand", async () => {
@@ -418,7 +452,13 @@ describe("the finaliser's click on a move of two steps", () => {
 			wallet: walletOfB(),
 			mark: marks().mark,
 		});
-		expect(result).toEqual({ ok: true, accepted: true, sent: 1 });
+		expect(result).toEqual({
+			ok: true,
+			accepted: true,
+			sent: 1,
+			answer: "accepted",
+			reason: null,
+		});
 		expect(log.filter((l) => l.startsWith("post"))).toEqual([
 			"post tokenDelegate",
 		]);
@@ -432,6 +472,8 @@ describe("the finaliser's click on a move of two steps", () => {
 			ok: true,
 			accepted: true,
 			sent: 0,
+			answer: "accepted",
+			reason: null,
 		});
 	});
 });
@@ -511,7 +553,12 @@ describe("a vault action, which is signed as a code", () => {
 			wallet: walletOfB(),
 			mark: m.mark.bind(null, 0),
 		});
-		expect(result).toEqual({ ok: true, accepted: true });
+		expect(result).toEqual({
+			ok: true,
+			accepted: true,
+			answer: "accepted",
+			reason: null,
+		});
 		// the code first, under 1337; then the readable envelope, under the chain the wallet was on
 		expect(log.filter((l) => /^(chain|sign|post)/.test(l))).toEqual([
 			"chain 0x539",
@@ -585,7 +632,13 @@ describe("a vault action, which is signed as a code", () => {
 		const steps = [await stepOf(one), await stepOf(two)];
 		const { seen, mark } = marks();
 		const result = await finaliseMove({ steps, wallet: walletOfB(), mark });
-		expect(result).toEqual({ ok: true, accepted: true, sent: 2 });
+		expect(result).toEqual({
+			ok: true,
+			accepted: true,
+			sent: 2,
+			answer: "accepted",
+			reason: null,
+		});
 		// every signature first, then the posts in order
 		expect(doing()).toEqual([
 			// step 1: B's own signature on the readable step, then as finaliser

@@ -26,9 +26,11 @@ import {
 	deriveStage,
 	FINISHED,
 	finaliserLeft,
+	numberUsed,
 	refusedForGood,
 	type StageInput,
 	shortAddress,
+	stillCounts,
 } from "./stage";
 
 const DAY = 86_400_000;
@@ -97,7 +99,7 @@ describe("deriveStage", () => {
 		]);
 		// C's signature would complete the threshold, but C is not the finaliser
 		expect(asC.executeReason).toBe(
-			`Only the finaliser ${shortAddress(B)} can send it.`,
+			`Only the finaliser ${shortAddress(B)} can send it. If they can't, the proposer can cancel it and propose it again with another finaliser.`,
 		);
 		expect(asC.executeAddsSignature).toBe(false);
 
@@ -141,7 +143,7 @@ describe("deriveStage", () => {
 		]);
 		const asA = await stage(p, { wallet: A });
 		expect(asA.executeReason).toBe(
-			`Only the finaliser ${shortAddress(B)} can send it.`,
+			`Only the finaliser ${shortAddress(B)} can send it. If they can't, the proposer can cancel it and propose it again with another finaliser.`,
 		);
 		expect((await stage(p)).executeReason).toBe(
 			"Connect the finaliser's wallet to send it.",
@@ -249,12 +251,13 @@ describe("deriveStage", () => {
 			}).phase,
 		).toBe("refused");
 
-		// an answer that never reached Hyperliquid's books leaves it as it was
+		// an answer that was not Hyperliquid's is no attempt at all: it leaves the
+		// proposal as it was (pages store none any more; an older copy may hold one)
 		const http = await stage(
 			{ ...p, receipt: receipt("Bad Gateway", 502) },
 			{ wallet: B },
 		);
-		expect(http.failedAttempt?.source).toBe("http");
+		expect(http.failedAttempt).toBeNull();
 		expect(http.phase).toBe("ready");
 		expect(http.canExecute).toBe(true);
 		expect(refusedForGood({ ...p, receipt: receipt("Bad Gateway", 502) })).toBe(
@@ -831,6 +834,11 @@ describe("an action Hyperliquid would refuse as things stand", () => {
 		const asC = await stage(open, { wallet: C, refusal: WHY });
 		expect(asC.canSign).toBe(false);
 		expect(asC.signReason).toBe(`${WHY}.`);
+		// a whole sentence keeps its one full stop
+		const sentence =
+			"This asks for 3 of 2 signers, which Hyperliquid cannot take.";
+		const whole = await stage(open, { wallet: C, refusal: sentence });
+		expect(whole.signReason).toBe(sentence);
 	});
 
 	it("leaves a closed proposal's own reason in place", async () => {
@@ -1063,7 +1071,7 @@ describe("a staking step found in Hyperliquid's staking history", () => {
 });
 
 describe("a submission answered “duplicate nonce”", () => {
-	it("says the number was used before, and to look before proposing again", async () => {
+	it("says it most likely went through, and never offers to propose it again", async () => {
 		const p = {
 			...(await signAs(await signAs(makeProposal(), 1), 3)),
 			receipt: receipt({
@@ -1072,11 +1080,17 @@ describe("a submission answered “duplicate nonce”", () => {
 			}),
 		};
 		const s = await stage(p, { wallet: B });
-		expect(s.phase).toBe("refused");
-		expect(s.canExecute).toBe(false);
+		expect(s.phase).toBe("used");
+		expect([s.canSign, s.canExecute]).toEqual([false, false]);
+		expect(s.headline).toBe("Already used · it most likely went through");
 		expect(s.detail).toBe(
-			"Hyperliquid answered that this proposal's number was already used (\"duplicate nonce\"). If the earlier attempt went through, the action has already happened. Look at the treasury's record on Hyperliquid before proposing it again.",
+			"Hyperliquid says this proposal was already used, so it most likely went through. Check Hyperliquid's record.",
 		);
+		expect(s.detail).not.toMatch(/propose/i);
+		expect(CANNOT_BE_SENT.has(s.phase)).toBe(true);
+		expect(numberUsed(p)).toBe(true);
+		// it can never be sent again either: no waiting list counts it
+		expect(refusedForGood(p)).toBe(true);
 	});
 });
 
@@ -1219,5 +1233,42 @@ describe("a finished proposal: its copy is a record", () => {
 			"finaliser-no",
 		] as const)
 			expect(FINISHED.has(phase), phase).toBe(false);
+	});
+});
+
+describe("which proposals a new send is numbered after (audit F-103)", () => {
+	const p = makeProposal();
+	const known = (over: {
+		status?: string | null;
+		accepted?: boolean;
+		proposal?: Proposal;
+	}) => ({ proposal: p, status: "open", accepted: false, ...over });
+
+	it("leaves out one cancelled before anyone signed, one past its window, one refused", async () => {
+		expect(stillCounts(known({ status: "withdrawn" }), NOW)).toBe(false);
+		expect(stillCounts(known({}), NONCE + 3 * 86_400_000)).toBe(false);
+		const refused = {
+			...p,
+			receipt: {
+				submittedAt: NOW,
+				signatureChainId: "0x3e6",
+				outerSignature: { r: "0x1", s: "0x1", v: 27 },
+				httpStatus: 200,
+				response: { status: "err", response: "Insufficient balance" },
+			},
+		} as unknown as Proposal;
+		expect(stillCounts(known({ proposal: refused }), NOW)).toBe(false);
+	});
+
+	it("keeps one that may still go through, and every one Hyperliquid took", async () => {
+		expect(stillCounts(known({}), NOW)).toBe(true);
+		// cancelled after a signature: whoever holds the signatures could still send it
+		const signed = await signAs(p, 1);
+		expect(
+			stillCounts(known({ status: "withdrawn", proposal: signed }), NOW),
+		).toBe(true);
+		expect(stillCounts(known({ accepted: true }), NONCE + 3 * 86_400_000)).toBe(
+			true,
+		);
 	});
 });

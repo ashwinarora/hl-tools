@@ -760,10 +760,11 @@ describe("several wallets signed in in one browser", () => {
 		const listed = await listTreasuries(here.clientFor(one.address));
 		expect(listed.data).toBeNull();
 		expect(codes(listed.issue)).toBe("relay.session_ended");
-		// and the next check of the slot empties it: the wallet is asked to sign in again
+		// and the next check of the slot empties it and says the session ended
+		// (the page tells the wallet so, then asks it to sign in again)
 		expect(
 			await probeFor(here.clientFor(one.address), one.address, here.slots),
-		).toBe("none");
+		).toBe("ended");
 		expect(storedWallets(here.slots)).toEqual([]);
 	});
 

@@ -1998,6 +1998,41 @@ Branch `ui/review-fixes`, off `main` after the launch. Dev server on `http://loc
 
 138 test files, 3,427 unit tests (the core's coverage stays at 100%), Biome and `tsc` clean, both builds pass.
 
+## 25. Multisig: fixes from the overnight test campaign (2026-10-20)
+
+Branch `fix/campaign-findings`, off `main` after the campaign of 2026-10-19/20 (104 Multisig findings; 13 decisions taken again with the owner). Dev server on `http://localhost:3000` with the local relay (the two new migrations applied with `supabase migration up --local`) and the 1337 stand-in, Brave with Rabby, testnet only: the 2-of-3 treasury "Audit testnet B" (T) with signers S1, S2, S3. Outages were made with a page-local `fetch` stub (`navigate_page` `initScript`) that answers matching requests with a status, holds them until their signal ends (rejecting with the signal's own reason, as `fetch` does), or fails them. Crafted copies were built in the page with the core's `createProposal` and opened from a link in an isolated context with no wallet.
+
+| Check | Result |
+|---|---|
+| Vault Max (Step 0, D13) | a user vault took its exact `maxWithdrawable`; HLP refused every later withdrawal whatever the amount ("Insufficient vault equity for withdrawal") while its child vaults had millions free: Max unchanged (DECISIONS) |
+| An answer that never came back (H-OUT-08, G-RACE-02) | `/exchange` answered 429: "No clear answer from Hyperliquid", naming HTTP 429, with Try again, nothing stored, no "refused"; a send forwarded and then failed in the page: the unclear toast, then the page found the send on Hyperliquid's record and read "Carried out" |
+| A real 2-of-3 round on T: 0.01 USDC to S3, finaliser S1 | S2 "Create and sign": "Proposal created"; S3 signed while signed out: "Signature added" with "Saved in this browser. Nobody else can see it yet"; S1 "Send to Hyperliquid": "Checking with Hyperliquid, then asking your wallet…", then "Accepted by Hyperliquid · It cannot be undone." |
+| Your part at Ready, not the finaliser (G-SIGNER-05) | "You signed this. Only [S1's short address], the finaliser, can send it. If they can't, the proposer can cancel it and propose it again with another finaliser." |
+| Your part after the finaliser's no (D-LIFE-14) | "You signed this, but [S2's short address], the finaliser, said no: it will not be sent unless that no is taken back. …"; no "You can close this page". The proposal was then cancelled for everyone |
+| Your part of a proposal only this browser holds (G-CONF-15) | created and signed by a wallet not signed in: "Your co-signers see it only once you pass it on: share it below." |
+| A finished move (E-MOV-08) | "Done · both steps were carried out", no "cannot be sent" note; its heading now names the validator, "Stake 0.02 HYPE with Test (0x3c83…1a76)" (it read the address alone: the first step's query, which asks for no validators, handed back another network's cached list; fixed in `useStaking`) |
+| Raw JSON (F-SIG-25/27/29, G-AMT-04) | one amber line each in the Preview: "1e-2" (read as 0.01 by Hyperliquid), 0.0100001 USDC from perps ("would move 0.01 USDC"), 9 decimals of a token that takes 8, a name whose id is another token's, 50 against a perps balance of 6.009556 |
+| The zero address (G-DEST-08) | form: "This is the zero address. Nobody holds its key: whatever is sent to it is lost." in place of the cost line; the same line on a crafted copy's page |
+| A crafted "3 of 2" signer change (G-LOCK-04) | "This asks for 3 of 2 signers, which Hyperliquid cannot take." in What changes and under Your part, no Sign (it first read "cannot take..": the stage now adds a full stop only when the reason has none) |
+| A payment like one already waiting (G-RACE-04) | a crafted copy paying "0.010" to the same address as a waiting "0.01": "A proposal like this one is already waiting: sending both pays twice." with a link |
+| Validator order (E-STK-03) | Alchemy 10,063, Twinstake 11,057, ABCD Testnet 208,484, PurrposefulNode, Quicknode, figment…: the order the campaign read on Hyperliquid's staking page, the jailed ones after |
+| Account mode unread (H-OUT-01) | `userAbstraction` answered 500: two balances with "The account mode could not be read from Hyperliquid, so the balances are laid out as for a manual account…", the tag "mode unread" |
+| "While you were away" (B-AWAY-08, H-OUT-12) | `extraAgents` answered 500: "Hyperliquid did not answer, so API wallets and transfers could not be checked."; the explorer's allowance refusal: "Hyperliquid's explorer refused more look-ups for today", and nothing more asked |
+| A hung explorer (H-OUT-13) | every request held: one for the list, one per row, every row "Hyperliquid's explorer did not answer. Check again." within 105 s (it was still "checking…" after two minutes: a request that ran out of its 30 s was asked twice more behind the pacer; one that ran out of time is no longer asked again by itself) |
+| `whoami` answered 503 (H-OUT-24) | "Can't reach the hl-tools server. …" with Try again; all seven session slots kept, no toast; signed in again once it answered |
+| A session ended elsewhere (H-OUT-32) | S1's sessions deleted from the local `auth.sessions`: one toast, "Signed out of the hl-tools server · This wallet's sign-in here has ended. …"; signed in again with one prompt |
+| Two tabs with two drafts (D-NET-05) | both drafts kept after typing in one, then the other, then the first; both cleared afterwards |
+| The hl-tools server down while proposing (D-WD-06) | every relay read 503: "The hl-tools server could not be read, so this is numbered after this browser's copies only…"; Create waits only for the form's own fields |
+| A vault step on the record (E-VST-18) | "Hyperliquid's record shows a vault step like this one." |
+| Phone (375 px) | the inbox, a treasury and its "On Hyperliquid" tab, two forms, a proposal, a move and a cancelled proposal: no page wider than the screen; dark and light |
+| Production build (`bun run build`, :3111) | the policy header; no violation on the inbox, the stake and Raw JSON forms, a treasury, the glossary or the privacy page. The one "`eval` blocked" issue came from a wallet extension: an isolated context without extensions shows none |
+| pgTAP | `200_rls_auto_enable.sql` recreates Supabase's auto-RLS snippet, then: no client role may run it, a new table in `public` still gets RLS; the migration's branch also run on the local database with the snippet in place (every role could execute it before, none after). The explorer's allowance in `120_carried_out.sql`: read as `allowance`, the report waits ten minutes uncounted, signer look-ups not blocked, six refusals close nothing, a report refused for a day gives up as `lookup_failed`. 20 files, 1,064 assertions; `supabase db advisors --local` clean |
+| Relay itest | 79 pass (the ended-session case now expects "ended") |
+
+Not run in the browser: the silent socket (H-OUT-17/18), covered by the core's hub tests with a fake socket and clock; a "duplicate nonce" answer (E-VST-14 and the "already used" phase), covered by the stage, move and toast tests: Hyperliquid answers it only to a number already taken, which a page cannot stage without sending twice.
+
+141 test files, 3,481 unit tests (the core's coverage stays at 100%), Biome and `tsc` clean, both builds pass.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).

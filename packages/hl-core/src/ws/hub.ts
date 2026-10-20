@@ -447,12 +447,26 @@ export class WsHub {
 		entry.sent = true;
 		entry.first = true;
 		this.setEntry(entry, "pending", null);
-		entry.ackTimer = this.timers.set(() => {
-			entry.ackTimer = null;
-			if (entry.status === "pending")
-				this.setEntry(entry, "refused", NOT_ACKNOWLEDGED);
-		}, this.ackMs);
+		entry.ackTimer = this.timers.set(() => this.ackDue(entry), this.ackMs);
 		this.send({ method: "subscribe", subscription: entry.subscription });
+	}
+
+	/**
+	 * No acknowledgement in time. On a socket that has said nothing since it
+	 * opened that proves nothing about the subscription: the connection itself
+	 * may be stalled, which the liveness check judges and closes. So the wait
+	 * goes on there, and only a socket that answers yet never acknowledges
+	 * refuses it (a stall read as "refused" kept live updates off after it
+	 * ended, audit F-062, F-068).
+	 */
+	private ackDue(entry: Entry): void {
+		entry.ackTimer = null;
+		if (entry.status !== "pending") return;
+		if ((this.lastMessageAt ?? Number.NEGATIVE_INFINITY) < this.openedAt) {
+			entry.ackTimer = this.timers.set(() => this.ackDue(entry), this.ackMs);
+			return;
+		}
+		this.setEntry(entry, "refused", NOT_ACKNOWLEDGED);
 	}
 
 	private drop(entry: Entry): void {
@@ -512,7 +526,10 @@ export class WsHub {
 			return;
 		}
 		for (const e of [...this.entries.values()]) {
-			if (e.channel !== channel || !e.sent || e.status === "refused") continue;
+			if (e.channel !== channel || !e.sent) continue;
+			// Hyperliquid's own refusal stands; a missing acknowledgement does not,
+			// once data for it arrives
+			if (e.status === "refused" && e.reason !== NOT_ACKNOWLEDGED) continue;
 			if (!isFor(e, msg.data)) continue;
 			// data without an ack: the ack was lost, the subscription is plainly alive
 			this.setEntry(e, "live", null);

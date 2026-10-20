@@ -5,12 +5,15 @@ import { amountIn } from "../model/headline";
 const ADDRESS = /(0x[0-9a-fA-F]{40})/;
 
 /**
- * The type of a whole address on a line of its own: monospace, never broken,
- * and as large as the column lets 42 characters be (a character of the
- * monospace face is 0.6 of its size), up to `max`.
+ * The type of a whole address on a line of its own: monospace, as large as
+ * the column lets 42 characters be (a character of the monospace face is 0.6
+ * of its size), up to `max`, and never under 10 px: a column narrower than
+ * that (a 320 px phone) wraps the address instead of shrinking it past
+ * reading (audit F-111).
  */
+export const ADDRESS_MIN_PX = 10;
 export const fittedAddress = (max: number, room = "0px") => ({
-	fontSize: `min(${max}px, calc((100cqi - ${room}) / 25.4))`,
+	fontSize: `clamp(${ADDRESS_MIN_PX}px, calc((100cqi - ${room}) / 25.4), ${max}px)`,
 });
 
 const SIZE = {
@@ -48,7 +51,7 @@ function Words({ text, size }: { text: string; size: keyof typeof SIZE }) {
 					<span
 						// biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one fixed sentence
 						key={i}
-						className="block whitespace-nowrap font-mono font-normal tracking-normal text-foreground"
+						className="block font-mono font-normal tracking-normal text-foreground [overflow-wrap:anywhere]"
 						style={fittedAddress(SIZE[size].address)}
 					>
 						{p}

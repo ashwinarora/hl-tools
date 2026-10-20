@@ -1,11 +1,12 @@
 import type { Address, Network } from "@hl-tools/core";
+import { Decimal } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { cn } from "#/lib/utils";
 import { useStaking } from "../live/useStaking";
 import { useVaults } from "../live/useVaults";
 import { amountIn } from "../model/headline";
-import { balanceView } from "../model/mode";
+import { balanceView, MODE_UNREAD } from "../model/mode";
 import { stakingSummaryLine } from "../model/staking";
 import { vaultsSummaryLine } from "../model/vault";
 import { Help } from "../shell/Help";
@@ -56,7 +57,12 @@ export function HoldingTiles({
 		: balanceView(state.mode, live.perp, live.spot);
 	return (
 		<div className="mb-4 flex flex-col gap-2">
-			<SourceLine status={live.status} asOf={live.asOf} onRetry={live.retry}>
+			<SourceLine
+				status={live.status}
+				asOf={live.asOf}
+				onRetry={live.retry}
+				reason={live.refused[0]?.reason ?? null}
+			>
 				Balances, positions and orders arrive live from Hyperliquid. Nothing
 				here is stored by this tool. <Help k="live" />
 			</SourceLine>
@@ -137,6 +143,16 @@ export function HoldingTiles({
 					/>
 				)}
 			</div>
+			{state.modeFailed && (
+				// laid out without the mode: said, never guessed (audit F-060)
+				<p className="flex items-start gap-1.5 text-[13px] text-warning">
+					<span
+						className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+						aria-hidden
+					/>
+					<span>{MODE_UNREAD}</span>
+				</p>
+			)}
 		</div>
 	);
 }
@@ -146,8 +162,16 @@ export function HoldingTiles({
  * rest of the part's words under it, word for word ("1.5 HYPE staked" is
  * "1.5" · "HYPE" · "staked"). A part with no amount stays as it is.
  */
-function Amounts({ line }: { line: string }) {
+function Amounts({
+	line,
+	whole = null,
+}: {
+	line: string;
+	/** The first figure uncut: on hover and for a screen reader where the cut left digits out (audit F-001). */
+	whole?: string | null;
+}) {
 	const parts = line.split(" · ");
+	const exact = whole === null ? null : Decimal.tryParse(whole);
 	return (
 		<>
 			{parts.map((part, i) => {
@@ -159,7 +183,21 @@ function Amounts({ line }: { line: string }) {
 					>
 						{cut && !cut.before ? (
 							<>
-								{cut.figure}
+								{i === 0 &&
+								exact &&
+								!exact.eq(
+									Decimal.tryParse(cut.figure.replace(/,/g, "")) ?? exact,
+								) ? (
+									<span title={exact.toDisplay()}>
+										{cut.figure}
+										<span className="sr-only">
+											{" "}
+											(exactly {exact.toDisplay()})
+										</span>
+									</span>
+								) : (
+									cut.figure
+								)}
 								<span className="ml-1.5 font-sans text-xs font-normal tracking-normal text-muted-foreground">
 									{cut.unit}
 									{cut.after && (
@@ -198,7 +236,13 @@ function Holdings({
 	// one read a minute: what is staked does not show in the spot balances
 	const staked = stakingSummaryLine(useStaking(state.target).summary);
 	// and so is what sits in a vault
-	const inVaults = vaultsSummaryLine(useVaults(state.target).deposits);
+	const deposits = useVaults(state.target).deposits;
+	const inVaults = vaultsSummaryLine(deposits);
+	const vaultsWhole = deposits
+		? deposits
+				.reduce((sum, d) => sum.add(Decimal.parse(d.equity)), Decimal.ZERO)
+				.toString()
+		: null;
 	return (
 		<>
 			{staked && (
@@ -229,7 +273,7 @@ function Holdings({
 					<Figure
 						big
 						label="In vaults"
-						value={<Amounts line={inVaults} />}
+						value={<Amounts line={inVaults} whole={vaultsWhole} />}
 						extra={
 							linked && (
 								<Link

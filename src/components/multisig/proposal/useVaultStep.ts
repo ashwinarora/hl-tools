@@ -11,7 +11,7 @@ import { useMemo } from "react";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useVault, useVaults, type Vaults } from "../live/useVaults";
 import { type VaultRecord, vaultRecord } from "../model/chain/vaultRecord";
-import { lockupWords } from "../model/vault";
+import { lockupWords, VAULT } from "../model/vault";
 
 export interface VaultStepState {
 	/** Null when the proposal's action is no vault action. */
@@ -30,6 +30,11 @@ export interface VaultStepState {
 	 * that all of it is locked again. Read for every signer who opens it.
 	 */
 	readonly relocks: string | null;
+	/**
+	 * A withdrawal whose vault could not be read: what it releases is not
+	 * known, and the worth stands in for it (audit F-073). Null otherwise.
+	 */
+	readonly releasesUnread: string | null;
 	/**
 	 * Whether the account's ledger already holds a row like this step. Null
 	 * when the action is no vault action or nothing is asked.
@@ -82,6 +87,12 @@ export function useVaultStep(
 		relocks: held
 			? `The treasury already has money in this vault. This adds to it, which locks all of it again: none of it can be withdrawn for ${lockupWords(held.vault, network)}.`
 			: null,
+		releasesUnread:
+			active &&
+			step?.kind === "withdraw" &&
+			lookup.lookup?.kind === "unreadable"
+				? VAULT.releasesUnread
+				: null,
 		record,
 	};
 }

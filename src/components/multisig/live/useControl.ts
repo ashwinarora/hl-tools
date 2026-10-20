@@ -37,6 +37,11 @@ export interface Control {
 	readonly mode: AccountMode | null;
 	/** The mode is being read for the first time: nothing is known of it yet. */
 	readonly modePending: boolean;
+	/**
+	 * The mode could not be read (a read failed and none has answered since):
+	 * the page says so, never lays the balances out as if it knew (audit F-060).
+	 */
+	readonly modeFailed: boolean;
 	/** When both lists were last read from Hyperliquid (the older of the two). */
 	readonly checkedAt: number | null;
 	/** A read is under way. */
@@ -100,7 +105,18 @@ export function useControl(target: AccountTarget | null): Control {
 				? errorMessage(agents.error)
 				: null,
 		mode: modeRead,
-		modePending: !!target && modeRaw === undefined && mode.isPending,
+		// only the first read: a read again after one that failed is not "first"
+		// (a query with no data goes back to pending when it is asked again,
+		// which hid the live tiles every minute, audit F-066)
+		modePending:
+			!!target &&
+			modeRaw === undefined &&
+			mode.isPending &&
+			mode.errorUpdateCount === 0,
+		modeFailed:
+			!!target &&
+			modeRaw === undefined &&
+			(mode.isError || mode.errorUpdateCount > 0),
 		checkedAt: read.length === 2 ? Math.min(...read) : null,
 		checking: policy.isFetching || agents.isFetching || mode.isFetching,
 		failed: policy.isError || agents.isError,

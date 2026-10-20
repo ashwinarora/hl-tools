@@ -46,7 +46,12 @@ import {
 } from "@hl-tools/core";
 import { ADDRESS_RE } from "#/components/tools/multisig/model";
 import { chainChoiceFor, type InnerChain } from "./chains";
-import { addressField, amountField } from "./fields";
+import {
+	addressField,
+	amountField,
+	paysZeroAddress,
+	ZERO_RECEIVES,
+} from "./fields";
 import {
 	judgeSwitch,
 	MODE_NAME,
@@ -358,11 +363,127 @@ function warnOverBalance(
 			issue(
 				"amount.exceeds_balance",
 				"warning",
-				`${amount.toString()} is more than the ${what} observed just now (${b.toString()}). Hyperliquid will refuse it unless funds arrive first.`,
+				// the page head says whether that figure is live (audit F-118)
+				`${amount.toString()} is more than the ${what} on this page (${b.toString()}). Hyperliquid will refuse it unless funds arrive first.`,
 				{ path: "action.amount" },
 			),
 		);
 	}
+}
+
+/**
+ * What Hyperliquid would make of an action's amount and token, said before
+ * anyone signs (decision D9, audit F-004, F-006, F-008, F-091). The guided
+ * forms refuse these as they are typed; an action pasted as Raw JSON, or a
+ * copy somebody made, gets the same rules as amber lines, and nothing is
+ * blocked. Each line says what Hyperliquid does where it was measured
+ * (testnet, 2026-10-19), and "may" where it was not.
+ */
+export function amountWarnings(
+	action: PlainObject,
+	ctx: Pick<BuildContext, "tokens" | "balances" | "mode">,
+): Issue[] {
+	const out: Issue[] = [];
+	const type = String(action.type ?? "");
+	const raw = action.amount;
+	if (
+		typeof raw !== "string" ||
+		![
+			"usdSend",
+			"spotSend",
+			"sendAsset",
+			"withdraw3",
+			"usdClassTransfer",
+		].includes(type)
+	)
+		return out;
+	const at = { path: "action.amount" };
+	const parsed = /[eE]/.test(raw) ? null : Decimal.tryParse(raw);
+	if (!parsed || parsed.isNegative()) {
+		out.push(
+			issue(
+				"amount.not_plain",
+				"warning",
+				`Signers read the amount as written, "${raw}", and Hyperliquid may read it otherwise (it carried out "1e-2" as 0.01) or refuse it. Write it as a plain decimal number such as 12.5.`,
+				at,
+			),
+		);
+		return out;
+	}
+	const usdcLine = (measured: boolean) => {
+		if (parsed.decimalPlaces() <= USDC_DECIMALS) return;
+		const cut = parsed.roundToDecimals(USDC_DECIMALS, "down").toString();
+		out.push(
+			issue(
+				"amount.usdc_precision",
+				"warning",
+				measured
+					? `Hyperliquid moves USDC from the perps balance in whole millionths: it would move ${cut} USDC, not ${raw}.`
+					: `USDC moves here in whole millionths: Hyperliquid may move ${cut} USDC instead of ${raw}, or refuse it.`,
+				at,
+			),
+		);
+	};
+	if (type === "usdSend") usdcLine(true);
+	if (type === "withdraw3" || type === "usdClassTransfer") usdcLine(false);
+	const shape = sendShape(action);
+	const token = typeof action.token === "string" ? action.token : null;
+	const fromPerps = shape?.from === "perps";
+	if (type === "sendAsset" && fromPerps && shape?.token === USDC)
+		usdcLine(false);
+	if ((type === "spotSend" || (type === "sendAsset" && !fromPerps)) && token) {
+		const [name = "", id = ""] = token.split(":");
+		const listed = ctx.tokens?.find(
+			(t) => t.tokenId.toLowerCase() === id.toLowerCase(),
+		);
+		if (ctx.tokens && !listed)
+			out.push(
+				issue(
+					"token.unlisted",
+					"warning",
+					`${token} is not on Hyperliquid's list of spot tokens for this network: Hyperliquid refuses it, and the proposal's number is then used up.`,
+					{ path: "action.token" },
+				),
+			);
+		else if (listed && listed.name !== name)
+			out.push(
+				issue(
+					"token.name_mismatch",
+					"warning",
+					`This names ${name}, but its id belongs to ${listed.name}: Hyperliquid refuses it as an unknown token, and the proposal's number is then used up.`,
+					{ path: "action.token" },
+				),
+			);
+		else if (listed && parsed.decimalPlaces() > listed.weiDecimals)
+			out.push(
+				issue(
+					"amount.token_precision",
+					"warning",
+					`${listed.name} takes ${listed.weiDecimals} decimal places; ${raw} has ${parsed.decimalPlaces()}. Hyperliquid refuses more, and the proposal's number is then used up.`,
+					at,
+				),
+			);
+	}
+	// what the balance it comes from holds, as the guided forms say it
+	if (shape && ctx.balances && ctx.mode) {
+		const unified = ctx.mode.kind === "unified";
+		const coin = shape.token;
+		if (shape.from === "perps" && !unified)
+			warnOverBalance(
+				parsed,
+				ctx.balances.perpWithdrawable,
+				"perps balance",
+				out,
+			);
+		else if (shape.from === "spot" || (unified && coin === USDC))
+			warnOverBalance(
+				parsed,
+				spotFree(ctx as BuildContext, coin),
+				`${coin} spot balance`,
+				out,
+			);
+	}
+	return out;
 }
 
 /**
@@ -446,6 +567,13 @@ function warnAboutSend(
 		);
 		return;
 	}
+	// Raw JSON has no address field to say it: once only (audit F-018)
+	if (paysZeroAddress(action) && !issues.some((i) => i.code === "address.zero"))
+		issues.push(
+			issue("address.zero", "warning", ZERO_RECEIVES, {
+				path: "action.destination",
+			}),
+		);
 	const toItself = selfRefusal(treasury, action);
 	if (toItself) {
 		issues.push(
@@ -1000,7 +1128,10 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 		}
 		case "raw": {
 			const action = rawAction(form.raw, head, ctx.nonce, issues);
-			if (action) warnAboutSend(action, ctx, issues);
+			if (action) {
+				warnAboutSend(action, ctx, issues);
+				issues.push(...amountWarnings(action, ctx));
+			}
 			return done(action);
 		}
 	}
@@ -1199,8 +1330,9 @@ export function destinationOf(
 		if (o && ["usdSend", "spotSend", "sendAsset"].includes(str(o.type)))
 			value = str(o.destination);
 	}
-	const address = value.trim().toLowerCase();
-	return ADDRESS_RE.test(address) ? address : null;
+	// tested as typed: "0X…" is no address to the field, so it is not looked up either (audit F-077)
+	const typed = value.trim();
+	return ADDRESS_RE.test(typed) ? typed.toLowerCase() : null;
 }
 
 export interface Draft {

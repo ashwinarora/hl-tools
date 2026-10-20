@@ -303,14 +303,14 @@ describe("publishBlocker", () => {
 		["names no vault", vaultProposal({ ...deposit, vaultAddress: null })],
 	])("stops a vault action that %s", (_name, blocked) => {
 		expect(publishBlocker(blocked)).toBe(
-			"This vault action is not in the form the sharing service takes, so it cannot be shared through it. It still works as a link or a file.",
+			"This vault action is not in the form the hl-tools server takes, so it cannot be shared through it. It still works as a link or a file.",
 		);
 		expect(kinds(blocked, { relay: null, publish: true })).toEqual([]);
 	});
 
 	it("stops every other action signed as a code, and a user-signed one that claims to be", () => {
 		const text =
-			"Of the actions signed as a code, only a vault deposit or withdrawal can be shared through the sharing service.";
+			"Of the actions signed as a code, only a vault deposit or withdrawal can be shared through the hl-tools server.";
 		expect(publishBlocker(vaultProposal({ type: "noop" }))).toBe(text);
 		expect(
 			publishBlocker(
@@ -338,7 +338,7 @@ describe("publishBlocker", () => {
 		const expiring = { ...p, payload: { ...p.payload, expiresAfter: NOW } };
 		for (const blocked of [l1, vault, expiring]) {
 			expect(publishBlocker(blocked)).toMatch(
-				/shared through the sharing service/,
+				/shared through the hl-tools server/,
 			);
 			expect(kinds(blocked, { relay: null, publish: true })).toEqual([]);
 		}

@@ -64,7 +64,8 @@ describe("On Hyperliquid as CSV", () => {
 				P,
 				"-40.123456",
 				"USDC",
-				"1.0",
+				// written as digits, the way the amount is (audit F-053)
+				"1",
 				"USDC",
 				null,
 				H(1),
@@ -76,7 +77,7 @@ describe("On Hyperliquid as CSV", () => {
 				null,
 				"-1",
 				"USDC",
-				"1.0",
+				"1",
 				"USDC",
 				"2",
 				H(2),
@@ -95,6 +96,11 @@ describe("On Hyperliquid as CSV", () => {
 				"none on record",
 			],
 		]);
+	});
+
+	it("never writes a figure in exponent form, as Hyperliquid may send a number (audit F-053)", () => {
+		const t = transfersCsv([ledger({ fee: "1e-7" })], () => ({ kind: "none" }));
+		expect(t.rows[0]?.[5]).toBe("0.0000001");
 	});
 
 	it("says no more about a row's proposal than the page could tell", () => {

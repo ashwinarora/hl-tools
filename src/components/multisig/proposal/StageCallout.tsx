@@ -16,6 +16,7 @@ const TONE: Record<Phase, Tone> = {
 	stuck: "warning",
 	overtaken: "warning",
 	refused: "danger",
+	used: "warning",
 	// held up by a no: open still, and a change of mind makes it live again
 	"cannot-pass": "warning",
 	"finaliser-no": "warning",

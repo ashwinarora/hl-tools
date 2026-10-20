@@ -71,7 +71,7 @@ export function useOlderSends(proposal: Proposal, enabled: boolean): Older {
 	const relay = useRelay();
 	const now = useNow();
 	const { network, multiSigUser, action } = proposal.payload;
-	// signed in, the sharing service's list holds what the co-signers shared;
+	// signed in, the hl-tools server's list holds what the co-signers shared;
 	// otherwise this browser's own proposals, as the propose form reads them
 	const signedIn = relay.mode === "on";
 	const open = useOpenProposals();

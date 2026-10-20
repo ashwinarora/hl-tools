@@ -23,7 +23,7 @@ export function makeNonce(): string {
 
 /**
  * The origins a build is configured to reach besides any https or wss host:
- * the sharing service's (and its live channel's) and the signing network's.
+ * the hl-tools server's (and its live channel's) and the signing network's.
  * In production they are https and already allowed; a local build reaches
  * them over plain http and ws, which the policy names exactly so.
  */

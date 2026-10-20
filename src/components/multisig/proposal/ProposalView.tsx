@@ -10,6 +10,7 @@ import {
 	parseSignersString,
 	type SignerSet,
 	sendShape,
+	shownNote,
 	vaultActionOf,
 } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
@@ -30,11 +31,16 @@ import { useChainMatch, useTxLookups } from "../live/useChainMatch";
 import { CONTROL_REFRESH_MS } from "../live/useControl";
 import { useReceiver } from "../live/useReceiver";
 import { useRecord } from "../live/useRecord";
+import { useSignerChecks } from "../live/useSignerChecks";
+import { useTokenList } from "../live/useTokenList";
+import { amountWarnings } from "../model/actions";
 import { explorerTxUrl } from "../model/chain/columns";
 import { ledgerEvidence } from "../model/chain/match";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
 import { recordQuestion } from "../model/chain/record";
-import { CHANGE } from "../model/change";
+import { CHANGE, changeLines } from "../model/change";
+import { likeWaiting, paymentOf } from "../model/duplicates";
+import { paysZeroAddress, ZERO_RECEIVES } from "../model/fields";
 import { receiptOk } from "../model/history";
 import {
 	copyNotesShown,
@@ -46,7 +52,12 @@ import { labelledLine } from "../model/parts";
 import { proposalTimeline, recordEntries } from "../model/proposalTimeline";
 import { refusalNote } from "../model/refusal";
 import { RELAY_COPY } from "../model/relay/copy";
-import { costLine, modeRefusal, standingRefusals } from "../model/send";
+import {
+	costLine,
+	modeRefusal,
+	shownFlags,
+	standingRefusals,
+} from "../model/send";
 import { changeSummary } from "../model/signerSet";
 import { signingNetwork } from "../model/signingNetwork";
 import {
@@ -56,6 +67,7 @@ import {
 	shortAddress,
 	type WalletRole,
 } from "../model/stage";
+import { SEND_ANSWER } from "../model/toasts";
 import { TreasuryNames, Who } from "../names/Names";
 import { Sentence } from "../names/Sentence";
 import { CostNote } from "../propose/ActionFields";
@@ -76,6 +88,7 @@ import {
 import { useNow, When } from "../shell/live";
 import { ShellPage } from "../shell/ShellPage";
 import { Split } from "../shell/Split";
+import { TitleHeading } from "../shell/TitleHeading";
 import { AffectedList } from "../signers/AffectedList";
 import { useAffected } from "../signers/useAffected";
 import { TreasuryStrip } from "../TreasuryStrip";
@@ -86,6 +99,7 @@ import { useWalletSigner } from "../useWalletSigner";
 import { ActionBar } from "./ActionBar";
 import { CopyNotes } from "./CopyNotes";
 import { FirstSign } from "./FirstSign";
+import { LikeWaiting } from "./LikeWaiting";
 import { Notices } from "./Notices";
 import { OlderSends, useOlderSends } from "./OlderSends";
 import { PARTY } from "./parties";
@@ -115,6 +129,8 @@ const ACTIONABLE: ReadonlySet<Phase> = new Set([
 	"cannot-pass",
 	"finaliser-no",
 	"refused",
+	// nothing to send any more, but its proposer can still clear it away
+	"used",
 ]);
 /** Phases in which what the send costs is still worth saying. */
 const COSTED: ReadonlySet<Phase> = new Set([
@@ -298,10 +314,15 @@ export function ProposalView({
 		const asked = parseSignersString(proposal.payload.action.signers);
 		return asked.revert ? "revert" : asked.set;
 	}, [proposal.payload.action]);
+	// a payment: is a like one still waiting? (decision D4)
+	const pays = useMemo(
+		() => paymentOf(proposal.payload.action, target.address) !== null,
+		[proposal.payload.action, target.address],
+	);
 	const known = useKnownProposals(
 		target.network,
 		target.address as Address,
-		(ordered || changeTo !== null) && !settled,
+		(ordered || pays || changeTo !== null) && !settled,
 	);
 	const overtakenOnRecord = useMemo(
 		() =>
@@ -353,6 +374,34 @@ export function ProposalView({
 		proposal.payload.action,
 		target.address,
 	);
+	// A change of signers, judged as the form judges it, against the signers
+	// Hyperliquid reports now: every co-signer reads what its proposer was told
+	// (decision D3, audit F-092), and Sign is off only for a change Hyperliquid
+	// would not take.
+	const nextSet = changeTo === null || changeTo === "revert" ? null : changeTo;
+	const added = useMemo(
+		() =>
+			nextSet
+				? nextSet.authorizedUsers.filter(
+						(a) => !state.policy?.authorizedUsers.includes(a),
+					)
+				: NO_SIGNERS,
+		[nextSet, state.policy],
+	);
+	const signerChecks = useSignerChecks(target.network, added);
+	const changeJudged =
+		changeTo !== null && state.policy && state.policy.authorizedUsers.length > 0
+			? changeLines({
+					next: nextSet,
+					current: state.policy,
+					self: target.address,
+					checks: signerChecks.checks,
+					me,
+					leader: proposal.payload.outerSigner,
+					agents: treasury.agents,
+					now: clock,
+				})
+			: null;
 	const stage = deriveStage({
 		proposal,
 		readiness: judged,
@@ -380,9 +429,22 @@ export function ProposalView({
 		objections: doc.relay.objections,
 		// one clock for the page: the same event reads the same age wherever it is said
 		now: clock,
-		refusal: refusal?.title ?? null,
+		refusal: refusal?.title ?? changeJudged?.blockedBy ?? null,
 	});
 	const role = ROLE[stage.role];
+	// a pasted or copied amount, judged by the guided forms' rules (decision D9)
+	const tokenSend = ["spotSend", "sendAsset"].includes(
+		String(proposal.payload.action.type),
+	);
+	const tokenList = useTokenList(
+		target.network,
+		tokenSend && COSTED.has(stage.phase),
+	);
+	const amountLines = COSTED.has(stage.phase)
+		? amountWarnings(proposal.payload.action, {
+				tokens: tokenList.data?.tokens,
+			})
+		: [];
 	const description = useMemo(
 		// with its network: a vault action names none, and its lockup is the network's
 		() =>
@@ -426,7 +488,7 @@ export function ProposalView({
 					mode: treasury.mode,
 					perpsUsdc: treasury.perp?.withdrawable ?? null,
 					spot: treasury.spot,
-					receiver: null,
+					receiver: lookup.receiver,
 					self: target.address,
 				})
 			: [];
@@ -439,6 +501,7 @@ export function ProposalView({
 					mode: treasury.mode,
 					perpsUsdc: treasury.perp?.withdrawable ?? null,
 					spot: treasury.spot,
+					self: target.address,
 				});
 
 	// the treasury page, when the relay lists this treasury for the wallet
@@ -490,7 +553,7 @@ export function ProposalView({
 	// the relay's word, never the copy's: who proposed it is not signed
 	const proposer = row?.createdBy ?? null;
 	const ready = judged;
-	// who did what, when: the sharing service's history, or the copy itself;
+	// who did what, when: the hl-tools server's history, or the copy itself;
 	// Hyperliquid's record only where the page already reads it (once sent)
 	const recordAsk = useMemo(
 		() => (stage.phase === "submitted" ? recordQuestion(proposal) : null),
@@ -535,7 +598,9 @@ export function ProposalView({
 	// and said again, one line each, right above the buttons that sign or send.
 	const older = useOlderSends(proposal, COSTED.has(stage.phase));
 	const rejectedTitle =
-		stage.failedAttempt && stage.phase !== "carried-out"
+		stage.failedAttempt &&
+		stage.phase !== "carried-out" &&
+		stage.phase !== "used"
 			? `The last attempt to send it was refused: ${stage.failedAttempt.message}`
 			: null;
 	const signersChanged = stage.policyChanged && !CLOSED.has(stage.phase);
@@ -577,7 +642,13 @@ export function ProposalView({
 			signers={signersNow}
 		>
 			<ShellPage
-				title={proposal.meta.title ?? description.headline}
+				title={
+					proposal.meta.title ? (
+						<TitleHeading title={proposal.meta.title} />
+					) : (
+						description.headline
+					)
+				}
 				back={
 					listed ? (
 						<Link
@@ -630,7 +701,7 @@ export function ProposalView({
 								<StageCallout
 									stage={stage}
 									action={
-										stage.phase === "submitted" ? (
+										stage.phase === "submitted" || stage.phase === "used" ? (
 											listed ? (
 												<Link
 													to="/multisig/t/$network/$address"
@@ -641,7 +712,9 @@ export function ProposalView({
 													search={{ tab: "chain" }}
 													className={linkButtonSm}
 												>
-													See it on Hyperliquid's record
+													{stage.phase === "used"
+														? SEND_ANSWER.checkRecord
+														: "See it on Hyperliquid's record"}
 												</Link>
 											) : (
 												<Link
@@ -701,9 +774,18 @@ export function ProposalView({
 									actions={<NetTag network={target.network} />}
 								>
 									<Headline text={description.headline} />
-									{(description.flags.length > 0 || !description.known) && (
+									{(shownFlags(
+										description.flags,
+										proposal.payload.action,
+										target.address,
+									).length > 0 ||
+										!description.known) && (
 										<div className="mt-3 flex flex-wrap gap-1.5">
-											{description.flags.map((f) => (
+											{shownFlags(
+												description.flags,
+												proposal.payload.action,
+												target.address,
+											).map((f) => (
 												<Tag
 													key={f}
 													// a long one wraps on a narrow phone; 10 px is as round as a full radius on one line
@@ -789,10 +871,52 @@ export function ProposalView({
 											{proposal.payload.outerSigner === me ? " (you)" : ""}
 										</AddressFact>
 										{proposal.meta.note && (
-											<Fact label="Note">{proposal.meta.note}</Fact>
+											<Fact label="Note">
+												{/* its own line breaks kept, at most one blank line (`shownNote`, audit F-127) */}
+												<span className="whitespace-pre-line">
+													{shownNote(proposal.meta.note)}
+												</span>
+											</Fact>
 										)}
 									</Facts>
 									<CostNote line={cost} />
+									{amountLines.map((w) => (
+										<p
+											key={w.code}
+											className="mt-3 flex items-start gap-1.5 text-[13px] text-warning"
+										>
+											<span
+												className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+												aria-hidden
+											/>
+											<span className="[overflow-wrap:anywhere]">
+												{w.message}
+											</span>
+										</p>
+									))}
+									{paysZeroAddress(proposal.payload.action) && (
+										// what the proposer was told, said to every co-signer (audit F-018)
+										<p className="mt-3 flex items-start gap-1.5 text-[13px] text-warning">
+											<span
+												className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+												aria-hidden
+											/>
+											<span>{ZERO_RECEIVES}</span>
+										</p>
+									)}
+									{COSTED.has(stage.phase) && (
+										<LikeWaiting
+											like={likeWaiting(
+												proposal.payload.action,
+												known.proposals,
+												{
+													self: target.address,
+													except: proposal.digest,
+													now: clock,
+												},
+											)}
+										/>
+									)}
 									{COSTED.has(stage.phase) && stakingStep.noPay && (
 										// read from Hyperliquid for every signer who opens this
 										<p className="mt-3 flex items-start gap-1.5 text-[13px] text-warning">
@@ -810,6 +934,15 @@ export function ProposalView({
 												aria-hidden
 											/>
 											<span>{vaultStep.relocks}</span>
+										</p>
+									)}
+									{COSTED.has(stage.phase) && vaultStep.releasesUnread && (
+										<p className="mt-3 flex items-start gap-1.5 text-[13px] text-warning">
+											<span
+												className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+												aria-hidden
+											/>
+											<span>{vaultStep.releasesUnread}</span>
 										</p>
 									)}
 									{stage.phase === "collecting" && stage.closesFirst && (
@@ -915,6 +1048,23 @@ export function ProposalView({
 													)}
 												/>
 											</p>
+											{changeJudged?.blockedBy && (
+												<p className="text-[13px] text-danger">
+													{changeJudged.blockedBy}
+												</p>
+											)}
+											{changeJudged?.lines.map((l) => (
+												<p
+													key={l.code}
+													className="flex items-start gap-1.5 text-[13px] text-warning"
+												>
+													<span
+														className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+														aria-hidden
+													/>
+													<span>{l.text}</span>
+												</p>
+											))}
 											<p className="text-xs text-muted-foreground">
 												{CHANGE.againstNow}
 											</p>
@@ -959,25 +1109,7 @@ export function ProposalView({
 												</Callout>
 											),
 										rejected: rejectedTitle && (
-											<Callout
-												tone="danger"
-												title={rejectedTitle}
-												action={
-													// "already used" often means it went through somewhere else: the ledger says
-													stage.failedAttempt?.id === "nonce-duplicate" ? (
-														<Link
-															to="/tools/multisig"
-															search={{
-																view: "account",
-																address: target.address,
-															}}
-															className={linkButtonSm}
-														>
-															Check Hyperliquid's record in the inspector
-														</Link>
-													) : undefined
-												}
-											>
+											<Callout tone="danger" title={rejectedTitle}>
 												{stage.failedAttempt &&
 													refusalNote(stage.failedAttempt)}
 											</Callout>
@@ -1024,7 +1156,7 @@ export function ProposalView({
 										// a refused write is a stop: co-signers may not see what was done here
 										[doc.relay.issue?.severity === "error"
 											? "sharing-refused"
-											: "sharing"]: doc.relay.issue && (
+											: "sharing"]: doc.relay.issue ? (
 											<Callout
 												tone={
 													doc.relay.issue.severity === "error"
@@ -1035,7 +1167,11 @@ export function ProposalView({
 											>
 												{doc.relay.issue.fix}
 											</Callout>
-										),
+										) : relay.mode === "unreachable" ? (
+											// what is shown is this browser's copy: said on the page,
+											// not only in the rail a phone folds away (audit F-121)
+											<Callout tone="warning" title={RELAY_COPY.copyOnly} />
+										) : null,
 										// what this browser refused to take from the relay's copy
 										"sharing-notes": relayNotes.map((n) => (
 											<Callout

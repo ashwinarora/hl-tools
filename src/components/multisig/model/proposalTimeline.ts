@@ -1,7 +1,7 @@
 /**
  * A proposal's timeline, oldest first: who proposed it, who signed, who said
  * no or took it back, how it ended, and what Hyperliquid's record says. Read
- * from the sharing service's history of the proposal when there is one (who
+ * from the hl-tools server's history of the proposal when there is one (who
  * did what, and when); otherwise from the copy itself, which can say only
  * when it was made, which signatures it carries (and when, as written in
  * it) and when it was sent. Who proposed a copy is not signed, so a copy's
@@ -17,7 +17,7 @@ import { shortAddress } from "./stage";
 /** One proposal of the timeline: alone, or one step of a move. */
 export interface TimelineStep {
 	readonly proposal: Proposal;
-	/** The sharing service's history of this proposal; null when it has none to give. */
+	/** The hl-tools server's history of this proposal; null when it has none to give. */
 	readonly events: readonly EventRow[] | null;
 	/** The signers whose signature on the copy verifies; null while not judged. */
 	readonly counted: readonly Address[] | null;
@@ -32,6 +32,11 @@ export interface TimelineRecord {
 	readonly at: number;
 	/** Hyperliquid's own words when its record shows the transaction refused. */
 	readonly refused?: string;
+	/**
+	 * A vault step: its record holds one like it, never more than "likely"
+	 * (a vault action carries no number that would tie it to this proposal).
+	 */
+	readonly likely?: true;
 }
 
 export interface TimelineItem {
@@ -72,8 +77,10 @@ export function recordEntries(
 ): TimelineRecord[] {
 	if (!record) return [];
 	const at = step ? { step } : {};
-	if (record.kind === "found" || record.kind === "likely")
+	if (record.kind === "found")
 		return [{ ...at, hash: record.hash, at: record.time }];
+	if (record.kind === "likely")
+		return [{ ...at, hash: record.hash, at: record.time, likely: true }];
 	if (record.kind === "refused")
 		return [
 			{ ...at, hash: record.hash, at: record.time, refused: record.error },
@@ -225,7 +232,7 @@ function forOne(s: TimelineStep, me: Address | null): TimelineItem[] {
 								sent: true,
 							})
 						: item(
-								say`Sent by ${object(e.actor)}; Hyperliquid refused it. ${afterRejection(e.data.http_status)}`,
+								say`Sent by ${object(e.actor)}; Hyperliquid did not accept it. ${afterRejection(e.data.http_status, true)}`,
 								{ tone: "wrong", sent: true },
 							),
 				);
@@ -277,7 +284,9 @@ export function proposalTimeline(
 			at: r.at,
 			parts: r.refused
 				? say`Hyperliquid's record shows it refused: ${r.refused}`
-				: say`On Hyperliquid's record.`,
+				: r.likely
+					? say`Hyperliquid's record shows a vault step like this one.`
+					: say`On Hyperliquid's record.`,
 			step: r.step ?? null,
 			tone: r.refused ? "wrong" : "ok",
 			hash: r.hash,

@@ -19,9 +19,10 @@ import { HELP_JARGON } from "./model/help";
 /**
  * The section's own vocabulary on top of the help texts' list: the finaliser
  * sends (never "submits"), Hyperliquid's record (never "the ledger" or "the
- * chain"), the sharing service (never "the relay"), the signers (never "the
- * signer set"), proposing again (never "re-proposing"). A vault's "leader"
- * is Hyperliquid's own word for the one who trades it, and stays.
+ * chain"), the hl-tools server (never "the relay" or "the sharing service"),
+ * the signers (never "the signer set"), proposing again (never
+ * "re-proposing"). A vault's "leader" is Hyperliquid's own word for the one
+ * who trades it, and stays.
  */
 const SCREEN_WORDS: readonly RegExp[] = [
 	...HELP_JARGON,
@@ -32,6 +33,7 @@ const SCREEN_WORDS: readonly RegExp[] = [
 	/\bon chain\b/i,
 	/\bsigner set\b/i,
 	/\bre-?propos/i,
+	/\bsharing service\b/i,
 ];
 
 const ROOT = new URL(".", import.meta.url).pathname;

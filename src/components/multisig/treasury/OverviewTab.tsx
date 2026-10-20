@@ -31,7 +31,7 @@ import {
 } from "../model/chain/columns";
 import { approvalOf } from "../model/chain/match";
 import { CHANGE } from "../model/change";
-import { balanceView, modeLabel } from "../model/mode";
+import { balanceView, MODE_UNREAD, modeLabel } from "../model/mode";
 import {
 	isOutcomeShare,
 	type OutcomeRow,
@@ -40,7 +40,7 @@ import {
 import { RELAY_COPY } from "../model/relay/copy";
 import { type LastSigned, lastSignedText } from "../model/relay/lastSigned";
 import type { TreasuryRow } from "../model/relay/rows";
-import { fromNow, localDateTime } from "../model/time";
+import { fromNow, utcDateTime } from "../model/time";
 import { PROVENANCE_CLOSE } from "../model/toasts";
 import { useNames, Who } from "../names/Names";
 import { Checked } from "../shell/Checked";
@@ -60,8 +60,9 @@ import type { KnownProposal } from "./useKnownProposals";
 import { useLastSigned } from "./useLastSigned";
 
 /** The exact moment behind "last signed 2 days ago", for the hover. */
+// UTC on hover, as every other time of the section (audit F-049)
 const signedTitle = (l: LastSigned | undefined) =>
-	l?.kind === "signed" ? localDateTime(l.at) : undefined;
+	l?.kind === "signed" ? utcDateTime(l.at) : undefined;
 
 const DAY = 86_400_000;
 /** An API wallet this close to its expiry is pointed out. */
@@ -371,6 +372,13 @@ export function OverviewTab({
 							onChange={setHoldingsTab}
 							className="mb-0 self-end border-b-0"
 						/>
+						{holdingsTab === "balances" && !mode && state.modeFailed && (
+							<span className="inline-flex items-center gap-1.5 py-2">
+								<Tag tone="warn" title={MODE_UNREAD}>
+									mode unread
+								</Tag>
+							</span>
+						)}
 						{holdingsTab === "balances" && mode && (
 							<span className="inline-flex items-center gap-1.5 py-2">
 								{view?.kind === "two" && <Help k="perpsSpot" />}

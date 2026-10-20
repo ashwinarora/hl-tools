@@ -484,7 +484,7 @@ export async function requestTreasury(
 			issue: issue(
 				"relay.error",
 				"error",
-				"The sharing service accepted the request but did not return it.",
+				"The hl-tools server accepted the request but did not return it.",
 			),
 		};
 	}

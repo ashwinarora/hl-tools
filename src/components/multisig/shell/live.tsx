@@ -1,5 +1,5 @@
 /** Small pieces shared by the screens that show live figures and local times. */
-import { Decimal } from "@hl-tools/core";
+import { Decimal, shownLine } from "@hl-tools/core";
 import { type ReactNode, useEffect, useState } from "react";
 import { cn } from "#/lib/utils";
 import { signOf } from "../model/chain/columns";
@@ -83,13 +83,20 @@ export function LiveBadge({
 	status,
 	asOf = null,
 	onRetry,
+	reason = null,
 }: {
 	status: LiveStatus;
 	/** See `LiveAccount.asOf`: null while the figures are current. */
 	asOf?: number | null;
 	onRetry?: () => void;
+	/** Hyperliquid's own words when it refused (audit F-067). */
+	reason?: string | null;
 }) {
 	const s = LIVE[status];
+	const title =
+		status === "refused" && reason
+			? `${s.title} Its answer: "${shownLine(reason, 200)}"`
+			: s.title;
 	return (
 		<span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
 			{status !== "live" && asOf !== null && (
@@ -98,7 +105,7 @@ export function LiveBadge({
 				</span>
 			)}
 			<output
-				title={s.title}
+				title={title}
 				className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface px-2 py-px text-xs font-medium text-muted-foreground"
 			>
 				<span
@@ -130,16 +137,23 @@ export function SourceLine({
 	status,
 	asOf = null,
 	onRetry,
+	reason = null,
 }: {
 	children: ReactNode;
 	status: LiveStatus;
 	asOf?: number | null;
 	onRetry?: () => void;
+	reason?: string | null;
 }) {
 	return (
 		<div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
 			<span>{children}</span>
-			<LiveBadge status={status} asOf={asOf} onRetry={onRetry} />
+			<LiveBadge
+				status={status}
+				asOf={asOf}
+				onRetry={onRetry}
+				reason={reason}
+			/>
 		</div>
 	);
 }

@@ -20,11 +20,11 @@ const REFUSALS: Record<string, Known> = {
 		fix: "Sign in again.",
 	},
 	"relay.rate_limited": {
-		message: "The sharing service's hourly limit for this was reached.",
+		message: "The hl-tools server's hourly limit for this was reached.",
 		fix: "Wait a while and retry; links and files have no limit.",
 	},
 	"relay.busy": {
-		message: "The sharing service is working through a backlog of look-ups.",
+		message: "The hl-tools server is working through a backlog of look-ups.",
 		fix: "Try again in a few minutes.",
 	},
 	"relay.pending_cap": {
@@ -33,7 +33,7 @@ const REFUSALS: Record<string, Known> = {
 	},
 	"relay.document_mismatch": {
 		message:
-			"The sharing service refused the proposal: it does not match what was sent with it, or it is not a kind of proposal the service takes.",
+			"The hl-tools server refused the proposal: it does not match what was sent with it, or it is not a kind of proposal the server takes.",
 		fix: "Reload the proposal and retry. If it persists, pass it on as a file.",
 	},
 	"relay.treasury_frozen": {
@@ -42,7 +42,7 @@ const REFUSALS: Record<string, Known> = {
 	},
 	"relay.finaliser_not_signer": {
 		message:
-			"The finaliser is not in the sharing service's copy of this treasury's signers.",
+			"The finaliser is not in the hl-tools server's copy of this treasury's signers.",
 		fix: "Open the treasury page so the signer list is re-checked, or pick another finaliser.",
 	},
 	"relay.proposal_closed": {
@@ -157,7 +157,7 @@ export function relayIssue(e: unknown): Issue {
 		return issue(
 			"relay.unreachable",
 			"warning",
-			"Can't reach the sharing service. Your co-signers' updates will not show until it is back; you can still share by link or file.",
+			"Can't reach the hl-tools server. Your co-signers' updates will not show until it is back; you can still share by link or file.",
 		);
 	}
 	const o = (e && typeof e === "object" ? e : {}) as {
@@ -184,7 +184,7 @@ export function relayIssue(e: unknown): Issue {
 		return issue(
 			"relay.not_allowed",
 			"error",
-			"The sharing service refused this: your wallet is not in its copy of this treasury's signers.",
+			"The hl-tools server refused this: your wallet is not in its copy of this treasury's signers.",
 			{
 				fix: "If you were added recently, open the treasury page so the list is re-checked, then retry.",
 			},
@@ -194,14 +194,14 @@ export function relayIssue(e: unknown): Issue {
 		return issue(
 			"relay.duplicate",
 			"info",
-			"The sharing service already has this.",
+			"The hl-tools server already has this.",
 		);
 	}
 	if (code === "23503") {
 		return issue(
 			"relay.unknown_proposal",
 			"error",
-			"The sharing service does not have this proposal.",
+			"The hl-tools server does not have this proposal.",
 			{ fix: "Share it first." },
 		);
 	}
@@ -209,7 +209,7 @@ export function relayIssue(e: unknown): Issue {
 		return issue(
 			"relay.invalid",
 			"error",
-			"The sharing service refused the data as malformed.",
+			"The hl-tools server refused the data as malformed.",
 			{ fix: "Reload the page and try again." },
 		);
 	}
@@ -235,7 +235,7 @@ export function relayIssue(e: unknown): Issue {
 		return issue(
 			"relay.signin_rejected",
 			"error",
-			`The sharing service did not accept the sign-in message: ${message}`,
+			`The hl-tools server did not accept the sign-in message: ${message}`,
 			{
 				fix: "Check that this device's date and time are set automatically, then sign in again.",
 			},
@@ -245,8 +245,8 @@ export function relayIssue(e: unknown): Issue {
 		"relay.error",
 		"error",
 		message
-			? `The sharing service answered with an error: ${message}`
-			: "The sharing service answered with an error.",
+			? `The hl-tools server answered with an error: ${message}`
+			: "The hl-tools server answered with an error.",
 		{ fix: "Try again. Links and files still work." },
 	);
 }

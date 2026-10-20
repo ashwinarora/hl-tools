@@ -34,12 +34,19 @@ import {
 	type RowProposal,
 	rowProposal,
 } from "../model/chain/match";
-import { listQuery, pacer, rest, SESSION } from "./explorerList";
+import {
+	askAgain,
+	failureOf,
+	listQuery,
+	pacer,
+	Resting,
+	rest,
+	SESSION,
+	timeLimited,
+} from "./explorerList";
 
 /** The explorer answered, and does not know the hash (it can lag the ledger by a moment). */
 class UnknownHash extends Error {}
-/** Not asked: the explorer said a moment ago that the day's allowance is used up. */
-class Resting extends Error {}
 
 const ZERO_HASH = /^0x0+$/;
 const key = (network: Network, hash: string) =>
@@ -146,7 +153,9 @@ export function useTxLookups(
 				// the look-up ahead of this one may have been refused meanwhile
 				if (rest(network).resting) throw new Resting();
 				try {
-					const r = await explorerTxDetails(network, id, { signal });
+					const r = await explorerTxDetails(network, id, {
+						signal: timeLimited(signal),
+					});
 					if (!r.data.found) throw new UnknownHash(r.data.reason);
 					return r.data.tx;
 				} catch (e) {
@@ -158,8 +167,7 @@ export function useTxLookups(
 			...SESSION,
 			// a refusal for the day is not tried again: it would be refused again
 			retry: (failures: number, error: Error) =>
-				failures < 2 &&
-				!(error instanceof ExplorerAllowanceError || error instanceof Resting),
+				failures < 2 && askAgain(error),
 			retryDelay: 4_000,
 		})),
 	});
@@ -194,10 +202,9 @@ export function useTxLookups(
 					: listed
 						? { state: "found", tx: listed }
 						: routeOf(id) === "single" && q?.isError
-							? {
-									state:
-										q.error instanceof UnknownHash ? "unknown-hash" : "failed",
-								}
+							? q.error instanceof UnknownHash
+								? { state: "unknown-hash" }
+								: { state: "failed", why: failureOf(q.error) }
 							: { state: "pending" },
 			);
 		});

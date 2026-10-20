@@ -120,12 +120,12 @@ export interface RecheckState {
  */
 export function recheckLine(s: RecheckState): string {
 	if (s.checking)
-		return "The sharing service is checking this treasury on Hyperliquid now…";
+		return "The hl-tools server is checking this treasury on Hyperliquid now…";
 	if (s.refused !== null)
 		return `The copy could not be brought up to date. ${s.refused}`;
 	if (s.gaveUp)
-		return `The sharing service was asked ${RECHECK_MAX} times and its copy of the signers still differs from Hyperliquid's. It may not be reaching Hyperliquid right now; try again later.`;
-	return "The sharing service has been asked to look again; this page updates by itself.";
+		return `The hl-tools server was asked ${RECHECK_MAX} times and its copy of the signers still differs from Hyperliquid's. It may not be reaching Hyperliquid right now; try again later.`;
+	return "The hl-tools server has been asked to look again; this page updates by itself.";
 }
 
 /** A page may ask by hand once the asking by itself has stopped or was refused. */
@@ -142,11 +142,11 @@ export const COUNTED_MEANWHILE =
 /** Why the relay finished a request without doing what was asked, by its `reason`. */
 export const REQUEST_REASONS: Readonly<Record<string, string>> = {
 	not_a_signer:
-		"The sharing service looked the account up on Hyperliquid, and your wallet is not one of its signers.",
+		"The hl-tools server looked the account up on Hyperliquid, and your wallet is not one of its signers.",
 	not_multisig:
-		"The sharing service looked the account up on Hyperliquid, and it is not a treasury there.",
+		"The hl-tools server looked the account up on Hyperliquid, and it is not a treasury there.",
 	lookup_failed:
-		"The sharing service could not reach Hyperliquid for this look-up. Try again in a minute.",
+		"The hl-tools server could not reach Hyperliquid for this look-up. Try again in a minute.",
 };
 
 /**
@@ -160,6 +160,6 @@ export function requestRefusal(
 	if (request.status !== "rejected" && request.status !== "failed") return null;
 	return (
 		REQUEST_REASONS[request.reason ?? ""] ??
-		"The sharing service refused the request."
+		"The hl-tools server refused the request."
 	);
 }

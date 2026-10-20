@@ -69,7 +69,7 @@ export const HELP = {
 	},
 	movable: {
 		title: "Can be moved now",
-		body: "What a payment can use right now. In a manual account it is the part of the perps balance not tied up as margin for open positions. In a unified account it is the balance less what positions and waiting orders reserve.",
+		body: "In a manual account: what the perps balance can release right now, the part not tied up as margin for open positions. A payment can also come from the spot balance, shown beside it. In a unified account: the balance less what positions and waiting orders reserve.",
 	},
 	inUse: {
 		title: "In use",

@@ -9,6 +9,9 @@ import { type Part, say } from "../parts";
  * sign-in small print links to.
  */
 export const RELAY_COPY = {
+	/** On a proposal page while the hl-tools server cannot be reached (audit F-121). */
+	copyOnly:
+		"The hl-tools server can't be reached, so this is this browser's copy: newer signatures, a no or a cancel may be missing from it.",
 	signInButton: "Sign in with your wallet",
 	// a failed sign-in is one short line in a toast; the exact reason waits under "Details"
 	signInFailed: "Sign-in didn't go through. Please try again.",
@@ -34,15 +37,15 @@ export const RELAY_COPY = {
 	recentHere:
 		"Proposals you made or opened here, saved in this browser. Hyperliquid sees nothing until one is sent. Clearing this site's data removes them.",
 	unreachable:
-		"Can't reach the sharing service. Your co-signers' updates will not show until it is back. You can still share by link or file.",
+		"Can't reach the hl-tools server. Your co-signers' updates will not show until it is back. You can still share by link or file.",
 	// Several wallets can stay signed in in one browser; only the connected one is in use.
 	othersHow:
 		"Choose one of them in your wallet to use it, with no new signature. While another wallet is connected, nothing is read or sent for these.",
-	// a proposal made while the sharing service is not in use stays where it was made
+	// a proposal made while the hl-tools server is not in use stays where it was made
 	notSignedInLocal:
 		"You are not signed in, so it stays in this browser until you pass it on: your co-signers do not see it in their lists.",
 	unreachableLocal:
-		"The sharing service cannot be reached, so it stays in this browser until you pass it on.",
+		"The hl-tools server cannot be reached, so it stays in this browser until you pass it on.",
 	connectOneOf:
 		"Connect a wallet that is signed in here to continue, or sign in with another one.",
 	signOutAll: "Sign out all wallets",
@@ -99,6 +102,8 @@ export const RELAY_COPY = {
 		"Hyperliquid did not answer, so API wallets and transfers could not be checked.",
 	awayPartly:
 		"Some transfers could not be checked yet: Hyperliquid did not answer. They stay unread and are tried again.",
+	awayRested:
+		"Some transfers could not be checked yet: Hyperliquid's explorer refused more look-ups for today. They stay unread and are tried again later.",
 	awayNotChecked:
 		"API wallets and transfers are checked when you open this treasury.",
 	awayOthers:
@@ -122,7 +127,7 @@ export const RELAY_COPY = {
 		"Register it so that its signers find it in their list. You can then follow its proposals here too; signing them is for its signers.",
 	registerSelfButton: "Register it",
 	selfSeesNothing:
-		"The sharing service does not hold this treasury yet. Once it is registered, its signers find it in their list and you can follow its proposals here:",
+		"The hl-tools server does not hold this treasury yet. Once it is registered, its signers find it in their list and you can follow its proposals here:",
 	addedByOther:
 		"You did not add this treasury. Anyone can create a multi-sig that lists your address; signing its proposals acts on that account only, never on yours.",
 } as const;
@@ -138,15 +143,32 @@ export function cancelNote(until: number): Part[] {
 }
 
 /**
- * What can be said after "Hyperliquid rejected …" from the history entry
- * alone, which carries only the HTTP status. An answer from Hyperliquid
- * itself (200) has used up the proposal's number, whatever the reason was
- * (see the core's `numberSpent`): it is never called retryable. Anything
- * else never reached Hyperliquid's record of numbers.
+ * Beside Create, for a USDC send or a withdrawal while the hl-tools server's
+ * list could not be read: its number is worked out from this browser's
+ * copies only (audit F-083). Nothing is blocked: a read that fails stops
+ * nothing.
  */
-export function afterRejection(httpStatus: unknown): string {
+export const NUMBERED_HERE =
+	"The hl-tools server could not be read, so this is numbered after this browser's copies only: a send a co-signer proposed elsewhere may be missed, and Hyperliquid takes sends only in order.";
+
+/**
+ * Under "Your part" of a proposal only this browser holds: nobody else signs
+ * before it is passed on (audit F-125).
+ */
+export const SHARE_FIRST =
+	"Your co-signers see it only once you pass it on: share it below.";
+
+/**
+ * What can be said after "Hyperliquid did not accept …" from the history
+ * entry alone, which carries only the HTTP status. An answer from Hyperliquid
+ * itself (200) is a refusal or "already used" (most likely sent before, the
+ * answer lost): the history cannot tell which, so the proposal's page says.
+ * Anything else never reached Hyperliquid's record of numbers (pages no longer
+ * report such an answer; older history entries may hold one).
+ */
+export function afterRejection(httpStatus: unknown, here = false): string {
 	if (httpStatus === 200)
-		return "It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.";
+		return here ? "The top of this page says why." : "Its page says why.";
 	if (typeof httpStatus === "number")
 		return `The request did not get through (HTTP ${httpStatus}), so it can be sent again.`;
 	return "Open it to see why.";

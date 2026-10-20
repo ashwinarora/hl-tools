@@ -1,10 +1,10 @@
 import { Decimal, type Network, type Validator } from "@hl-tools/core";
 import { useMemo, useState } from "react";
 import { TextInput } from "#/components/hub/layout";
-import { compareAmount } from "../model/chain/columns";
 import {
 	ratePercent,
 	STAKING,
+	stakingPageOrder,
 	validatorState,
 	wholeHype,
 } from "../model/staking";
@@ -24,8 +24,8 @@ const percent = (fraction: string | null): string =>
 	fraction === null ? "—" : `${(Number(fraction) * 100).toFixed(2)}%`;
 
 /**
- * Every validator of the network as Hyperliquid reports it, the ones a stake
- * earns with first, then the rest, each list by stake. One is chosen with its
+ * Every validator of the network as Hyperliquid reports it, in the order of
+ * Hyperliquid's own staking page (`stakingPageOrder`). One is chosen with its
  * radio button. Nothing is hidden and nothing is recommended: a validator
  * that pays nothing says so in its row.
  */
@@ -70,11 +70,7 @@ export function ValidatorPicker({
 				state: validatorState(v),
 				share: all > 0 ? (Number(v.stake) / all) * 100 : 0,
 			}))
-			.sort(
-				(a, b) =>
-					Number(a.state.idle) - Number(b.state.idle) ||
-					compareAmount(b.v.stake, a.v.stake),
-			);
+			.sort((a, b) => stakingPageOrder(a.v, b.v));
 	}, [validators, query, exclude, chosen]);
 
 	const columns = useMemo<DataColumn<Row>[]>(

@@ -339,7 +339,17 @@ describe("why a proposal cannot be finished", () => {
 		expect(
 			stuckReason({ refused: true, finaliserLeft: true, overtaken: true }),
 		).toBe("refused");
+		// "already used" before "refused": it most likely went through
+		expect(
+			stuckReason({
+				used: true,
+				refused: true,
+				finaliserLeft: false,
+				overtaken: false,
+			}),
+		).toBe("used");
 		expect(Object.values(STUCK_WORDS)).toEqual([
+			"already used, most likely went through",
 			"refused",
 			"its finaliser left",
 			"a later send went first",

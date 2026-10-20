@@ -295,7 +295,7 @@ export function AddTreasuryScreen() {
 
 						{request?.status === "pending" && slow && (
 							<Callout tone="neutral" title="Queued behind other look-ups">
-								The sharing service looks accounts up on Hyperliquid one at a
+								The hl-tools server looks accounts up on Hyperliquid one at a
 								time. This page moves on by itself when yours is done.
 							</Callout>
 						)}

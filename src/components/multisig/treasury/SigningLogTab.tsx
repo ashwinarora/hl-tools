@@ -170,14 +170,24 @@ export function SigningLogTab({
 
 	// the same entries as a spreadsheet: times in UTC, addresses whole
 	const saveCsv = () => {
-		const csv = historyCsv(entries, (e) => {
-			const known = (e.accepted ?? [])
-				.map((d) => records.get(d))
-				.filter((v): v is NonNullable<typeof v> => !!v);
-			return known.length === (e.accepted ?? []).length
-				? (recordTagOf(known)?.text ?? null)
-				: null;
-		});
+		// the vaults and validators the sentences name, written whole in the file
+		const named = [...(docs.data?.proposals.values() ?? [])].flatMap((p) =>
+			[p.payload.action.vaultAddress, p.payload.action.validator].filter(
+				(a): a is string => typeof a === "string",
+			),
+		);
+		const csv = historyCsv(
+			entries,
+			(e) => {
+				const known = (e.accepted ?? [])
+					.map((d) => records.get(d))
+					.filter((v): v is NonNullable<typeof v> => !!v);
+				return known.length === (e.accepted ?? []).length
+					? (recordTagOf(known)?.text ?? null)
+					: null;
+			},
+			named,
+		);
 		downloadCsv(
 			historyFilename(network, address, "csv"),
 			toCsv(csv.columns, csv.rows),

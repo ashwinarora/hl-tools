@@ -79,7 +79,7 @@ export function watchFetch(
 			// the limit, not the caller: said the way a dropped connection is said
 			if (signal.aborted && !init?.signal?.aborted)
 				throw new TypeError(
-					`Failed to fetch: the sharing service did not answer within ${timeoutMs / 1000} s`,
+					`Failed to fetch: the hl-tools server did not answer within ${timeoutMs / 1000} s`,
 				);
 			throw e;
 		}

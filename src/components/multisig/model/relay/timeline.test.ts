@@ -9,6 +9,7 @@ import {
 	historyCsv,
 	historyExport,
 	historyFilename,
+	wholeAddresses,
 } from "./timeline";
 
 const D1 = `0x${"d1".repeat(32)}` as Hex;
@@ -304,15 +305,15 @@ describe("buildTimeline", () => {
 			])[0];
 		// answered by Hyperliquid: the proposal's number is used up
 		expect(rejected({ accepted: false, http_status: 200 })).toBe(
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+			`Hyperliquid did not accept Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. Its page says why.`,
 		);
 		// never reached Hyperliquid's books: that one can go again
 		expect(rejected({ accepted: false, http_status: 502 })).toBe(
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. The request did not get through (HTTP 502), so it can be sent again.`,
+			`Hyperliquid did not accept Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. The request did not get through (HTTP 502), so it can be sent again.`,
 		);
 		// an entry that does not say: nothing is claimed either way
 		expect(rejected({ accepted: false })).toBe(
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. Open it to see why.`,
+			`Hyperliquid did not accept Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. Open it to see why.`,
 		);
 	});
 
@@ -672,7 +673,7 @@ describe("a move of two steps in the Signing log", () => {
 			}),
 		];
 		expect(said(events)).toEqual([
-			`Hyperliquid rejected ${MOVE} (step 2 of 2). Sent by ${short(C)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+			`Hyperliquid did not accept ${MOVE} (step 2 of 2). Sent by ${short(C)}. Its page says why.`,
 			`${MOVE} (step 1 of 2) was accepted by Hyperliquid. Sent by ${short(C)}.`,
 			`${short(C)} signed ${MOVE} (step 1 of 2).`,
 		]);
@@ -724,5 +725,21 @@ describe("a move of two steps in the Signing log", () => {
 		expect(
 			said([eventRow("signature_added", { id: 1, digest: alone, actor: C })]),
 		).toEqual([`${short(C)} signed a proposal.`]);
+	});
+});
+
+describe("the Signing log as a file names every address whole (audit F-050)", () => {
+	const VAULT = "0x49d05977597b22e3c73d654c351adde9d9920e18";
+	it("writes the short form of a named vault whole", () => {
+		const whole = wholeAddresses([VAULT]);
+		expect(whole("Withdraw 5 USDC from vault 0x49d0…0e18")).toBe(
+			`Withdraw 5 USDC from vault ${VAULT}`,
+		);
+	});
+	it("leaves a short form two addresses share as it is", () => {
+		const twin = `0x49d0${"1".repeat(30)}0e18`;
+		expect(wholeAddresses([VAULT, twin])("vault 0x49d0…0e18")).toBe(
+			"vault 0x49d0…0e18",
+		);
 	});
 });

@@ -9,6 +9,7 @@ import {
 	checkBeforeSubmit,
 	checkMoveBeforeSubmit,
 	type SendReads,
+	WINDOW_CLOSED,
 } from "./sendCheck";
 
 const USDC = "USDC:0xeb62eee3685fc4c43992febcd9e75443";
@@ -737,5 +738,52 @@ describe("a vault deposit or withdrawal, before it is submitted", () => {
 			payload(vaultStep(50)),
 		];
 		expect(await checkMoveBeforeSubmit(odd, reads().r, after)).toEqual([]);
+	});
+});
+
+describe("the signing window, by Hyperliquid's clock (audit F-028)", () => {
+	const DAY = 86_400_000;
+	const NONCE = 1_792_196_031_025;
+	const send = {
+		type: "usdSend",
+		destination: RECIPIENT,
+		amount: "1",
+		time: NONCE,
+	};
+	const dated = (over: { expiresAfter?: number | null } = {}) => ({
+		...payload(send),
+		nonce: NONCE,
+		...over,
+	});
+	const ask = async (
+		clock: unknown,
+		device: number,
+		over: { expiresAfter?: number | null } = {},
+	) =>
+		(await checkBeforeSubmit(dated(over), reads({ clock }).r, device)).map(
+			(r) => r.code,
+		);
+
+	it("stops a send whose window has closed by Hyperliquid's clock, whatever the device says", () =>
+		// the finaliser's computer runs three days slow (H-CLOCK-09)
+		ask(NONCE + 3 * DAY, NONCE).then((c) =>
+			expect(c).toEqual(["window-closed"]),
+		));
+
+	it("lets it through while the window is open by Hyperliquid's clock, the device being fast", () =>
+		ask(NONCE + DAY, NONCE + 3 * DAY).then((c) => expect(c).toEqual([])));
+
+	it("falls back to the device's clock when Hyperliquid does not say", async () => {
+		expect(await ask(null, NONCE + 3 * DAY)).toEqual(["window-closed"]);
+		expect(await ask(new Error("network"), NONCE + DAY)).toEqual([]);
+	});
+
+	it("holds an expiry the proposal sets as well", () =>
+		ask(NONCE + 10, NONCE, { expiresAfter: NONCE + 5 }).then((c) =>
+			expect(c).toEqual(["window-closed"]),
+		));
+
+	it("says it in the section's words", () => {
+		expect(WINDOW_CLOSED).toContain("Hyperliquid's clock");
 	});
 });

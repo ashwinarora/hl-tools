@@ -63,10 +63,26 @@ export async function sessionWallet(
 
 export type SessionProbe =
 	| { readonly status: "ready"; readonly wallet: Address }
-	/** No session, or one the relay no longer recognises (it is cleared). */
-	| { readonly status: "none" }
-	/** There is a stored session but the relay did not answer; nothing is cleared. */
+	/**
+	 * No session, or one the relay no longer recognises (it is cleared).
+	 * `ended`: there was one, and the relay said it is over: the page says so.
+	 */
+	| { readonly status: "none"; readonly ended?: true }
+	/**
+	 * There is a stored session but the relay did not answer, or answered with
+	 * anything but "this session is not valid" (a 5xx, a 429, a gateway's
+	 * page): nothing is cleared, and it is asked again (decision D7, audit
+	 * F-064).
+	 */
 	| { readonly status: "unreachable" };
+
+/**
+ * Whether an answer refuses the session itself: HTTP 401 (the session was
+ * ended, or the token is not valid any more). Only that signs a wallet out;
+ * an outage never does.
+ */
+export const refusesSession = (status: number | undefined): boolean =>
+	status === 401;
 
 /**
  * What a stored session is worth right now: asked once when the section
@@ -76,16 +92,17 @@ export async function probeSession(client: RelayClient): Promise<SessionProbe> {
 	try {
 		const { data, error } = await client.auth.getSession();
 		if (error) {
+			// a renewal the relay refused: the session is over, and said to be
 			return isUnreachable(error)
 				? { status: "unreachable" }
-				: { status: "none" };
+				: { status: "none", ended: true };
 		}
 		if (!data.session) return { status: "none" };
-		const { data: wallet, error: refused } = await client.rpc("whoami");
+		const { data: wallet, error: refused, status } = await client.rpc("whoami");
 		if (refused) {
-			if (isUnreachable(refused)) return { status: "unreachable" };
+			if (!refusesSession(status)) return { status: "unreachable" };
 			await signOut(client);
-			return { status: "none" };
+			return { status: "none", ended: true };
 		}
 		if (typeof wallet === "string" && /^0x[0-9a-f]{40}$/.test(wallet)) {
 			let known = WALLETS.get(client);
@@ -98,7 +115,7 @@ export async function probeSession(client: RelayClient): Promise<SessionProbe> {
 		}
 		// a session that speaks for no wallet is of no use here
 		await signOut(client);
-		return { status: "none" };
+		return { status: "none", ended: true };
 	} catch (e) {
 		return isUnreachable(e) ? { status: "unreachable" } : { status: "none" };
 	}
@@ -148,8 +165,13 @@ export async function signIn(
 	} catch (e) {
 		return fail(relayIssue(e));
 	}
-	// the relay's own answer to "who am I" must be the wallet that just signed
+	// the relay's own answer to "who am I" must be the wallet that just signed;
+	// an outage in between is said as one, and the session is looked at again
+	// later rather than ended (decision D7)
 	const expected = wallet.address.toLowerCase() as Address;
+	const asked = await whoamiStatus(client);
+	if (asked === "unreachable")
+		return fail(relayIssue(new TypeError("Failed to fetch")));
 	const seen = await sessionWallet(client);
 	if (seen !== expected) {
 		await signOut(client);
@@ -158,14 +180,26 @@ export async function signIn(
 				"relay.signin_mismatch",
 				"error",
 				seen
-					? `The sharing service opened a session for ${seen}, not for the wallet that signed.`
-					: "The sharing service opened a session but could not say which wallet it is for.",
+					? `The hl-tools server opened a session for ${seen}, not for the wallet that signed.`
+					: "The hl-tools server opened a session but could not say which wallet it is for.",
 				{ fix: "Sign in again." },
 			),
 		);
 	}
 	if (previous) await endReplaced(client, previous);
 	return { ok: true, wallet: expected };
+}
+
+/** Whether the relay answers "who am I" at all: an outage is not a refusal. */
+async function whoamiStatus(
+	client: RelayClient,
+): Promise<"answered" | "unreachable"> {
+	try {
+		const { error, status } = await client.rpc("whoami");
+		return error && !refusesSession(status) ? "unreachable" : "answered";
+	} catch {
+		return "unreachable";
+	}
 }
 
 /** The access token of the session this client holds now, if any. */
@@ -219,13 +253,13 @@ export async function probeFor(
 	client: RelayClient,
 	wallet: Address,
 	slots: Slots,
-): Promise<"ready" | "none" | "unreachable"> {
+): Promise<"ready" | "none" | "ended" | "unreachable"> {
 	const probe = await probeSession(client);
 	if (probe.status === "unreachable") return "unreachable";
 	if (probe.status === "ready" && probe.wallet === wallet) return "ready";
 	if (probe.status === "ready") await signOut(client);
 	forgetWallet(slots, wallet);
-	return "none";
+	return probe.status === "none" && probe.ended ? "ended" : "none";
 }
 
 /**

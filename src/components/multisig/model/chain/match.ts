@@ -338,7 +338,7 @@ export type RowProposal =
 	| { readonly kind: "none" }
 	| { readonly kind: "checking" }
 	/** The explorer did not answer, or does not know the hash: nothing is claimed. */
-	| { readonly kind: "unchecked" }
+	| { readonly kind: "unchecked"; readonly why?: LookupFailure }
 	| { readonly kind: "matched"; readonly digest: Hex }
 	/**
 	 * One proposal on record agrees with everything the row shows, and the
@@ -347,10 +347,16 @@ export type RowProposal =
 	| { readonly kind: "likely"; readonly digest: Hex }
 	| { readonly kind: "ambiguous"; readonly digests: readonly Hex[] };
 
+/**
+ * Why a look-up failed, as the cell says it (audit F-065): the explorer is
+ * limiting requests (429), it refused more for today, or it did not answer.
+ */
+export type LookupFailure = "limited" | "today" | "no-answer";
+
 /** How a look-up of a row's transaction stands. */
 export type Lookup =
 	| { readonly state: "pending" }
-	| { readonly state: "failed" }
+	| { readonly state: "failed"; readonly why?: LookupFailure }
 	| { readonly state: "unknown-hash" }
 	| { readonly state: "found"; readonly tx: ExplorerTx };
 
@@ -377,7 +383,10 @@ export function rowProposal(
 			? { kind: "likely", digest: c.digests[0] as Hex }
 			: { kind: "ambiguous", digests: c.digests };
 	if (!lookup || lookup.state === "pending") return { kind: "checking" };
-	if (lookup.state !== "found") return { kind: "unchecked" };
+	if (lookup.state !== "found")
+		return lookup.state === "failed" && lookup.why
+			? { kind: "unchecked", why: lookup.why }
+			: { kind: "unchecked" };
 	const wanted = new Set(c.digests);
 	const verdict = judgeTx(
 		lookup.tx,

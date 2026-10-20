@@ -6,6 +6,7 @@ import {
 	HIDE_COPY,
 	mergeToast,
 	PROVENANCE_CLOSE,
+	SEND_ANSWER,
 	stepAccepted,
 	stepNotSent,
 	TOAST_LINE_MAX,
@@ -20,6 +21,9 @@ describe("what a toast says", () => {
 		...Object.values(TOAST_TITLES),
 		...Object.values(TOAST_LINES),
 		...Object.values(HIDE_COPY),
+		...Object.values(SEND_ANSWER).map((v) =>
+			typeof v === "function" ? v(2) : v,
+		),
 		PROVENANCE_CLOSE,
 		stepAccepted(1),
 		stepNotSent(2),
@@ -28,6 +32,25 @@ describe("what a toast says", () => {
 	it("claims nothing the section must not claim", () => {
 		for (const text of all)
 			for (const claim of FORBIDDEN_CLAIMS) expect(text).not.toMatch(claim);
+	});
+
+	it("never says an unclear send was not sent, nor offers a new proposal for it (decision D1)", () => {
+		for (const text of [
+			SEND_ANSWER.unclear,
+			SEND_ANSWER.unclearStep(2),
+			SEND_ANSWER.used,
+			SEND_ANSWER.usedStep(1),
+		]) {
+			expect(text).not.toMatch(/nothing was (sent|submitted)|refused|propose/i);
+		}
+		expect(SEND_ANSWER.unclear).toContain("Trying again is safe");
+		expect(SEND_ANSWER.used).toContain("most likely went through");
+		// a refusal's own words reach its toast (audit F-007)
+		expect(failed(TOAST_TITLES.refused, "Invalid number of decimals")).toEqual({
+			tone: "failed",
+			title: "Refused by Hyperliquid",
+			line: "Invalid number of decimals",
+		});
 	});
 
 	it("closes by itself, a failure a little later than a success", () => {

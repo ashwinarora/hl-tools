@@ -6,7 +6,7 @@ const refused = {
 	code: "relay.signin_rejected",
 	severity: "error" as const,
 	message:
-		"The sharing service did not accept the sign-in message: Signed Ethereum message is using a Domain that does not match the one in URI which is not allowed on this server",
+		"The hl-tools server did not accept the sign-in message: Signed Ethereum message is using a Domain that does not match the one in URI which is not allowed on this server",
 	fix: "Check that this device's date and time are set automatically, then sign in again.",
 };
 
@@ -19,7 +19,7 @@ describe("what a sign-in that did not finish says", () => {
 			details: refused.message,
 		});
 		// the line never carries the server's words, nor advice that may not apply
-		expect(n.title).not.toMatch(/sharing service|Ethereum|date and time/);
+		expect(n.title).not.toMatch(/hl-tools server|Ethereum|date and time/);
 	});
 
 	it("says a decline in the wallet calmly, with nothing to unfold", () => {

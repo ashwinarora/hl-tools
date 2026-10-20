@@ -6,8 +6,10 @@ import {
 	FORBIDDEN_CLAIMS,
 	finishHint,
 	gateOthers,
+	NUMBERED_HERE,
 	othersSummary,
 	RELAY_COPY,
+	SHARE_FIRST,
 	SIGN_HINT_TEXTS,
 	signHint,
 } from "./copy";
@@ -63,6 +65,8 @@ describe("relay copy", () => {
 		// a function of its date, so it is not among the plain entries
 		["cancel note", partsText(cancelNote(Date.UTC(2026, 9, 16, 2, 48)))],
 		...REFUSAL_TEXTS.map((t, i): [string, string] => [`refusal ${i}`, t]),
+		["share first", SHARE_FIRST],
+		["numbered here", NUMBERED_HERE],
 		// what the page says when it refuses a nickname before asking the relay
 		...["", "0xabc", "You", "x".repeat(41), `a${String.fromCodePoint(0x200b)}b`]
 			.map((name) => nicknameProblem(name))
@@ -137,9 +141,10 @@ describe("relay copy", () => {
 	});
 
 	it("never calls a proposal that Hyperliquid itself refused retryable", () => {
-		// the proposal's number is used up by any answer from Hyperliquid (numberSpent)
-		expect(afterRejection(200)).not.toMatch(/retr|can be sent again/i);
-		expect(afterRejection(200)).toContain("cannot be sent again as it is");
+		// a refusal, or "already used" (most likely went through): its page says which
+		expect(afterRejection(200)).not.toMatch(/retr|can be sent again|propose/i);
+		expect(afterRejection(200)).toBe("Its page says why.");
+		expect(afterRejection(200, true)).toBe("The top of this page says why.");
 		// a request that never got there is another matter
 		expect(afterRejection(502)).toContain("can be sent again");
 		expect(afterRejection("200")).toBe("Open it to see why.");

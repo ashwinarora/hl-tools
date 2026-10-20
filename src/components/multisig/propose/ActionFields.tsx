@@ -1,7 +1,6 @@
 import {
 	type AccountMode,
 	type AgentInfo,
-	MULTISIG_FACTS,
 	type Network,
 	visibleText,
 	withdrawalFrom,
@@ -23,7 +22,7 @@ import {
 	REMOVE_AGENT,
 	type Receiver,
 } from "../model/actions";
-import { API_WALLET_PROPOSE } from "../model/apiWallet";
+import { API_WALLET_ACTS, API_WALLET_PROPOSE } from "../model/apiWallet";
 import type { MaxAmount } from "../model/max";
 import { modeLabel } from "../model/mode";
 import { MODE_SWITCH, type ModeTarget } from "../model/modeSwitch";
@@ -31,6 +30,7 @@ import { RELAY_COPY } from "../model/relay/copy";
 import type { CostLine } from "../model/send";
 import { shortAddress } from "../model/stage";
 import { fromNow } from "../model/time";
+import { usdcShown } from "../model/vault";
 import { useNames, Who } from "../names/Names";
 import { Help } from "../shell/Help";
 import { useMax } from "./MaxButton";
@@ -160,6 +160,8 @@ export function ActionFields({
 	tokens,
 	held,
 	tokensLoading,
+	tokensFailed,
+	onRetryTokens,
 	mode,
 	receiver,
 	cost,
@@ -167,6 +169,7 @@ export function ActionFields({
 	movable,
 	agents,
 	agentsFailed,
+	modeFailed,
 	now,
 	max,
 }: {
@@ -180,6 +183,9 @@ export function ActionFields({
 	/** Token indexes the treasury holds, listed first: a network can have thousands. */
 	held: readonly number[];
 	tokensLoading: boolean;
+	/** The token list could not be read: said, with a way to ask again (audit F-081). */
+	tokensFailed: boolean;
+	onRetryTokens: () => void;
 	/** The treasury's account mode; null while it is not read. */
 	mode: AccountMode | null;
 	/** What is known about the destination; null while it is not. */
@@ -194,6 +200,8 @@ export function ActionFields({
 	agents: readonly AgentInfo[] | null;
 	/** The read of the API wallets failed. */
 	agentsFailed: boolean;
+	/** The read of the account mode failed. */
+	modeFailed: boolean;
 	/** The page's clock, for what has expired. */
 	now: number;
 	/** The amount's Max (`model/max.ts`); null for a kind with no amount. */
@@ -269,11 +277,11 @@ export function ActionFields({
 								options={[
 									{
 										value: "perps",
-										label: `Perps${movable.perps !== null ? ` · ${movable.perps} USDC` : ""}`,
+										label: `Perps${movable.perps !== null ? ` · ${usdcShown(movable.perps)} USDC` : ""}`,
 									},
 									{
 										value: "spot",
-										label: `Spot${movable.spotUsdc !== null ? ` · ${movable.spotUsdc} USDC` : ""}`,
+										label: `Spot${movable.spotUsdc !== null ? ` · ${usdcShown(movable.spotUsdc)} USDC` : ""}`,
 									},
 								]}
 							/>
@@ -307,7 +315,7 @@ export function ActionFields({
 			return (
 				<>
 					{destination(
-						`The address that receives USDC on Arbitrum${network === "testnet" ? " Sepolia" : ""}.`,
+						`The address that receives USDC on Arbitrum${network === "testnet" ? " Sepolia" : ""}. Whoever holds its key there controls the money: not a contract or an exchange that does not credit USDC on Arbitrum.`,
 					)}
 					{amount(
 						"USDC",
@@ -324,9 +332,23 @@ export function ActionFields({
 						htmlFor="ms-token"
 						error={error("token")}
 						hint={
-							tokensLoading
-								? `Loading the spot tokens of ${network}…`
-								: "The action carries the token as NAME:tokenId."
+							tokensLoading ? (
+								`Loading the spot tokens of ${network}…`
+							) : tokensFailed ? (
+								<span className="text-warning">
+									The token list of {network} could not be read from
+									Hyperliquid.{" "}
+									<button
+										type="button"
+										onClick={onRetryTokens}
+										className="underline underline-offset-2"
+									>
+										Try again
+									</button>
+								</span>
+							) : (
+								"The action carries the token as NAME:tokenId."
+							)
 						}
 					>
 						<Select
@@ -376,8 +398,7 @@ export function ActionFields({
 			return (
 				<>
 					<Callout tone="warning" title="One key will act for the treasury">
-						{MULTISIG_FACTS.find((f) => f.id === "agent-bypass")?.text}{" "}
-						{API_WALLET_PROPOSE}
+						{API_WALLET_ACTS} {API_WALLET_PROPOSE}
 					</Callout>
 					<Field
 						label="API wallet address"
@@ -417,7 +438,11 @@ export function ActionFields({
 			return (
 				<>
 					<p className="text-[13px] text-muted-foreground">
-						{mode ? MODE_SWITCH.now(modeLabel(mode).tag) : MODE_SWITCH.reading}{" "}
+						{mode
+							? MODE_SWITCH.now(modeLabel(mode).tag)
+							: modeFailed
+								? MODE_SWITCH.unread
+								: MODE_SWITCH.reading}{" "}
 						<Help k="accountMode" />
 					</p>
 					<Field label={MODE_SWITCH.label} error={error("toMode")}>

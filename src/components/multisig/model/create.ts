@@ -133,6 +133,9 @@ export const CREATE = {
 	readBack: "Confirmed with Hyperliquid.",
 	switchNow:
 		"You are signed in as the treasury itself, which can no longer act. Choose one of its signers in your wallet to use it.",
+	/** Once the wallet has moved to another account, one of its signers or not. */
+	onSigner:
+		"Your wallet is no longer on the treasury's own account. To act for the treasury, use one of its signers and open it.",
 	/** Before the list of signers on the success screen. */
 	signInAs: "Its signers:",
 	openTreasury: "Open the treasury",
@@ -208,6 +211,13 @@ export function accountLines(f: AccountFacts): AccountJudgement {
 			text: `${what[0]?.toUpperCase()}${what.slice(1)}. After converting, only an API wallet can trade or cancel for this account.`,
 		});
 	}
+	// a part that could not be read is said, never counted as none (audit F-086)
+	if (f.positions === null || f.orders === null)
+		lines.push({
+			level: "warning",
+			code: "create.open_unread",
+			text: `Its ${f.positions === null && f.orders === null ? "open positions and orders" : f.positions === null ? "open positions" : "open orders"} could not be read. If it has any, only an API wallet can trade or cancel for this account after converting.`,
+		});
 	if (f.agents === null) {
 		lines.push({
 			level: "warning",

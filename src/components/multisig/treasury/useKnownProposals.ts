@@ -155,6 +155,7 @@ export function useKnownProposals(
 	const state = knownStateOf({
 		enabled,
 		relay: !!client,
+		checking: relay.mode === "restoring",
 		shared:
 			shared.data !== undefined
 				? "read"

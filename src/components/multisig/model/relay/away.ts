@@ -306,7 +306,7 @@ export function awayItems(i: {
 			case "rejected":
 				if (rel && e.actor !== me)
 					item(
-						say`Hyperliquid rejected ${action(p, false)}, which you ${rel}. ${afterRejection(e.data.http_status)}`,
+						say`Hyperliquid did not accept ${action(p, false)}, which you ${rel}. ${afterRejection(e.data.http_status)}`,
 					);
 				break;
 			case "withdrawn":
@@ -469,10 +469,17 @@ export function awayItems(i: {
 			.sort((a, b) => b.row.time - a.row.time);
 		for (const { row } of left.slice(0, AWAY_TRANSFERS_SHOWN)) {
 			// as the tables show it: "1", not the ledger's "1.0"
-			const amount = row.amount
-				? (Decimal.tryParse(row.amount)?.toString() ?? row.amount)
-				: "An amount";
-			const what = `${amount}${row.token ? ` ${row.token}` : ""}`;
+			const plain = (v: string) => Decimal.tryParse(v)?.toString() ?? v;
+			const unit = row.token ? ` ${row.token}` : "";
+			const fee =
+				row.fee && Decimal.tryParse(row.fee)?.isPositive()
+					? `${plain(row.fee)} ${row.feeToken ?? row.token ?? ""}`.trim()
+					: null;
+			// all that left the treasury: a withdrawal what was asked for (what
+			// arrives and the bridge's fee), a send with its fee (audit F-057)
+			const what = row.requested
+				? `${plain(row.requested)}${unit} (${row.amount ? plain(row.amount) : "some"} arrives, ${fee ?? "the rest"} bridge fee)`
+				: `${row.amount ? plain(row.amount) : "An amount"}${unit}${fee ? ` and a ${fee} fee` : ""}`;
 			out.push({
 				key: `left:${row.key}`,
 				at: row.time,

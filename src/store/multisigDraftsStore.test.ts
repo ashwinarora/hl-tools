@@ -104,6 +104,15 @@ describe("the drafts store", () => {
 		);
 		await useMultisigDrafts.persist.rehydrate();
 		expect(Object.keys(state().drafts)).toEqual([KEY]);
+		// what was dropped on reading leaves storage at once, not with the next
+		// keystroke (audit F-085)
+		await Promise.resolve();
+		expect(
+			Object.keys(
+				JSON.parse(localStorage.getItem(MULTISIG_DRAFTS_KEY) ?? "{}").state
+					.drafts,
+			),
+		).toEqual([KEY]);
 		// a kind this version does not know falls back to the default one
 		expect(state().drafts[KEY]).toMatchObject({ form: FORM });
 		// storage that is not JSON at all leaves an empty store

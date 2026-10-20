@@ -24,6 +24,7 @@ import {
 	withdrawalOutcome,
 } from "@hl-tools/core";
 import type { Receiver } from "./actions";
+import { paysZeroAddress } from "./fields";
 import { selfRefusal } from "./selfSend";
 
 export interface SendFacts {
@@ -266,11 +267,17 @@ export function preflight(action: PlainObject, facts: SendFacts): Refusal[] {
 	return out;
 }
 
-/** Refusals a proposal's page says before anyone signs: the balances, and a withdrawal at or below the bridge's fee. */
+/**
+ * Refusals a proposal's page says before anyone signs: the balances, a
+ * withdrawal at or below the bridge's fee, and the 1 USDC of a new address
+ * that the amount or the balances cannot cover (audit F-021).
+ */
 const STANDING: ReadonlySet<string> = new Set([
 	"transfer-balance",
 	"token-balance",
 	"withdrawal-below-fee",
+	"transfer-below-fee",
+	"transfer-gas",
 ]);
 
 /**
@@ -295,6 +302,7 @@ export function standingRefusals(
 const BALANCE_REFUSALS: ReadonlySet<string> = new Set([
 	"transfer-balance",
 	"token-balance",
+	"transfer-gas",
 ]);
 
 /**
@@ -346,6 +354,23 @@ export interface CostLine {
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 /** "It arrives in their perps balance.", for a send that names where it goes. */
+/** A send whose destination is the treasury itself. */
+export const TO_ITSELF =
+	"The destination is the treasury itself: this only moves money between its own balances, and costs nothing.";
+
+/**
+ * The flags a page shows beside an action: never "moves funds out" for a
+ * send to the treasury itself, which moves nothing out (audit F-002).
+ */
+export function shownFlags<F extends string>(
+	flags: readonly F[],
+	action: unknown,
+	self: string,
+): F[] {
+	const toItself = sendShape(action)?.destination === self.toLowerCase();
+	return flags.filter((f) => !(toItself && f === "funds_out"));
+}
+
 function arrival(action: PlainObject, receiver: Receiver): string {
 	if (!receiver.mode) return "";
 	const lands = landsIn(receiver.mode, action);
@@ -367,12 +392,19 @@ export function costLine(input: {
 	readonly mode: AccountMode | null;
 	readonly perpsUsdc: string | null;
 	readonly spot: SendFacts["spot"];
+	/** The treasury: a send to itself pays nobody (audit F-002). */
+	readonly self?: string;
 }): CostLine | null {
 	const { action, receiver } = input;
 	const shape = action ? sendShape(action) : null;
 	if (!action || !shape || shape.destination === null) return null;
+	if (input.self && shape.destination === input.self.toLowerCase())
+		return { tone: "plain", text: TO_ITSELF };
 	// not an account: the form says so under the destination, and nothing is paid
 	if (multiSigEvmRefusal(action)) return null;
+	// nobody to describe: the line about the zero address says what it is,
+	// never "in use, costs nothing" (audit F-018)
+	if (paysZeroAddress(action)) return null;
 	if (receiver === "loading")
 		return {
 			tone: "muted",

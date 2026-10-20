@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { download } from "#/lib/download";
+import { receiptOk } from "../model/history";
 import { RELAY_COPY } from "../model/relay/copy";
 import { coSignerMessage } from "../model/relay/message";
 import {
@@ -51,7 +52,13 @@ export function TellCoSigners({
 		const open = all.some(
 			(x) => x.doc.relay.row?.status === "open" && !x.doc.relay.expired,
 		);
-		if (!open) return null;
+		// sent and accepted here while the server still holds it open: its
+		// result has not reached the server, so "they already see this" would
+		// not be true (audit F-095); the page's notice says what went wrong
+		const sentHere = all.some(
+			(x) => !!x.proposal.receipt && receiptOk(x.proposal.receipt),
+		);
+		if (!open || sentHere) return null;
 		const copy = async () => {
 			const text = coSignerMessage({
 				origin: window.location.origin,

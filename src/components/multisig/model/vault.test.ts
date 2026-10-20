@@ -373,6 +373,25 @@ describe("a withdrawal", () => {
 		]);
 	});
 
+	it("says when what the vault releases could not be read: the worth stands in for it (audit F-073)", () => {
+		const p = plan(
+			wd("20"),
+			read({
+				deposits: [{ vault: V, equity: "100", lockedUntil: NOW - DAY }],
+				vault: { kind: "unreadable" },
+			}),
+		);
+		expect(codes(p.issues)).toEqual([
+			"warning:vault.unread",
+			"warning:vault.releases_unread",
+		]);
+		expect(p.issues[1]?.message).toContain(
+			"which can be more than Hyperliquid releases",
+		);
+		// a warning only: a read that fails stops nothing
+		expect(p.steps).toHaveLength(1);
+	});
+
 	it("warns when the deposits could not be read, and blocks nothing for it", () => {
 		const p = plan(wd("20"), read({ deposits: null }));
 		expect(codes(p.issues)).toEqual(["warning:deposits.unread"]);
@@ -653,7 +672,10 @@ describe("the Vaults tab", () => {
 		// what "withdraw everything" leaves, a first hour's profit, a small loss
 		expect(usdcShown("0.000653")).toBe("0.000653");
 		expect(usdcShown("0.0001374779")).toBe("0.000137");
-		expect(usdcShown("-0.0000004733")).toBe("0");
+		// a figure the cut would turn to nothing is shown whole (audit F-051)
+		expect(usdcShown("-0.0000004733")).toBe("-0.0000004733");
+		expect(usdcShown("0.0000001")).toBe("0.0000001");
+		expect(usdcShown("0.00000015")).toBe("0.00000015");
 		expect(usdcShown("-12.349")).toBe("-12.34");
 		expect(usdcShown("much")).toBe("much");
 	});

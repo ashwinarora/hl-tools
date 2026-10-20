@@ -71,6 +71,44 @@ export async function submitEnvelope(
 	return { receipt, explained: explainExchangeError(response, res.status) };
 }
 
+/**
+ * What one answer to a send means for its proposal:
+ *
+ *   accepted  Hyperliquid carried it out.
+ *   refused   Hyperliquid answered with a reason: the number is used up.
+ *   used      Hyperliquid answered that the number was used already
+ *             ("duplicate nonce"): an earlier attempt most likely went
+ *             through, its answer lost on the way.
+ *   unclear   No answer, or not Hyperliquid's (an HTTP status other than 200,
+ *             a body that is not its answer): whether it went through is not
+ *             known. Sending the same proposal again is safe, because
+ *             Hyperliquid takes a proposal's number once.
+ */
+export type SendAnswer = "accepted" | "refused" | "used" | "unclear";
+
+export function sendAnswer(e: ErrorExplanation): SendAnswer {
+	if (e.id === "ok") return "accepted";
+	if (e.source === "http") return "unclear";
+	if (e.id === "nonce-duplicate") return "used";
+	return "refused";
+}
+
+/** What came back instead of Hyperliquid's answer, in a few words. */
+export function unclearDetail(receipt: Receipt | null): string {
+	if (!receipt) return "No answer reached this page.";
+	const body =
+		typeof receipt.response === "string"
+			? receipt.response.trim()
+			: receipt.response === null
+				? ""
+				: stringifyJson(fromPlain(receipt.response), 0);
+	const said =
+		body && body.length <= 80 && !/[<>]/.test(body) ? `: ${body}` : "";
+	return receipt.httpStatus === 200
+		? "What came back was not Hyperliquid's answer."
+		: `The answer was HTTP ${receipt.httpStatus}${said}.`;
+}
+
 export function withReceipt(p: Proposal, receipt: Receipt): Proposal {
 	return { ...p, receipt };
 }

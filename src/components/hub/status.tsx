@@ -142,7 +142,9 @@ export function IssueList({
 						/>
 						<div className="min-w-0 flex-1 space-y-1">
 							<div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-								<span className="font-medium text-foreground">{i.message}</span>
+								<span className="font-medium text-foreground [overflow-wrap:anywhere]">
+									{i.message}
+								</span>
 							</div>
 							{plain ? (
 								i.fix && (

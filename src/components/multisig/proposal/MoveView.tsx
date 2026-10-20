@@ -1,5 +1,5 @@
 import type { Address, Issue, Move, Network, Proposal } from "@hl-tools/core";
-import { cutTo } from "@hl-tools/core";
+import { cutTo, shownNote } from "@hl-tools/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, ExternalLink } from "lucide-react";
@@ -29,10 +29,13 @@ import { untilWords } from "../model/time";
 import {
 	done as doneToast,
 	failed as failedToast,
+	SEND_ANSWER,
+	SENDING,
 	stepAccepted,
 	stepNotSent,
 	TOAST_LINES,
 	TOAST_TITLES,
+	unsure as unsureToast,
 } from "../model/toasts";
 import { TreasuryNames, Who } from "../names/Names";
 import { Sentence } from "../names/Sentence";
@@ -64,6 +67,7 @@ import { useNow, When } from "../shell/live";
 import { notify } from "../shell/notify";
 import { ShellPage } from "../shell/ShellPage";
 import { Split } from "../shell/Split";
+import { TitleHeading } from "../shell/TitleHeading";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useTreasuryNames } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
@@ -71,6 +75,7 @@ import { useWalletSigner } from "../useWalletSigner";
 import { ActionBar } from "./ActionBar";
 import {
 	finaliseMove,
+	type MoveResult,
 	type Outcome,
 	type StepId,
 	type StepState,
@@ -275,8 +280,14 @@ export function MoveView({
 			{label}
 		</Link>
 	);
+	// a step Hyperliquid says was already used most likely went through:
+	// it is never offered to be made again
+	const used = (s: MoveStepState) => s.stage.phase === "used";
 	const repropose =
-		stage.phase === "broken" ? (
+		stage.phase === "broken" && used(steps[1]) ? undefined : stage.unsure ===
+				0 && used(steps[0]) ? (
+			again(second, "Propose only step 2")
+		) : stage.phase === "broken" ? (
 			// said by its number where it may be done already: the reader should
 			// know it is a new step 2 that is being made
 			again(
@@ -293,13 +304,17 @@ export function MoveView({
 		) : (
 			again(first, "Propose it again")
 		);
-	// a refused step stays open on the relay until it is withdrawn or lapses
-	const leftOpen = steps.some(
-		(s) =>
-			s.doc.relay.known &&
-			s.doc.relay.row?.status === "open" &&
-			!s.doc.relay.expired,
-	);
+	// a refused step stays open on the relay until it is withdrawn or lapses;
+	// a move carried out in full has nothing left to offer, whatever the relay
+	// still holds open (audit F-048)
+	const leftOpen =
+		stage.phase !== "done" &&
+		steps.some(
+			(s) =>
+				s.doc.relay.known &&
+				s.doc.relay.row?.status === "open" &&
+				!s.doc.relay.expired,
+		);
 	// on a phone, the bar at the bottom brings this wallet's part into view
 	const partRef = useRef<HTMLDivElement>(null);
 	// whom the two steps name (a validator, a vault), each once
@@ -329,7 +344,13 @@ export function MoveView({
 			signers={signersNow}
 		>
 			<ShellPage
-				title={first.meta.title ?? sentence}
+				title={
+					first.meta.title ? (
+						<TitleHeading title={first.meta.title} />
+					) : (
+						sentence
+					)
+				}
 				back={
 					listed ? (
 						<Link
@@ -424,7 +445,12 @@ export function MoveView({
 											{finaliser === me ? " (you)" : ""}
 										</AddressFact>
 										{first.meta.note && (
-											<Fact label="Note">{first.meta.note}</Fact>
+											<Fact label="Note">
+												{/* its own line breaks kept, at most one blank line (`shownNote`, audit F-127) */}
+												<span className="whitespace-pre-line">
+													{shownNote(first.meta.note)}
+												</span>
+											</Fact>
 										)}
 									</Facts>
 									{(first.meta.title || first.meta.note) && (
@@ -683,6 +709,9 @@ function StepCard({
 			)}
 			{open && staking.noPay && <Amber>{staking.noPay}</Amber>}
 			{open && step.vault.relocks && <Amber>{step.vault.relocks}</Amber>}
+			{open && step.vault.releasesUnread && (
+				<Amber>{step.vault.releasesUnread}</Amber>
+			)}
 			{ask &&
 				(step.vault.record?.kind === "likely" ||
 					step.vault.record?.kind === "several") && (
@@ -723,19 +752,21 @@ function StepCard({
 					treasury's Staking history before {before}.
 				</Amber>
 			)}
-			{stage.failedAttempt && (
-				<Callout
-					tone="danger"
-					className="mt-3"
-					title={`Hyperliquid refused this step: ${stage.failedAttempt.message}`}
-				>
-					{duplicate ? (
-						<Sentence parts={stage.detailParts} />
-					) : (
-						refusalNote(stage.failedAttempt)
-					)}
-				</Callout>
-			)}
+			{stage.failedAttempt &&
+				(duplicate ? (
+					// most likely carried out from a page that never got the answer
+					<Callout tone="warning" className="mt-3" title={TOAST_TITLES.used}>
+						{SEND_ANSWER.usedStep(number)}
+					</Callout>
+				) : (
+					<Callout
+						tone="danger"
+						className="mt-3"
+						title={`Hyperliquid refused this step: ${stage.failedAttempt.message}`}
+					>
+						{refusalNote(stage.failedAttempt)}
+					</Callout>
+				))}
 			{!done && !open && !stage.failedAttempt && (
 				<p className="mt-2.5 text-[13px] text-muted-foreground">
 					<Sentence parts={stage.detailParts} />
@@ -793,6 +824,11 @@ function MovePart({
 		readonly issues: readonly Issue[];
 	} | null>(null);
 	const [marks, setMarks] = useState<Marks | null>(null);
+	/** Sent with no clear answer: what was said, and the same requests to post again. */
+	const [unclear, setUnclear] = useState<{
+		readonly issues: readonly Issue[];
+		readonly retry: () => Promise<MoveResult>;
+	} | null>(null);
 	const [confirm, setConfirm] = useState(false);
 	const [busy, setBusy] = useState(false);
 	// the wallet answered that it lacks the signing network: the code panel offers to add it
@@ -909,9 +945,54 @@ function MovePart({
 	};
 	const sign = () => void wallet.run("Waiting for the wallet…", doSign);
 
+	/** What a send came to, on the page and in a toast. */
+	const heard = (result: MoveResult) => {
+		if (!result.ok && result.needsNetwork) {
+			setNeedsNetwork(true);
+			return;
+		}
+		setNeedsNetwork(false);
+		if (!result.ok && result.retry) {
+			setUnclear({ issues: result.issues, retry: result.retry });
+			notify(
+				unsureToast(TOAST_TITLES.unclear, result.issues[0]?.message ?? null),
+			);
+		} else if (!result.ok) {
+			setUnclear(null);
+			const title =
+				result.sent > 0
+					? stepNotSent((stage.toSend[result.index] ?? 0) + 1)
+					: TOAST_TITLES.nothingSent;
+			setFailure({ title, issues: result.issues });
+			notify(failedToast(title, result.issues));
+		} else {
+			setUnclear(null);
+			notify(
+				result.answer === "used"
+					? unsureToast(TOAST_TITLES.used, SEND_ANSWER.used)
+					: !result.accepted
+						? failedToast(TOAST_TITLES.refused, result.reason)
+						: result.sent >= 2
+							? doneToast(TOAST_TITLES.moveAccepted, TOAST_LINES.final)
+							: doneToast(
+									stepAccepted((stage.toSend[0] ?? 0) + 1),
+									stage.toSend.length < 2 && (stage.toSend[0] ?? 0) === 0
+										? TOAST_LINES.secondStepLater
+										: TOAST_LINES.final,
+								),
+			);
+		}
+		// what the treasury has in staking, or in vaults, changed with every step that went through
+		if (result.sent > 0) {
+			void refreshStaking(queries, network, multiSigUser);
+			void refreshVaults(queries, network, multiSigUser);
+		}
+	};
+
 	const doSubmit = async () => {
 		setOutcome(null);
 		setFailure(null);
+		setUnclear(null);
 		setMarks({});
 		const result = await finaliseMove({
 			steps: toSend.map((s) => ({
@@ -927,37 +1008,16 @@ function MovePart({
 				})),
 		});
 		setMarks(null);
-		if (!result.ok && result.needsNetwork) {
-			setNeedsNetwork(true);
-			return;
-		}
-		setNeedsNetwork(false);
-		if (!result.ok) {
-			const title =
-				result.sent > 0
-					? stepNotSent((stage.toSend[result.index] ?? 0) + 1)
-					: TOAST_TITLES.nothingSent;
-			setFailure({ title, issues: result.issues });
-			notify(failedToast(title, result.issues));
-		} else
-			notify(
-				!result.accepted
-					? failedToast(TOAST_TITLES.refused, TOAST_LINES.refused)
-					: result.sent >= 2
-						? doneToast(TOAST_TITLES.moveAccepted, TOAST_LINES.final)
-						: doneToast(
-								stepAccepted((stage.toSend[0] ?? 0) + 1),
-								stage.toSend.length < 2 && (stage.toSend[0] ?? 0) === 0
-									? TOAST_LINES.secondStepLater
-									: TOAST_LINES.final,
-							),
-			);
-		// what the treasury has in staking, or in vaults, changed with every step that went through
-		if (result.sent > 0) {
-			void refreshStaking(queries, network, multiSigUser);
-			void refreshVaults(queries, network, multiSigUser);
-		}
+		heard(result);
 	};
+	/** The very same signed requests once more: no wallet prompt, and they cannot pay twice. */
+	const tryAgain = () =>
+		void wallet.run(SEND_ANSWER.tryingAgain, async () => {
+			const again = unclear?.retry;
+			if (!again) return;
+			setFailure(null);
+			heard(await again());
+		});
 
 	/** One approval in the wallet adds the network; then what was asked for goes on. */
 	const addNetwork = () =>
@@ -972,7 +1032,7 @@ function MovePart({
 			await (stage.canExecute ? doSubmit() : doSign());
 		});
 
-	const submit = () => void wallet.run("Waiting for the wallet…", doSubmit);
+	const submit = () => void wallet.run(SENDING, doSubmit);
 
 	if (marks) {
 		return (
@@ -1049,6 +1109,7 @@ function MovePart({
 
 	const waits = stage.opensAt !== null && !stage.canExecute;
 	const any =
+		!!unclear ||
 		stage.canExecute ||
 		stage.canSign ||
 		waits ||
@@ -1057,20 +1118,22 @@ function MovePart({
 		can.sayNo.length > 0 ||
 		can.takeBackNo.length > 0;
 	const off = wallet.busy || busy;
-	const note = over
-		? leftOpenNote(can.withdraw.length > 0)
-		: stage.canExecute
-			? `Your wallet is asked ${times(stage.prompts)}. Then step ${(stage.toSend[0] ?? 0) + 1} is sent${toSend.length > 1 ? ", and step 2 once Hyperliquid has accepted it" : ""}.`
-			: stage.canSign
-				? `${toSign.length > 1 ? "One wallet prompt for each step. " : ""}${signHints(
-						stage.toSign.map((i) => ({
-							proposal: (steps[i] as MoveStepState).proposal,
-							number: i + 1,
-						})),
-					)}`
-				: stage.signed > 0 && stage.toSign.length === 0
-					? `You signed ${stage.signed === 2 ? "both steps" : "what is left to sign"}. ${isFinaliser ? "" : `The finaliser ${shortAddress(finaliser)} sends it.`}`
-					: (stage.executeReason ?? "");
+	const note = unclear
+		? SEND_ANSWER.tryAgainNote
+		: over
+			? leftOpenNote(can.withdraw.length > 0)
+			: stage.canExecute
+				? `Your wallet is asked ${times(stage.prompts)}. Then step ${(stage.toSend[0] ?? 0) + 1} is sent${toSend.length > 1 ? ", and step 2 once Hyperliquid has accepted it" : ""}.`
+				: stage.canSign
+					? `${toSign.length > 1 ? "One wallet prompt for each step. " : ""}${signHints(
+							stage.toSign.map((i) => ({
+								proposal: (steps[i] as MoveStepState).proposal,
+								number: i + 1,
+							})),
+						)}`
+					: stage.signed > 0 && stage.toSign.length === 0
+						? `You signed ${stage.signed === 2 ? "both steps" : "what is left to sign"}. ${isFinaliser ? "" : `The finaliser ${shortAddress(finaliser)} sends it.`}`
+						: (stage.executeReason ?? "");
 
 	return (
 		<Card
@@ -1099,7 +1162,12 @@ function MovePart({
 			)}
 			{any && (
 				<div className="flex flex-wrap items-center gap-2">
-					{stage.canExecute ? (
+					{unclear ? (
+						// the same requests again, never new signatures over them
+						<Btn variant="brand" disabled={off} onClick={tryAgain}>
+							{SEND_ANSWER.tryAgain}
+						</Btn>
+					) : stage.canExecute ? (
 						<Btn
 							variant={needsNetwork ? "outline" : "brand"}
 							disabled={off}
@@ -1259,7 +1327,7 @@ function MovePart({
 					/>
 				</Callout>
 			)}
-			<Heard when={outcome ?? failure}>
+			<Heard when={outcome ?? failure ?? unclear}>
 				{outcome?.ok === true && (
 					<Callout tone="success" title="Signed" className="mt-3">
 						{steps[0].doc.relay.known
@@ -1279,6 +1347,11 @@ function MovePart({
 				{failure && (
 					<Callout tone="danger" title={failure.title} className="mt-3">
 						<IssueList plain issues={failure.issues} />
+					</Callout>
+				)}
+				{unclear && (
+					<Callout tone="warning" title={TOAST_TITLES.unclear} className="mt-3">
+						<IssueList plain issues={unclear.issues} />
 					</Callout>
 				)}
 			</Heard>

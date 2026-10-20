@@ -22,7 +22,7 @@ export type NoticeId =
 	| "signers-changed"
 	/** This browser could not save it. */
 	| "not-saved"
-	/** The sharing service refused a write: co-signers may not see what was done here. */
+	/** The hl-tools server refused a write: co-signers may not see what was done here. */
 	| "sharing-refused"
 	/** A copy reports a refusal that Hyperliquid's record overrides. */
 	| "copy-refusal"
@@ -30,9 +30,9 @@ export type NoticeId =
 	| "copy-notes"
 	/** What the page that opened it has to say (one step of a move). */
 	| "aside"
-	/** The sharing service did not answer. */
+	/** The hl-tools server did not answer. */
 	| "sharing"
-	/** What this browser would not take from the sharing service's copy. */
+	/** What this browser would not take from the hl-tools server's copy. */
 	| "sharing-notes";
 
 const STOP: readonly NoticeId[] = [

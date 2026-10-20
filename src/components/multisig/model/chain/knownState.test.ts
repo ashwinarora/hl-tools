@@ -36,6 +36,15 @@ describe("how much of the record a page has", () => {
 			"unavailable",
 		);
 	});
+	it("waits while the hl-tools server's session is still being checked (audit F-083)", () => {
+		expect(knownStateOf(reads({ relay: false, checking: true }))).toBe(
+			"loading",
+		);
+		// once the check is over without a session, this browser's copies are what there is
+		expect(knownStateOf(reads({ relay: false, checking: false }))).toBe(
+			"unavailable",
+		);
+	});
 	it("waits while the page has not asked", () => {
 		expect(knownStateOf(reads({ enabled: false }))).toBe("loading");
 	});

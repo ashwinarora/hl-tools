@@ -3,7 +3,11 @@ import { act, createElement } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type PersistApi, usePersistHydrated } from "./hydrated";
+import {
+	followOtherTabs,
+	type PersistApi,
+	usePersistHydrated,
+} from "./hydrated";
 
 (
 	globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -82,5 +86,49 @@ describe("usePersistHydrated", () => {
 		expect(api.rehydrate).toHaveBeenCalledTimes(1);
 		expect(recovered).toEqual([]);
 		expect(container.textContent).toBe("restored");
+	});
+});
+
+describe("following another tab (audit F-080)", () => {
+	const store = (name = "hl-tools:test") => {
+		let read = 0;
+		return {
+			read: () => read,
+			persist: {
+				rehydrate: () => {
+					read += 1;
+				},
+				getOptions: () => ({ name }),
+			},
+		};
+	};
+	const tab = () => {
+		const listeners: ((ev: StorageEvent) => void)[] = [];
+		return {
+			addEventListener: (_: string, l: (ev: StorageEvent) => void) =>
+				void listeners.push(l),
+			write: (key: string | null) => {
+				for (const l of listeners) l({ key } as StorageEvent);
+			},
+		};
+	};
+
+	it("reads the store again when another tab writes its key, or clears storage", () => {
+		const s = store();
+		const t = tab();
+		followOtherTabs(s, t as never);
+		t.write("hl-tools:test");
+		t.write(null);
+		expect(s.read()).toBe(2);
+		// another key is somebody else's business
+		t.write("hl-tools:other");
+		expect(s.read()).toBe(2);
+	});
+
+	it("does nothing on the server, or for a store with no persist", () => {
+		const s = store();
+		followOtherTabs(s, undefined);
+		followOtherTabs({}, tab() as never);
+		expect(s.read()).toBe(0);
 	});
 });

@@ -71,7 +71,9 @@ export function AddressFact({
 				<span className="@container block min-w-0">
 					<span className="block" style={fittedAddress(13, room)}>
 						{children ?? (
-							<span className="whitespace-nowrap font-mono">{address}</span>
+							<span className="font-mono [overflow-wrap:anywhere]">
+								{address}
+							</span>
 						)}
 					</span>
 				</span>

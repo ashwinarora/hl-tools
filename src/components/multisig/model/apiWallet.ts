@@ -19,6 +19,13 @@ export const API_WALLET_FORMER =
 	"An API wallet still acts for this account: it can trade with everything the account holds and move it into vaults. It cannot send funds to another account or withdraw them.";
 
 /** In the form that proposes one, after the protocol's own sentence. */
+/**
+ * The core's fact `agent-bypass` in the section's words: no "envelope", and
+ * "Convert back" for a revert (audit F-084; the inspector keeps the core's).
+ */
+export const API_WALLET_ACTS =
+	"An API wallet approved by the signers acts for the treasury directly, with no proposal and no signers, and it keeps acting after a Convert back. It can trade with everything the treasury holds and move it into vaults; it cannot send it to another account or withdraw it.";
+
 export const API_WALLET_PROPOSE =
 	"Whoever holds this key can do all of that on their own, with the perps and the spot balance alike.";
 

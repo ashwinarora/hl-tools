@@ -197,7 +197,7 @@ export function WalletSummary() {
 			: relay.mode === "restoring"
 				? "checking your session…"
 				: relay.mode === "unreachable"
-					? "can't reach the sharing service"
+					? "can't reach the hl-tools server"
 					: relay.mode === "signed-out"
 						? w.connected
 							? "not signed in"

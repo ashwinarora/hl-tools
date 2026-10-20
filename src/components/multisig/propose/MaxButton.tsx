@@ -28,6 +28,10 @@ export function useMax(
 		if (max.kind === "ok") {
 			fill(max.amount, max.validator);
 			setSaid({ text: max.basis, at: max.amount, sig });
+		} else if (max.empty) {
+			// nothing can move: an amount left in the field would say otherwise
+			fill("");
+			setSaid({ text: max.reason, at: "", sig });
 		} else setSaid({ text: max.reason, at: value, sig });
 	};
 	return {
