@@ -304,15 +304,15 @@ describe("buildTimeline", () => {
 			])[0];
 		// answered by Hyperliquid: the proposal's number is used up
 		expect(rejected({ accepted: false, http_status: 200 })).toBe(
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+			`Hyperliquid did not accept Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. Its page says why.`,
 		);
 		// never reached Hyperliquid's books: that one can go again
 		expect(rejected({ accepted: false, http_status: 502 })).toBe(
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. The request did not get through (HTTP 502), so it can be sent again.`,
+			`Hyperliquid did not accept Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. The request did not get through (HTTP 502), so it can be sent again.`,
 		);
 		// an entry that does not say: nothing is claimed either way
 		expect(rejected({ accepted: false })).toBe(
-			`Hyperliquid rejected Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. Open it to see why.`,
+			`Hyperliquid did not accept Send 120 USDC to 0x9a01…77c2. Sent by ${short(B)}. Open it to see why.`,
 		);
 	});
 
@@ -672,7 +672,7 @@ describe("a move of two steps in the Signing log", () => {
 			}),
 		];
 		expect(said(events)).toEqual([
-			`Hyperliquid rejected ${MOVE} (step 2 of 2). Sent by ${short(C)}. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+			`Hyperliquid did not accept ${MOVE} (step 2 of 2). Sent by ${short(C)}. Its page says why.`,
 			`${MOVE} (step 1 of 2) was accepted by Hyperliquid. Sent by ${short(C)}.`,
 			`${short(C)} signed ${MOVE} (step 1 of 2).`,
 		]);

@@ -267,7 +267,7 @@ export function buildTimeline(
 								...(e.digest ? { accepted: [e.digest] } : {}),
 							}
 						: entry(
-								say`Hyperliquid rejected ${action(e.digest, false)}. Sent by ${object(e.actor)}. ${afterRejection(e.data.http_status)}`,
+								say`Hyperliquid did not accept ${action(e.digest, false)}. Sent by ${object(e.actor)}. ${afterRejection(e.data.http_status)}`,
 							),
 				);
 				break;

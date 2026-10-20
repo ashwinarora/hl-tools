@@ -13,6 +13,7 @@ import {
 	type Hex,
 	judgeMove,
 	type Move,
+	numberSpent,
 	otherStep,
 	type Proposal,
 	stakingActionOf,
@@ -158,7 +159,9 @@ const duplicate = (s: StepView): boolean =>
 	s.stage.failedAttempt?.id === "nonce-duplicate";
 /** Hyperliquid refused it for a reason of its own: that submission carried nothing out, and its number is spent. */
 const refusedForGood = (s: StepView): boolean =>
-	!!s.stage.failedAttempt && !duplicate(s);
+	!!s.stage.failedAttempt &&
+	!duplicate(s) &&
+	numberSpent(s.stage.failedAttempt);
 const likeOnRecord = (s: StepView): boolean =>
 	s.onRecord === "likely" || s.onRecord === "unchecked";
 /** Whether the step was carried out is not known, in either direction. */
@@ -168,8 +171,7 @@ const mayBeDone = (s: StepView): boolean =>
 /** Why a step that is over may have been carried out all the same. */
 const maybe = (s: StepView, n: 1 | 2): Part[] =>
 	duplicate(s)
-		? // jargon: Hyperliquid's own answer, quoted for whoever searches for it
-			say`Step ${String(n)}: Hyperliquid answered that its number was already used ("duplicate nonce"). If the earlier attempt went through, the step has already happened. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was.`
+		? say`Step ${String(n)}: Hyperliquid says it was already used, so it most likely went through. Check Hyperliquid's record before proposing anything again: a new proposal is carried out whether or not this one was.`
 		: say`Step ${String(n)}: ${s.stage.headlineParts}. Hyperliquid's staking history shows a step like it, so it may have been carried out all the same: the explorer did not say. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was.`;
 
 /**

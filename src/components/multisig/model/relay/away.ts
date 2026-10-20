@@ -306,7 +306,7 @@ export function awayItems(i: {
 			case "rejected":
 				if (rel && e.actor !== me)
 					item(
-						say`Hyperliquid rejected ${action(p, false)}, which you ${rel}. ${afterRejection(e.data.http_status)}`,
+						say`Hyperliquid did not accept ${action(p, false)}, which you ${rel}. ${afterRejection(e.data.http_status)}`,
 					);
 				break;
 			case "withdrawn":

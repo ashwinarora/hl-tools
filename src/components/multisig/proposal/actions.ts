@@ -15,8 +15,7 @@ import {
 	signEnvelope,
 	signProposal,
 } from "@hl-tools/core";
-import { errorMessage } from "#/hooks/useHyperliquid";
-import { askedFor, gotNoAnswer } from "../model/noAnswer";
+import { askedFor } from "../model/noAnswer";
 import {
 	checkBeforeSubmit,
 	checkMoveBeforeSubmit,
@@ -24,7 +23,15 @@ import {
 } from "../model/sendCheck";
 import { envelopeChainOf } from "../model/signingNetwork";
 import { type Stage, shortAddress } from "../model/stage";
-import { submitEnvelope, withReceipt } from "../model/submit";
+import {
+	type SendAnswer,
+	type SubmitResult,
+	sendAnswer,
+	submitEnvelope,
+	unclearDetail,
+	withReceipt,
+} from "../model/submit";
+import { SEND_ANSWER } from "../model/toasts";
 import { signerFailure } from "../model/walletErrors";
 import type { WalletSigner } from "../useWalletSigner";
 import type { ProposalDoc } from "./useProposalDoc";
@@ -87,14 +94,15 @@ export type StepId = "inner" | "envelope" | "submit";
 export type StepState = "todo" | "active" | "done" | "failed";
 
 export type FinaliseResult =
-	| { readonly ok: true; readonly accepted: boolean }
 	| {
-			readonly ok: false;
-			readonly step: StepId;
-			readonly issues: readonly Issue[];
-			/** The wallet does not have the signing network yet: the page offers to add it. */
-			readonly needsNetwork?: true;
-	  };
+			readonly ok: true;
+			readonly accepted: boolean;
+			/** What Hyperliquid answered (never "unclear": that one is a failure). */
+			readonly answer: Exclude<SendAnswer, "unclear">;
+			/** Hyperliquid's own words when it did not accept it. */
+			readonly reason: string | null;
+	  }
+	| Failure;
 
 /** What the check before submit is handed: every figure read from Hyperliquid now, never from a cache. */
 export function submitReads(network: Network): SendReads {
@@ -149,6 +157,12 @@ type Failure = {
 	readonly issues: readonly Issue[];
 	/** The wallet does not have the signing network yet: the page offers to add it. */
 	readonly needsNetwork?: true;
+	/**
+	 * Sent, with no clear answer: nothing was stored, and `retry` posts the
+	 * very same signed request again, with no wallet prompt. That cannot pay
+	 * twice: Hyperliquid takes the proposal's number once.
+	 */
+	readonly retry?: () => Promise<FinaliseResult>;
 };
 
 /** What was signed for one proposal and is ready to be posted. */
@@ -201,10 +215,15 @@ async function signToSubmit(i: {
 	readonly wallet: WalletSigner;
 	readonly doc: Doc;
 	readonly mark: (id: StepId, state: StepState) => void;
-}): Promise<{ readonly ok: true; readonly signed: Signed } | Failure> {
+}): Promise<
+	{ readonly ok: true; readonly signed: Signed } | Omit<Failure, "retry">
+> {
 	const { proposal, stage, wallet, doc, mark } = i;
 	const { network, multiSigUser } = proposal.payload;
-	const stop = (step: StepId, issues: readonly Issue[]): Failure => {
+	const stop = (
+		step: StepId,
+		issues: readonly Issue[],
+	): Omit<Failure, "retry"> => {
 		mark(step, "failed");
 		return { ok: false, step, issues };
 	};
@@ -279,9 +298,11 @@ async function signToSubmit(i: {
 }
 
 /**
- * One POST to Hyperliquid from this browser. Whatever the exchange answers
- * goes back into the document and, with the relay in use, onto the relay
- * (sharing the proposal first if it came from a link or a file).
+ * One POST to Hyperliquid from this browser. Hyperliquid's own answer goes
+ * back into the document and, with the relay in use, onto the relay (sharing
+ * the proposal first if it came from a link or a file). An answer that is not
+ * Hyperliquid's, or none at all, is stored nowhere: the page offers to post
+ * the same request again (`retry`).
  */
 async function post(i: {
 	readonly signed: Signed;
@@ -289,36 +310,46 @@ async function post(i: {
 	readonly mark: (id: StepId, state: StepState) => void;
 	/** In a move: how many steps Hyperliquid accepted before this one, in the same click. */
 	readonly acceptedBefore?: number;
+	/** In a move: this step's number, 1 or 2. */
+	readonly number?: number;
 }): Promise<FinaliseResult> {
 	const { signed, doc, mark } = i;
 	mark("submit", "active");
+	let sent: SubmitResult | null = null;
 	try {
-		const sent = await submitEnvelope(
+		sent = await submitEnvelope(
 			signed.current.payload.network,
 			signed.request,
 			signed.signature,
 		);
-		// the receipt is kept whether the chain accepted or not; the page explains it
-		await doc.store(withReceipt(signed.current, sent.receipt), {
-			publish: true,
-		});
-		const accepted = sent.explained.id === "ok";
-		mark("submit", accepted ? "done" : "failed");
-		return { ok: true, accepted };
-	} catch (e) {
+	} catch {
+		// no answer: it may or may not have reached Hyperliquid
+	}
+	const answer = sent ? sendAnswer(sent.explained) : "unclear";
+	if (!sent || answer === "unclear") {
 		mark("submit", "failed");
+		const said =
+			i.acceptedBefore && i.number
+				? SEND_ANSWER.unclearStep(i.number)
+				: SEND_ANSWER.unclear;
 		return {
 			ok: false,
 			step: "submit",
 			issues: problem(
-				"execute",
-				// in a move, "nothing was submitted" would deny the step before it
-				i.acceptedBefore
-					? `The request for this step did not reach Hyperliquid${gotNoAnswer(e) ? "" : `: ${errorMessage(e).replace(/\.$/, "")}`}. The step before it was accepted and stands. This step was not sent; it is safe to try again.`
-					: `The request did not reach Hyperliquid${gotNoAnswer(e) ? "" : `: ${errorMessage(e).replace(/\.$/, "")}`}. Nothing was sent; it is safe to try again.`,
+				"execute.unclear",
+				`${said} ${unclearDetail(sent?.receipt ?? null)}`,
 			),
+			retry: () => post(i),
 		};
 	}
+	// Hyperliquid's own answer is kept, whatever it is: the page explains it
+	await doc.store(withReceipt(signed.current, sent.receipt), {
+		publish: true,
+	});
+	mark("submit", answer === "accepted" ? "done" : "failed");
+	return answer === "accepted"
+		? { ok: true, accepted: true, answer, reason: null }
+		: { ok: true, accepted: false, answer, reason: sent.explained.message };
 }
 
 /**
@@ -370,7 +401,14 @@ export interface MoveStep {
 
 export type MoveResult =
 	/** `sent` steps were posted; `accepted` says whether the last of them went through. */
-	| { readonly ok: true; readonly accepted: boolean; readonly sent: number }
+	| {
+			readonly ok: true;
+			readonly accepted: boolean;
+			readonly sent: number;
+			/** Hyperliquid's answer to the last step posted. */
+			readonly answer: Exclude<SendAnswer, "unclear">;
+			readonly reason: string | null;
+	  }
 	| {
 			readonly ok: false;
 			/** Which of the steps handed in. */
@@ -381,6 +419,8 @@ export type MoveResult =
 			readonly sent: number;
 			/** The wallet does not have the signing network yet: the page offers to add it. */
 			readonly needsNetwork?: true;
+			/** No clear answer to step `index`: post it again, then the rest in order. */
+			readonly retry?: () => Promise<MoveResult>;
 	  };
 
 /**
@@ -399,7 +439,14 @@ export async function finaliseMove(i: {
 }): Promise<MoveResult> {
 	const { steps, wallet, mark } = i;
 	const [head] = steps;
-	if (!head) return { ok: true, accepted: true, sent: 0 };
+	if (!head)
+		return {
+			ok: true,
+			accepted: true,
+			sent: 0,
+			answer: "accepted",
+			reason: null,
+		};
 	const stop = (
 		index: number,
 		step: StepId,
@@ -432,20 +479,45 @@ export async function finaliseMove(i: {
 		signed.push(one.signed);
 	}
 
-	let sent = 0;
-	for (const [index, s] of steps.entries()) {
-		const answer = await post({
-			signed: signed[index] as Signed,
-			doc: s.doc,
-			mark: (id, state) => mark(index, id, state),
-			acceptedBefore: sent,
-		});
-		if (!answer.ok) return { ...answer, index, sent };
-		sent += 1;
-		// refused: the steps after it are not sent, and their numbers stay unused
-		if (!answer.accepted) return { ok: true, accepted: false, sent };
-	}
-	return { ok: true, accepted: true, sent };
+	// from `start` on, in order, each only once the one before was accepted
+	const postFrom = async (
+		start: number,
+		before: number,
+	): Promise<MoveResult> => {
+		let sent = before;
+		for (let index = start; index < steps.length; index += 1) {
+			const s = steps[index] as MoveStep;
+			const answer = await post({
+				signed: signed[index] as Signed,
+				doc: s.doc,
+				mark: (id, state) => mark(index, id, state),
+				acceptedBefore: sent,
+				number: index + 1,
+			});
+			if (!answer.ok) {
+				const { retry, ...failure } = answer;
+				const at = sent;
+				return {
+					...failure,
+					index,
+					sent: at,
+					...(retry ? { retry: () => postFrom(index, at) } : {}),
+				};
+			}
+			sent += 1;
+			// refused or already used: the steps after it are not sent, and their numbers stay unused
+			if (!answer.accepted)
+				return {
+					ok: true,
+					accepted: false,
+					sent,
+					answer: answer.answer,
+					reason: answer.reason,
+				};
+		}
+		return { ok: true, accepted: true, sent, answer: "accepted", reason: null };
+	};
+	return postFrom(0, 0);
 }
 
 /**

@@ -100,7 +100,7 @@ describe("a proposal's timeline, from the hl-tools server's history", () => {
 			`${short(C)} signed.`,
 			`${short(C)} took back their signature.`,
 			"You, its finaliser, said no: it will not be sent.",
-			"Sent by you; Hyperliquid refused it. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.",
+			"Sent by you; Hyperliquid did not accept it. The top of this page says why.",
 			`Cancelled for everyone by the proposer, ${short(A)}.`,
 			"An entry this version of the page cannot describe (“unknown”).",
 		]);
@@ -315,9 +315,18 @@ describe("Hyperliquid's record in the timeline", () => {
 		expect(recordEntries({ kind: "found", hash: "0x1", time: NOW })).toEqual([
 			{ hash: "0x1", at: NOW },
 		]);
+		// a vault step: never more than "likely" (audit F-074)
 		expect(
 			recordEntries({ kind: "likely", hash: "0x2", time: NOW }, 2),
-		).toEqual([{ step: 2, hash: "0x2", at: NOW }]);
+		).toEqual([{ step: 2, hash: "0x2", at: NOW, likely: true }]);
+		const told = proposalTimeline(
+			[],
+			null,
+			recordEntries({ kind: "likely", hash: "0x2", time: NOW }),
+		);
+		expect(told.items.map((i) => partsText(i.parts))).toEqual([
+			"Hyperliquid's record shows a vault step like this one.",
+		]);
 		expect(
 			recordEntries(
 				{ kind: "refused", hash: "0x3", time: NOW, error: "No." },

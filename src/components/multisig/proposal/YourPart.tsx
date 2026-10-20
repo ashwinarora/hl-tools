@@ -37,8 +37,10 @@ import { untilWords } from "../model/time";
 import {
 	done as doneToast,
 	failed as failedToast,
+	SEND_ANSWER,
 	TOAST_LINES,
 	TOAST_TITLES,
+	unsure as unsureToast,
 } from "../model/toasts";
 import { Sentence } from "../names/Sentence";
 import { Headline } from "../shell/Headline";
@@ -50,6 +52,7 @@ import { notify } from "../shell/notify";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
 import type { WalletSigner } from "../useWalletSigner";
 import {
+	type FinaliseResult,
 	finalise,
 	type Outcome,
 	type StepId,
@@ -105,8 +108,15 @@ export function YourPart({
 	const [outcome, setOutcome] = useState<Outcome | null>(null);
 	const [steps, setSteps] = useState<Record<StepId, StepState> | null>(null);
 	const [failure, setFailure] = useState<readonly Issue[] | null>(null);
-	/** Hyperliquid's answer to this page's own send: accepted, or not. */
-	const [sent, setSent] = useState<boolean | null>(null);
+	/** Hyperliquid's answer to this page's own send. */
+	const [sent, setSent] = useState<"accepted" | "refused" | "used" | null>(
+		null,
+	);
+	/** Sent with no clear answer: what was said, and the same request to post again. */
+	const [unclear, setUnclear] = useState<{
+		readonly issues: readonly Issue[];
+		readonly retry: () => Promise<FinaliseResult>;
+	} | null>(null);
 	const [confirm, setConfirm] = useState(false);
 	const [finishing, setFinishing] = useState(false);
 	// the wallet answered that it lacks the signing network: the code panel offers to add it
@@ -178,10 +188,69 @@ export function YourPart({
 				: doneToast(title),
 		);
 
+	/** What a send came to, on the page and in a toast. */
+	const heard = (result: FinaliseResult) => {
+		if (!result.ok && result.needsNetwork) {
+			setNeedsNetwork(true);
+			return;
+		}
+		setNeedsNetwork(false);
+		if (!result.ok && result.retry) {
+			setUnclear({ issues: result.issues, retry: result.retry });
+			notify(unsureToast(TOAST_TITLES.unclear, SEND_ANSWER.unclear));
+			return;
+		}
+		setUnclear(null);
+		if (!result.ok) {
+			setFailure(result.issues);
+			notify(failedToast(TOAST_TITLES.notSent, result.issues));
+			return;
+		}
+		setSent(result.answer);
+		notify(
+			result.answer === "accepted"
+				? doneToast(TOAST_TITLES.accepted, TOAST_LINES.final)
+				: result.answer === "used"
+					? unsureToast(TOAST_TITLES.used, SEND_ANSWER.used)
+					: failedToast(TOAST_TITLES.refused, result.reason),
+		);
+		if (!result.accepted) return;
+		// a staking step that went through changed what the treasury has in staking
+		if (stakingActionOf(proposal.payload.action))
+			void refreshStaking(
+				queries,
+				proposal.payload.network,
+				proposal.payload.multiSigUser,
+			);
+		// a vault step that went through changed what the treasury has in vaults
+		else if (vaultActionOf(proposal.payload.action))
+			void refreshVaults(
+				queries,
+				proposal.payload.network,
+				proposal.payload.multiSigUser,
+			);
+		// the same for the mode and the API wallets, which are read once a minute otherwise
+		else if (modeTargetOf(proposal.payload.action))
+			void queries.invalidateQueries({
+				queryKey: modeQueryOptions(
+					proposal.payload.network,
+					proposal.payload.multiSigUser,
+				).queryKey,
+			});
+		else if (proposal.payload.action.type === "approveAgent")
+			void queries.invalidateQueries({
+				queryKey: agentsQueryOptions(
+					proposal.payload.network,
+					proposal.payload.multiSigUser,
+				).queryKey,
+			});
+	};
+
 	const doSubmit = async () => {
 		setOutcome(null);
 		setFailure(null);
 		setSent(null);
+		setUnclear(null);
 		setSteps(FRESH);
 		setFinishing(true);
 		const result = await finalise({
@@ -192,52 +261,15 @@ export function YourPart({
 			mark: (id, state) => setSteps((s) => ({ ...(s ?? FRESH), [id]: state })),
 		});
 		setFinishing(false);
-		if (!result.ok && result.needsNetwork) {
-			setNeedsNetwork(true);
-			return;
-		}
-		setNeedsNetwork(false);
-		if (!result.ok) {
-			setFailure(result.issues);
-			notify(failedToast(TOAST_TITLES.notSent, result.issues));
-			return;
-		}
-		setSent(result.accepted);
-		notify(
-			result.accepted
-				? doneToast(TOAST_TITLES.accepted, TOAST_LINES.final)
-				: failedToast(TOAST_TITLES.refused, TOAST_LINES.refused),
-		);
-		// a staking step that went through changed what the treasury has in staking
-		if (result.accepted && stakingActionOf(proposal.payload.action))
-			void refreshStaking(
-				queries,
-				proposal.payload.network,
-				proposal.payload.multiSigUser,
-			);
-		// a vault step that went through changed what the treasury has in vaults
-		else if (result.accepted && vaultActionOf(proposal.payload.action))
-			void refreshVaults(
-				queries,
-				proposal.payload.network,
-				proposal.payload.multiSigUser,
-			);
-		// the same for the mode and the API wallets, which are read once a minute otherwise
-		else if (result.accepted && modeTargetOf(proposal.payload.action))
-			void queries.invalidateQueries({
-				queryKey: modeQueryOptions(
-					proposal.payload.network,
-					proposal.payload.multiSigUser,
-				).queryKey,
-			});
-		else if (result.accepted && proposal.payload.action.type === "approveAgent")
-			void queries.invalidateQueries({
-				queryKey: agentsQueryOptions(
-					proposal.payload.network,
-					proposal.payload.multiSigUser,
-				).queryKey,
-			});
+		heard(result);
 	};
+	/** The very same signed request once more: no wallet prompt, and it cannot pay twice. */
+	const tryAgain = () =>
+		void wallet.run(SEND_ANSWER.tryingAgain, async () => {
+			const again = unclear?.retry;
+			if (!again) return;
+			heard(await again());
+		});
 	const submit = () => void wallet.run("Waiting for the wallet…", doSubmit);
 
 	/** One approval in the wallet adds the network; then what was asked for goes on. */
@@ -314,28 +346,31 @@ export function YourPart({
 	}
 
 	const waiting = need !== null ? Math.max(0, need - have) : null;
-	const note =
-		stage.phase === "stuck"
+	const note = unclear
+		? SEND_ANSWER.tryAgainNote
+		: stage.phase === "stuck"
 			? actions.withdraw
 				? "It cannot be sent, so nothing here needs a signature. Cancel it, then propose it again with another finaliser."
 				: "It cannot be sent, so nothing here needs your signature. Its proposer can cancel it."
-			: stage.phase === "overtaken" || stage.phase === "refused"
-				? actions.withdraw
-					? "It cannot be sent, so nothing here needs a signature. Cancel it, then propose it again."
-					: "It cannot be sent, so nothing here needs your signature. Its proposer can cancel it and propose it again."
-				: stage.canExecute
-					? adds
-						? `Your signature completes the number needed. Two wallet prompts, then it is sent to Hyperliquid. ${RELAY_COPY.sendIsFinal}`
-						: `One wallet prompt, then it is sent to Hyperliquid. ${RELAY_COPY.sendIsFinal} ${finishHint(proposal.payload.action, false)}`
-					: stage.canSign
-						? `${signHint(proposal.payload.action)}${stage.signsCode ? ` ${CODE_COPY.signedUnder}` : chain ? ` Your wallet may ask to switch to ${chain.label} first, then to sign. Nothing is sent or paid there.` : ""}`
-						: stage.hasSigned
-							? stage.phase === "ready"
-								? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to send it.`
-								: waiting
-									? `You signed this. It needs ${waiting} more ${waiting === 1 ? "signature" : "signatures"}; then ${isFinaliser ? "you send" : `${shortAddress(outerSigner)} sends`} it. You can close this page.`
-									: "You signed this."
-							: (stage.signReason ?? stage.executeReason ?? "");
+			: stage.phase === "used"
+				? "Nothing here needs a signature: Hyperliquid already has this proposal's number. Check Hyperliquid's record."
+				: stage.phase === "overtaken" || stage.phase === "refused"
+					? actions.withdraw
+						? "It cannot be sent, so nothing here needs a signature. Cancel it, then propose it again."
+						: "It cannot be sent, so nothing here needs your signature. Its proposer can cancel it and propose it again."
+					: stage.canExecute
+						? adds
+							? `Your signature completes the number needed. Two wallet prompts, then it is sent to Hyperliquid. ${RELAY_COPY.sendIsFinal}`
+							: `One wallet prompt, then it is sent to Hyperliquid. ${RELAY_COPY.sendIsFinal} ${finishHint(proposal.payload.action, false)}`
+						: stage.canSign
+							? `${signHint(proposal.payload.action)}${stage.signsCode ? ` ${CODE_COPY.signedUnder}` : chain ? ` Your wallet may ask to switch to ${chain.label} first, then to sign. Nothing is sent or paid there.` : ""}`
+							: stage.hasSigned
+								? stage.phase === "ready"
+									? `You signed this. It is waiting for ${isFinaliser ? "you" : shortAddress(outerSigner)} to send it.`
+									: waiting
+										? `You signed this. It needs ${waiting} more ${waiting === 1 ? "signature" : "signatures"}; then ${isFinaliser ? "you send" : `${shortAddress(outerSigner)} sends`} it. You can close this page.`
+										: "You signed this."
+								: (stage.signReason ?? stage.executeReason ?? "");
 	// the wallet is the treasury account: the same sentence as on its own page
 	const itself = stage.role === "treasury" && note === stage.signReason;
 
@@ -391,7 +426,12 @@ export function YourPart({
 			)}
 			{any && (
 				<div className="flex flex-wrap items-center gap-2">
-					{stage.canExecute ? (
+					{unclear ? (
+						// the same request again, never a new signature over it
+						<Btn variant="brand" disabled={wallet.busy} onClick={tryAgain}>
+							{SEND_ANSWER.tryAgain}
+						</Btn>
+					) : stage.canExecute ? (
 						<Btn
 							variant={needsNetwork ? "outline" : "brand"}
 							disabled={wallet.busy || doc.relay.busy}
@@ -548,7 +588,7 @@ export function YourPart({
 					<Sentence parts={cancelNote(stage.window.validUntil)} />
 				</Callout>
 			)}
-			<Heard when={outcome ?? failure ?? sent}>
+			<Heard when={outcome ?? failure ?? unclear ?? sent}>
 				{outcome?.ok === true && (
 					<Callout tone="success" title="Signature added" className="mt-3">
 						{doc.relay.known
@@ -566,7 +606,12 @@ export function YourPart({
 						<IssueList plain issues={failure} />
 					</Callout>
 				)}
-				{sent === true && (
+				{unclear && (
+					<Callout tone="warning" title={TOAST_TITLES.unclear} className="mt-3">
+						<IssueList plain issues={unclear.issues} />
+					</Callout>
+				)}
+				{sent === "accepted" && (
 					<Callout
 						tone="success"
 						title="Sent · accepted by Hyperliquid"
@@ -576,7 +621,12 @@ export function YourPart({
 						moment.
 					</Callout>
 				)}
-				{sent === false && (
+				{sent === "used" && (
+					<Callout tone="warning" title={TOAST_TITLES.used} className="mt-3">
+						{SEND_ANSWER.used}
+					</Callout>
+				)}
+				{sent === "refused" && (
 					<Callout
 						tone="danger"
 						title="Sent · refused by Hyperliquid"

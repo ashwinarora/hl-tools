@@ -56,6 +56,7 @@ import {
 	shortAddress,
 	type WalletRole,
 } from "../model/stage";
+import { SEND_ANSWER } from "../model/toasts";
 import { TreasuryNames, Who } from "../names/Names";
 import { Sentence } from "../names/Sentence";
 import { CostNote } from "../propose/ActionFields";
@@ -115,6 +116,8 @@ const ACTIONABLE: ReadonlySet<Phase> = new Set([
 	"cannot-pass",
 	"finaliser-no",
 	"refused",
+	// nothing to send any more, but its proposer can still clear it away
+	"used",
 ]);
 /** Phases in which what the send costs is still worth saying. */
 const COSTED: ReadonlySet<Phase> = new Set([
@@ -535,7 +538,9 @@ export function ProposalView({
 	// and said again, one line each, right above the buttons that sign or send.
 	const older = useOlderSends(proposal, COSTED.has(stage.phase));
 	const rejectedTitle =
-		stage.failedAttempt && stage.phase !== "carried-out"
+		stage.failedAttempt &&
+		stage.phase !== "carried-out" &&
+		stage.phase !== "used"
 			? `The last attempt to send it was refused: ${stage.failedAttempt.message}`
 			: null;
 	const signersChanged = stage.policyChanged && !CLOSED.has(stage.phase);
@@ -630,7 +635,7 @@ export function ProposalView({
 								<StageCallout
 									stage={stage}
 									action={
-										stage.phase === "submitted" ? (
+										stage.phase === "submitted" || stage.phase === "used" ? (
 											listed ? (
 												<Link
 													to="/multisig/t/$network/$address"
@@ -641,7 +646,9 @@ export function ProposalView({
 													search={{ tab: "chain" }}
 													className={linkButtonSm}
 												>
-													See it on Hyperliquid's record
+													{stage.phase === "used"
+														? SEND_ANSWER.checkRecord
+														: "See it on Hyperliquid's record"}
 												</Link>
 											) : (
 												<Link
@@ -959,25 +966,7 @@ export function ProposalView({
 												</Callout>
 											),
 										rejected: rejectedTitle && (
-											<Callout
-												tone="danger"
-												title={rejectedTitle}
-												action={
-													// "already used" often means it went through somewhere else: the ledger says
-													stage.failedAttempt?.id === "nonce-duplicate" ? (
-														<Link
-															to="/tools/multisig"
-															search={{
-																view: "account",
-																address: target.address,
-															}}
-															className={linkButtonSm}
-														>
-															Check Hyperliquid's record in the inspector
-														</Link>
-													) : undefined
-												}
-											>
+											<Callout tone="danger" title={rejectedTitle}>
 												{stage.failedAttempt &&
 													refusalNote(stage.failedAttempt)}
 											</Callout>

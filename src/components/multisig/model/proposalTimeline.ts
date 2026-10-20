@@ -32,6 +32,11 @@ export interface TimelineRecord {
 	readonly at: number;
 	/** Hyperliquid's own words when its record shows the transaction refused. */
 	readonly refused?: string;
+	/**
+	 * A vault step: its record holds one like it, never more than "likely"
+	 * (a vault action carries no number that would tie it to this proposal).
+	 */
+	readonly likely?: true;
 }
 
 export interface TimelineItem {
@@ -72,8 +77,10 @@ export function recordEntries(
 ): TimelineRecord[] {
 	if (!record) return [];
 	const at = step ? { step } : {};
-	if (record.kind === "found" || record.kind === "likely")
+	if (record.kind === "found")
 		return [{ ...at, hash: record.hash, at: record.time }];
+	if (record.kind === "likely")
+		return [{ ...at, hash: record.hash, at: record.time, likely: true }];
 	if (record.kind === "refused")
 		return [
 			{ ...at, hash: record.hash, at: record.time, refused: record.error },
@@ -225,7 +232,7 @@ function forOne(s: TimelineStep, me: Address | null): TimelineItem[] {
 								sent: true,
 							})
 						: item(
-								say`Sent by ${object(e.actor)}; Hyperliquid refused it. ${afterRejection(e.data.http_status)}`,
+								say`Sent by ${object(e.actor)}; Hyperliquid did not accept it. ${afterRejection(e.data.http_status, true)}`,
 								{ tone: "wrong", sent: true },
 							),
 				);
@@ -277,7 +284,9 @@ export function proposalTimeline(
 			at: r.at,
 			parts: r.refused
 				? say`Hyperliquid's record shows it refused: ${r.refused}`
-				: say`On Hyperliquid's record.`,
+				: r.likely
+					? say`Hyperliquid's record shows a vault step like this one.`
+					: say`On Hyperliquid's record.`,
 			step: r.step ?? null,
 			tone: r.refused ? "wrong" : "ok",
 			hash: r.hash,

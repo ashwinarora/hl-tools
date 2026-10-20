@@ -26,6 +26,7 @@ import {
 	deriveStage,
 	FINISHED,
 	finaliserLeft,
+	numberUsed,
 	refusedForGood,
 	type StageInput,
 	shortAddress,
@@ -249,12 +250,13 @@ describe("deriveStage", () => {
 			}).phase,
 		).toBe("refused");
 
-		// an answer that never reached Hyperliquid's books leaves it as it was
+		// an answer that was not Hyperliquid's is no attempt at all: it leaves the
+		// proposal as it was (pages store none any more; an older copy may hold one)
 		const http = await stage(
 			{ ...p, receipt: receipt("Bad Gateway", 502) },
 			{ wallet: B },
 		);
-		expect(http.failedAttempt?.source).toBe("http");
+		expect(http.failedAttempt).toBeNull();
 		expect(http.phase).toBe("ready");
 		expect(http.canExecute).toBe(true);
 		expect(refusedForGood({ ...p, receipt: receipt("Bad Gateway", 502) })).toBe(
@@ -1063,7 +1065,7 @@ describe("a staking step found in Hyperliquid's staking history", () => {
 });
 
 describe("a submission answered “duplicate nonce”", () => {
-	it("says the number was used before, and to look before proposing again", async () => {
+	it("says it most likely went through, and never offers to propose it again", async () => {
 		const p = {
 			...(await signAs(await signAs(makeProposal(), 1), 3)),
 			receipt: receipt({
@@ -1072,11 +1074,17 @@ describe("a submission answered “duplicate nonce”", () => {
 			}),
 		};
 		const s = await stage(p, { wallet: B });
-		expect(s.phase).toBe("refused");
-		expect(s.canExecute).toBe(false);
+		expect(s.phase).toBe("used");
+		expect([s.canSign, s.canExecute]).toEqual([false, false]);
+		expect(s.headline).toBe("Already used · it most likely went through");
 		expect(s.detail).toBe(
-			"Hyperliquid answered that this proposal's number was already used (\"duplicate nonce\"). If the earlier attempt went through, the action has already happened. Look at the treasury's record on Hyperliquid before proposing it again.",
+			"Hyperliquid says this proposal was already used, so it most likely went through. Check Hyperliquid's record.",
 		);
+		expect(s.detail).not.toMatch(/propose/i);
+		expect(CANNOT_BE_SENT.has(s.phase)).toBe(true);
+		expect(numberUsed(p)).toBe(true);
+		// it can never be sent again either: no waiting list counts it
+		expect(refusedForGood(p)).toBe(true);
 	});
 });
 

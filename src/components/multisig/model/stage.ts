@@ -65,6 +65,7 @@ export type Phase =
 	| "stuck"
 	| "overtaken"
 	| "refused"
+	| "used"
 	| "cannot-pass"
 	| "finaliser-no"
 	| "withdrawn"
@@ -260,6 +261,19 @@ export function refusedForGood(p: Proposal): boolean {
 }
 
 /**
+ * Hyperliquid answered that this proposal's number was used already
+ * ("duplicate nonce"): it most likely went through from somewhere whose
+ * answer never got here. It cannot be sent again either.
+ */
+export function numberUsed(p: Proposal): boolean {
+	return (
+		!!p.receipt &&
+		explainExchangeError(p.receipt.response, p.receipt.httpStatus).id ===
+			"nonce-duplicate"
+	);
+}
+
+/**
  * A change of signers whose result is what Hyperliquid reports now: the signer
  * list it asks for, or (for the conversion back) no signer list at all. Then
  * it has been carried out, whoever recorded that and whoever did not. Without
@@ -288,6 +302,7 @@ const heldWhen = (at: number): Part => ({
 /** Phases in which nothing can send the proposal any more: only ending it is left. */
 export const CANNOT_BE_SENT: ReadonlySet<Phase> = new Set<Phase>([
 	"refused",
+	"used",
 	"overtaken",
 	"expired",
 	"stuck",
@@ -355,7 +370,11 @@ export function deriveStage(input: StageInput): Stage {
 		? explainExchangeError(p.receipt.response, p.receipt.httpStatus)
 		: null;
 	const accepted = receipt?.id === "ok";
-	const failedAttempt = receipt && !accepted ? receipt : null;
+	// An answer that was not Hyperliquid's (an HTTP error, a gateway's page) is
+	// no attempt to speak of: whether it got through is unknown, and the same
+	// proposal can be sent again. Pages no longer keep one; older copies may.
+	const failedAttempt =
+		receipt && !accepted && receipt.source !== "http" ? receipt : null;
 	const unsignedFields =
 		p.meta.kind === "user-signed" &&
 		(p.payload.vaultAddress !== null || p.payload.expiresAfter !== null);
@@ -442,6 +461,13 @@ export function deriveStage(input: StageInput): Stage {
 		phase = "unsupported";
 		head = say`A switch to an account mode this page was not tested with`;
 		body = say`${unmeasuredSwitch(p.payload.action) as string}`;
+	} else if (failedAttempt?.id === "nonce-duplicate") {
+		// the number was used before this attempt: most likely by one that went
+		// through and whose answer never got here. Never "propose it again":
+		// a new proposal would be carried out a second time
+		phase = "used";
+		head = say`Already used · it most likely went through`;
+		body = say`Hyperliquid says this proposal was already used, so it most likely went through. Check Hyperliquid's record.`;
 	} else if (
 		failedAttempt &&
 		failedAttempt.id !== "nonce-used" &&
@@ -449,21 +475,14 @@ export function deriveStage(input: StageInput): Stage {
 	) {
 		// before anything about signatures: no signature changes it any more
 		phase = "refused";
-		head =
-			failedAttempt.id !== "nonce-duplicate" && input.likeOnRecord
-				? say`Refused, as reported · it may have happened anyway`
-				: say`Refused by Hyperliquid · cannot be sent again`;
-		body =
-			failedAttempt.id === "nonce-duplicate"
-				? // the number was used before this attempt: by an attempt that was
-					// refused, or by one that went through and whose answer never got here
-					// jargon: Hyperliquid's own answer, quoted for whoever searches for it
-					say`Hyperliquid answered that this proposal's number was already used ("duplicate nonce"). If the earlier attempt went through, the action has already happened. Look at the treasury's record on Hyperliquid before proposing it again.`
-				: input.likeOnRecord
-					? // the answer in a receipt is what its finaliser wrote down, and
-						// the record holds something like this action: never "propose again"
-						say`This copy says Hyperliquid refused it, but Hyperliquid's record shows a similar action. Check the record before proposing it again: if this one went through, a new proposal would do it a second time.`
-					: say`Hyperliquid refused this. A refused proposal cannot be sent again: its number is used up. Propose it again: it gets a new number, and every signer signs once more. The refusal is what the finaliser's page recorded: if in doubt, look at the treasury's record on Hyperliquid first.`;
+		head = input.likeOnRecord
+			? say`Refused, as reported · it may have happened anyway`
+			: say`Refused by Hyperliquid · cannot be sent again`;
+		body = input.likeOnRecord
+			? // the answer in a receipt is what its finaliser wrote down, and
+				// the record holds something like this action: never "propose again"
+				say`This copy says Hyperliquid refused it, but Hyperliquid's record shows a similar action. Check the record before proposing it again: if this one went through, a new proposal would do it a second time.`
+			: say`Hyperliquid refused this. A refused proposal cannot be sent again: its number is used up. Propose it again: it gets a new number, and every signer signs once more. The refusal is what the finaliser's page recorded: if in doubt, look at the treasury's record on Hyperliquid first.`;
 	} else if (!r) {
 		phase = "judging";
 		head = say`Checking signatures…`;

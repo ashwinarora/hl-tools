@@ -19,7 +19,9 @@ import {
 import {
 	exchangeBodyText,
 	exchangeUrl,
+	sendAnswer,
 	submitEnvelope,
+	unclearDetail,
 	withReceipt,
 } from "./submit";
 
@@ -147,5 +149,71 @@ describe("submitEnvelope", () => {
 		const done = withReceipt(p, receipt);
 		expect(done.receipt).toBe(receipt);
 		expect({ ...done, receipt: null }).toEqual(p);
+	});
+});
+
+describe("what an answer to a send means (decision D1, audit F-025, F-058, F-100)", () => {
+	const answer = async (status: number, body: string) =>
+		sendAnswer(
+			(
+				await submitEnvelope("testnet", request, outer, {
+					fetch: answering(status, body).fake,
+				})
+			).explained,
+		);
+
+	it("tells an acceptance, a refusal and a used number apart", async () => {
+		expect(
+			await answer(200, '{"status":"ok","response":{"type":"default"}}'),
+		).toBe("accepted");
+		expect(
+			await answer(200, '{"status":"err","response":"Insufficient balance"}'),
+		).toBe("refused");
+		expect(
+			await answer(
+				200,
+				'{"status":"err","response":"Invalid nonce: duplicate nonce 1792459090573"}',
+			),
+		).toBe("used");
+	});
+
+	it("calls anything that is not Hyperliquid's answer unclear: it may or may not have gone through", async () => {
+		// a rate limit, a gateway's page, an empty body (H-OUT-08, D-LIFE-24)
+		expect(await answer(429, "null")).toBe("unclear");
+		expect(await answer(502, "<html>Bad gateway</html>")).toBe("unclear");
+		expect(await answer(200, "")).toBe("unclear");
+		expect(await answer(200, "[1,2]")).toBe("unclear");
+	});
+
+	it("says in a few words what came back instead", async () => {
+		expect(unclearDetail(null)).toBe("No answer reached this page.");
+		const { receipt: limited } = await submitEnvelope(
+			"testnet",
+			request,
+			outer,
+			{ fetch: answering(429, "null").fake },
+		);
+		// an empty answer is not quoted (the campaign's 429 answered "null")
+		expect(unclearDetail(limited)).toBe("The answer was HTTP 429.");
+		const { receipt: said } = await submitEnvelope("testnet", request, outer, {
+			fetch: answering(429, "Too many requests").fake,
+		});
+		expect(unclearDetail(said)).toBe(
+			"The answer was HTTP 429: Too many requests.",
+		);
+		// a gateway's page is not quoted
+		const { receipt: gateway } = await submitEnvelope(
+			"testnet",
+			request,
+			outer,
+			{ fetch: answering(502, "<html>Bad gateway</html>").fake },
+		);
+		expect(unclearDetail(gateway)).toBe("The answer was HTTP 502.");
+		const { receipt: odd } = await submitEnvelope("testnet", request, outer, {
+			fetch: answering(200, "").fake,
+		});
+		expect(unclearDetail(odd)).toBe(
+			"What came back was not Hyperliquid's answer.",
+		);
 	});
 });

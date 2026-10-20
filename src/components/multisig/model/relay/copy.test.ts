@@ -137,9 +137,10 @@ describe("relay copy", () => {
 	});
 
 	it("never calls a proposal that Hyperliquid itself refused retryable", () => {
-		// the proposal's number is used up by any answer from Hyperliquid (numberSpent)
-		expect(afterRejection(200)).not.toMatch(/retr|can be sent again/i);
-		expect(afterRejection(200)).toContain("cannot be sent again as it is");
+		// a refusal, or "already used" (most likely went through): its page says which
+		expect(afterRejection(200)).not.toMatch(/retr|can be sent again|propose/i);
+		expect(afterRejection(200)).toBe("Its page says why.");
+		expect(afterRejection(200, true)).toBe("The top of this page says why.");
 		// a request that never got there is another matter
 		expect(afterRejection(502)).toContain("can be sent again");
 		expect(afterRejection("200")).toBe("Open it to see why.");

@@ -138,15 +138,16 @@ export function cancelNote(until: number): Part[] {
 }
 
 /**
- * What can be said after "Hyperliquid rejected …" from the history entry
- * alone, which carries only the HTTP status. An answer from Hyperliquid
- * itself (200) has used up the proposal's number, whatever the reason was
- * (see the core's `numberSpent`): it is never called retryable. Anything
- * else never reached Hyperliquid's record of numbers.
+ * What can be said after "Hyperliquid did not accept …" from the history
+ * entry alone, which carries only the HTTP status. An answer from Hyperliquid
+ * itself (200) is a refusal or "already used" (most likely sent before, the
+ * answer lost): the history cannot tell which, so the proposal's page says.
+ * Anything else never reached Hyperliquid's record of numbers (pages no longer
+ * report such an answer; older history entries may hold one).
  */
-export function afterRejection(httpStatus: unknown): string {
+export function afterRejection(httpStatus: unknown, here = false): string {
 	if (httpStatus === 200)
-		return "It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.";
+		return here ? "The top of this page says why." : "Its page says why.";
 	if (typeof httpStatus === "number")
 		return `The request did not get through (HTTP ${httpStatus}), so it can be sent again.`;
 	return "Open it to see why.";

@@ -98,6 +98,9 @@ function Row({ entry, onDelete }: { entry: Entry; onDelete: () => void }) {
 					)}
 					{outcomes.every((o) => o === "ok") ? (
 						<Pill tone="success">sent</Pill>
+					) : outcomes.includes("used") ? (
+						// most likely went through: never listed as rejected
+						<Pill tone="warning">already used</Pill>
 					) : outcomes.includes("error") ? (
 						<Pill tone="danger">rejected</Pill>
 					) : outcomes.includes("ok") ? (

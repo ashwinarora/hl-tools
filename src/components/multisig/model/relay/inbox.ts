@@ -43,14 +43,17 @@ export interface InboxEntry {
 }
 
 /**
+ * used            Hyperliquid says its number was used already: it most
+ *                 likely went through, the answer lost on the way
  * refused         Hyperliquid refused it once, which used up its number
  * finaliser-left  its finaliser is no longer a signer
  * overtaken       a USDC send, and a newer send of the treasury went first
  */
-export type StuckReason = "refused" | "finaliser-left" | "overtaken";
+export type StuckReason = "used" | "refused" | "finaliser-left" | "overtaken";
 
 /** The reason a list row gives, after "cannot be finished: ". */
 export const STUCK_WORDS: Record<StuckReason, string> = {
+	used: "already used, most likely went through",
 	refused: "refused",
 	"finaliser-left": "its finaliser left",
 	overtaken: "a later send went first",
@@ -58,10 +61,12 @@ export const STUCK_WORDS: Record<StuckReason, string> = {
 
 /** The first reason that holds, in the order a reader can act on. */
 export function stuckReason(i: {
+	readonly used?: boolean;
 	readonly refused: boolean;
 	readonly finaliserLeft: boolean;
 	readonly overtaken: boolean;
 }): StuckReason | null {
+	if (i.used) return "used";
 	if (i.refused) return "refused";
 	if (i.finaliserLeft) return "finaliser-left";
 	if (i.overtaken) return "overtaken";

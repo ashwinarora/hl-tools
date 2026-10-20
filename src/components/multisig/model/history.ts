@@ -30,6 +30,7 @@ import {
 	type Receipt,
 } from "@hl-tools/core";
 import { idbRequest } from "#/lib/idb";
+import { sendAnswer } from "./submit";
 
 export interface StoredProposal {
 	readonly digest: Hex;
@@ -39,8 +40,12 @@ export interface StoredProposal {
 	readonly kind: Kind;
 	readonly actionType: string;
 	readonly signatures: number;
-	/** Outcome of the submission recorded in the document, if any. */
-	readonly submitted: "ok" | "error" | null;
+	/**
+	 * Hyperliquid's answer recorded in the document, if any: accepted,
+	 * refused, or "used" (its number was used already: it most likely went
+	 * through, the answer lost on the way).
+	 */
+	readonly submitted: "ok" | "error" | "used" | null;
 	readonly updatedAt: number;
 	/** `encodeProposal` text: the document is stored as it travels. */
 	readonly doc: string;
@@ -52,6 +57,18 @@ export const RECEIPT_LEFT_OUT =
 
 export const receiptLeftOut = (): Issue =>
 	issue("history.receipt_unsigned", "warning", RECEIPT_LEFT_OUT);
+
+/** What a recorded answer comes to, for a list; null for one that was not Hyperliquid's. */
+export function receiptOutcome(r: Receipt): "ok" | "error" | "used" | null {
+	const answer = sendAnswer(explainExchangeError(r.response, r.httpStatus));
+	return answer === "accepted"
+		? "ok"
+		: answer === "refused"
+			? "error"
+			: answer === "used"
+				? "used"
+				: null;
+}
 
 export function receiptOk(r: Receipt): boolean {
 	return explainExchangeError(r.response, r.httpStatus).id === "ok";
@@ -81,7 +98,7 @@ export function toStored(
 		kind: p.meta.kind,
 		actionType: String(p.payload.action.type),
 		signatures: p.signatures.length,
-		submitted: p.receipt ? (receiptOk(p.receipt) ? "ok" : "error") : null,
+		submitted: p.receipt ? receiptOutcome(p.receipt) : null,
 		updatedAt: now,
 		doc: encodeProposal(p),
 	};

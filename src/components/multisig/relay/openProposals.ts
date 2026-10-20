@@ -19,7 +19,7 @@ import { assembleProposal, countedSigners } from "../model/relay/assemble";
 import { type InboxEntry, moveEntry, stuckReason } from "../model/relay/inbox";
 import { standing } from "../model/relay/positions";
 import type { ProposalRow } from "../model/relay/rows";
-import { finaliserLeft, refusedForGood } from "../model/stage";
+import { finaliserLeft, numberUsed, refusedForGood } from "../model/stage";
 import { actionLine } from "../model/staking";
 import { listCarriedOutAfter, listOpenProposals } from "./api";
 import { treasuriesQuery, unwrap } from "./queries";
@@ -120,6 +120,8 @@ export function useOpenProposals() {
 					})),
 				});
 				const stuckBy = stuckReason({
+					// "already used": most likely sent from a page whose answer was lost
+					used: numberUsed(p),
 					// refused once: its number is used up, whoever signs now
 					refused: refusedForGood(p),
 					finaliserLeft: finaliserLeft(p, {

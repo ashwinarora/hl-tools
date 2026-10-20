@@ -166,7 +166,9 @@ describe("what two steps mean together", () => {
 	});
 
 	const refusedWith = (id: string) =>
-		step("refused", { failedAttempt: { id } as Stage["failedAttempt"] });
+		step("refused", {
+			failedAttempt: { id, source: "status" } as Stage["failedAttempt"],
+		});
 
 	it('a step answered "duplicate nonce" is never said to be not carried out', () => {
 		// its number was used before: by a refusal, or by a submission that
@@ -177,13 +179,13 @@ describe("what two steps mean together", () => {
 			"Step 1 may be carried out already · look before proposing again",
 		);
 		expect(one.detail).toBe(
-			`Step 1: Hyperliquid answered that its number was already used ("duplicate nonce"). If the earlier attempt went through, the step has already happened. Look at the treasury's staking history before proposing it again: a new proposal is carried out whether or not this one was. Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.`,
+			"Step 1: Hyperliquid says it was already used, so it most likely went through. Check Hyperliquid's record before proposing anything again: a new proposal is carried out whether or not this one was. Step 2 was not sent. If step 1 was carried out, only step 2 is left to propose; if it was not, the whole move is.",
 		);
 		const two = deriveMoveStage([done(), refusedWith("nonce-duplicate")]);
 		expect([two.phase, two.unsure]).toEqual(["broken", 1]);
 		expect(two.headline).toBe("Step 1 was carried out · step 2 may be too");
 		expect(two.detail).toMatch(
-			/^Step 2: Hyperliquid answered that its number was already used/,
+			/^Step 2: Hyperliquid says it was already used, so it most likely went through/,
 		);
 		for (const m of [one, two])
 			expect(`${m.headline} ${m.detail} ${m.executeReason}`).not.toContain(

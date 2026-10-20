@@ -237,7 +237,7 @@ describe("awayItems: the end of something you proposed or signed", () => {
 	it("tells a rejection, a withdrawal and a decline to those who had a part in it", () => {
 		expect(texts({ events: [rejected(11, C)], proposals: [mineToo] })).toEqual([
 			// Hyperliquid's own answer uses up the proposal's number: never "it can be retried"
-			"Hyperliquid rejected Send 120 USDC to 0x9a01…77c2, which you signed. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.",
+			"Hyperliquid did not accept Send 120 USDC to 0x9a01…77c2, which you signed. Its page says why.",
 		]);
 		expect(
 			texts({
@@ -1029,7 +1029,7 @@ describe("a move of two steps in the notice", () => {
 		).toEqual(
 			[
 				`${MOVE} (step 1 of 2), which you proposed, was carried out. Sent by ${short(C)}.`,
-				`Hyperliquid rejected ${MOVE} (step 2 of 2), which you proposed. It cannot be sent again as it is: open it to see why, and propose it again if it is still wanted.`,
+				`Hyperliquid did not accept ${MOVE} (step 2 of 2), which you proposed. Its page says why.`,
 			].sort(),
 		);
 	});
