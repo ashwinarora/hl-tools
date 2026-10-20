@@ -46,7 +46,7 @@ $$;
 create function tests.tx_says(h int, p_outcome text) returns void
 language sql as $$
 	insert into tests.tx_answers (hash, outcome, http_status)
-	values (tests.tx_hash(h), p_outcome, case p_outcome when 'rate_limited' then 429 when 'unknown' then 200 else 500 end)
+	values (tests.tx_hash(h), p_outcome, case p_outcome when 'rate_limited' then 429 when 'unknown' then 200 when 'allowance' then 200 else 500 end)
 $$;
 -- A report is looked at 30 seconds after it was filed; this is those 30 seconds.
 create function tests.due() returns void
@@ -86,6 +86,8 @@ select is((select tx_error from private.parse_tx(200,
 	'Insufficient balance for withdrawal.', 'a rejected attempt keeps the chain''s error');
 select is((select outcome from private.parse_tx(200, '{"type":"error","message":"invalid block height: 0"}')), 'unknown',
 	'"no such transaction" is an answer of its own');
+select is((select outcome || ':' || http_status from private.parse_tx(200, '{"type":"error","message":"More than 100 archived blocks queried in one day"}')),
+	'allowance:200', 'the day''s allowance spent is a refusal of its own, never "no such transaction" (audit F-059)');
 select is((select outcome || ':' || http_status from private.parse_tx(429, 'slow down')), 'rate_limited:429', 'HTTP 429 is "slow down"');
 select is((select outcome || ':' || http_status from private.parse_tx(422, 'Failed to deserialize the JSON body')), 'error:422', 'any other status is an error');
 select is((select outcome from private.parse_tx(null, null)), 'error', 'no answer at all is an error');
@@ -284,6 +286,30 @@ select tests.tx_is(31, 10, 3);
 select is(private.lookup_step(), 'idle', 'nothing on that network is asked meanwhile');
 update private.worker_state set blocked_until_testnet = null;
 select is(private.lookup_step(), 'report_confirmed', 'and then it is');
+
+-- the explorer has refused this network address for the day (audit F-059)
+create function tests.step_when_due() returns text
+language plpgsql as $$ begin perform tests.due(); return private.lookup_step(); end $$;
+select tests.propose(4, 11, 4, 130, tests.now_ms() + 130);
+select tests.report(4, 11, 130, 130);
+select tests.due();
+select tests.tx_says(130, 'allowance') from generate_series(1, 6);
+select is(private.lookup_step(), 'report_resting', 'the allowance spent says nothing about the transaction');
+select results_eq($$ select status, attempts, not_before > now() + interval '9 minutes' from public.execution_reports where tx_hash = tests.tx_hash(130) $$,
+	$$ values ('pending', 0, true) $$, 'the report waits ten minutes, uncounted');
+select ok((select blocked_until_testnet is null from private.worker_state), 'and signer look-ups on that network go on meanwhile');
+select is(array(select tests.step_when_due() from generate_series(1, 5)), array_fill('report_resting'::text, array[5]),
+	'more refusals than "not known yet" is ever given close nothing');
+select tests.tx_is(130, 11, 130);
+select is(tests.step_when_due(), 'report_confirmed', 'once the explorer answers, the report is believed');
+-- but none waits for ever
+select tests.propose(4, 11, 4, 131, tests.now_ms() + 131);
+select tests.report(4, 11, 131, 131);
+update public.execution_reports set created_at = now() - interval '25 hours' where tx_hash = tests.tx_hash(131);
+select tests.tx_says(131, 'allowance');
+select is(tests.step_when_due(), 'report_failed', 'a report refused for a whole day gives up');
+select is(tests.report_of(131), 'failed:lookup_failed', 'as a look-up that failed, which may be filed again');
+select is(tests.status(11, 131), 'open', 'and the proposal stays as it was');
 
 -- --------------------------------------------- the finaliser's own result is late
 -- order one: the result is recorded while the report waits its 30 seconds
