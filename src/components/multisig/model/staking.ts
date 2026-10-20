@@ -48,6 +48,7 @@ import {
 	validatorPays,
 	waitWords,
 } from "@hl-tools/core";
+import { compareAmount } from "./chain/columns";
 import { addressField, amountField } from "./fields";
 import { shortAddress } from "./parts";
 import { vaultActionLine } from "./vault";
@@ -192,8 +193,24 @@ export const STAKING = {
 	validatorsUnread:
 		"The list of validators could not be read from Hyperliquid, so this address was not checked against it.",
 	noRecommendation:
-		"Every validator is listed as Hyperliquid reports it. Which one to stake with is the signers' choice.",
+		"Every validator is listed as Hyperliquid reports it, in the order of Hyperliquid's own staking page. Which one to stake with is the signers' choice.",
 } as const;
+
+/**
+ * The order of Hyperliquid's own staking page (read on testnet 2026-10-20,
+ * audit F-075): the active validators that are not jailed first, then the
+ * rest, each group by total stake, smallest first. Paying nothing does not
+ * move a validator down: its row says so instead. Never an order of this
+ * page's own, which would be a ranking.
+ */
+export function stakingPageOrder(a: Validator, b: Validator): number {
+	const group = (v: Validator) => (v.isActive && !v.isJailed ? 0 : 1);
+	return (
+		group(a) - group(b) ||
+		compareAmount(a.stake, b.stake) ||
+		a.address.localeCompare(b.address)
+	);
+}
 
 /** Why a stake with a validator earns nothing, as a clause after its name. */
 const NO_PAY: Readonly<Record<NoPay, string>> = {
