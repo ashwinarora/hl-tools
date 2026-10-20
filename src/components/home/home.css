@@ -1,0 +1,77 @@
+/*
+ * The refined Bento's own motion, in CSS so it needs no script and shows
+ * everything without one: the tiles rise in once on load, the bands below
+ * rise as they scroll into view where the browser can tie an animation to
+ * scrolling (elsewhere they are simply there), and the calculator's slider
+ * gets a thumb in the faucet's colour. The site-wide reduced-motion rule
+ * (styles.css) cuts every animation here to nothing.
+ */
+
+@keyframes c2-rise {
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.c2-rise {
+	animation: c2-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+	animation-delay: var(--c2-delay, 0ms);
+}
+
+@supports (animation-timeline: view()) {
+	.c2-reveal {
+		animation: c2-rise linear both;
+		animation-timeline: view();
+		animation-range: entry 0% entry 40%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.c2-reveal {
+		animation: none;
+	}
+}
+
+/* a tile lifts a little under the pointer */
+.c2-tile {
+	transition:
+		transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+		border-color 300ms,
+		box-shadow 300ms;
+}
+@media (hover: hover) {
+	.c2-tile:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 24px 50px -32px rgb(0 0 0 / 0.45);
+	}
+}
+
+.c2-range::-webkit-slider-thumb {
+	appearance: none;
+	width: 22px;
+	height: 22px;
+	border-radius: 9999px;
+	background: var(--surface);
+	border: 2px solid var(--testnet);
+	box-shadow: 0 2px 8px -2px rgb(0 0 0 / 0.35);
+	transition: transform 150ms;
+}
+.c2-range::-webkit-slider-thumb:hover {
+	transform: scale(1.1);
+}
+.c2-range::-moz-range-thumb {
+	width: 18px;
+	height: 18px;
+	border-radius: 9999px;
+	background: var(--surface);
+	border: 2px solid var(--testnet);
+}
+.c2-range:focus-visible {
+	outline: 2px solid var(--testnet);
+	outline-offset: 4px;
+}

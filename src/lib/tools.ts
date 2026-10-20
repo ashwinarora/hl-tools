@@ -53,7 +53,6 @@ export interface ToolDef {
 	/** Primary source the tool relies on. */
 	readonly primarySource: { readonly label: string; readonly url: string };
 	readonly sample: ToolSample | null;
-	readonly flagship?: boolean;
 	readonly writes?: boolean;
 }
 
@@ -124,7 +123,6 @@ export const TOOLS: readonly ToolDef[] = [
 			url: `${DOCS}/for-developers/hyperevm/interaction-timings`,
 		},
 		sample: { id: "limit-order", label: "Mainnet limit order tx" },
-		flagship: true,
 	},
 	{
 		id: "orders",
@@ -197,8 +195,8 @@ export const TOOLS: readonly ToolDef[] = [
 		title: "Multisig Signer",
 		short: "Multisig",
 		description:
-			"Create a treasury from your own account, then propose, sign and submit native multi-sig actions — USDC and spot sends, perps ↔ spot transfers, withdrawals, API-wallet approvals, a change of signers — with your own wallet. Pass a proposal on as a link or a file, or sign in and every signer of a treasury sees it live. Signatures are verified in your browser before anything is sent.",
-		answers: "How do two of three signers get one payment onto the chain?",
+			"Create a treasury from your own account, then propose, sign and send native multi-sig actions — USDC and spot sends, perps ↔ spot transfers, withdrawals, staking, vaults, API wallets, a change of signers — with your own wallet. Pass a proposal on as a link or a file, or sign in and every signer of a treasury sees it live. Signatures are verified in your browser before anything is sent.",
+		answers: "How do two of three signers send one payment to Hyperliquid?",
 		icon: FileSignature,
 		ruleSets: [
 			"multisig",
