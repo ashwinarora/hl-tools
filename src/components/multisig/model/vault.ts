@@ -179,6 +179,9 @@ export const VAULT = {
 		"This treasury's account mode could not be read from Hyperliquid, so this is planned as one step. In a manual account a deposit is taken from the perps balance only.",
 	depositsUnread:
 		"The treasury's vault deposits could not be read from Hyperliquid, so the amount was not checked against them.",
+	/** A withdrawal whose vault could not be read: the worth stands in for what it releases (audit F-073). */
+	releasesUnread:
+		"What this vault releases could not be read from Hyperliquid, so the amount is judged by the deposit's worth, which can be more than Hyperliquid releases.",
 	noDeposits: "The treasury has no money in any vault.",
 	pick: "Withdraw from",
 	/** A code, not the action: the wallet step every vault proposal has. */
@@ -395,6 +398,9 @@ export function planVault(
 			`The treasury already has ${usdc(held.equity)} in this vault. Adding to it locks all of it again: none of it can be withdrawn for ${lockupWords(vault, network)}.`,
 			AMOUNT,
 		);
+	// the vault unread: its worth stands in for what it releases (audit F-073)
+	if (!deposit && held && (!lookup || lookup.kind === "unreadable"))
+		warn("vault.releases_unread", VAULT.releasesUnread, AMOUNT);
 	if (!deposit && held) {
 		// a deposit's worth moves with the vault between now and the submission
 		const worth = Decimal.parse(facts.maxWithdrawable ?? held.equity);

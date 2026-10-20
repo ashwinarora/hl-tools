@@ -584,7 +584,7 @@ describe("buildAction / buildProposalInput", () => {
 		};
 		expect(one("5", lab)).toEqual([]);
 		expect(one("14", lab).map((i) => i.message)).toEqual([
-			"14 is more than the balance that can be moved observed just now (13.79613). Hyperliquid will refuse it unless funds arrive first.",
+			"14 is more than the balance that can be moved on this page (13.79613). Hyperliquid will refuse it unless funds arrive first.",
 		]);
 		expect(one("14", { perpWithdrawable: "0.291437" })).toEqual([]);
 		const purr = (balances: BuildContext["balances"]) =>

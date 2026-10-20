@@ -370,3 +370,74 @@ describe("the Max of each form", () => {
 		).toBe("ok");
 	});
 });
+
+describe("Max for USDC as a spot token, and when nothing is known or nothing moves (audit F-009, F-061, F-082)", () => {
+	const usdc = (
+		receiver: "new" | "active" | "failed" | null,
+		over: { unified?: boolean; perps?: string | null } = {},
+	) =>
+		maxSendToken({
+			coin: "USDC",
+			available: "33.90999998",
+			decimals: 8,
+			usdc: {
+				unified: over.unified ?? true,
+				perps: over.perps ?? null,
+				receiver,
+			},
+		});
+
+	it("keeps the 1 USDC fee of a new address back where the same balance pays it", () => {
+		// the campaign's case: unified, a new address (F-AUD-02)
+		expect(amountOf(usdc("new"))).toBe("32.90999998");
+		// Hyperliquid's own rule agrees: the amount it fills is taken with its fee
+		expect(
+			charge("32.90999998", "spot", "0", "33.90999998").refusal,
+		).toBeNull();
+		// a manual treasury whose perps balance pays the fee keeps all of spot
+		expect(amountOf(usdc("new", { unified: false, perps: "5" }))).toBe(
+			"33.90999998",
+		);
+		expect(amountOf(usdc("new", { unified: false, perps: "0.5" }))).toBe(
+			"32.90999998",
+		);
+		// an address in use costs nothing
+		expect(amountOf(usdc("active"))).toBe("33.90999998");
+		// any other token is not touched by the fee
+		expect(
+			amountOf(maxSendToken({ coin: "PURR", available: "5", decimals: 5 })),
+		).toBe("5");
+	});
+
+	it("says why it fills nothing while the destination is unknown, entered or not", () => {
+		const reason = (m: ReturnType<typeof maxSendToken>) =>
+			m.kind === "none" ? m.reason : null;
+		expect(reason(usdc(null))).toContain("Enter the destination first");
+		expect(reason(usdc("failed"))).toBe(
+			"Whether the destination is new could not be checked, so Max cannot allow for the 1 USDC fee of a new address. Type the amount.",
+		);
+		expect(
+			reason(
+				maxSendUsdc({
+					unified: false,
+					from: "perps",
+					perps: "5",
+					spot: "5",
+					receiver: "failed",
+				}),
+			),
+		).toContain("could not be checked");
+	});
+
+	it("empties the field when there is nothing to move", () => {
+		const m = maxClassTransfer({ toPerp: false, perps: "0", spot: "5" });
+		expect(m).toEqual({
+			kind: "none",
+			reason: "There is nothing to move: 0 USDC.",
+			empty: true,
+		});
+		// unread is another matter: the field is left as it is
+		const unread = maxClassTransfer({ toPerp: false, perps: null, spot: "5" });
+		expect(unread.kind === "none" && unread.empty).toBeFalsy();
+	});
+});

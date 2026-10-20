@@ -701,7 +701,9 @@ function ProposeForm({
 				? null
 				: lookup.state === "loading"
 					? "loading"
-					: (lookup.receiver?.status ?? null),
+					: lookup.state === "failed"
+						? "failed"
+						: (lookup.receiver?.status ?? null),
 		token:
 			form.kind === "sendToken" && coin
 				? {

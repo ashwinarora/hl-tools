@@ -696,6 +696,9 @@ function StepCard({
 			)}
 			{open && staking.noPay && <Amber>{staking.noPay}</Amber>}
 			{open && step.vault.relocks && <Amber>{step.vault.relocks}</Amber>}
+			{open && step.vault.releasesUnread && (
+				<Amber>{step.vault.releasesUnread}</Amber>
+			)}
 			{ask &&
 				(step.vault.record?.kind === "likely" ||
 					step.vault.record?.kind === "several") && (

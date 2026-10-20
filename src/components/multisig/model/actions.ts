@@ -363,7 +363,8 @@ function warnOverBalance(
 			issue(
 				"amount.exceeds_balance",
 				"warning",
-				`${amount.toString()} is more than the ${what} observed just now (${b.toString()}). Hyperliquid will refuse it unless funds arrive first.`,
+				// the page head says whether that figure is live (audit F-118)
+				`${amount.toString()} is more than the ${what} on this page (${b.toString()}). Hyperliquid will refuse it unless funds arrive first.`,
 				{ path: "action.amount" },
 			),
 		);

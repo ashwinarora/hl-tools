@@ -21,7 +21,12 @@ import type { Receiver } from "./actions";
  */
 export type MaxAmount =
 	| { readonly kind: "ok"; readonly amount: string; readonly basis: string }
-	| { readonly kind: "none"; readonly reason: string };
+	| {
+			readonly kind: "none";
+			readonly reason: string;
+			/** Read, and nothing can move: the field is emptied, not left as typed (audit F-082). */
+			readonly empty?: true;
+	  };
 
 /** A USDC send, a bridge withdrawal and a class transfer carry 6 decimals. */
 export const USDC_SEND_DECIMALS = 6;
@@ -54,7 +59,11 @@ function filled(
 	const whole = cut(full, decimals);
 	const amount = at(whole);
 	if (!amount.isPositive())
-		return none(`There is nothing to move: ${full.toString()} ${unit}.`);
+		return {
+			kind: "none",
+			reason: `There is nothing to move: ${full.toString()} ${unit}.`,
+			empty: true,
+		};
 	const left = full.sub(whole);
 	return {
 		kind: "ok",
@@ -81,12 +90,10 @@ export function maxSendUsdc(i: {
 	readonly from: "perps" | "spot";
 	readonly perps: string | null;
 	readonly spot: string | null;
-	readonly receiver: Receiver["status"] | "loading" | null;
+	readonly receiver: Receiver["status"] | "loading" | "failed" | null;
 }): MaxAmount {
-	if (i.receiver === null || i.receiver === "loading")
-		return none(
-			"Enter the destination first: a first send to a new address costs 1 USDC, and Max takes that into account.",
-		);
+	const asked = feeUnknown(i.receiver);
+	if (asked) return asked;
 	if (i.receiver !== "new" && i.receiver !== "active")
 		return none(
 			"Whether the 1 USDC fee for a new address applies to this destination cannot be told, so Max cannot work it out. Type the amount.",
@@ -137,22 +144,74 @@ export function maxSendUsdc(i: {
 }
 
 /**
+ * Why Max cannot allow for the 1 USDC fee of a new address yet; null once
+ * whether the destination is new is known.
+ */
+function feeUnknown(
+	receiver: Receiver["status"] | "loading" | "failed" | null,
+): MaxAmount | null {
+	if (receiver === null || receiver === "loading")
+		return none(
+			"Enter the destination first: a first send to a new address costs 1 USDC, and Max takes that into account.",
+		);
+	// entered, but Hyperliquid did not say (audit F-061)
+	if (receiver === "failed")
+		return none(
+			"Whether the destination is new could not be checked, so Max cannot allow for the 1 USDC fee of a new address. Type the amount.",
+		);
+	if (receiver !== "new" && receiver !== "active")
+		return none(
+			"Whether the 1 USDC fee for a new address applies to this destination cannot be told, so Max cannot work it out. Type the amount.",
+		);
+	return null;
+}
+
+/**
  * A spot token send: all of the token that is not on hold, cut to the
- * token's own decimals. A fee for a new address is paid in USDC, apart.
+ * token's own decimals. A fee for a new address is paid in USDC, apart, so
+ * for any other token it changes nothing. For USDC itself it comes out of
+ * the same spot balance unless the perps balance pays it (core
+ * `activationCharge`), and Max keeps it back then (audit F-009).
  */
 export function maxSendToken(i: {
 	readonly coin: string;
 	readonly available: string | null;
 	/** The token's `weiDecimals`; null when the token list is not read. */
 	readonly decimals: number | null;
+	/** For USDC: what decides whether the fee of a new address comes out of it. */
+	readonly usdc?: {
+		readonly unified: boolean;
+		readonly perps: string | null;
+		readonly receiver: Receiver["status"] | "loading" | "failed" | null;
+	};
 }): MaxAmount {
 	const available = read(i.available);
 	if (!available || i.decimals === null) return none(NOT_READ);
+	const all = (a: string) =>
+		`All the ${i.coin} in spot that is not on hold: ${a} ${i.coin}.`;
+	if (i.coin !== "USDC" || !i.usdc)
+		return filled(available, i.decimals, all, i.coin);
+	const asked = feeUnknown(i.usdc.receiver);
+	if (asked) return asked;
+	if (i.usdc.receiver === "active")
+		return filled(available, i.decimals, all, i.coin);
+	const perps = i.usdc.unified ? null : read(i.usdc.perps);
+	if (!i.usdc.unified && !perps) return none(NOT_READ);
+	if (perps?.gte(FEE))
+		return filled(
+			available,
+			i.decimals,
+			(a) =>
+				`${all(a)} The 1 USDC fee for a new address comes from the perps balance.`,
+			i.coin,
+		);
 	return filled(
 		available,
 		i.decimals,
-		(a) => `All the ${i.coin} in spot that is not on hold: ${a} ${i.coin}.`,
+		(a) =>
+			`All the USDC in spot that is not on hold, less the 1 USDC fee for a new address: ${a} USDC.`,
 		i.coin,
+		(d) => d.sub(FEE),
 	);
 }
 
@@ -333,7 +392,7 @@ export interface MaxFacts {
 	readonly spotUsdc: string | null;
 	/** The balance a USDC send leaves, as the form resolved it. */
 	readonly from: "perps" | "spot";
-	readonly receiver: Receiver["status"] | "loading" | null;
+	readonly receiver: Receiver["status"] | "loading" | "failed" | null;
 	/** The spot token a token send names; null when none is chosen. */
 	readonly token: {
 		readonly coin: string;
@@ -363,7 +422,10 @@ export function maxFor(
 	},
 	facts: MaxFacts,
 ): (MaxAmount & { readonly validator?: string }) | null {
-	const leaves = ["sendUsdc", "withdraw3", "vaultDeposit"].includes(form.kind);
+	const leaves =
+		["sendUsdc", "withdraw3", "vaultDeposit"].includes(form.kind) ||
+		// USDC as a token: whether the fee comes out of it depends on the mode
+		(form.kind === "sendToken" && facts.token?.coin === "USDC");
 	if (leaves && !facts.modeKnown)
 		return none(
 			"The treasury's account mode has not been read yet, and which balance this leaves depends on it.",
@@ -379,7 +441,14 @@ export function maxFor(
 			});
 		case "sendToken":
 			return facts.token
-				? maxSendToken(facts.token)
+				? maxSendToken({
+						...facts.token,
+						usdc: {
+							unified: facts.unified,
+							perps: facts.perps,
+							receiver: facts.receiver,
+						},
+					})
 				: none("Choose the token first.");
 		case "usdClassTransfer":
 			return maxClassTransfer({

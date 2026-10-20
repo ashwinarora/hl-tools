@@ -484,7 +484,7 @@ const answered = (r: Recorded): string | null =>
 	r.answer.status === "err" ? explainExchangeError(r.answer, 200).id : null;
 
 describe("what a proposal's page says against it before anyone signs", () => {
-	it("is the balances and a withdrawal at the fee, never the mode or the receiver", () => {
+	it("is the balances, a withdrawal at the fee and a fee nobody can pay, never the mode", () => {
 		expect(
 			standingRefusals(usdSend("1000"), facts()).map((r) => r.code),
 		).toEqual(["transfer-balance"]);
@@ -494,11 +494,32 @@ describe("what a proposal's page says against it before anyone signs", () => {
 				facts(),
 			).map((r) => r.code),
 		).toEqual(["withdrawal-below-fee"]);
-		// the mode is said apart, and a new receiver is the cost line's
+		// the mode is said apart; a new receiver costs what the cost line says
 		expect(standingRefusals(usdSend(), facts({ mode: UNIFIED }))).toEqual([]);
 		expect(
 			standingRefusals(usdSend("100"), facts({ receiver: FRESH })),
 		).toEqual([]);
+		// a fee the treasury cannot pay stands against it too (audit F-021)
+		expect(
+			standingRefusals(
+				{
+					type: "sendAsset",
+					destination: RECIPIENT,
+					sourceDex: "spot",
+					destinationDex: "spot",
+					token: "USDC:0xeb62eee3685fc4c43992febcd9e75443",
+					amount: "100",
+					fromSubAccount: "",
+					nonce: 1,
+				},
+				facts({ receiver: FRESH, perpsUsdc: "0" }),
+			).map((r) => r.code),
+		).toEqual(["transfer-gas"]);
+		expect(
+			standingRefusals(usdSend("1"), facts({ receiver: FRESH })).map(
+				(r) => r.code,
+			),
+		).toEqual(["transfer-below-fee"]);
 		// a balance not read stops nothing
 		expect(
 			standingRefusals(usdSend("1000"), facts({ perpsUsdc: null })),

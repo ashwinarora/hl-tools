@@ -481,7 +481,7 @@ export function ProposalView({
 					mode: treasury.mode,
 					perpsUsdc: treasury.perp?.withdrawable ?? null,
 					spot: treasury.spot,
-					receiver: null,
+					receiver: lookup.receiver,
 					self: target.address,
 				})
 			: [];
@@ -906,6 +906,15 @@ export function ProposalView({
 												aria-hidden
 											/>
 											<span>{vaultStep.relocks}</span>
+										</p>
+									)}
+									{COSTED.has(stage.phase) && vaultStep.releasesUnread && (
+										<p className="mt-3 flex items-start gap-1.5 text-[13px] text-warning">
+											<span
+												className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+												aria-hidden
+											/>
+											<span>{vaultStep.releasesUnread}</span>
 										</p>
 									)}
 									{stage.phase === "collecting" && stage.closesFirst && (

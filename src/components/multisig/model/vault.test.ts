@@ -373,6 +373,25 @@ describe("a withdrawal", () => {
 		]);
 	});
 
+	it("says when what the vault releases could not be read: the worth stands in for it (audit F-073)", () => {
+		const p = plan(
+			wd("20"),
+			read({
+				deposits: [{ vault: V, equity: "100", lockedUntil: NOW - DAY }],
+				vault: { kind: "unreadable" },
+			}),
+		);
+		expect(codes(p.issues)).toEqual([
+			"warning:vault.unread",
+			"warning:vault.releases_unread",
+		]);
+		expect(p.issues[1]?.message).toContain(
+			"which can be more than Hyperliquid releases",
+		);
+		// a warning only: a read that fails stops nothing
+		expect(p.steps).toHaveLength(1);
+	});
+
 	it("warns when the deposits could not be read, and blocks nothing for it", () => {
 		const p = plan(wd("20"), read({ deposits: null }));
 		expect(codes(p.issues)).toEqual(["warning:deposits.unread"]);

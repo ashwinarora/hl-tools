@@ -267,11 +267,17 @@ export function preflight(action: PlainObject, facts: SendFacts): Refusal[] {
 	return out;
 }
 
-/** Refusals a proposal's page says before anyone signs: the balances, and a withdrawal at or below the bridge's fee. */
+/**
+ * Refusals a proposal's page says before anyone signs: the balances, a
+ * withdrawal at or below the bridge's fee, and the 1 USDC of a new address
+ * that the amount or the balances cannot cover (audit F-021).
+ */
 const STANDING: ReadonlySet<string> = new Set([
 	"transfer-balance",
 	"token-balance",
 	"withdrawal-below-fee",
+	"transfer-below-fee",
+	"transfer-gas",
 ]);
 
 /**
@@ -296,6 +302,7 @@ export function standingRefusals(
 const BALANCE_REFUSALS: ReadonlySet<string> = new Set([
 	"transfer-balance",
 	"token-balance",
+	"transfer-gas",
 ]);
 
 /**
