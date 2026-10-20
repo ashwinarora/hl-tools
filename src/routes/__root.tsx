@@ -13,6 +13,7 @@ import Header from "../components/Header";
 import NotFound from "../components/NotFound";
 import { THEME_COLORS } from "../components/ThemeToggle";
 import { Toaster } from "../components/ui/sonner";
+import { SHARE, shareMeta } from "../lib/site";
 import { NETWORK_INIT_SCRIPT, useNetworkStore } from "../store/networkStore";
 
 // TanStack devtools are opt-in during development (`?devtools=1` or
@@ -44,13 +45,14 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "hl-tools — Hyperliquid developer tools",
+				title: SHARE.title,
 			},
 			{
 				name: "description",
-				content:
-					"Tools for Hyperliquid developers, in your browser. Read-only diagnostics: resolve assets, inspect signatures, decode CoreWriter actions, trace HyperEVM → HyperCore, lint orders, debug WebSockets, probe RPCs, inspect multi-sigs. Plus a native multi-sig signer and a testnet faucet miner.",
+				content: SHARE.description,
 			},
+			// what a shared link shows; a page may name its own title and path
+			...shareMeta(),
 		],
 		links: [
 			{

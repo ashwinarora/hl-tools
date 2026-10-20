@@ -2033,6 +2033,25 @@ Not run in the browser: the silent socket (H-OUT-17/18), covered by the core's h
 
 141 test files, 3,481 unit tests (the core's coverage stays at 100%), Biome and `tsc` clean, both builds pass.
 
+## 26. The home page: the Bento (2026-10-20)
+
+Branch `feat/home-bento`, off `main` at 8b7a05f. Six designs were built first in worktrees (`landing/a` to `landing/f`, local only) and used blind by six personas, each driving its own headless Chrome over the DevTools protocol (screenshots, scrolling, clicks, typing into the paste boxes, following links). The Bento was then refined twice with the owner on `landing/c2`, and this branch carries the result. Dev server on `http://localhost:3008`, production build (`bun --bun run build`, `bun .output/server/index.mjs`) on `:3018`.
+
+| Check | Result |
+|---|---|
+| The panel (current page and six designs) | averages: three doors 8.0, Bento 7.2, demo 6.7, console 6.7, product page 6.5, essay 6.5, the old home page 4.2; the old page came last for five of six |
+| The fold at 1440×900 | headline, the Multisig tile with Create / Add, the testnet note and the treasury window, the faucet tile and the tools tile with its paste box, all whole |
+| Widths 375, 768, 1024, 1440 | no page wider than the screen; dark and light at each; no console error |
+| Every link | Create → `/multisig/create?network=<the header's network>`, Add → `/multisig/add`, the faucet miner and its how-to, the glossary, GitHub, the eight tools (both lists), `/tools/multisig?view=account`, `/changes` |
+| The paste box | "Price must be divisible by tick size." + Enter → `/tools/orders?tab=explain` |
+| Motion | the pending card turns "Ready to send" once in view; the faucet's dollar hops through five wallets and the total counts up while on screen; the calculator's total follows the slider |
+| Reduced motion (`prefers-reduced-motion: reduce`) | the card shows "Ready to send" at once, nothing moves, the CSS rise is cut to nothing |
+| Production build | the policy header; the page hydrates under it (the card turns "Ready to send"); `home.css` applies |
+| Share tags | each `og:` and `twitter:` tag once on `/` (the home page's `og:url`, the image `https://hltools.tech/og-image.png`, 1200×630, its alt text); `/multisig` carries the site's defaults under its own title; `/og-image.png` 200, `image/png`, 161 KB |
+| Wording | `copy.test.ts` scans every sentence of `src/components/home/` and the route: no forbidden claim, no "submit", "relay", "ledger", "the chain" or "sharing service" |
+
+142 test files, 3,485 unit tests, Biome and `tsc` clean, the build passes.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).

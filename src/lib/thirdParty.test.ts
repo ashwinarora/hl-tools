@@ -22,6 +22,15 @@ describe("what every page loads", () => {
 		expect(head.match(/https?:\/\/[^"'`\s)]+/g) ?? []).toEqual([]);
 	});
 
+	it("names only its own origin in what a shared link shows", () => {
+		// a link preview needs absolute URLs; crawlers read them, a visitor's
+		// browser fetches nothing because of them, and the host is the site's
+		const site = read("./site.ts");
+		expect(site.match(/https?:\/\/[^"'`\s)]+/g)).toEqual([
+			"https://hltools.tech",
+		]);
+	});
+
 	it("takes its fonts and styles from the bundle", () => {
 		const css = read("../styles.css");
 		expect(css).not.toMatch(/fonts\.(googleapis|gstatic)\.com/);
