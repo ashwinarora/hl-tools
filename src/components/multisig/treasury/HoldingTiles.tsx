@@ -5,7 +5,7 @@ import { cn } from "#/lib/utils";
 import { useStaking } from "../live/useStaking";
 import { useVaults } from "../live/useVaults";
 import { amountIn } from "../model/headline";
-import { balanceView } from "../model/mode";
+import { balanceView, MODE_UNREAD } from "../model/mode";
 import { stakingSummaryLine } from "../model/staking";
 import { vaultsSummaryLine } from "../model/vault";
 import { Help } from "../shell/Help";
@@ -56,7 +56,12 @@ export function HoldingTiles({
 		: balanceView(state.mode, live.perp, live.spot);
 	return (
 		<div className="mb-4 flex flex-col gap-2">
-			<SourceLine status={live.status} asOf={live.asOf} onRetry={live.retry}>
+			<SourceLine
+				status={live.status}
+				asOf={live.asOf}
+				onRetry={live.retry}
+				reason={live.refused[0]?.reason ?? null}
+			>
 				Balances, positions and orders arrive live from Hyperliquid. Nothing
 				here is stored by this tool. <Help k="live" />
 			</SourceLine>
@@ -137,6 +142,16 @@ export function HoldingTiles({
 					/>
 				)}
 			</div>
+			{state.modeFailed && (
+				// laid out without the mode: said, never guessed (audit F-060)
+				<p className="flex items-start gap-1.5 text-[13px] text-warning">
+					<span
+						className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+						aria-hidden
+					/>
+					<span>{MODE_UNREAD}</span>
+				</p>
+			)}
 		</div>
 	);
 }

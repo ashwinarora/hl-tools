@@ -34,7 +34,15 @@ describe("accountLines: the account being converted", () => {
 	it("an ordinary account with nothing open has nothing to say", () => {
 		expect(accountLines(facts())).toEqual({ lines: [], blockedBy: null });
 		// nothing read yet about positions: nothing claimed
-		expect(codes({ positions: null, orders: null })).toEqual([]);
+		// what could not be read is said, never counted as none (audit F-086)
+		expect(codes({ positions: null, orders: null })).toEqual([
+			"create.open_unread",
+		]);
+		expect(accountLines(facts({ positions: null })).lines[0]?.text).toContain(
+			"Its open positions could not be read.",
+		);
+		// a warning: converting stays on
+		expect(accountLines(facts({ orders: null })).blockedBy).toBeNull();
 	});
 	it("blocks an account Hyperliquid would refuse: never used, or a multi-sig already", () => {
 		const never = accountLines(facts({ role: "missing" }));

@@ -33,6 +33,7 @@ import {
 	usePrefsHydrated,
 } from "#/store/multisigPrefsStore";
 import { useNetwork } from "#/store/networkStore";
+import { rest } from "../live/explorerList";
 import { lookupOf, useTxLookups } from "../live/useChainMatch";
 import {
 	hashesToLookUp,
@@ -174,12 +175,44 @@ interface ChainCheck {
 	readonly candidates: readonly MatchCandidate[];
 	/** Whether the record could be read: only then may a transfer be called unexplained. */
 	readonly onRecord: boolean;
+	/**
+	 * Hyperliquid did not answer for the API wallets or the transfers: the
+	 * group says so, never reads as complete (audit F-102).
+	 */
+	readonly failed: boolean;
+}
+
+/**
+ * How long one treasury's check may take. One that hangs is given up, so it
+ * does not hold every treasury after it on "Checking…" (audit F-070).
+ */
+const CHECK_LIMIT_MS = 60_000;
+
+function limited<T>(job: () => Promise<T>): () => Promise<T> {
+	return () =>
+		new Promise<T>((resolve, reject) => {
+			const timer = setTimeout(
+				() => reject(new Error("Hyperliquid did not answer in time.")),
+				CHECK_LIMIT_MS,
+			);
+			job().then(
+				(v) => {
+					clearTimeout(timer);
+					resolve(v);
+				},
+				(e: unknown) => {
+					clearTimeout(timer);
+					reject(e);
+				},
+			);
+		});
 }
 
 /** One treasury at a time per network, whoever asks. */
 const lanes = new Map<Network, Promise<unknown>>();
 function inTurn<T>(network: Network, job: () => Promise<T>): Promise<T> {
-	const next = (lanes.get(network) ?? Promise.resolve()).then(job, job);
+	const run = limited(job);
+	const next = (lanes.get(network) ?? Promise.resolve()).then(run, run);
 	lanes.set(
 		network,
 		next.catch(() => {}),
@@ -203,6 +236,7 @@ function chainQuery(
 				const mark = (await queries.fetchQuery(marksQuery(client, wallet))).get(
 					keyOf(network, address),
 				);
+				let failed = false;
 				const agents = await queries
 					.fetchQuery({
 						...agentsQueryOptions(network, address),
@@ -210,7 +244,10 @@ function chainQuery(
 					})
 					.then(
 						(o) => o.data,
-						() => null,
+						() => {
+							failed = true;
+							return null;
+						},
 					);
 				let ledger: LedgerRow[] | null = null;
 				let ledgerReadAt: number | null = null;
@@ -232,6 +269,7 @@ function chainQuery(
 						ledgerReadAt = ledger ? r.observedAt : null;
 					} catch {
 						ledger = null;
+						failed = true;
 					}
 				}
 				let candidates: readonly MatchCandidate[] = [];
@@ -250,7 +288,7 @@ function chainQuery(
 						onRecord = false;
 					}
 				}
-				return { agents, ledger, ledgerReadAt, candidates, onRecord };
+				return { agents, ledger, ledgerReadAt, candidates, onRecord, failed };
 			}),
 		staleTime: AWAY_CHECK_EVERY_MS,
 		gcTime: 6 * AWAY_CHECK_EVERY_MS,
@@ -278,6 +316,8 @@ export type AwayScope =
  * checking     being looked at now
  * failed       Hyperliquid did not answer
  * partly       read, but some transfers could not be matched yet (they stay unread)
+ * rested       read, but the explorer refused more look-ups for today, so some
+ *              transfers could not be matched yet (they stay unread)
  * not-checked  not looked at on this visit (the home screen looks at ten)
  */
 export type ChainState =
@@ -285,6 +325,7 @@ export type ChainState =
 	| "checking"
 	| "failed"
 	| "partly"
+	| "rested"
 	| "not-checked";
 
 export interface AwayGroup {
@@ -418,7 +459,9 @@ export function useAway(scope: AwayScope): Away {
 			const check = checks[i];
 			const data = check?.data ?? null;
 			const state: ChainState = data
-				? "checked"
+				? data.failed
+					? "failed"
+					: "checked"
 				: check?.isError
 					? "failed"
 					: asked.has(key)
@@ -448,7 +491,10 @@ export function useAway(scope: AwayScope): Away {
 					: progress === "open"
 						? "checking"
 						: progress === "failed"
-							? "partly"
+							? // the explorer's refusal for the day is not "did not answer" (audit F-063)
+								rest(t.network).resting
+								? "rested"
+								: "partly"
 							: "checked";
 			const baseline = agentsBaseline(mark, chain.agents);
 			if (baseline)

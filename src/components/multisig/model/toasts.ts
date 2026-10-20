@@ -80,6 +80,12 @@ export const SEND_ANSWER = {
 	checkRecord: "Check Hyperliquid's record",
 } as const;
 
+/**
+ * While a send is on its way: Hyperliquid is asked first whether it would
+ * refuse, then the wallet (audit F-003: no wallet prompt may follow at all).
+ */
+export const SENDING = "Checking with Hyperliquid, then asking your wallet…";
+
 /** One step of a move, accepted. */
 export const stepAccepted = (n: number) => `Step ${n} accepted by Hyperliquid`;
 /** One step of a move, not sent (the one before it was). */

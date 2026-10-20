@@ -9,9 +9,11 @@
 import {
 	ExplorerAllowanceError,
 	explorerUserDetails,
+	InfoRequestError,
 	type Network,
 } from "@hl-tools/core";
 import { type AccountTxs, accountTxs } from "../model/chain/accountTxs";
+import type { LookupFailure } from "../model/chain/match";
 import { Pacer, Rest } from "../model/chain/pace";
 
 /**
@@ -55,6 +57,52 @@ export const SESSION = {
 	refetchOnReconnect: false,
 } as const;
 
+/** Not asked: the explorer said a moment ago that the day's allowance is used up. */
+export class Resting extends Error {}
+
+/**
+ * How long one explorer request may take. One that has not answered by then
+ * is given up, so no row says "checking…" for ever (audit F-071).
+ */
+export const EXPLORER_TIMEOUT_MS = 30_000;
+
+/** The caller's signal, ended also by the time limit. */
+export function timeLimited(
+	signal: AbortSignal,
+	ms = EXPLORER_TIMEOUT_MS,
+): AbortSignal {
+	const limit = AbortSignal.timeout(ms);
+	if (typeof AbortSignal.any === "function")
+		return AbortSignal.any([signal, limit]);
+	const both = new AbortController();
+	for (const s of [signal, limit]) {
+		if (s.aborted) {
+			both.abort(s.reason);
+			break;
+		}
+		s.addEventListener("abort", () => both.abort(s.reason), { once: true });
+	}
+	return both.signal;
+}
+
+/** Whether a failed explorer request is worth asking again by itself: never a refusal for the day, a rest, or a rate limit (audit F-065). */
+export function askAgain(error: Error): boolean {
+	return !(
+		error instanceof ExplorerAllowanceError ||
+		error instanceof Resting ||
+		(error instanceof InfoRequestError && error.status === 429)
+	);
+}
+
+/** Why a failed explorer request failed, as a row's cell says it. */
+export function failureOf(error: unknown): LookupFailure {
+	if (error instanceof ExplorerAllowanceError || error instanceof Resting)
+		return "today";
+	if (error instanceof InfoRequestError && error.status === 429)
+		return "limited";
+	return "no-answer";
+}
+
 export const listKey = (network: Network, account: string) =>
 	["explorer-account", network, account.toLowerCase()] as const;
 
@@ -67,11 +115,16 @@ export function listQuery(network: Network, account: string) {
 		}: {
 			signal: AbortSignal;
 		}): Promise<AccountTxs> => {
+			// resting after the day's refusal: nothing is asked (audit F-055)
+			if (rest(network).resting) throw new Resting();
 			await pacer(network).turn();
 			// the screen that asked may be gone by the time its turn comes
 			signal.throwIfAborted();
+			if (rest(network).resting) throw new Resting();
 			try {
-				const r = await explorerUserDetails(network, account, { signal });
+				const r = await explorerUserDetails(network, account, {
+					signal: timeLimited(signal),
+				});
 				return accountTxs(r.data);
 			} catch (e) {
 				if (e instanceof ExplorerAllowanceError) rest(network).start();
@@ -80,8 +133,7 @@ export function listQuery(network: Network, account: string) {
 		},
 		...SESSION,
 		// a refusal for the day is not tried again: it would be refused again
-		retry: (failures: number, error: Error) =>
-			failures < 1 && !(error instanceof ExplorerAllowanceError),
+		retry: (failures: number, error: Error) => failures < 1 && askAgain(error),
 		retryDelay: 2_000,
 	};
 }

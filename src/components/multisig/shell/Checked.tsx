@@ -36,7 +36,8 @@ export function Checked({
 					? checking
 						? "Reading from Hyperliquid…"
 						: failed
-							? "Could not be read from Hyperliquid."
+							? // the box above says what could not be read; said once (audit F-090)
+								"The check failed."
 							: "Not read yet."
 					: failed
 						? `The last check failed. Shown as read ${ago(observedAt, now)}.`

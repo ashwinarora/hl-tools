@@ -31,7 +31,7 @@ import {
 } from "../model/chain/columns";
 import { approvalOf } from "../model/chain/match";
 import { CHANGE } from "../model/change";
-import { balanceView, modeLabel } from "../model/mode";
+import { balanceView, MODE_UNREAD, modeLabel } from "../model/mode";
 import {
 	isOutcomeShare,
 	type OutcomeRow,
@@ -371,6 +371,13 @@ export function OverviewTab({
 							onChange={setHoldingsTab}
 							className="mb-0 self-end border-b-0"
 						/>
+						{holdingsTab === "balances" && !mode && state.modeFailed && (
+							<span className="inline-flex items-center gap-1.5 py-2">
+								<Tag tone="warn" title={MODE_UNREAD}>
+									mode unread
+								</Tag>
+							</span>
+						)}
 						{holdingsTab === "balances" && mode && (
 							<span className="inline-flex items-center gap-1.5 py-2">
 								{view?.kind === "two" && <Help k="perpsSpot" />}

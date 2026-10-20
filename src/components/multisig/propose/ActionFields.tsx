@@ -160,6 +160,8 @@ export function ActionFields({
 	tokens,
 	held,
 	tokensLoading,
+	tokensFailed,
+	onRetryTokens,
 	mode,
 	receiver,
 	cost,
@@ -167,6 +169,7 @@ export function ActionFields({
 	movable,
 	agents,
 	agentsFailed,
+	modeFailed,
 	now,
 	max,
 }: {
@@ -180,6 +183,9 @@ export function ActionFields({
 	/** Token indexes the treasury holds, listed first: a network can have thousands. */
 	held: readonly number[];
 	tokensLoading: boolean;
+	/** The token list could not be read: said, with a way to ask again (audit F-081). */
+	tokensFailed: boolean;
+	onRetryTokens: () => void;
 	/** The treasury's account mode; null while it is not read. */
 	mode: AccountMode | null;
 	/** What is known about the destination; null while it is not. */
@@ -194,6 +200,8 @@ export function ActionFields({
 	agents: readonly AgentInfo[] | null;
 	/** The read of the API wallets failed. */
 	agentsFailed: boolean;
+	/** The read of the account mode failed. */
+	modeFailed: boolean;
 	/** The page's clock, for what has expired. */
 	now: number;
 	/** The amount's Max (`model/max.ts`); null for a kind with no amount. */
@@ -324,9 +332,23 @@ export function ActionFields({
 						htmlFor="ms-token"
 						error={error("token")}
 						hint={
-							tokensLoading
-								? `Loading the spot tokens of ${network}…`
-								: "The action carries the token as NAME:tokenId."
+							tokensLoading ? (
+								`Loading the spot tokens of ${network}…`
+							) : tokensFailed ? (
+								<span className="text-warning">
+									The token list of {network} could not be read from
+									Hyperliquid.{" "}
+									<button
+										type="button"
+										onClick={onRetryTokens}
+										className="underline underline-offset-2"
+									>
+										Try again
+									</button>
+								</span>
+							) : (
+								"The action carries the token as NAME:tokenId."
+							)
 						}
 					>
 						<Select
@@ -417,7 +439,11 @@ export function ActionFields({
 			return (
 				<>
 					<p className="text-[13px] text-muted-foreground">
-						{mode ? MODE_SWITCH.now(modeLabel(mode).tag) : MODE_SWITCH.reading}{" "}
+						{mode
+							? MODE_SWITCH.now(modeLabel(mode).tag)
+							: modeFailed
+								? MODE_SWITCH.unread
+								: MODE_SWITCH.reading}{" "}
 						<Help k="accountMode" />
 					</p>
 					<Field label={MODE_SWITCH.label} error={error("toMode")}>

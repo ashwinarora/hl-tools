@@ -40,6 +40,7 @@ import {
 	done as doneToast,
 	failed as failedToast,
 	SEND_ANSWER,
+	SENDING,
 	TOAST_LINES,
 	TOAST_TITLES,
 	unsure as unsureToast,
@@ -272,7 +273,7 @@ export function YourPart({
 			if (!again) return;
 			heard(await again());
 		});
-	const submit = () => void wallet.run("Waiting for the wallet…", doSubmit);
+	const submit = () => void wallet.run(SENDING, doSubmit);
 
 	/** One approval in the wallet adds the network; then what was asked for goes on. */
 	const addNetwork = () =>

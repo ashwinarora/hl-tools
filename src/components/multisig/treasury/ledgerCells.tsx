@@ -9,7 +9,7 @@ import { ExternalLink, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "#/lib/utils";
 import { explorerTxUrl } from "../model/chain/columns";
-import type { RowProposal } from "../model/chain/match";
+import type { LookupFailure, RowProposal } from "../model/chain/match";
 import { When } from "../shell/live";
 
 /** The time of a row, with a way to the transaction itself where there is one. */
@@ -44,6 +44,15 @@ export function TimeCell({
 const quiet = "text-xs text-subtle-foreground";
 
 /** Which proposal caused a row. Plain and small: most rows of most accounts have none. */
+/** Why a row could not be checked, on its "Check again" button (audit F-065). */
+const UNCHECKED: Record<NonNullable<LookupFailure>, string> = {
+	limited:
+		"Hyperliquid's explorer is limiting requests right now. Check again in a minute.",
+	today:
+		"Hyperliquid's explorer refused more look-ups from this network address for today. Check again later.",
+	"no-answer": "Hyperliquid's explorer did not answer. Check again.",
+};
+
 export function ProposalCell({
 	match,
 	titles,
@@ -87,7 +96,7 @@ export function ProposalCell({
 						type="button"
 						onClick={onRetry}
 						aria-label="Check this row again"
-						title="Check again"
+						title={match.why ? UNCHECKED[match.why] : "Check again"}
 						className="rounded p-0.5 hover:bg-surface-2 hover:text-foreground"
 					>
 						<RefreshCw className="size-3" aria-hidden />

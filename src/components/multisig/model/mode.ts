@@ -105,3 +105,10 @@ export function balanceView(
 		inUse: plain(spot ? (usdc?.hold ?? "0") : null),
 	};
 }
+/**
+ * Beside the balances while the account mode could not be read: they are laid
+ * out as Hyperliquid reports any account, which for a unified treasury puts
+ * its whole balance under spot (audit F-060). Unread means warn, not guess.
+ */
+export const MODE_UNREAD =
+	"The account mode could not be read from Hyperliquid, so the balances are laid out as for a manual account. If this treasury is a unified account, its whole balance is the spot figure.";

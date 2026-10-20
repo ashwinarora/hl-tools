@@ -30,6 +30,7 @@ import {
 	done as doneToast,
 	failed as failedToast,
 	SEND_ANSWER,
+	SENDING,
 	stepAccepted,
 	stepNotSent,
 	TOAST_LINES,
@@ -1019,7 +1020,7 @@ function MovePart({
 			await (stage.canExecute ? doSubmit() : doSign());
 		});
 
-	const submit = () => void wallet.run("Waiting for the wallet…", doSubmit);
+	const submit = () => void wallet.run(SENDING, doSubmit);
 
 	if (marks) {
 		return (

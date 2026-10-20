@@ -1105,6 +1105,8 @@ function ProposeForm({
 															.filter((t): t is number => t !== null) ?? []
 													}
 													tokensLoading={universe.isFetching}
+													tokensFailed={universe.isError && !universe.data}
+													onRetryTokens={() => void universe.refetch()}
 													mode={state.mode}
 													receiver={lookup.receiver}
 													cost={cost}
@@ -1112,6 +1114,7 @@ function ProposeForm({
 													movable={movable}
 													agents={state.agents}
 													agentsFailed={!!state.agentsError}
+													modeFailed={state.modeFailed}
 													now={now}
 													max={amountMax}
 												/>

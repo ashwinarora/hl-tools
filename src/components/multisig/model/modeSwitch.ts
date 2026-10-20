@@ -163,4 +163,6 @@ export const MODE_SWITCH = {
 	/** `tag` is the mode in the Overview's words ("unified account"). */
 	now: (tag: string) => `This treasury's mode now: ${tag}.`,
 	reading: "Reading the account mode from Hyperliquid…",
+	/** The read failed: never "reading" for good (audit F-089). */
+	unread: "The account mode could not be read from Hyperliquid.",
 } as const;

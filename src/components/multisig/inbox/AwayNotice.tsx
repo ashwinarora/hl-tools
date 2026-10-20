@@ -31,6 +31,7 @@ const CHAIN_LINE: Record<Exclude<ChainState, "checked">, string> = {
 	checking: RELAY_COPY.awayChecking,
 	failed: RELAY_COPY.awayFailed,
 	partly: RELAY_COPY.awayPartly,
+	rested: RELAY_COPY.awayRested,
 	"not-checked": RELAY_COPY.awayNotChecked,
 };
 
@@ -251,7 +252,7 @@ export function AwayNotice({ scope }: { scope: AwayScope }) {
 						</NamesFor>
 						{g.chain !== "checked" && (
 							<p
-								className={`mt-2 text-xs xl:col-start-2 ${g.chain === "failed" || g.chain === "partly" ? "text-warning" : "text-subtle-foreground"}`}
+								className={`mt-2 text-xs xl:col-start-2 ${g.chain === "failed" || g.chain === "partly" || g.chain === "rested" ? "text-warning" : "text-subtle-foreground"}`}
 							>
 								{CHAIN_LINE[g.chain]}
 							</p>
