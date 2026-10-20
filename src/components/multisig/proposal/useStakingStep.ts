@@ -9,7 +9,7 @@ import {
 import { useMemo } from "react";
 import type { AccountTarget } from "#/components/tools/multisig/model";
 import { useTxLookups } from "../live/useChainMatch";
-import { type Staking, useStaking } from "../live/useStaking";
+import { type Staking, useStaking, useValidators } from "../live/useStaking";
 import {
 	type StepRecord,
 	stakingCandidates,
@@ -61,11 +61,21 @@ export function useStakingStep(
 		[step, active, multiSigUser, network],
 	);
 	const names = step?.kind === "stake" || step?.kind === "unstake";
-	const staking = useStaking(target, {
+	const live = useStaking(target, {
 		stakes: step?.kind === "unstake",
 		history: true,
 		validators: names,
 	});
+	// the validator's name is read also once the step is settled: it is what
+	// the page calls it (audit F-056); metadata, kept ten minutes
+	const settledNames = useValidators(network, names && !active);
+	const staking = useMemo(
+		() =>
+			live.validators || !settledNames
+				? live
+				: { ...live, validators: settledNames },
+		[live, settledNames],
+	);
 
 	const candidates = useMemo(
 		() =>

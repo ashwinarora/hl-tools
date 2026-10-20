@@ -1,7 +1,6 @@
 import {
 	type AccountMode,
 	type AgentInfo,
-	MULTISIG_FACTS,
 	type Network,
 	visibleText,
 	withdrawalFrom,
@@ -23,7 +22,7 @@ import {
 	REMOVE_AGENT,
 	type Receiver,
 } from "../model/actions";
-import { API_WALLET_PROPOSE } from "../model/apiWallet";
+import { API_WALLET_ACTS, API_WALLET_PROPOSE } from "../model/apiWallet";
 import type { MaxAmount } from "../model/max";
 import { modeLabel } from "../model/mode";
 import { MODE_SWITCH, type ModeTarget } from "../model/modeSwitch";
@@ -31,6 +30,7 @@ import { RELAY_COPY } from "../model/relay/copy";
 import type { CostLine } from "../model/send";
 import { shortAddress } from "../model/stage";
 import { fromNow } from "../model/time";
+import { usdcShown } from "../model/vault";
 import { useNames, Who } from "../names/Names";
 import { Help } from "../shell/Help";
 import { useMax } from "./MaxButton";
@@ -277,11 +277,11 @@ export function ActionFields({
 								options={[
 									{
 										value: "perps",
-										label: `Perps${movable.perps !== null ? ` · ${movable.perps} USDC` : ""}`,
+										label: `Perps${movable.perps !== null ? ` · ${usdcShown(movable.perps)} USDC` : ""}`,
 									},
 									{
 										value: "spot",
-										label: `Spot${movable.spotUsdc !== null ? ` · ${movable.spotUsdc} USDC` : ""}`,
+										label: `Spot${movable.spotUsdc !== null ? ` · ${usdcShown(movable.spotUsdc)} USDC` : ""}`,
 									},
 								]}
 							/>
@@ -398,8 +398,7 @@ export function ActionFields({
 			return (
 				<>
 					<Callout tone="warning" title="One key will act for the treasury">
-						{MULTISIG_FACTS.find((f) => f.id === "agent-bypass")?.text}{" "}
-						{API_WALLET_PROPOSE}
+						{API_WALLET_ACTS} {API_WALLET_PROPOSE}
 					</Callout>
 					<Field
 						label="API wallet address"

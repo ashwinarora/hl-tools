@@ -35,7 +35,9 @@ export const CHANGE = {
 			n === 1
 				? "the one signer"
 				: k === n
-					? `all ${n} of them`
+					? n === 2
+						? "both of them"
+						: `all ${n} of them`
 					: `any ${k} of the ${n}`
 		}.`,
 	/** With a change that takes someone out. */
@@ -50,6 +52,9 @@ export const CHANGE = {
 	backTitle: "Convert back to a normal account",
 	/** Its own choice in the propose form's picker: the same action as `backLink`. */
 	backChoice: "Convert back",
+	/** Under "Action" for Convert back. */
+	backDescription:
+		"Turn the treasury back into a normal account, run by its own key again.",
 	backLead:
 		"After this the account is a normal account again. Whoever holds its own key controls everything it holds, alone. The signers decide nothing any more.",
 	backUndo: "Keep it a treasury and change its signers instead",

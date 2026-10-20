@@ -60,6 +60,7 @@ import {
 	failed as failedToast,
 	unsure as unsureToast,
 } from "../model/toasts";
+import { usdcShown } from "../model/vault";
 import { requestTreasury } from "../relay/api";
 import { useRequest } from "../relay/queries";
 import { useRelay } from "../relay/useRelay";
@@ -530,7 +531,12 @@ function Wizard({
 							</p>
 						)}
 						<p className="text-sm">
-							{withRelay ? CREATE.switchNow : CREATE.switchNowNoRelay}
+							{/* follows the wallet: once it is on a signer, the treasury is theirs to use (audit F-017) */}
+							{wallet.address?.toLowerCase() !== account.toLowerCase()
+								? CREATE.onSigner
+								: withRelay
+									? CREATE.switchNow
+									: CREATE.switchNowNoRelay}
 						</p>
 						<div>
 							<p className="mb-1 text-xs font-medium text-muted-foreground">
@@ -652,7 +658,7 @@ function Wizard({
 													Perps account value
 												</dt>
 												<dd className="font-mono tabular-nums">
-													{perp.marginSummary.accountValue} USDC
+													{usdcShown(perp.marginSummary.accountValue)} USDC
 												</dd>
 											</div>
 										)}
@@ -660,7 +666,7 @@ function Wizard({
 											<div className="flex items-center gap-1.5">
 												<dt className="text-muted-foreground">Spot</dt>
 												<dd className="font-mono tabular-nums">
-													{usdc ? usdc.total : "0"} USDC
+													{usdc ? usdcShown(usdc.total) : "0"} USDC
 													{others > 0 && (
 														<span className="font-sans text-muted-foreground">
 															{" "}

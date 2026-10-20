@@ -275,7 +275,7 @@ export const CODE_COPY = {
 	intro:
 		"Your wallet cannot show this kind of action. It will show a code instead:",
 	check:
-		"This page worked that code out from the action above. Check that your wallet shows the same one.",
+		"This page worked that code out from the action above. Check that your wallet shows the same one; if it shows another, reject it in the wallet.",
 	asShown: (source: string) =>
 		`In the wallet it is the field "connectionId", next to "source: ${source}".`,
 	missing:

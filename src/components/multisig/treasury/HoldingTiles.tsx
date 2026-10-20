@@ -1,4 +1,5 @@
 import type { Address, Network } from "@hl-tools/core";
+import { Decimal } from "@hl-tools/core";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { cn } from "#/lib/utils";
@@ -161,8 +162,16 @@ export function HoldingTiles({
  * rest of the part's words under it, word for word ("1.5 HYPE staked" is
  * "1.5" · "HYPE" · "staked"). A part with no amount stays as it is.
  */
-function Amounts({ line }: { line: string }) {
+function Amounts({
+	line,
+	whole = null,
+}: {
+	line: string;
+	/** The first figure uncut: on hover and for a screen reader where the cut left digits out (audit F-001). */
+	whole?: string | null;
+}) {
 	const parts = line.split(" · ");
+	const exact = whole === null ? null : Decimal.tryParse(whole);
 	return (
 		<>
 			{parts.map((part, i) => {
@@ -174,7 +183,21 @@ function Amounts({ line }: { line: string }) {
 					>
 						{cut && !cut.before ? (
 							<>
-								{cut.figure}
+								{i === 0 &&
+								exact &&
+								!exact.eq(
+									Decimal.tryParse(cut.figure.replace(/,/g, "")) ?? exact,
+								) ? (
+									<span title={exact.toDisplay()}>
+										{cut.figure}
+										<span className="sr-only">
+											{" "}
+											(exactly {exact.toDisplay()})
+										</span>
+									</span>
+								) : (
+									cut.figure
+								)}
 								<span className="ml-1.5 font-sans text-xs font-normal tracking-normal text-muted-foreground">
 									{cut.unit}
 									{cut.after && (
@@ -213,7 +236,13 @@ function Holdings({
 	// one read a minute: what is staked does not show in the spot balances
 	const staked = stakingSummaryLine(useStaking(state.target).summary);
 	// and so is what sits in a vault
-	const inVaults = vaultsSummaryLine(useVaults(state.target).deposits);
+	const deposits = useVaults(state.target).deposits;
+	const inVaults = vaultsSummaryLine(deposits);
+	const vaultsWhole = deposits
+		? deposits
+				.reduce((sum, d) => sum.add(Decimal.parse(d.equity)), Decimal.ZERO)
+				.toString()
+		: null;
 	return (
 		<>
 			{staked && (
@@ -244,7 +273,7 @@ function Holdings({
 					<Figure
 						big
 						label="In vaults"
-						value={<Amounts line={inVaults} />}
+						value={<Amounts line={inVaults} whole={vaultsWhole} />}
 						extra={
 							linked && (
 								<Link

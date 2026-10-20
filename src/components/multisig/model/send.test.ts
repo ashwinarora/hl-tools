@@ -19,9 +19,11 @@ import {
 	type SendFacts,
 	sendsBefore,
 	sendsFirstLine,
+	shownFlags,
 	spotAvailable,
 	standingRefusals,
 	TO_HYPEREVM,
+	TO_ITSELF,
 } from "./send";
 
 const USDC = "USDC:0xeb62eee3685fc4c43992febcd9e75443";
@@ -345,6 +347,25 @@ describe("costLine: what sending to this address costs", () => {
 				IN_USE,
 			),
 		).toBeNull();
+	});
+	it("says a send to the treasury itself moves money between its own balances (audit F-002)", () => {
+		const IN_USE = { status: "active", mode: null } as unknown as Receiver;
+		expect(
+			line({ ...asset("spot", "perps"), destination: TREASURY }, IN_USE, {
+				self: TREASURY,
+			})?.text,
+		).toBe(TO_ITSELF);
+		expect(
+			shownFlags(
+				["funds_out", "policy_change"],
+				{ ...asset("spot", "perps"), destination: TREASURY },
+				TREASURY,
+			),
+		).toEqual(["policy_change"]);
+		// paying anyone else keeps it
+		expect(shownFlags(["funds_out"], asset("spot", "perps"), TREASURY)).toEqual(
+			["funds_out"],
+		);
 	});
 	it("is silent for what pays nobody", () => {
 		expect(line(null, FRESH)).toBeNull();

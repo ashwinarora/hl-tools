@@ -52,7 +52,12 @@ import { labelledLine } from "../model/parts";
 import { proposalTimeline, recordEntries } from "../model/proposalTimeline";
 import { refusalNote } from "../model/refusal";
 import { RELAY_COPY } from "../model/relay/copy";
-import { costLine, modeRefusal, standingRefusals } from "../model/send";
+import {
+	costLine,
+	modeRefusal,
+	shownFlags,
+	standingRefusals,
+} from "../model/send";
 import { changeSummary } from "../model/signerSet";
 import { signingNetwork } from "../model/signingNetwork";
 import {
@@ -496,6 +501,7 @@ export function ProposalView({
 					mode: treasury.mode,
 					perpsUsdc: treasury.perp?.withdrawable ?? null,
 					spot: treasury.spot,
+					self: target.address,
 				});
 
 	// the treasury page, when the relay lists this treasury for the wallet
@@ -768,9 +774,18 @@ export function ProposalView({
 									actions={<NetTag network={target.network} />}
 								>
 									<Headline text={description.headline} />
-									{(description.flags.length > 0 || !description.known) && (
+									{(shownFlags(
+										description.flags,
+										proposal.payload.action,
+										target.address,
+									).length > 0 ||
+										!description.known) && (
 										<div className="mt-3 flex flex-wrap gap-1.5">
-											{description.flags.map((f) => (
+											{shownFlags(
+												description.flags,
+												proposal.payload.action,
+												target.address,
+											).map((f) => (
 												<Tag
 													key={f}
 													// a long one wraps on a narrow phone; 10 px is as round as a full radius on one line

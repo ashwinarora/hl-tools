@@ -83,7 +83,7 @@ import { isOutcomeShare } from "../model/outcomes";
 import { NUMBERED_HERE, RELAY_COPY } from "../model/relay/copy";
 import { reproposeSource } from "../model/repropose";
 import { isItself } from "../model/selfTreasury";
-import { costLine, spotAvailable } from "../model/send";
+import { costLine, shownFlags, spotAvailable } from "../model/send";
 import { toLookUp, waitingProposals, wantedSet } from "../model/signerSet";
 import {
 	CODE_COPY,
@@ -668,7 +668,11 @@ function ProposeForm({
 	const secondDescribed = secondAction
 		? describeAction(secondAction, { network })
 		: null;
-	const flags = prepared?.flags ?? [];
+	const flags = shownFlags(
+		prepared?.flags ?? [],
+		prepared?.action ?? null,
+		address ?? "",
+	);
 	const unified = state.mode?.kind === "unified";
 	const movable = {
 		perps: state.perp?.withdrawable ?? null,
@@ -996,8 +1000,11 @@ function ProposeForm({
 												? "HYPE between spot, the staking balance and a validator."
 												: vaultOn
 													? "USDC into a vault, or back out of one."
-													: ACTION_KINDS.find((k) => k.kind === form.kind)
-															?.description
+													: converting
+														? // its own line, not Change signers' (audit F-079)
+															CHANGE.backDescription
+														: ACTION_KINDS.find((k) => k.kind === form.kind)
+																?.description
 										}
 									>
 										<div className="space-y-4">

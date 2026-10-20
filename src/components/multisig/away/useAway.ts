@@ -18,6 +18,7 @@ import {
 	type Network,
 	type Proposal,
 	parseLedger,
+	stakingActionOf,
 } from "@hl-tools/core";
 import {
 	type QueryClient,
@@ -35,6 +36,7 @@ import {
 import { useNetwork } from "#/store/networkStore";
 import { rest } from "../live/explorerList";
 import { lookupOf, useTxLookups } from "../live/useChainMatch";
+import { useValidators } from "../live/useStaking";
 import {
 	hashesToLookUp,
 	type MatchCandidate,
@@ -61,6 +63,7 @@ import {
 	type MarkRow,
 	type ProposalRow,
 } from "../model/relay/rows";
+import { actionLine } from "../model/staking";
 import {
 	listEventsAfter,
 	listLapsed,
@@ -98,6 +101,9 @@ export function marksQuery(client: RelayClient, wallet: Address) {
 interface NewsProposal extends AwayProposal {
 	readonly network: Network;
 	readonly treasury: Address;
+	/** Kept to name a staking step's validator once the list is read. */
+	readonly proposal: Proposal;
+	readonly proposedBy: Address;
 }
 
 interface News {
@@ -154,6 +160,8 @@ function newsQuery(client: RelayClient, wallet: Address, queries: QueryClient) {
 					move: moves.get(proposal.digest) ?? null,
 					network: row.network,
 					treasury: row.treasury,
+					proposal,
+					proposedBy: row.createdBy,
 				}),
 			);
 			return { events, proposals };
@@ -446,7 +454,40 @@ export function useAway(scope: AwayScope): Away {
 	const lookups = useTxLookups(network, wanted);
 
 	const marksNow = marks.data;
-	const newsNow = news.data;
+	// a staking step names its validator by name, as every list does (audit F-056)
+	const staking = (n: Network) =>
+		!!news.data?.proposals.some(
+			(p) => p.network === n && !!stakingActionOf(p.proposal.payload.action),
+		);
+	const mainnetNames = useValidators("mainnet", staking("mainnet"));
+	const testnetNames = useValidators("testnet", staking("testnet"));
+	const newsNow = useMemo(() => {
+		const d = news.data;
+		if (!d) return d;
+		const names = { mainnet: mainnetNames, testnet: testnetNames };
+		let proposals = d.proposals.map((p) => {
+			const v = names[p.network];
+			return v && stakingActionOf(p.proposal.payload.action)
+				? { ...p, line: actionLine(p.proposal.payload.action, v, p.network) }
+				: p;
+		});
+		for (const n of ["mainnet", "testnet"] as const) {
+			const v = names[n];
+			if (!v) continue;
+			const refs = moveRefs(
+				proposals
+					.filter((p) => p.network === n)
+					.map((p) => ({ proposal: p.proposal, proposedBy: p.proposedBy })),
+				v,
+			);
+			proposals = proposals.map((p) =>
+				p.network === n && refs.has(p.proposal.digest)
+					? { ...p, move: refs.get(p.proposal.digest) ?? null }
+					: p,
+			);
+		}
+		return { ...d, proposals };
+	}, [news.data, mainnetNames, testnetNames]);
 	const built = useMemo(() => {
 		const groups: AwayGroup[] = [];
 		const baselines: MarkWrite[] = [];

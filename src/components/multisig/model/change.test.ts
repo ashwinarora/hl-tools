@@ -45,6 +45,11 @@ describe("the Change signers form's sentences", () => {
 				expect(t, `${word} in "${t}"`).not.toMatch(word);
 		}
 	});
+	it('say "both" of two signers, as the wizard does (audit F-087)', () => {
+		expect(CHANGE.whoDecides(2, 2)).toBe(
+			"The current signers decide this: both of them.",
+		);
+	});
 	it("say who decides, by the number that holds now", () => {
 		expect(CHANGE.whoDecides(2, 3)).toBe(
 			"The current signers decide this: any 2 of the 3.",

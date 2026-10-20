@@ -672,7 +672,10 @@ describe("the Vaults tab", () => {
 		// what "withdraw everything" leaves, a first hour's profit, a small loss
 		expect(usdcShown("0.000653")).toBe("0.000653");
 		expect(usdcShown("0.0001374779")).toBe("0.000137");
-		expect(usdcShown("-0.0000004733")).toBe("0");
+		// a figure the cut would turn to nothing is shown whole (audit F-051)
+		expect(usdcShown("-0.0000004733")).toBe("-0.0000004733");
+		expect(usdcShown("0.0000001")).toBe("0.0000001");
+		expect(usdcShown("0.00000015")).toBe("0.00000015");
 		expect(usdcShown("-12.349")).toBe("-12.34");
 		expect(usdcShown("much")).toBe("much");
 	});

@@ -4,6 +4,7 @@ import type {
 	LedgerRow,
 	OrderHistoryRow,
 } from "@hl-tools/core";
+import { Decimal } from "@hl-tools/core";
 import { type CsvCell, csvTime } from "#/lib/download";
 import {
 	fillValue,
@@ -14,6 +15,9 @@ import {
 	orderTypeText,
 } from "./columns";
 import type { RowProposal } from "./match";
+
+/** A figure as digits, whatever form Hyperliquid wrote it in ("1e-7" is 0.0000001). */
+const canonical = (v: string): string => Decimal.tryParse(v)?.toString() ?? v;
 
 /**
  * The "On Hyperliquid" tables as CSV: the rows the page holds, each figure
@@ -80,9 +84,10 @@ export function transfersCsv(
 				what.party,
 				ledgerAmount(r),
 				r.token,
-				fee,
+				// every figure written out in full, never in exponent form (audit F-053)
+				fee === null ? null : canonical(fee),
 				fee === null ? null : r.feeToken,
-				r.requested,
+				r.requested === null ? null : canonical(r.requested),
 				r.hash,
 				proposalCell(proposalOf(r)),
 			];

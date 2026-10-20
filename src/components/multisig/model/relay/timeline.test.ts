@@ -9,6 +9,7 @@ import {
 	historyCsv,
 	historyExport,
 	historyFilename,
+	wholeAddresses,
 } from "./timeline";
 
 const D1 = `0x${"d1".repeat(32)}` as Hex;
@@ -724,5 +725,21 @@ describe("a move of two steps in the Signing log", () => {
 		expect(
 			said([eventRow("signature_added", { id: 1, digest: alone, actor: C })]),
 		).toEqual([`${short(C)} signed a proposal.`]);
+	});
+});
+
+describe("the Signing log as a file names every address whole (audit F-050)", () => {
+	const VAULT = "0x49d05977597b22e3c73d654c351adde9d9920e18";
+	it("writes the short form of a named vault whole", () => {
+		const whole = wholeAddresses([VAULT]);
+		expect(whole("Withdraw 5 USDC from vault 0x49d0…0e18")).toBe(
+			`Withdraw 5 USDC from vault ${VAULT}`,
+		);
+	});
+	it("leaves a short form two addresses share as it is", () => {
+		const twin = `0x49d0${"1".repeat(30)}0e18`;
+		expect(wholeAddresses([VAULT, twin])("vault 0x49d0…0e18")).toBe(
+			"vault 0x49d0…0e18",
+		);
 	});
 });

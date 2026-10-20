@@ -535,6 +535,41 @@ describe("awayItems: money that left", () => {
 			}),
 		).toEqual(["40 USDC left the treasury with no proposal on record."]);
 	});
+	it("counts all that left: a withdrawal's request with its fee, a send with its fee (audit F-057)", () => {
+		expect(
+			texts({
+				chain: {
+					ledger: ledger([
+						row({
+							type: "withdraw",
+							counterparty: null,
+							amount: "1.0",
+							fee: "1.0",
+							feeToken: "USDC",
+							requested: "2.0",
+						}),
+						"none",
+					]),
+					agents: null,
+				},
+			}),
+		).toEqual([
+			"2 USDC (1 arrives, 1 USDC bridge fee) left the treasury with no proposal on record.",
+		]);
+		expect(
+			texts({
+				chain: {
+					ledger: ledger([
+						row({ amount: "1234567.1234567", fee: "1.0", feeToken: "USDC" }),
+						"none",
+					]),
+					agents: null,
+				},
+			}),
+		).toEqual([
+			`1234567.1234567 USDC and a 1 USDC fee left for ${short(RECIPIENT)} with no proposal on record.`,
+		]);
+	});
 	it("writes the amount as the tables do", () => {
 		expect(
 			texts({

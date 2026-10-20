@@ -524,9 +524,10 @@ export function usdcShown(v: string): string {
 	const d = Decimal.tryParse(v);
 	if (!d) return v;
 	const small = !d.isZero() && d.abs().lt(Decimal.parse("0.01"));
-	return small
-		? d.roundToDecimals(VAULT_USD_DECIMALS, "down").toDisplay()
-		: d.roundToDecimals(2, "down").toDisplay({ minDecimals: 2 });
+	if (!small) return d.roundToDecimals(2, "down").toDisplay({ minDecimals: 2 });
+	const cut = d.roundToDecimals(VAULT_USD_DECIMALS, "down");
+	// a figure the cut would turn to nothing is shown whole (audit F-051)
+	return (cut.isZero() ? d : cut).toDisplay();
 }
 
 /**
