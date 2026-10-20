@@ -265,13 +265,28 @@ export function planStaking(
 		validators?.find((v) => v.address === address) ?? null;
 	const label = (address: string) => validatorLabel(address, validators);
 
-	const amount = amountField(
+	const typed = amountField(
 		form.amount,
 		HYPE_WEI_DECIMALS,
 		"HYPE",
 		issues,
 		AMOUNT,
-	)?.toString();
+	);
+	// what the wallet signs is a 64-bit whole number of units: a larger
+	// amount cannot be signed at all (audit F-114)
+	if (typed && typed.toScaledBigInt(HYPE_WEI_DECIMALS) > UINT64_MAX)
+		issues.push(
+			issue(
+				"amount.too_large",
+				"error",
+				"That is more HYPE than an action can carry.",
+				{ path: AMOUNT },
+			),
+		);
+	const amount =
+		typed && typed.toScaledBigInt(HYPE_WEI_DECIMALS) <= UINT64_MAX
+			? typed.toString()
+			: undefined;
 	/** A validator HYPE is staked with: it has to be one, where the list was read. */
 	const target = (value: string, path: string): string | null => {
 		const address = addressField(value, path, "The validator", issues, false);
@@ -401,6 +416,9 @@ function wouldRefuseDetail(
 	}
 	return "";
 }
+
+/** The largest whole number an action's 64-bit field holds. */
+const UINT64_MAX = 2n ** 64n - 1n;
 
 /**
  * The actions of a plan as Hyperliquid takes them: each with the chain fields

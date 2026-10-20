@@ -60,7 +60,7 @@ function filled(
 		kind: "ok",
 		amount: amount.toString(),
 		basis: left.isPositive()
-			? `${basis(amount.toString())} The last ${left.toString()} ${unit} stays: this action carries ${decimals} decimals.`
+			? `${basis(amount.toString())} The last ${left.toString()} ${unit} stays: this form moves ${unit} to ${decimals} decimals.`
 			: basis(amount.toString()),
 	};
 }

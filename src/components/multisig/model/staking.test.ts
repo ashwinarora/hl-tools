@@ -701,3 +701,15 @@ describe("what the Staking section shows", () => {
 		expect(stakingSummaryLine(null)).toBeNull();
 	});
 });
+
+describe("an amount no action can carry (audit F-114)", () => {
+	it("is refused in the form: the wallet signs a 64-bit whole number", () => {
+		const big = plan({ amount: "200000000000" });
+		expect(codes(big.issues)).toContain("amount.too_large");
+		expect(big.steps).toBeNull();
+		// the largest that fits still builds
+		expect(
+			codes(plan({ amount: "184467440737.09551615" }).issues),
+		).not.toContain("amount.too_large");
+	});
+});

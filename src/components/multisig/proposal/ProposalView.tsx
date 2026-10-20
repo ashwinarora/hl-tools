@@ -31,6 +31,8 @@ import { CONTROL_REFRESH_MS } from "../live/useControl";
 import { useReceiver } from "../live/useReceiver";
 import { useRecord } from "../live/useRecord";
 import { useSignerChecks } from "../live/useSignerChecks";
+import { useTokenList } from "../live/useTokenList";
+import { amountWarnings } from "../model/actions";
 import { explorerTxUrl } from "../model/chain/columns";
 import { ledgerEvidence } from "../model/chain/match";
 import { laterSends, shutOutByTx } from "../model/chain/overtaken";
@@ -423,6 +425,19 @@ export function ProposalView({
 		refusal: refusal?.title ?? changeJudged?.blockedBy ?? null,
 	});
 	const role = ROLE[stage.role];
+	// a pasted or copied amount, judged by the guided forms' rules (decision D9)
+	const tokenSend = ["spotSend", "sendAsset"].includes(
+		String(proposal.payload.action.type),
+	);
+	const tokenList = useTokenList(
+		target.network,
+		tokenSend && COSTED.has(stage.phase),
+	);
+	const amountLines = COSTED.has(stage.phase)
+		? amountWarnings(proposal.payload.action, {
+				tokens: tokenList.data?.tokens,
+			})
+		: [];
 	const description = useMemo(
 		// with its network: a vault action names none, and its lockup is the network's
 		() =>
@@ -837,6 +852,20 @@ export function ProposalView({
 										)}
 									</Facts>
 									<CostNote line={cost} />
+									{amountLines.map((w) => (
+										<p
+											key={w.code}
+											className="mt-3 flex items-start gap-1.5 text-[13px] text-warning"
+										>
+											<span
+												className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-warning"
+												aria-hidden
+											/>
+											<span className="[overflow-wrap:anywhere]">
+												{w.message}
+											</span>
+										</p>
+									))}
 									{paysZeroAddress(proposal.payload.action) && (
 										// what the proposer was told, said to every co-signer (audit F-018)
 										<p className="mt-3 flex items-start gap-1.5 text-[13px] text-warning">

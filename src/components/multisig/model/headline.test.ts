@@ -42,6 +42,23 @@ describe("the amount a sentence about an action names", () => {
 		).toMatchObject({ figure: "10", unit: "HYPE" });
 	});
 
+	it("takes a figure as a pasted action writes it, and a token name in any case", () => {
+		expect(amountIn(`Send .01 USDC (perps) to ${A}`)).toMatchObject({
+			figure: ".01",
+			unit: "USDC",
+		});
+		expect(amountIn(`Send +0.01 USDC to ${A}`)).toMatchObject({
+			figure: "+0.01",
+		});
+		expect(amountIn(`Send 1 TestPascal1 to ${A}`)).toMatchObject({
+			figure: "1",
+			unit: "TestPascal1",
+		});
+		expect(amountIn(`Send 2 kHYPE to ${A}`)).toMatchObject({ unit: "kHYPE" });
+		// a word after a figure is no unit
+		expect(amountIn(`Send 5 to ${A}`)).toBeNull();
+	});
+
 	it("is not a figure deep in the sentence, or one without a unit", () => {
 		expect(amountIn(`Remove the API wallet named bot 50 USDC`)).toBeNull();
 		expect(amountIn("Change signers to 2 of 3")).toBeNull();

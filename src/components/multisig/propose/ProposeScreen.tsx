@@ -4,7 +4,6 @@ import {
 	describeAction,
 	fromPlain,
 	type Issue,
-	infoClient,
 	isZeroAddress,
 	type Network,
 	nonceWindow,
@@ -19,7 +18,7 @@ import {
 	tieSteps,
 	ZERO_ADDRESS,
 } from "@hl-tools/core";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FileSignature, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -45,6 +44,7 @@ import { useNetworkHydrated } from "#/store/networkStore";
 import { useReceiver } from "../live/useReceiver";
 import { useSignerChecks } from "../live/useSignerChecks";
 import { useStaking } from "../live/useStaking";
+import { useTokenList } from "../live/useTokenList";
 import { useVault, useVaultDetails, useVaults } from "../live/useVaults";
 import {
 	ACTION_KINDS,
@@ -404,15 +404,14 @@ function ProposeForm({
 		};
 	}, [supersedes, hydrated, network, address]);
 
-	const universe = useQuery({
-		queryKey: ["universe", network],
-		queryFn: () => infoClient(network).universe(),
-		staleTime: 5 * 60_000,
-		retry: 1,
-		// both sends name their token by its id
-		enabled:
-			hydrated && (form.kind === "sendUsdc" || form.kind === "sendToken"),
-	});
+	// both sends name their token by its id; Raw JSON is checked against it too
+	const universe = useTokenList(
+		network,
+		hydrated &&
+			(form.kind === "sendUsdc" ||
+				form.kind === "sendToken" ||
+				form.kind === "raw"),
+	);
 
 	// Hyperliquid carries out an account's sends and withdrawals only in the
 	// order of their numbers, so a new one is numbered after every one on record

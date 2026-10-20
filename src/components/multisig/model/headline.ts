@@ -11,9 +11,15 @@
 /** Where somebody else's words begin. */
 const QUOTED = /["“”«»]/;
 
-/** At most two words (the verb), then a figure and its unit. */
+/**
+ * At most two words (the verb), then a figure and its unit. The figure may be
+ * written ".01" or "+0.01", as a pasted action can have it (audit F-054); a
+ * unit is a token's name, lower-case letters included ("kHYPE",
+ * "TestPascal1", audit F-113), with at least one capital, so that "Send 5 to …"
+ * does not read "to" as a unit.
+ */
 const OWN_AMOUNT =
-	/^((?:\S+ ){0,2})(\d[\d,]*(?:\.\d+)?) ([A-Z][A-Z0-9]{1,11})(?=$|[\s),.;:])/;
+	/^((?:\S+ ){0,2})(\+?(?:\d[\d,]*(?:\.\d+)?|\.\d+)) ((?=[A-Za-z0-9]*[A-Z])[A-Za-z][A-Za-z0-9]{1,11})(?=$|[\s),.;:])/;
 
 export interface AmountCut {
 	/** The words before the figure, as written ("Send"); empty when it opens the sentence. */
