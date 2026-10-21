@@ -22,6 +22,7 @@ import WalletTable from "#/components/WalletTable";
 import { useAutoChain } from "#/hooks/useAutoChain";
 import { useWebData, type WebDataSnapshot } from "#/hooks/useWebData";
 import { type AbstractionMode, isUnifiedLike } from "#/lib/hlActions";
+import { pageHead } from "#/lib/pages";
 import { tool } from "#/lib/tools";
 import { cn } from "#/lib/utils";
 
@@ -31,7 +32,10 @@ const ABSTRACTION_LABEL: Record<AbstractionMode, string> = {
 	disabled: "Standard",
 };
 
-export const Route = createFileRoute("/faucet-miner/")({ component: App });
+export const Route = createFileRoute("/faucet-miner/")({
+	head: () => pageHead("/faucet-miner"),
+	component: App,
+});
 
 function fmt(value: string | number): string {
 	const num = typeof value === "string" ? Number.parseFloat(value) : value;

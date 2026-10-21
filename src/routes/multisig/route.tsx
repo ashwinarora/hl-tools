@@ -4,10 +4,13 @@ import { RelayProvider } from "#/components/multisig/relay/RelayProvider";
 import { MultisigShell } from "#/components/multisig/shell/MultisigShell";
 import { NotHere } from "#/components/multisig/shell/NotHere";
 import WalletProviders from "#/integrations/wallet/WalletProviders";
+import { NOINDEX } from "#/lib/pages";
 import { signerConfig } from "#/lib/signerWagmiConfig";
 
 export const Route = createFileRoute("/multisig")({
-	head: () => ({ meta: [{ title: SECTION_TITLE }] }),
+	// a treasury, a proposal or a form is one visitor's state: out of search,
+	// unless the page is an entry page (`pageHead` undoes this)
+	head: () => ({ meta: [{ title: SECTION_TITLE }, NOINDEX] }),
 	component: MultisigLayout,
 	// an unknown address under /multisig keeps the section's frame and says so
 	notFoundComponent: NotHere,

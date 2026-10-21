@@ -13,6 +13,7 @@ import {
 	ExplainTab,
 } from "#/components/tools/orders/ExplainTab";
 import { useUniverse } from "#/hooks/useHyperliquid";
+import { pageHead } from "#/lib/pages";
 import { clearShared, readShared } from "#/lib/share";
 import { tool } from "#/lib/tools";
 import { useHandoffStore } from "#/store/handoffStore";
@@ -27,9 +28,7 @@ export const Route = createFileRoute("/tools/orders")({
 		sample: typeof s.sample === "string" ? s.sample : undefined,
 		tab: s.tab === "explain" || s.tab === "compose" ? s.tab : undefined,
 	}),
-	head: () => ({
-		meta: [{ title: "Order Composer & Failure Explainer — hl-tools" }],
-	}),
+	head: () => pageHead("/tools/orders"),
 	component: OrdersTool,
 });
 

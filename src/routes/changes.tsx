@@ -1,11 +1,12 @@
 import { RULE_REGISTRY } from "@hl-tools/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronRight, History } from "lucide-react";
+import { pageHead } from "#/lib/pages";
 import { TOOLS } from "#/lib/tools";
 
 export const Route = createFileRoute("/changes")({
 	component: Changes,
-	head: () => ({ meta: [{ title: "Protocol rule changes — hl-tools" }] }),
+	head: () => pageHead("/changes"),
 });
 
 function Changes() {

@@ -232,12 +232,18 @@ export function countOpen(
 /** The section's title in the browser tab. */
 export const SECTION_TITLE = "Multisig — hl-tools";
 
+/** A count already in front of a title, "(3) " or "(99+) ". */
+const COUNTED = /^\(\d+\+?\) /;
+
 /**
  * The tab's title with what needs the signer in front, the way a mail client
  * counts unread mail: "(3) Multisig — hl-tools". A tab in the background then
- * says there is something to do without any notification being sent.
+ * says there is something to do without any notification being sent. The
+ * count goes in front of the page's own title (`base`, which search engines
+ * read too), never in place of it, and never twice.
  */
-export function tabTitle(needs: number): string {
-	if (!(needs >= 1)) return SECTION_TITLE;
-	return `(${needs > 99 ? "99+" : Math.floor(needs)}) ${SECTION_TITLE}`;
+export function tabTitle(needs: number, base: string = SECTION_TITLE): string {
+	const plain = base.replace(COUNTED, "") || SECTION_TITLE;
+	if (!(needs >= 1)) return plain;
+	return `(${needs > 99 ? "99+" : Math.floor(needs)}) ${plain}`;
 }

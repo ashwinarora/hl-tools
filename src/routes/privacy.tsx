@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { pageHead } from "#/lib/pages";
 
 export const Route = createFileRoute("/privacy")({
-	head: () => ({ meta: [{ title: "Privacy Policy — hl-tools" }] }),
+	head: () => pageHead("/privacy"),
 	component: PrivacyPage,
 });
 

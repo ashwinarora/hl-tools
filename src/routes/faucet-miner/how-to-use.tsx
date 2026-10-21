@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
+import { pageHead } from "#/lib/pages";
 
 export const Route = createFileRoute("/faucet-miner/how-to-use")({
-	head: () => ({
-		meta: [{ title: "How the faucet miner works — hl-tools" }],
-	}),
+	head: () => pageHead("/faucet-miner/how-to-use"),
 	component: HowToUse,
 });
 

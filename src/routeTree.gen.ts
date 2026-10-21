@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as HowToUseRouteImport } from './routes/how-to-use'
 import { Route as ChangesRouteImport } from './routes/changes'
@@ -35,6 +36,11 @@ import { Route as MultisigAddRouteImport } from './routes/multisig/add'
 import { Route as FaucetMinerHowToUseRouteImport } from './routes/faucet-miner/how-to-use'
 import { Route as MultisigTNetworkAddressRouteImport } from './routes/multisig/t.$network.$address'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
   '/privacy': typeof PrivacyRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/multisig/add': typeof MultisigAddRoute
   '/multisig/create': typeof MultisigCreateRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
   '/privacy': typeof PrivacyRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/multisig/add': typeof MultisigAddRoute
   '/multisig/create': typeof MultisigCreateRoute
@@ -221,6 +229,7 @@ export interface FileRoutesById {
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
   '/privacy': typeof PrivacyRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/multisig/add': typeof MultisigAddRoute
   '/multisig/create': typeof MultisigCreateRoute
@@ -250,6 +259,7 @@ export interface FileRouteTypes {
     | '/changes'
     | '/how-to-use'
     | '/privacy'
+    | '/sitemap.xml'
     | '/faucet-miner/how-to-use'
     | '/multisig/add'
     | '/multisig/create'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/changes'
     | '/how-to-use'
     | '/privacy'
+    | '/sitemap.xml'
     | '/faucet-miner/how-to-use'
     | '/multisig/add'
     | '/multisig/create'
@@ -302,6 +313,7 @@ export interface FileRouteTypes {
     | '/changes'
     | '/how-to-use'
     | '/privacy'
+    | '/sitemap.xml'
     | '/faucet-miner/how-to-use'
     | '/multisig/add'
     | '/multisig/create'
@@ -330,6 +342,7 @@ export interface RootRouteChildren {
   ChangesRoute: typeof ChangesRoute
   HowToUseRoute: typeof HowToUseRoute
   PrivacyRoute: typeof PrivacyRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Rpc1337Route: typeof Rpc1337Route
   ToolsAssetsRoute: typeof ToolsAssetsRoute
   ToolsCorewriterRoute: typeof ToolsCorewriterRoute
@@ -343,6 +356,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -567,6 +587,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChangesRoute: ChangesRoute,
   HowToUseRoute: HowToUseRoute,
   PrivacyRoute: PrivacyRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   Rpc1337Route: Rpc1337Route,
   ToolsAssetsRoute: ToolsAssetsRoute,
   ToolsCorewriterRoute: ToolsCorewriterRoute,

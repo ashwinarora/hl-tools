@@ -2052,6 +2052,24 @@ Branch `feat/home-bento`, off `main` at 8b7a05f. Six designs were built first in
 
 142 test files, 3,485 unit tests, Biome and `tsc` clean, the build passes.
 
+## 27. Search: titles, canonicals, sitemap (2026-10-21)
+
+Branch `feat/seo`, off `main` at 5a01df1. Checked on a production build (`bun run build`, the server on port 3100) with `curl` and in Brave.
+
+| Check | Result |
+|---|---|
+| Entry pages | `/`, `/multisig`, `/multisig/glossary`, `/tools/assets`, `/faucet-miner`, `/privacy`: each its own title and description, `robots` "index, follow", one canonical (`https://hltools.tech/<path>`) |
+| A query string | `/tools/assets?id=hype`: canonical `https://hltools.tech/tools/assets` |
+| Working pages | `/multisig/proposal?digest=…`, `/multisig/propose`, `/multisig/t/mainnet/0x…01`: "noindex, follow", no canonical |
+| `/sitemap.xml` | 200 to GET and HEAD, `application/xml`, the 14 entry pages and nothing else |
+| `/robots.txt` | `Disallow: /rpc/` and the `Sitemap:` line |
+| Structured data | `/` carries one `application/ld+json` block (WebSite with its alternate names, the application with no price); the console shows no policy violation from it (the one `eval` issue is the same on the live site, from the wallet extensions) |
+| The tab title after load | `/multisig/glossary` keeps "Hyperliquid Multisig glossary — hl-tools"; moving to `/multisig` (client-side) gives that page's title and canonical |
+| Lighthouse | SEO 100 on `/multisig` (desktop) |
+| `/nope` | 404 |
+
+`pages.test.ts` holds the table: every tool listed, every path a route, no working page, unique titles and descriptions of 50 to 180 characters, the wording rules, canonicals without a query, and the sitemap listing exactly the table. 143 test files, 3,495 unit tests, Biome and `tsc` clean, the build passes.
+
 ## Feedback round 1 (2026-10-04)
 
 Changes from the first round of user feedback, each verified in the browser (desktop 1440×900 dark, plus 375×812 light for the composer).

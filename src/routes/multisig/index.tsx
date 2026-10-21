@@ -4,9 +4,13 @@ import { InboxScreen } from "#/components/multisig/inbox/InboxScreen";
 import { Landing } from "#/components/multisig/inbox/Landing";
 import { OpenScreen } from "#/components/multisig/OpenScreen";
 import { useRelay } from "#/components/multisig/relay/useRelay";
+import { pageHead } from "#/lib/pages";
 import { useHandoffStore } from "#/store/handoffStore";
 
-export const Route = createFileRoute("/multisig/")({ component: MultisigHome });
+export const Route = createFileRoute("/multisig/")({
+	head: () => pageHead("/multisig"),
+	component: MultisigHome,
+});
 
 /**
  * The section's front door. With no relay it is the link-and-file screen;
