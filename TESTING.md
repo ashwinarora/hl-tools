@@ -2061,7 +2061,7 @@ Branch `feat/seo`, off `main` at 5a01df1. Checked on a production build (`bun ru
 | Entry pages | `/`, `/multisig`, `/multisig/glossary`, `/tools/assets`, `/faucet-miner`, `/privacy`: each its own title and description, `robots` "index, follow", one canonical (`https://hltools.tech/<path>`) |
 | A query string | `/tools/assets?id=hype`: canonical `https://hltools.tech/tools/assets` |
 | Working pages | `/multisig/proposal?digest=…`, `/multisig/propose`, `/multisig/t/mainnet/0x…01`: "noindex, follow", no canonical |
-| `/sitemap.xml` | 200 to GET and HEAD, `application/xml`, the 14 entry pages and nothing else |
+| `/sitemap.xml` | 200 to GET and HEAD, `application/xml`, the 15 entry pages and nothing else |
 | `/robots.txt` | `Disallow: /rpc/` and the `Sitemap:` line |
 | Structured data | `/` carries one `application/ld+json` block (WebSite with its alternate names, the application with no price); the console shows no policy violation from it (the one `eval` issue is the same on the live site, from the wallet extensions) |
 | The tab title after load | `/multisig/glossary` keeps "Hyperliquid Multisig glossary — hl-tools"; moving to `/multisig` (client-side) gives that page's title and canonical |
