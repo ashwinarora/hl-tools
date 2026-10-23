@@ -40,6 +40,7 @@ import { TraceFlow, TransferFlow } from "#/components/tools/trace/TraceFlow";
 import { TransferDetail } from "#/components/tools/trace/TransferDetail";
 import { Button } from "#/components/ui/button";
 import { errorMessage } from "#/hooks/useHyperliquid";
+import { pageHead } from "#/lib/pages";
 import { tool } from "#/lib/tools";
 import { useHandoffStore } from "#/store/handoffStore";
 import {
@@ -55,7 +56,7 @@ export const Route = createFileRoute("/tools/trace")({
 		sample: typeof s.sample === "string" ? s.sample : undefined,
 		tx: typeof s.tx === "string" ? s.tx : undefined,
 	}),
-	head: () => ({ meta: [{ title: "Cross-layer Trace — hl-tools" }] }),
+	head: () => pageHead("/tools/trace"),
 	component: TraceTool,
 });
 

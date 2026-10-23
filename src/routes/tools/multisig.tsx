@@ -9,6 +9,7 @@ import {
 	type AccountTarget,
 	ADDRESS_RE,
 } from "#/components/tools/multisig/model";
+import { pageHead } from "#/lib/pages";
 import { clearShared, readShared } from "#/lib/share";
 import { tool } from "#/lib/tools";
 import { useHandoffStore } from "#/store/handoffStore";
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/tools/multisig")({
 		address: typeof s.address === "string" ? s.address : undefined,
 		sample: typeof s.sample === "string" ? s.sample : undefined,
 	}),
-	head: () => ({ meta: [{ title: "Multisig Inspector — hl-tools" }] }),
+	head: () => pageHead("/tools/multisig"),
 	component: MultisigTool,
 });
 

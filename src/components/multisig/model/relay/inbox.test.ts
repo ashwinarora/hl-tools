@@ -210,6 +210,13 @@ describe("tabTitle", () => {
 			expect(tabTitle(n)).toBe(SECTION_TITLE);
 		expect(SECTION_TITLE).toBe("Multisig — hl-tools");
 	});
+	it("keeps the page's own title and puts the count in front of it once", () => {
+		const page = "Hyperliquid Multisig glossary — hl-tools";
+		expect(tabTitle(2, page)).toBe(`(2) ${page}`);
+		expect(tabTitle(5, `(2) ${page}`)).toBe(`(5) ${page}`);
+		expect(tabTitle(0, `(99+) ${page}`)).toBe(page);
+		expect(tabTitle(1, "")).toBe("(1) Multisig — hl-tools");
+	});
 });
 
 describe("what the finaliser's row offers (audit F-018)", () => {

@@ -33,6 +33,7 @@ import {
 	type Tone,
 } from "#/components/hub/status";
 import { Button } from "#/components/ui/button";
+import { pageHead } from "#/lib/pages";
 import { tool } from "#/lib/tools";
 import { cn } from "#/lib/utils";
 import { useHandoffStore } from "#/store/handoffStore";
@@ -42,7 +43,7 @@ export const Route = createFileRoute("/tools/rpc")({
 	validateSearch: (s: Record<string, unknown>): { sample?: string } => ({
 		sample: typeof s.sample === "string" ? s.sample : undefined,
 	}),
-	head: () => ({ meta: [{ title: "RPC Capability Probe — hl-tools" }] }),
+	head: () => pageHead("/tools/rpc"),
 	component: RpcTool,
 });
 

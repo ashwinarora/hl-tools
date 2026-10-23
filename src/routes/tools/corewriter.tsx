@@ -25,6 +25,7 @@ import { DecodeResult } from "#/components/tools/corewriter/DecodeResult";
 import { Precompiles } from "#/components/tools/corewriter/Precompiles";
 import { Button } from "#/components/ui/button";
 import { useUniverse } from "#/hooks/useHyperliquid";
+import { pageHead } from "#/lib/pages";
 import { tool } from "#/lib/tools";
 import { useHandoffStore } from "#/store/handoffStore";
 import {
@@ -45,7 +46,7 @@ export const Route = createFileRoute("/tools/corewriter")({
 				? s.tab
 				: undefined,
 	}),
-	head: () => ({ meta: [{ title: "CoreWriter Workbench — hl-tools" }] }),
+	head: () => pageHead("/tools/corewriter"),
 	component: CoreWriterTool,
 });
 

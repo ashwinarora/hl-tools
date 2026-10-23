@@ -20,7 +20,6 @@ import {
 	countNeeds,
 	countOpen,
 	countTreasuriesOn,
-	SECTION_TITLE,
 	tabTitle,
 } from "../model/relay/inbox";
 import { shortAddress } from "../model/stage";
@@ -343,21 +342,32 @@ function NetworkHint() {
 /**
  * Puts what needs the signer into the browser tab's title, "(3) Multisig —
  * hl-tools", so a tab in the background says there is something to do. No
- * notification is sent anywhere. The plain title returns when the count is
- * zero, when the signer signs out, and (the router's doing) outside the section.
+ * notification is sent anywhere. The count goes in front of the page's own
+ * title (its route's `head`), which stays what search engines read. The plain
+ * title returns when the count is zero, when the signer signs out, and (the
+ * router's doing) outside the section.
  */
 function TitleCount() {
 	const nav = useNav();
+	const base = useRouterState({
+		select: (s) => {
+			for (const m of [...s.matches].reverse()) {
+				const t = m.meta?.find((x) => x?.title)?.title;
+				if (t) return t;
+			}
+			return "";
+		},
+	});
 	const path = useRouterState({ select: (s) => s.location.pathname });
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `path` re-applies the title after the router rewrote it on navigation
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `path` re-applies the count after the router rewrote the title on navigation
 	useEffect(() => {
-		document.title = tabTitle(nav.needs);
-	}, [nav.needs, path]);
+		document.title = tabTitle(nav.needs, base);
+	}, [nav.needs, base, path]);
 	useEffect(
 		() => () => {
 			// still inside the section (signed out, wallet switched): back to the plain title
 			if (window.location.pathname.startsWith("/multisig"))
-				document.title = SECTION_TITLE;
+				document.title = tabTitle(0, document.title);
 		},
 		[],
 	);

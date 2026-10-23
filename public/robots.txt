@@ -1,3 +1,7 @@
 # https://www.robotstxt.org/robotstxt.html
+# Working pages (a treasury, a proposal, a form) stay crawlable on purpose:
+# they say "noindex" themselves, which a blocked page could not.
 User-agent: *
-Disallow:
+Disallow: /rpc/
+
+Sitemap: https://hltools.tech/sitemap.xml

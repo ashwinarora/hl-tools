@@ -59,6 +59,7 @@ import {
 	type StoredSession,
 	saveSession,
 } from "#/lib/idb";
+import { pageHead } from "#/lib/pages";
 import { tool } from "#/lib/tools";
 import { useHandoffStore } from "#/store/handoffStore";
 import { useNetwork, useNetworkHydrated } from "#/store/networkStore";
@@ -67,7 +68,7 @@ export const Route = createFileRoute("/tools/websocket")({
 	validateSearch: (s: Record<string, unknown>): { sample?: string } => ({
 		sample: typeof s.sample === "string" ? s.sample : undefined,
 	}),
-	head: () => ({ meta: [{ title: "WebSocket Workbench — hl-tools" }] }),
+	head: () => pageHead("/tools/websocket"),
 	component: WebSocketTool,
 });
 

@@ -27,6 +27,7 @@ import {
 	sampleInput,
 } from "#/components/tools/signing/SigningForm";
 import { Button } from "#/components/ui/button";
+import { pageHead } from "#/lib/pages";
 import { clearShared, readShared } from "#/lib/share";
 import { tool } from "#/lib/tools";
 import { useHandoffStore } from "#/store/handoffStore";
@@ -42,7 +43,7 @@ export const Route = createFileRoute("/tools/signing")({
 	validateSearch: (s: Record<string, unknown>): { sample?: string } => ({
 		sample: typeof s.sample === "string" ? s.sample : undefined,
 	}),
-	head: () => ({ meta: [{ title: "Signing Inspector — hl-tools" }] }),
+	head: () => pageHead("/tools/signing"),
 	component: SigningTool,
 });
 

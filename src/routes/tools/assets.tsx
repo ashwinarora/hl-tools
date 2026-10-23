@@ -31,6 +31,7 @@ import {
 } from "#/components/tools/assets/Spellings";
 import { Button } from "#/components/ui/button";
 import { errorMessage, useMids, useUniverse } from "#/hooks/useHyperliquid";
+import { pageHead } from "#/lib/pages";
 import { tool } from "#/lib/tools";
 import { useHandoffStore } from "#/store/handoffStore";
 import { useNetwork } from "#/store/networkStore";
@@ -49,7 +50,7 @@ export const Route = createFileRoute("/tools/assets")({
 					: undefined,
 		sample: typeof s.sample === "string" ? s.sample : undefined,
 	}),
-	head: () => ({ meta: [{ title: "Asset Resolver — hl-tools" }] }),
+	head: () => pageHead("/tools/assets"),
 	component: AssetsTool,
 });
 
