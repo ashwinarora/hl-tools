@@ -1,0 +1,81 @@
+---
+title: Send and withdraw
+description: Propose a USDC or spot token payment, a move between the perps and spot balances, or a withdrawal to Arbitrum, and what each one costs.
+covers: [sendUsdc, sendToken, usdClassTransfer, withdraw3, max]
+---
+
+Four forms move a treasury's money. Each makes one proposal that the signers approve and the finaliser sends. Open them from the treasury's page: **Propose an action**.
+
+| Form | What it does |
+| --- | --- |
+| **Send USDC** | Pays USDC to another Hyperliquid account |
+| **Send spot token** | Pays any spot token, HYPE included, to another Hyperliquid account |
+| **Perps ↔ spot** | Moves USDC between the treasury's own perps and spot balances |
+| **Withdraw** | Sends USDC out of Hyperliquid to an address on Arbitrum |
+
+## Before you start
+
+A treasury in a **manual** account has two balances: perps and spot. One in a **unified** account has one balance, so it has no **Perps ↔ spot** form and nothing to choose about balances. The treasury's mode is shown on its Overview: see [Account mode](/docs/multisig/actions/account-mode).
+
+<Diagram name="balances" alt="A treasury's money sits in four places: the perps balance, the spot balance, staking, and vaults." />
+
+## Steps
+
+<Steps>
+<Step>
+
+### Fill in the form
+
+- **Destination**: an address on Hyperliquid itself. An exchange's deposit address is not one.
+- **Taken from** (manual account): the perps or the spot balance, with what each holds.
+- **Amount**: signed exactly as typed. **Max** fills in the most Hyperliquid would take now, less any fee paid from the same balance.
+- **Arrives in** (manual account): the receiver's perps or spot balance.
+
+For **Send spot token**, choose the **Token** first. **Withdraw** asks for an address on Arbitrum (Arbitrum Sepolia on testnet).
+
+</Step>
+<Step>
+
+### Read the cost line
+
+Under the form, one line says what the send costs:
+
+- An address **in use** on Hyperliquid: nothing.
+- A **new** address: <Fact id="activationFee" />, charged once by Hyperliquid. It comes from the treasury on top of the amount, so the receiver gets the full amount.
+- A **withdrawal**: the bridge keeps <Fact id="withdrawalFee" /> out of the amount. An amount of <Fact id="withdrawalFee" /> or less is refused.
+
+</Step>
+<Step>
+
+### Choose the finaliser and create it
+
+Pick who sends it under **Who finalises this?**, then **Create and sign as 0x…**. The preview beside the form shows exactly what every signer will sign.
+
+</Step>
+</Steps>
+
+<Shot src="/docs/img/ms-propose-send.webp" alt="The Send USDC form with a destination nicknamed Design studio, the cost line, the amount and where it is taken from, beside the preview of what every signer will sign" width={2212} height={1452} />
+
+## What happens next
+
+Your co-signers sign it, and the finaliser [sends it to Hyperliquid](/docs/multisig/send). The finished payment appears in the **On Hyperliquid** tab, tied to its proposal.
+
+## Good to know
+
+<Accordions>
+<Accordion title="Amber lines on the form">
+They warn without blocking. For example: the destination is the zero address, or an API wallet, or a proposal paying the same amount to the same place is still waiting. Read them before you create.
+</Accordion>
+<Accordion title="What the form refuses">
+A send from the treasury to itself, and a send to a HyperEVM system address. Hyperliquid refuses both from a treasury.
+</Accordion>
+<Accordion title="Max fills in nothing">
+Max needs the figures it depends on: the treasury's mode, and for a send, whether the destination is new. Until they are read, it fills in nothing and says why.
+</Accordion>
+<Accordion title="Withdrawals go in order">
+Hyperliquid takes withdrawals in order of their dates. Once one goes through, older waiting withdrawals are refused and must be proposed again.
+</Accordion>
+<Accordion title="Amounts are never rounded">
+What you type is what is signed. Figures on screen are cut down, never rounded up, so a balance never looks bigger than it is.
+</Accordion>
+</Accordions>

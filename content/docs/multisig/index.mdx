@@ -1,0 +1,45 @@
+---
+title: How a treasury works
+description: A treasury is a Hyperliquid account that several wallets control together. How a payment goes from proposal to signatures to Hyperliquid.
+covers: [multisig-overview, multisig-sign]
+---
+
+A treasury is a Hyperliquid account that several wallets control together. Its own key can no longer act alone: every action needs the agreed number of its signers. Hyperliquid itself enforces this. hl-tools is the place where signers propose, sign and send.
+
+## The three steps
+
+<Diagram name="propose-sign-send" alt="Propose: any signer writes down one action. Sign: signers approve it in their wallets until enough have signed. Send to Hyperliquid: the finaliser sends it, and it is final once Hyperliquid accepts it." />
+
+1. **Propose.** Any signer writes down one action, such as "send 500 USDC to this address". Nothing moves yet.
+2. **Sign.** Each signer who agrees approves it in their own wallet. Signing alone sends nothing.
+3. **Send to Hyperliquid.** Once enough have signed, the finaliser sends it. Once Hyperliquid accepts it, it cannot be undone.
+
+## The words you will see
+
+- **Signers**: the wallets allowed to approve the treasury's actions. A treasury has at most <Fact id="maxSigners" />.
+- **How many must sign**: the threshold, written like "2 of 3". Any two of the three are enough, and no single signer can move funds alone.
+- **Finaliser**: the one signer chosen, when a proposal is made, to send it. Only the finaliser can send it, and only exactly as it was signed.
+- **Signing window**: how long a proposal can still be sent, <Fact id="windowNormal" /> from when it was made, or almost <Fact id="windowLonger" /> if the proposer picked **3 days** under **Advanced** on the form (the longer window). After that Hyperliquid refuses it.
+- **Proposal number**: every proposal gets its own. Hyperliquid takes each number once, even when it refuses it. That is why a refused proposal is proposed again, never sent again.
+
+More words are in the [glossary](/docs/reference/glossary).
+
+## Two ways to work together
+
+- **Signed in.** Each signer signs in with their wallet. Proposals and signatures appear for everyone, with an inbox of what needs you.
+- **Links and files.** No sign-in. Pass a proposal to your co-signers as a link or a file, and merge the copies that come back.
+
+Both work for the same treasury. [Working together](/docs/multisig/together) explains each.
+
+## What a treasury can do
+
+Send USDC and spot tokens, move money between perps and spot, withdraw to Arbitrum, stake HYPE, deposit into vaults, approve an API wallet for a trading bot, switch its account mode, and change its own signers. Each is one proposal; see [What you can propose](/docs/multisig/actions/send).
+
+## Where to start
+
+<Cards>
+<Card title="Try it on testnet" href="/docs/multisig/quick-start">Create a treasury and send a first payment, end to end.</Card>
+<Card title="You were asked to sign" href="/docs/multisig/sign">What to check before you approve a proposal.</Card>
+<Card title="Create a treasury" href="/docs/multisig/create">Turn an account into a treasury.</Card>
+<Card title="Open a treasury" href="/docs/multisig/open">Add one you sign for, or look at any treasury.</Card>
+</Cards>

@@ -5,3 +5,4 @@ User-agent: *
 Disallow: /rpc/
 
 Sitemap: https://hltools.tech/sitemap.xml
+Sitemap: https://hltools.tech/docs/sitemap.xml

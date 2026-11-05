@@ -1,0 +1,75 @@
+---
+title: Manual mode and getting funds back
+description: Run the faucet miner one wallet and one step at a time, and recover USDC left in generated wallets after an abort, an error or a closed tab.
+covers: [manual-mode, recovery, reset]
+---
+
+Manual mode does each step of the faucet miner by hand, one wallet at a time. It is also where you get money back from the miner's wallets after a run that did not finish.
+
+## Manual mode
+
+<Steps>
+<Step>
+
+### Add a wallet
+
+Under **Manual Mode**, click **Add Wallet**. A new wallet is created and its key kept in this browser.
+
+</Step>
+<Step>
+
+### Activate it
+
+Click **Receive $1**. You sign <Fact id="activationFee" /> and your account is debited 2 USDC: the 1 USDC the wallet receives, plus Hyperliquid's fee for a new address.
+
+</Step>
+<Step>
+
+### Claim and drain
+
+Click **Claim** to take the testnet faucet's drip, then **Drain** under **Drain Testnet** to send the testnet USDC to you.
+
+</Step>
+<Step>
+
+### Get your 1 USDC back
+
+Click **Drain** under **Drain Mainnet**. The wallet's mainnet USDC returns to you, at no fee. Each wallet costs you <Fact id="activationFee" /> in the end.
+
+</Step>
+</Steps>
+
+**Refresh all balances** reads every wallet's balances again.
+
+## Getting funds back
+
+Money can be left in a generated wallet when you click **Abort**, when a step fails, or when you close the tab during a run. It is not lost while this browser keeps the wallet's key.
+
+- **After Abort or an error**: the progress card stays. Click **Drain** next to any balance that is not zero.
+- **After closing the tab**: next time you open Auto mode, a banner says how many wallets are left from a previous session and what they hold. Click **View & recover →**: Manual mode lists them, each with its **Drain** buttons.
+
+<Shot src="/docs/img/faucet-recover.webp" alt="The recovery banner: You have 2 wallets from a previous session, the funds they hold, and View and recover" width={2332} height={428} />
+
+## Deleting wallets
+
+**Reset**, **Run Again** and **Delete all wallets** first read every wallet's balances. If any still holds money, a dialog lists them under **Delete these wallets forever?**. Click **Go back and drain first**. **I know — delete forever** deletes the keys, and any money in those wallets is lost for good.
+
+<Callout type="warn" title="Careful">
+The trash icon on a single wallet's row deletes it at once, without checking its balance. Drain a wallet before you delete it.
+</Callout>
+
+## Good to know
+
+<Accordions>
+<Accordion title="Can I export a generated wallet's key?">
+Not from the page. The Drain buttons are the way to get money out, so you never need the key.
+</Accordion>
+<Accordion title="Clearing browser data">
+It deletes the generated wallets' keys. Drain every wallet first.
+</Accordion>
+<Accordion title="Auto wallets in Manual mode">
+Wallets made by Auto mode are tagged **auto** in the table. They were activated by the run, so they show "—" under Activate.
+</Accordion>
+</Accordions>
+
+<TryIt to="/faucet-miner">Open the faucet miner</TryIt>

@@ -1,0 +1,89 @@
+---
+title: RPC Capability Probe
+description: Find out what a HyperEVM JSON-RPC endpoint really supports, and whether it answers historical queries with the latest state.
+covers: [rpc]
+keywords: [JSON-RPC, eth_call, eth_getLogs, archive, rpc endpoint, rate limit, HyperEVM RPC]
+---
+
+Point the probe at a HyperEVM JSON-RPC endpoint (the HTTP interface Ethereum clients use to read the chain) and it runs a fixed set of read-only checks. Give it a second endpoint and the two are compared side by side.
+
+<TryIt to="/tools/rpc?sample=public">Compare the public mainnet and testnet RPCs</TryIt>
+
+## When to use it
+
+- Your indexer reads balances "at block N" and the numbers look suspiciously current.
+- `eth_getLogs` (the call that fetches contract events) fails on larger block ranges and you need the real limit.
+- You are choosing between RPC providers and want to see what each one supports.
+- You need to know if an endpoint serves HyperEVM's own methods, such as `eth_getSystemTxsByBlockNumber`.
+
+## How to use it
+
+<Steps>
+<Step>
+
+### Enter the endpoints
+
+**Endpoint A** starts as Hyperliquid's public RPC for the network chosen in the header (**Mainnet** or **Testnet**). Replace it with any `http` or `https` URL. **Endpoint B (optional, for comparison)** adds a second endpoint. **Use public mainnet vs testnet** fills both with Hyperliquid's public endpoints.
+
+</Step>
+<Step>
+
+### Run the probe
+
+Click **Run probe**. Each endpoint gets about 25 read-only requests, a quarter of a second apart: few enough for the public endpoint's limit of 100 requests a minute. Rows appear as each check finishes. **Stop** ends the run.
+
+</Step>
+<Step>
+
+### Open a check
+
+Click a row to expand it. You see what the check does, the verdict in a sentence, any flag, and every request and response under **Requests** and **Responses**.
+
+</Step>
+</Steps>
+
+
+## Reading the result
+
+Each endpoint gets a card with its address, its network and the time the run finished. The network is worked out from the chain ID the endpoint reports, not from the header.
+
+The checks, in order:
+
+| Check | What it asks |
+| --- | --- |
+| **Chain ID** | Which network the endpoint serves. Also tests that the endpoint can be reached from the page. |
+| **Client version** | `web3_clientVersion`. |
+| **Latest block** | The head block and how many seconds ago it was made. |
+| **Historical state (nonce oracle)** | An account's transaction count one block before a known transaction of theirs, about 1,000 blocks back. The right answer is exactly that transaction's nonce (the account's transaction counter). |
+| **Historical eth_getCode** | USDC's contract code at block 1,000, before it existed. The right answer is empty. |
+| **Historical eth_call** | USDC's total supply at a past block, compared with now. |
+| HyperEVM methods | `eth_bigBlockGasPrice`, `eth_usingBigBlocks`, `eth_getSystemTxsByBlockNumber`. |
+| Other methods | `eth_getBlockReceipts`, `eth_feeHistory`, `eth_syncing`, and **JSON-RPC batch** (two calls in one request). |
+| **eth_getLogs range limit** | CoreWriter logs over 1, 50, 51, 500, 1,000 and 5,000 blocks. |
+
+Each check ends in one of three statuses:
+
+- **supported**: it works as specified.
+- **unsupported**: it was refused, or answered incorrectly.
+- **inconclusive**: it could not be decided, for example because the endpoint rate-limited the probe.
+
+A **flag** marks something that misleads silently. A red flag means the endpoint answers a historical query with the latest state, or that endpoint A serves a different network from the one in the header. An amber flag means the chain is not HyperEVM, or `eth_getLogs` accepts more than the 50 blocks documented for the public RPC.
+
+An endpoint that cannot serve past state should refuse: that is **unsupported**, an honest answer. Returning the latest values for a past block is what earns the red flag. When hl-tools last measured them (2026-09-28), Hyperliquid's public RPCs did exactly that, and accepted 500-block `eth_getLogs` ranges, so the sample comparison shows flags on both.
+
+## Good to know
+
+<Accordions>
+<Accordion title="My endpoint has an API key in the URL">
+The page spots keys in the query string, in long path segments and in `user:password@`. It shows a notice, writes the URL with the key replaced by `•••` in every result, and tags the card "key redacted". The URL is not written into the page's address or stored by hl-tools. Requests go out with no cookies and no referrer.
+</Accordion>
+<Accordion title="Chain ID fails and every other check is skipped">
+The probe runs in your browser, so the endpoint must allow requests from a web page (CORS headers). Many paid or self-hosted endpoints do not. The detail line says when that is the likely cause.
+</Accordion>
+<Accordion title="Why is a check inconclusive?">
+Usually a rate limit (HTTP 429 or a "rate" error). Wait a minute and run again. When A and B share a host, B runs after A instead of alongside it, so the two do not share one limit at the same time.
+</Accordion>
+<Accordion title="Links and samples">
+There is no Share button here. `?sample=public` compares the public endpoints of the header's network and the other network, and runs at once. "Last verified against protocol docs" at the top links to [/changes](/changes).
+</Accordion>
+</Accordions>

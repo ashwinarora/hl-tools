@@ -1,0 +1,16 @@
+{
+  "title": "Docs",
+  "pages": [
+    "---Start here---",
+    "index",
+    "safety",
+    "---Multisig---",
+    "...multisig",
+    "---Testnet faucet miner---",
+    "...faucet",
+    "---Developer tools---",
+    "...tools",
+    "---Reference---",
+    "...reference"
+  ]
+}

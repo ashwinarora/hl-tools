@@ -1,0 +1,81 @@
+---
+title: Vaults
+description: Deposit a treasury's USDC into HLP or another vault, withdraw it again, and sign a vault step by comparing a code in your wallet.
+covers: [vaultDeposit, vaultWithdraw, vaults-tab, signing-network]
+---
+
+A vault is a Hyperliquid account that its leader trades with. Depositors share what the trading makes or loses, less the leader's share of the profit. HLP is Hyperliquid's own vault. A treasury can deposit into any vault and withdraw again.
+
+<Callout type="warn" title="Careful">A vault deposit can lose value: the vault's leader trades with it. hl-tools shows vaults as Hyperliquid reports them and recommends none.</Callout>
+
+## Before you start
+
+- **Vault steps are signed as a code.** Each signer's wallet shows a code, not the action, and must be on a network numbered 1337 to sign it. The button reads **Switch to the signing network and sign**. If your wallet does not have that network yet, the page offers **Add the signing network**: one approval in your wallet, once. The network holds no money, nothing is ever sent on it, and your wallet goes back to its own network after signing. Why this is safe: it is how Hyperliquid has every action of this family signed, not something hl-tools made up, and the code is worked out from the action, so a matching code means you sign this action and nothing else.
+- **Deposits come from the perps balance.** In a manual account with USDC in spot, the form makes two proposals that work as one move: first spot to perps, then the deposit. See [Staking](/docs/multisig/actions/staking#how-hype-moves) for how a move works.
+
+## Steps
+
+<Steps>
+<Step>
+
+### Open the form
+
+On the treasury's **Vaults** tab, click **Deposit**, or **Withdraw** on a row.
+
+</Step>
+<Step>
+
+### Choose the vault and the amount
+
+To deposit, click **Use HLP**, or paste a vault's address. The form shows who leads it and their share of the profit. A deposit is at least <Fact id="vaultMinDeposit" />.
+
+To withdraw, pick the vault under **Withdraw from**. Each one says what Hyperliquid **releases** now, and whether it is still locked. Enter the amount in USDC, or click **Max**.
+
+</Step>
+<Step>
+
+### Create it, then sign by the code
+
+Create the proposal as usual. When a signer signs, the page shows a code worked out from the action, and the wallet shows a code in its `connectionId` field, next to `source: a` (mainnet) or `source: b` (testnet). They must match. If they differ, reject it in the wallet.
+
+</Step>
+</Steps>
+
+<Shot src="/docs/img/ms-vault-code.webp" alt="Your part on a vault deposit: the code the wallet will show, where to find it in the wallet, and the button to switch to the signing network and sign" width={1410} height={850} />
+
+<WalletPrompt kind="vault" />
+
+## What happens next
+
+The finaliser sends it like any proposal. A withdrawal arrives in the treasury's perps balance, less the leader's share of any profit. The **Vaults** tab shows each deposit's worth, profit so far, and from when it can be withdrawn.
+
+## The lockup
+
+A deposit cannot be withdrawn for a while after it goes in:
+
+| Vault | Mainnet | Testnet |
+| --- | --- | --- |
+| HLP | <Fact id="hlpLockup" /> | <Fact id="hlpLockupTestnet" /> |
+| Any other vault | <Fact id="vaultLockup" /> | <Fact id="vaultLockupTestnet" /> |
+
+Adding to a deposit starts the wait again for all of it. A withdrawal inside its lockup can be signed, and sent once the lockup ends. The form refuses one whose lockup ends after the proposal's signing window closes.
+
+## Good to know
+
+<Accordions>
+<Accordion title="'Your wallet refused to add the signing network'">
+Add it by hand: in your wallet, add a custom network with chain ID 1337 and the URL the page shows. Some wallets list it as "Geth Testnet". Then sign again.
+</Accordion>
+<Accordion title="A wallet that shows only hashes">
+Some wallets show a hash instead of the code. Unfold **A wallet that shows only hashes** under the code to compare those instead.
+</Accordion>
+<Accordion title="The finaliser does not need the signing network">
+The finaliser's own signature is under an ordinary network. Only signers who sign the vault step need 1337.
+</Accordion>
+<Accordion title="'Likely' in the history">
+A vault action carries no number of its own, so the Vaults tab ties a history row to a proposal as "likely" at most. A row with no proposal was made another way, for example by an API wallet, which can deposit without the signers.
+</Accordion>
+<Accordion title="Figures read once a minute">
+Hyperliquid does not send vault figures live, so the tab reads them once a minute while it is open, and again after a vault step.
+</Accordion>
+</Accordions>

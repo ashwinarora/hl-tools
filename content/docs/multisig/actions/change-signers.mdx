@@ -1,0 +1,78 @@
+---
+title: Change signers
+description: Add or remove a treasury's signers, change how many must sign, or convert the treasury back to a normal account - all in one proposal.
+covers: [changeSigners, convertBack]
+---
+
+A treasury's signers and the number that must sign can change at any time. One proposal carries the whole new list and the new number. The current signers decide, by the current number.
+
+## Steps
+
+<Steps>
+<Step>
+
+### Open the form
+
+On the treasury's Overview, click **Change signers** on the Signers card. Or choose **Change signers** in **Propose an action**.
+
+</Step>
+<Step>
+
+### Edit the list
+
+**Signers after the change** starts with today's signers. Click **Remove** to drop one (**Undo** brings it back). Paste addresses to add new ones, marked **new**. Each new signer is checked on Hyperliquid, as when [creating a treasury](/docs/multisig/create).
+
+</Step>
+<Step>
+
+### Set how many must sign
+
+Pick the number. **What changes** sums up the difference, and says who decides this one.
+
+</Step>
+<Step>
+
+### Check what it does to waiting proposals
+
+**Waiting proposals this changes** lists proposals that could no longer be sent once the change goes through. Carry them out first if they matter.
+
+</Step>
+<Step>
+
+### Create, sign, send
+
+As with any proposal. Your wallet shows the new list of signers and the number that must sign.
+
+</Step>
+</Steps>
+
+## What happens next
+
+The change takes effect the moment Hyperliquid accepts it. Until then nothing changes. The Signers card shows the new list, read from Hyperliquid.
+
+## Convert back to a normal account
+
+**Convert this treasury back to a normal account instead** (on the form, or on the Signers card) makes the account a normal one again. From then on, whoever holds the account's own key controls everything it holds, alone, and the signers decide nothing.
+
+<Callout type="warn" title="Careful">
+If nobody holds the account's own key, converting back locks the account for good. hl-tools cannot tell who holds it.
+</Callout>
+
+Your wallet shows `signers` as `null` when you sign a conversion back. That is how Hyperliquid writes it.
+
+## Good to know
+
+<Accordions>
+<Accordion title="Removing yourself">
+The form allows it and says so. Once accepted, you can no longer sign for this treasury.
+</Accordion>
+<Accordion title="Someone being removed can still sign">
+Until the change is accepted, every current signer can sign it, including those it removes.
+</Accordion>
+<Accordion title="API wallets stay">
+Changing signers, or converting back, does not remove approved API wallets. Remove them with their own proposal: see [API wallets](/docs/multisig/actions/api-wallets).
+</Accordion>
+<Accordion title="Proposals passed around and never opened here">
+The list of affected proposals covers what this browser has opened, and what the hl-tools server holds if you are signed in. A proposal passed around as a link and never opened here is not known.
+</Accordion>
+</Accordions>

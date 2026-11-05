@@ -1,0 +1,47 @@
+---
+title: What hl-tools is
+description: hl-tools has three parts on Hyperliquid, a multisig treasury, a testnet USDC faucet miner and developer tools. What each is for, and where to start.
+covers: [home, network-switch, paste-box]
+---
+
+hl-tools is a set of tools for Hyperliquid: one site, three parts. Pick the part that matches what you want to do.
+
+## The three parts
+
+<Cards>
+<Card title="Multisig" href="/docs/multisig">
+Run a Hyperliquid account that several wallets control together. Propose a payment, collect signatures, send it.
+</Card>
+<Card title="Testnet faucet miner" href="/docs/faucet">
+Spend about 1 USDC on mainnet for each 999 testnet USDC, up to 50 times in one run.
+</Card>
+<Card title="Developer tools" href="/docs/tools">
+Eight read-only tools that explain Hyperliquid errors, signatures, orders, sockets and HyperEVM.
+</Card>
+</Cards>
+
+## Which parts ask your wallet
+
+| Part | Needs a wallet | What it can do |
+| --- | --- | --- |
+| Developer tools | No | Read only. They look things up on Hyperliquid and explain what you paste. |
+| Multisig | Yes, to sign | Asks your wallet to sign proposals, and sends signed ones to Hyperliquid. |
+| Faucet miner | Yes | Sends real mainnet USDC from your wallet and claims testnet USDC. |
+
+Every request to your wallet appears in the wallet first. Nothing is signed or sent until you approve it there. hl-tools never asks for a key or a seed phrase. [Is it safe?](/docs/safety) covers the rest.
+
+## Mainnet and testnet
+
+The switch in the site's header chooses the network: **Mainnet** (real money) or **Testnet** (Hyperliquid's practice network, where the money has no value). The developer tools and the Multisig read and act on the network the switch shows, and every result says which network it came from. Try anything new on testnet first.
+
+The faucet miner is the exception: it always uses both networks, because it spends mainnet USDC to collect testnet USDC.
+
+## Not sure which tool you need?
+
+Paste what you have into the box on the [home page](/): a transaction hash, an address, an error message or a request body. It opens the tool that reads it. The [developer tools overview](/docs/tools) lists what each one recognises.
+
+## Reading these docs
+
+- Every page can be copied as Markdown with **Copy page**, or opened in ChatGPT or Claude from **More**, to ask questions about it.
+- Press <kbd>⌘</kbd> <kbd>K</kbd> (<kbd>Ctrl</kbd> <kbd>K</kbd> on Windows and Linux) to search.
+- Words with a special meaning here are in the [glossary](/docs/reference/glossary). Fees, limits and waiting times are in [Hyperliquid's numbers](/docs/reference/numbers).

@@ -1,0 +1,86 @@
+---
+title: Quick start on testnet
+description: Create a 2-of-2 treasury on Hyperliquid testnet and send its first payment, from start to finish, in about ten minutes.
+covers: [quick-start]
+---
+
+This walks through the whole flow once, on testnet, where the money has no value. You will turn one account into a treasury with two signers, then propose, sign and send a payment.
+
+## Before you start
+
+You need three addresses in your wallet (MetaMask, Rabby or another browser wallet):
+
+- **The treasury account.** Its account becomes the treasury. On testnet, use a fresh address: once converted, its own key can no longer act alone on Hyperliquid. For real money, see [Setting up for real money](/docs/multisig/real-money).
+- **Two signers**, Alice and Bob in this guide. Each approves with their own wallet.
+
+Hyperliquid only takes addresses it has seen. Each of the three must have received something on Hyperliquid testnet, and the treasury account needs a few testnet USDC to send. The [faucet miner](/docs/faucet) or Hyperliquid's own testnet faucet gets you some.
+
+## Steps
+
+<Steps>
+<Step>
+
+### Switch to testnet
+
+In the site's header, set the network switch to **Testnet**.
+
+</Step>
+<Step>
+
+### Create the treasury
+
+Open [Create a treasury](/multisig/create?network=testnet) with the treasury account selected in your wallet, and sign in when asked. Under **Who signs**, paste Alice's and Bob's addresses and click **Add**. Under **How many must sign**, choose **2**.
+
+Click **Convert 0x… into a 2-of-2 treasury** and approve in your wallet. Your wallet may call it an unknown signature type: check that it lists the two signers and the number 2. The page then says **Your treasury is set up**. [Create a treasury](/docs/multisig/create) explains every part of this screen.
+
+</Step>
+<Step>
+
+### Propose a payment as Alice
+
+Switch your wallet to Alice and sign in. The treasury is already in her list. Open it and click **Propose an action**.
+
+Choose **Send USDC**. Enter a **Destination** and an **Amount**. Under **Who finalises this?**, pick Bob. Click **Create and sign as 0x…** and approve in your wallet. Alice's is the first of two signatures.
+
+Her wallet shows the payment field by field:
+
+<WalletPrompt kind="send" testnet />
+
+<Video src="/docs/video/propose-sign.mp4" poster="/docs/video/propose-sign.webp" caption="Alice fills in a payment, creates it and signs it in one step." width={2560} height={1600} />
+
+</Step>
+<Step>
+
+### Sign and send as Bob
+
+Switch your wallet to Bob and sign in. The proposal is in his inbox under **Ready for you to finish**, because his signature is the last one missing and he is the finaliser.
+
+Open it, check the destination and the amount, and click **Sign and send to Hyperliquid**. Your wallet asks twice: once for Bob's signature on the payment, once for his signature as finaliser ([what that second prompt shows](/docs/multisig/send#approve-in-your-wallet)).
+
+<Video src="/docs/video/finaliser-send.mp4" poster="/docs/video/finaliser-send.webp" caption="Bob, the finaliser, signs the last signature and sends the payment to Hyperliquid." width={2560} height={1600} />
+
+</Step>
+<Step>
+
+### See it on Hyperliquid's record
+
+The page says **Sent · accepted by Hyperliquid**. On the treasury's page, the **On Hyperliquid** tab lists the transfer, tied to the proposal that made it.
+
+</Step>
+</Steps>
+
+## Good to know
+
+<Accordions>
+<Accordion title="Can I do this without signing in?">
+Yes. Instead of the inbox, pass the proposal on: in its **Pass it on** panel, click **Get link** or **Download file** and send it to the next signer. See [Working together](/docs/multisig/together).
+</Accordion>
+<Accordion title="Why can the treasury account not be one of its signers?">
+Hyperliquid refuses an account as its own signer. The account's key steps aside, and the signers act for it.
+</Accordion>
+<Accordion title="The first send to a new address costs extra">
+Hyperliquid charges <Fact id="activationFee" /> the first time anything is sent to an address it has never seen. The Send forms take it from the treasury on top of the amount, so the receiver gets the full amount.
+</Accordion>
+</Accordions>
+
+<TryIt to="/multisig/create?network=testnet">Create a treasury on testnet</TryIt>

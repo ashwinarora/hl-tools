@@ -1,0 +1,80 @@
+---
+title: Staking
+description: Stake a treasury's HYPE with a validator, return it to spot, or move it to another validator. The waits, and why some forms make two proposals.
+covers: [stake, returnToSpot, moveStake, staking-tab]
+---
+
+A treasury can stake its HYPE with a validator to earn rewards. Three forms do it, each named by where the HYPE should end up. You say the end result; the form works out the steps.
+
+| Form | Ends with |
+| --- | --- |
+| **Stake** | HYPE staked with the validator you choose |
+| **Return to spot** | Staked HYPE back in the spot balance |
+| **Move to another validator** | Staked HYPE moved from one validator to another |
+
+## How HYPE moves
+
+HYPE passes through a **staking balance** on its way in and out. HYPE there is the treasury's, but it is not staked and earns nothing.
+
+- **Spot → staking balance → validator**: staking.
+- **Validator → staking balance → spot**: returning. The last part waits <Fact id="returnWait" /> (<Fact id="returnWaitTestnet" /> on testnet), then lands in spot by itself, with no further signature.
+
+Hyperliquid takes one of these steps per action. When the form needs two steps, it makes two proposals that work as one **move**:
+
+<Diagram name="move" alt="Step 1 and step 2 are signed together. Step 2 is sent only after Hyperliquid accepted step 1." />
+
+Signers sign both in one visit, and the finaliser sends the second only once Hyperliquid has accepted the first. A move is one row in every list and one page.
+
+## Steps
+
+<Steps>
+<Step>
+
+### Open the form
+
+On the treasury's **Staking** tab, click **Stake**, **Return to spot** or **Move to another validator**. The strip at the top shows what is **In spot, not on hold** and what is **In the staking balance, not staked**.
+
+</Step>
+<Step>
+
+### Choose the validator and the amount
+
+Pick a validator from the list. It shows each one's state, commission, expected rate over the last 7 days and total stake, as Hyperliquid reports them, in the order Hyperliquid's own staking page uses. hl-tools recommends none. Enter the amount in HYPE, or click **Max**.
+
+</Step>
+<Step>
+
+### Read the plan
+
+The box under the form says **This makes one proposal** or **This makes two proposals**, and lists each step in plain words, such as "Move 10 HYPE from the spot balance to the staking balance". Then create it as usual.
+
+</Step>
+</Steps>
+
+<Shot src="/docs/img/ms-staking.webp" alt="The Stake form: 100 HYPE, the validator list with Basalt chosen, and a plan of two proposals, then a note that adding to a stake locks all of it again" width={1354} height={2032} />
+
+## The waits
+
+| Wait | Mainnet | Testnet |
+| --- | --- | --- |
+| After staking, before it can be unstaked | <Fact id="stakeLockup" /> | <Fact id="stakeLockupTestnet" /> |
+| Return from the staking balance to spot | <Fact id="returnWait" /> | <Fact id="returnWaitTestnet" /> |
+
+Adding to a stake starts the lockup again for everything staked with that validator. An unstake inside its lockup can be signed, but the finaliser cannot send it until the lockup ends.
+
+## Good to know
+
+<Accordions>
+<Accordion title="A validator that pays nothing">
+A jailed or inactive validator earns nothing until that changes. The form says so in an amber line. It does not stop you.
+</Accordion>
+<Accordion title="Returns waiting at once">
+Hyperliquid lets <Fact id="maxPendingReturns" /> returns to spot wait at once. One more is refused until one lands.
+</Accordion>
+<Accordion title="The Staking tab">
+It shows the treasury's HYPE in spot, in the staking balance, staked (with whom, and from when it can be unstaked) and on its way back (and when it lands), plus the staking history. Hyperliquid does not send these figures live, so the tab reads them once a minute while it is open.
+</Accordion>
+<Accordion title="Proposing a move again">
+If a move's second step fails, **Propose only step 2** makes that step alone. **Propose the whole move again** starts over.
+</Accordion>
+</Accordions>

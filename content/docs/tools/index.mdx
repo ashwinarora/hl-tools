@@ -1,0 +1,64 @@
+---
+title: Developer tools
+description: Eight read-only tools for Hyperliquid developers, the paste box that picks the right one, and what every tool has in common.
+covers: [tools-overview, paste-box, changes]
+---
+
+Eight tools explain what Hyperliquid did with your request, and why. They read from Hyperliquid and explain what you paste. They need no wallet and change nothing.
+
+## The tools
+
+<Cards>
+<Card title="Asset Resolver" href="/docs/tools/assets">Why does `@107` mean HYPE on mainnet but nothing on testnet?</Card>
+<Card title="Signing Inspector" href="/docs/tools/signing">Why does my signature recover the wrong address?</Card>
+<Card title="CoreWriter Workbench" href="/docs/tools/corewriter">What do these CoreWriter bytes tell HyperCore to do?</Card>
+<Card title="Cross-layer Trace" href="/docs/tools/trace">My HyperEVM transaction succeeded. Why did nothing happen on HyperCore?</Card>
+<Card title="Order Composer & Failure Explainer" href="/docs/tools/orders">Why was my order rejected, and what should it look like?</Card>
+<Card title="WebSocket Workbench" href="/docs/tools/websocket">Did I miss messages while my socket was down?</Card>
+<Card title="RPC Capability Probe" href="/docs/tools/rpc">Does this RPC really return historical state?</Card>
+<Card title="Multisig Inspector" href="/docs/tools/multisig-inspector">Why does Hyperliquid say "Invalid multi-sig inner signer"?</Card>
+</Cards>
+
+## The paste box
+
+The box on the [home page](/) opens the right tool for whatever you paste:
+
+| You paste | It opens |
+| --- | --- |
+| A transaction hash (`0x` + 64 hex) | Cross-layer Trace |
+| An address (`0x` + 40 hex) | Multisig Inspector |
+| A token ID (`0x` + 32 hex), a symbol or an asset ID | Asset Resolver |
+| CoreWriter action bytes (`0x01…`) | CoreWriter Workbench |
+| A `ws://` or `wss://` URL | WebSocket Workbench |
+| An `http(s)://` URL | RPC Capability Probe, or the Multisig for a proposal link |
+| An exchange response, or an error such as "Price must be divisible by tick size" | Order Composer & Failure Explainer |
+| A signed request with `action` | Signing Inspector |
+| A multi-sig request or proposal | Multisig Inspector, or the Multisig for a proposal |
+
+Pasted text is handed to the tool inside the page. It is not put in the link.
+
+<Video src="/docs/video/paste-box.mp4" poster="/docs/video/paste-box.webp" caption="A transaction hash pasted on the home page opens the Cross-layer Trace." width={2560} height={1600} />
+
+To try it, paste this mainnet transaction hash, a contract's limit order, into the box on the [home page](/):
+
+```text
+0x4b65b9ab3d57b40a29103541b725773012266f2ffd73507077360e9d7d64d949
+```
+
+## What every tool shares
+
+- **The network.** The header's **Mainnet** / **Testnet** switch picks the network. Every result says which network it was read on, and when. If you switch afterwards, the tool says the result is from the other network.
+- **Samples.** Each tool has samples to try it with. A sample may switch the header to its own network.
+- **Links you can share.** Some tools put what you entered into the link (for example `?q=` or `?tx=`), and some have a **Share** button that puts the whole state into the link after `#`, which browsers do not send to the site. A pasted payload is put in a link only when you press **Share**.
+- **Last verified.** Each tool's header shows when its rules were last checked against Hyperliquid's docs, and links to the [rule changes](/changes) page: every rule set with its sources and changelog.
+
+## Good to know
+
+<Accordions>
+<Accordion title="Where requests go">
+The tools ask Hyperliquid's public API and WebSocket, and any HyperEVM RPC endpoint you give them, straight from your browser. Those services see your IP address and what you ask.
+</Accordion>
+<Accordion title="Recorded sessions">
+The WebSocket Workbench can record sessions. They are kept in this browser until you delete them.
+</Accordion>
+</Accordions>

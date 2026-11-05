@@ -1,0 +1,86 @@
+---
+title: Multisig Inspector
+description: Look inside a Hyperliquid multi-sig account or request, and find out why a signature does not count or a request is refused.
+covers: [multisig]
+keywords: [multiSig, envelope, multiSigActionHash, outerSigner, payloadMultiSigUser, multi-sig signature]
+---
+
+A read-only view of Hyperliquid's native multi-sig: what an account's signer set looks like, and what a multi-sig request does, who signed it and whether it can go through. To propose, sign or send, use the [Multisig signer](/docs/multisig) instead.
+
+<TryIt to="/tools/multisig?sample=lab-broken-envelope">Inspect a broken envelope</TryIt>
+
+## When to use it
+
+- Hyperliquid answers "Invalid multi-sig inner signer" and you need to know whose signature is wrong and why.
+- You hold a request your code built and want to check every signature before sending it.
+- You want to see an account's signers, how many must sign, and which API wallets can act for it without them.
+- Someone sent you a proposal document and you want to read it without connecting a wallet.
+
+## How to use it
+
+Pick a view with the control at the top: **Account** or **Envelope / proposal**. Both read from the network chosen in the header (**Mainnet** or **Testnet**). No wallet is needed.
+
+<Steps>
+<Step>
+
+### Account: look up an address
+
+Paste any HyperCore address into **Address** and click **Look up on mainnet** (or testnet). The address goes into the page's link (`?address=`), so you can bookmark it.
+
+</Step>
+<Step>
+
+### Account: ask for more when you need it
+
+Some reads cost more and run only on request: **Check signers for nesting** (is a signer itself a multi-sig?), **Check HyperEVM** (the same address's balance on HyperEVM, Hyperliquid's EVM chain) and **Load recent actions** (from the HyperCore explorer).
+
+</Step>
+<Step>
+
+### Envelope / proposal: paste a request
+
+Paste into **JSON**. It takes the request body your code or a wallet app sends (the envelope: the action, every signer's signature, and the submitter's own signature on top), a bare `multiSig` action, or a proposal document from the Multisig signer. **Valid sample** and **Broken sample** load testnet examples.
+
+</Step>
+</Steps>
+
+## Reading the result
+
+### Account
+
+A tag under the address says **multi-sig user** or **not a multi-sig**, with the network and the time of the read. Then:
+
+- **Health**: what Hyperliquid will not warn you about. For example, an API wallet that can trade for the account with no signatures, a set where every signer is needed (losing one key locks the account), or HYPE on HyperEVM still held by the account's original key.
+- **Signers**: the signer list and the threshold.
+- **Approved API wallets**: each with its expiry, marked active or expired.
+- **Balances**, **Open orders**, **Recent actions**, and **Raw requests** (what the page asked Hyperliquid, with each request's rate-limit weight).
+
+### Envelope / proposal
+
+- **Action**: what it does in plain words, with tags such as "moves funds out" or "changes the signer set". Below are the account (**Multi-sig user**), the **Leader (outerSigner)** who signs the envelope and sends it, the **Nonce** (the request's number, a timestamp in milliseconds) and **Submittable**, the window in which Hyperliquid accepts that nonce.
+- **Readiness**: **ready**, **not-ready**, **expired**, **not-yet-valid**, **not-multisig** or **unknown**, with "N of M required signatures", whether the leader may lead, and who can still sign.
+- **Signatures**: each one recovered from what was signed. The address it recovers to is checked against the signer set Hyperliquid reports now, never against the address the request claims. A signature over different bytes is marked **signed different bytes**, and the page names the difference it found: another network, another leader, another nonce, a missing vault address or `expiresAfter`, another `signatureChainId`, or the action written differently.
+- **Digests**: the hash each signer signs (inner digest) and the one the leader signs (envelope digest). Both are EIP-712 digests, Ethereum's format for signing typed data.
+- **Canonical envelope**: the body in the key order Hyperliquid hashes.
+
+<Shot src="/docs/img/tool-multisig-inspector.webp" alt="The Account view of a 2-of-3 treasury: health flags, the signers table and an approved API wallet" width={1332} height={2040} caption="The Account view of a made-up 2-of-3 treasury." />
+
+## Good to know
+
+<Accordions>
+<Accordion title="Which network is a request checked on?">
+A user-signed action names its network in its own fields, and the page follows that; it warns if the header says otherwise. An L1 action carries no network, so the header decides. If the account is a multi-sig only on the other network, the page says so and offers **Switch to testnet** (or mainnet).
+</Accordion>
+<Accordion title="Is the leader the same as the finaliser?">
+Yes. The Multisig signer calls this signer the finaliser. Hyperliquid's field is `outerSigner`.
+</Accordion>
+<Accordion title="Can the inspector sign or send?">
+No. For a proposal document it offers **Open in Multisig Signer**, where you can sign or send it. A request that is not a multi-sig one gets **Open in Signing Inspector**, see [Signing Inspector](/docs/tools/signing).
+</Accordion>
+<Accordion title="What does the page ask Hyperliquid, and what is kept?">
+Signatures are checked in the page. For a pasted request it asks Hyperliquid only for the account's signer set on both networks and for the list of markets, to name coins. hl-tools stores nothing. The pasted text goes into a link only when you press **Share** in the Envelope / proposal view and confirm the content is public; it then travels in the link's `#share=` fragment.
+</Accordion>
+<Accordion title="Samples and links">
+`?sample=lab-treasury` opens a testnet 2-of-3 account; `?sample=lab-envelope` and `?sample=lab-broken-envelope` open requests for it. A sample switches the header to testnet. "Last verified against protocol docs" at the top links to [/changes](/changes).
+</Accordion>
+</Accordions>

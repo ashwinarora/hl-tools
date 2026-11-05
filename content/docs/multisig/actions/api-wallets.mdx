@@ -1,0 +1,60 @@
+---
+title: API wallets
+description: Let a trading bot act for a treasury without the signers, by approving an API wallet, and remove it again. What an API wallet can and cannot do.
+covers: [approveAgent, removeAgent]
+---
+
+An API wallet is a separate key the treasury allows to act for it, usually a trading bot. A treasury's signers cannot trade quickly, so this is how a treasury trades.
+
+<Callout type="warn" title="Careful">
+An approved API wallet acts for the treasury directly, with no proposal and no signers. It can trade with everything the treasury holds and move it into vaults. It cannot send funds to another account or withdraw them. Whoever holds its key can do all of that on their own. Approve one only for a bot you trust.
+</Callout>
+
+## Approve an API wallet
+
+<Steps>
+<Step>
+
+### Open the form
+
+On the treasury's page, click **Propose an action** and choose **Approve API wallet**.
+
+</Step>
+<Step>
+
+### Fill in the address and a name
+
+Paste the bot's **API wallet address**. **Name** is optional; a name such as `trading-bot` tells several API wallets apart. The name is signed exactly as typed.
+
+</Step>
+<Step>
+
+### Create, sign, send
+
+As with any proposal. Once Hyperliquid accepts it, the API wallet appears on the treasury's Overview under **API wallets**, with when it expires.
+
+</Step>
+</Steps>
+
+## Remove an API wallet
+
+On the Overview, click **Remove** next to it, or choose **Remove API wallet** in **Propose an action** and pick it from the list. Once carried out, that wallet stops acting for the treasury. Nothing else changes: balances, positions and open orders stay as they are.
+
+Your wallet shows an address of all zeros and the API wallet's name when you sign a removal. That is how Hyperliquid writes "remove".
+
+## Good to know
+
+<Accordions>
+<Accordion title="One removal at a time">
+Hyperliquid takes one removal at a time. Send a second one a minute or two after the first.
+</Accordion>
+<Accordion title="API wallets survive a Convert back">
+An approved API wallet keeps acting after the treasury is converted back to a normal account. Remove it first if it should stop.
+</Accordion>
+<Accordion title="Expiry">
+The Overview shows when each API wallet expires, in amber when that is within a week.
+</Accordion>
+<Accordion title="Its actions have no proposal">
+What an API wallet does is not proposed or signed by anyone, so no proposal explains it. A vault deposit it makes shows as **None on record** in the Vaults tab's history.
+</Accordion>
+</Accordions>

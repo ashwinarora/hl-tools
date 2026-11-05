@@ -1,0 +1,85 @@
+---
+title: Create a treasury
+description: Turn a Hyperliquid account into a treasury that its signers control together. What the wizard checks, and what converting does and does not do.
+covers: [create]
+---
+
+Creating a treasury converts an existing Hyperliquid account. You choose who signs and how many of them must agree. From then on, the account's own key can no longer act alone on Hyperliquid. For a treasury that will hold real money, read [Setting up for real money](/docs/multisig/real-money) first: it helps you choose between a fresh account and the one you have.
+
+## Before you start
+
+- **Use the account you want to convert.** The wizard always converts the account of the wallet you are using, and signs in with it first. To convert another one, choose it in your wallet.
+- **The account must have received something on Hyperliquid.** An account that never has cannot send the conversion yet. Send it some USDC first.
+- **Each signer must be in use on Hyperliquid**, for the same reason. The account itself cannot be one of its signers.
+- **Trading stops.** After converting, only an approved API wallet can trade or cancel orders for the account. Close positions and cancel orders first, or [approve an API wallet](/docs/multisig/actions/api-wallets) for a bot you trust.
+- **Keep the account's key.** It still controls this address on HyperEVM and other chains, and it controls the account again if the signers ever convert it back.
+
+## Steps
+
+<Steps>
+<Step>
+
+### Check the account
+
+**The account you are converting** shows its mode, its perps account value and its spot balances. If it has open positions or orders, or approved API wallets, an amber line says what will happen to them.
+
+</Step>
+<Step>
+
+### Add the signers
+
+Under **Who signs**, paste one address or several at once and click **Add**. A treasury has at most <Fact id="maxSigners" /> signers. Each one is checked on Hyperliquid:
+
+- **Red**: Hyperliquid would refuse it, for example an address never used on Hyperliquid, a vault or a sub-account. Remove it.
+- **Amber**: worth a second look, for example an API wallet, another treasury, or an address that could not be checked.
+- **Plain**: "In use on Hyperliquid." The page can tell that an address is in use, not that anyone holds its key.
+
+</Step>
+<Step>
+
+### Choose how many must sign
+
+Under **How many must sign**, pick a number. A higher number means more keys must be stolen before money can be taken. It also means fewer keys can be lost before nobody can act. The signers can change both later with a proposal.
+
+</Step>
+<Step>
+
+### Convert
+
+Read the sentence above the button: it says exactly who can act once you convert. Click **Convert 0x… into a k-of-n treasury** and approve in your wallet.
+
+Your wallet shows the signer addresses and the number that must sign. It may call this an unknown signature type. Check the signers and the number before you approve.
+
+</Step>
+</Steps>
+
+<Shot src="/docs/img/ms-create.webp" alt="The create wizard: the account being converted, three signers marked in use on Hyperliquid, 2 chosen, and the sentence above the Convert button" width={2224} height={1834} caption="A made-up account being converted into a 2-of-3 treasury." />
+
+## What happens next
+
+The page sends the conversion and reads the signer list back from Hyperliquid. When it matches, it says **Your treasury is set up**. If you are signed in, the treasury is added to each signer's list. Click **Open the treasury** to see it, or **Create your first proposal**.
+
+| Converting does | Converting does not |
+| --- | --- |
+| Stop this account's own key acting alone on Hyperliquid | Move any funds or cost anything. Balances, positions and history stay |
+| Let the signers act for it, as many together as you set | Stop anyone sending money to this address |
+| | Protect this address on HyperEVM or other chains |
+
+## Good to know
+
+<Accordions>
+<Accordion title="'Accepted, not confirmed yet'">
+Hyperliquid accepted the conversion, but its signer list did not show it while the page waited. Click **Check again** in a moment before doing anything else.
+</Accordion>
+<Accordion title="'It is not known whether the account was converted'">
+The request got no answer and the signer list could not be read either. Check again before trying a second time.
+</Accordion>
+<Accordion title="A half-filled form">
+If you leave the page, what you filled in is kept in this browser for <Fact id="draftKept" /> and comes back when you return. **Clear** removes it.
+</Accordion>
+<Accordion title="Undoing it">
+The signers can change the signers and the number at any time, or convert the treasury back to a normal account. Both are proposals: see [Change signers](/docs/multisig/actions/change-signers).
+</Accordion>
+</Accordions>
+
+<TryIt to="/multisig/create?network=testnet">Create a treasury on testnet</TryIt>

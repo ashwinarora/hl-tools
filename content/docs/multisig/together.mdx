@@ -1,0 +1,65 @@
+---
+title: Working together
+description: Two ways for signers to share proposals - signed in with an inbox, or as links and files. Plus saying no, cancelling for everyone, and "While you were away".
+covers: [together, inbox, share, cancel, away, seen]
+---
+
+Signers can share proposals in two ways. Both work for the same treasury, and you can mix them.
+
+| | Signed in | Links and files |
+| --- | --- | --- |
+| How proposals reach others | They appear in everyone's inbox | You send each signer a link or a file |
+| Signatures | Arrive for everyone as they are given | Each signer passes their copy on, and copies are merged |
+| What is stored | Proposals and signatures on the hl-tools server | Nothing on the hl-tools server |
+| Needs | One sign-in per wallet | Nothing but a wallet |
+
+## Signed in: the inbox
+
+Signed in, **Needs you** lists every open proposal of your treasuries in four groups:
+
+- **Ready for you to finish**: you are the finaliser and it can be sent, or your signature is the last one missing. Start with the oldest.
+- **Waiting for your signature**: check it, and [sign](/docs/multisig/sign) if you agree.
+- **Waiting on others**: nothing for you to do.
+- **Cannot be finished**: Hyperliquid refused it or would refuse it, or its finaliser is no longer a signer. Open it to see why, and to propose it again.
+
+<Shot src="/docs/img/ms-inbox.webp" alt="Bob's inbox: one proposal ready for him to finish, one waiting for his signature, and one waiting on others" width={2790} height={940} />
+
+The browser tab shows how many proposals need you. A signer who opened a proposal is marked **seen**, so you can tell "has not looked yet" from "looked and has not signed".
+
+## Links and files: pass it on
+
+On a proposal's page, the **Pass it on** panel holds every way out:
+
+- **Get link** makes a link holding the whole proposal and its signatures. Tick **I am sending this only to the other signers**, then **Copy link**. The proposal travels in the part of the link after `#`, which browsers do not send to the site.
+- **Download file** saves the same as a file. **Copy JSON** copies it as text.
+- **Merge a returned copy** takes a copy back from a co-signer (paste it or **Upload file**) and adds its signatures to yours.
+
+Signed in, the same panel is folded under **Export / Import**, so you can still hand a proposal to someone who does not sign in.
+
+<Shot src="/docs/img/ms-pass-it-on.webp" alt="The Pass it on panel: Get link, Download file, Copy JSON, Inspect, and a box to merge a returned copy" width={784} height={868} />
+
+## Saying no and cancelling
+
+- **Say no** tells everyone you object. It ends nothing.
+- **Cancel for everyone** is the proposer's alone. It takes the proposal off everyone's list. It cannot be undone, and it does not stop the proposal on Hyperliquid: signatures already given stay valid until the signing window closes, and the finaliser could still send it. If it must never go through, ask the finaliser not to send it.
+
+## While you were away
+
+When you open the Multisig signed in, **While you were away** lists what finished or changed since you last pressed **Got it**: actions sent without your signature, changes to the signers and to API wallets, and money that left a treasury with no proposal on record. **Mark all as read** clears it for all your treasuries.
+
+## Good to know
+
+<Accordions>
+<Accordion title="A proposal only this browser holds">
+A proposal made without signing in exists only in your browser until you pass it on. The page reminds you to share it before you close it.
+</Accordion>
+<Accordion title="Titles and notes are not signed">
+Anyone holding a copy can change a proposal's title or note. Judge a proposal by its action, never by its title.
+</Accordion>
+<Accordion title="Several wallets in one browser">
+Each wallet signs in once. Switch between them in your wallet, with no new sign-in. Only the connected one is in use.
+</Accordion>
+<Accordion title="Nicknames">
+Signers can give an address a nickname, used only in that treasury and always shown next to the address. You sign the address, never the name, so check the address before a payment.
+</Accordion>
+</Accordions>

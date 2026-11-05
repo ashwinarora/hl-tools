@@ -1,0 +1,75 @@
+---
+title: Send to Hyperliquid
+description: The finaliser's step. How a signed proposal is sent, what the page checks first, and what each of Hyperliquid's four possible answers means.
+covers: [send, finaliser]
+---
+
+Once enough signers have approved a proposal, its finaliser sends it to Hyperliquid. Only the finaliser can, and only exactly as it was signed. Once Hyperliquid accepts it, it cannot be undone.
+
+## Before you start
+
+- **You must be the proposal's finaliser.** The proposer chose them when the proposal was made. Everyone else reads that only the finaliser can send it.
+- **Enough signatures.** The status says **Ready · 2 of 2 signatures**, or your own signature is the last one missing.
+
+## Steps
+
+<Steps>
+<Step>
+
+### Open the proposal
+
+Signed in, it is in your inbox under **Ready for you to finish**. Start with the oldest.
+
+</Step>
+<Step>
+
+### Send it
+
+Under **Your part**, click **Send to Hyperliquid**. If your own signature is still missing, the button reads **Sign and send to Hyperliquid** and does both.
+
+The page first asks Hyperliquid whether it would refuse the action as things stand, for example because the balance is too low or the signing window has closed. If it would, the page says why and sends nothing.
+
+</Step>
+<Step>
+
+### Approve in your wallet
+
+Your wallet shows `multiSigActionHash`. It stands for the action together with the signatures collected: this is your signature as finaliser. If you also sign the action itself, that prompt comes first.
+
+</Step>
+</Steps>
+
+<WalletPrompt kind="finaliser" />
+
+## What happens next
+
+Hyperliquid answers in one of four ways:
+
+| The page says | What it means | What to do |
+| --- | --- | --- |
+| **Sent · accepted by Hyperliquid** | It is done. | Nothing. It appears in the treasury's **On Hyperliquid** tab. |
+| **Refused by Hyperliquid** | Hyperliquid said no, and the reason is shown. The proposal's number is used up. | Fix the cause, then **Propose it again**. It cannot be sent again. |
+| **Already used: it most likely went through** | Hyperliquid had already taken this proposal's number. | Click **Check Hyperliquid's record** before proposing anything again. |
+| **No clear answer from Hyperliquid** | The request may or may not have gone through. | Click **Try again**. It sends the same signed request, with no wallet prompt, so it cannot pay twice. |
+
+<Shot src="/docs/img/ms-proposal-sent.webp" alt="A proposal after sending: Sent, accepted by Hyperliquid, with both signatures verified and the timeline ending in the accepted send" width={2224} height={1040} />
+
+## Good to know
+
+<Accordions>
+<Accordion title="'Cannot be sent yet'">
+Some actions can be signed before they can be sent: an unstake inside its lockup, or a vault withdrawal inside its lockup. The page shows when it can be sent and keeps the button off until then.
+</Accordion>
+<Accordion title="Some payments go in order">
+Hyperliquid takes two kinds of payment only in order of their dates: a USDC send written as raw JSON, and a withdrawal to Arbitrum. Once one goes through, older ones of both kinds are refused and have to be proposed again. The Send forms here are not bound by this. Pending lists say **Some of these have to go in order**.
+</Accordion>
+<Accordion title="A move of two steps">
+Some forms make two proposals that work as one move, such as a deposit into a vault from the spot balance. The finaliser gives every signature first. The page then sends step 1, and sends step 2 only once Hyperliquid has accepted step 1.
+</Accordion>
+<Accordion title="The finaliser is away">
+Nobody else can send it. The proposer can cancel the proposal for everyone and propose it again with another finaliser.
+</Accordion>
+<Accordion title="Changing your mind">
+A finaliser who will not send a proposal can say no to it, like any signer. The others see it.
+</Accordion>
+</Accordions>

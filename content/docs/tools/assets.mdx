@@ -1,0 +1,85 @@
+---
+title: Asset Resolver
+description: Every name, ID and index a Hyperliquid asset goes by, and why @107 means HYPE on mainnet but nothing on testnet.
+covers: [assets]
+keywords: [asset id, coin, spot index, "@107", szDecimals, token id, perp index, HIP-3, universe]
+---
+
+Type any name or number Hyperliquid uses for an asset and see every other spelling of it, where each one is accepted, and how it differs between mainnet and testnet.
+
+<TryIt to="/tools/assets?sample=hype">Resolve HYPE</TryIt>
+
+## When to use it
+
+- An info request or WebSocket subscription returns nothing for a market you can see in the app. The app shows `UBTC/USDC`; the API wants `@` and a spot pair index.
+- An order goes to the wrong market, or is refused, because its asset ID (the `a` field of an order) was copied from the other network.
+- A log or a contract gives you a bare number such as `110001` or `150`, and you need to know what it points at.
+- You need a market's `szDecimals` (its lot size) or a token's `weiDecimals` to scale an amount.
+
+## How to use it
+
+<Steps>
+<Step>
+
+### Pick the network
+
+Use the **Mainnet** / **Testnet** switch in the site header. IDs and indexes differ between the two, so the resolver only reads the selected network's metadata.
+
+</Step>
+<Step>
+
+### Type a query
+
+Type into **Symbol, coin, asset ID, token index, token ID or EVM address**: `HYPE`, `@107`, `xyz:TSLA`, `#83061`, `110001`, a 16-byte token ID or a token's EVM contract. Matches appear as you type. Or click one of the examples next to **Try on mainnet:** (or **Try on testnet:**).
+
+**Resolve** also writes the query into the page's link (`?q=`), so you can bookmark or send it.
+
+</Step>
+<Step>
+
+### Pick the identity you mean
+
+When one identity matches, it is selected for you. When several match, the list says **Ambiguous — pick the identity you mean** and nothing is selected until you choose. Names that only look alike (UBTC for `BTC`) are listed apart under **Similar names**.
+
+</Step>
+<Step>
+
+### Compare the networks (optional)
+
+Press **Compare networks** to add a **Mainnet vs testnet** table. Rows are paired by symbol, never by ID, and cells that differ are highlighted.
+
+</Step>
+</Steps>
+
+<Shot src="/docs/img/tool-assets.webp" alt="The Asset Resolver for HYPE on mainnet: six matches with an ambiguity warning, and the HYPE perp selected with every spelling and where each is used" width={2332} height={1780} />
+
+## Reading the result
+
+**You typed** says what shape your query has before anything is looked up, and what follows from the shape alone. For an outcome query, for example, it splits the number into outcome, side, coin, token and asset ID. **How names fit together** jumps to the legend at the bottom of the page.
+
+Above the results, a line shows the network, the time the metadata was read, and how many identities, perp dexes and tokens it holds.
+
+The left panel lists the matches, with notes where the query needs one (for example, why a bare number can mean four things).
+
+The **Identity** panel on the right has three tabs:
+
+- **Identity**: every spelling of the selected identity, each with a copy button and the places it is accepted (`info`, `WebSocket`, `exchange a`, `CoreWriter`, `spotClearinghouseState`, `spotSend / sendAsset`, `HyperEVM`). A dashed `app only` chip marks a name the app shows and the API never takes. Hover a chip for plain words. **Same asset elsewhere** links the perp, the spot pair, the token or the other side of an outcome. **Trading rules** gives lot size, maximum price decimals, maximum leverage and the mid price.
+- **Snippets**: a ready `l2Book` info request (JSON and curl), a WebSocket subscription message and a minimal unsigned order, with a link to compose it in the [Order Composer](/docs/tools/orders).
+- **Raw metadata**: the metadata objects exactly as the info API returned them.
+
+## Good to know
+
+<Accordions>
+<Accordion title="Why can one number mean four things?">
+Hyperliquid has four separate index spaces: action asset IDs, spot pair indexes, token indexes and outcome IDs. Asset IDs follow fixed rules: a perp's index; 10000 + the spot pair index; 100000 + dex × 10000 + index for a HIP-3 perp; 100000000 + the encoding for an outcome. The resolver lists every reading of a bare number and lets you choose.
+</Accordion>
+<Accordion title="Why is the display symbol refused by the API?">
+`BTC-PERP` and `HYPE/USDC` are what the app shows. The API never accepts them. Use the coin string for info and WebSocket requests and the asset ID for orders.
+</Accordion>
+<Accordion title="An outcome I traded is not found">
+Outcomes leave the live metadata once they settle. When an outcome-shaped query (`#…`, `+…` or `100000000+…`) has no live match, the resolver asks Hyperliquid for the settled outcome and shows its specification and result instead.
+</Accordion>
+<Accordion title="Could not load the metadata">
+The resolver needs Hyperliquid's `perpDexs`, `allPerpMetas` and `spotMeta`. If one of them fails, the page says so with a **Retry** button. The mid price comes from `allMids` and refreshes every 15 seconds.
+</Accordion>
+</Accordions>

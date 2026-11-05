@@ -1,0 +1,151 @@
+---
+title: Glossary
+description: The words hl-tools uses, in plain terms - first the Multisig's own words, then the developer terms the tools use.
+covers: [glossary]
+---
+
+{/* jargon: the glossary names the experts' words beside the plain ones */}
+
+## Multisig words
+
+### Treasury
+
+A Hyperliquid account controlled by several wallets together. Its own key can no longer act alone.
+
+### Signer
+
+A wallet allowed to approve the treasury's actions.
+
+### Threshold
+
+How many signers must approve, as in "2 of 3".
+
+### Proposal
+
+A request for the treasury to do one thing. Nothing happens until enough signers approve and the finaliser sends it.
+
+### Finaliser
+
+The one signer who sends an approved proposal to Hyperliquid, chosen when the proposal is made. See [Send to Hyperliquid](/docs/multisig/send).
+
+### Sign
+
+Approve a proposal in your wallet. Signing alone sends nothing. See [You've been asked to sign](/docs/multisig/sign).
+
+### Send to Hyperliquid
+
+The finaliser's last step. Once Hyperliquid accepts it, it cannot be undone.
+
+### Say no
+
+Tells your co-signers you object. It does not stop the proposal: only its proposer can cancel it.
+
+### Cancel for everyone
+
+The proposer takes a proposal off everyone's list. Signatures already given stay valid until its signing window closes, so the finaliser could still send it.
+
+### Signing window
+
+How long a proposal can still be sent, <Fact id="windowNormal" /> from when it was made, or almost <Fact id="windowLonger" /> with the longer window (**3 days** under **Advanced** on the form).
+
+### Proposal number
+
+Every proposal has its own, and Hyperliquid takes each number once, even when it refused it. That is why a refused proposal is proposed again rather than sent again. Developers call it the *nonce*.
+
+### Hyperliquid's record
+
+The account's own history on Hyperliquid, shown in the **On Hyperliquid** tab. It is the proof of what happened.
+
+### Signing log
+
+What happened in hl-tools: who proposed, signed, said no and sent.
+
+### hl-tools server
+
+Stores the proposals and signatures you share when signed in, so your co-signers see them. Optional: links and files work without it. In the code it is called the *relay*.
+
+### Signing network
+
+The network your wallet signs under. Nothing is sent or paid there. A vault step is signed under one numbered 1337. See [Vaults](/docs/multisig/actions/vaults).
+
+### Move
+
+Two proposals that together do one thing, such as moving funds from spot into a vault. They are signed together and sent in order.
+
+### API wallet
+
+A key the treasury allows to trade for it without the signers. It can trade with everything the treasury holds and move it into vaults, but cannot send funds to another account or withdraw them. See [API wallets](/docs/multisig/actions/api-wallets).
+
+### Account mode
+
+Manual keeps separate perps and spot balances. Unified keeps one balance for both. See [Account mode](/docs/multisig/actions/account-mode).
+
+### Perps and spot
+
+Hyperliquid's two balances per account. Perps holds the USDC that backs futures positions. Spot holds tokens owned outright.
+
+### Staking balance
+
+HYPE moved out of spot for staking and not staked with a validator. It earns nothing there.
+
+### Vault
+
+An account its leader trades with, which others deposit into. **HLP** is Hyperliquid's own. See [Vaults](/docs/multisig/actions/vaults).
+
+## Developer terms
+
+### HyperCore
+
+Hyperliquid's own exchange layer, where balances, orders and positions live.
+
+### HyperEVM
+
+Hyperliquid's EVM chain, running next to HyperCore. Contracts there reach HyperCore through CoreWriter and read it through precompiles. Probe an endpoint with the [RPC Capability Probe](/docs/tools/rpc).
+
+### CoreWriter
+
+The HyperEVM contract that sends actions to HyperCore, as raw bytes. Decode its bytes in the [CoreWriter Workbench](/docs/tools/corewriter); every action is in [CoreWriter and precompiles](/docs/reference/corewriter).
+
+### Precompile
+
+A built-in HyperEVM address that returns HyperCore state, such as a balance or a position. Every address is in [CoreWriter and precompiles](/docs/reference/corewriter#read-precompiles).
+
+### L1 action
+
+An action signed through a "phantom agent": the wallet signs a hash of the action, not its fields. Orders and vault transfers are L1 actions. See what is hashed in the [Signing Inspector](/docs/tools/signing).
+
+### User-signed action
+
+An action whose fields the wallet shows one by one under EIP-712, such as a send or a withdrawal. See its fields in the [Signing Inspector](/docs/tools/signing).
+
+### EIP-712
+
+The standard for signing structured data, so a wallet can show each field before you sign. Try one in the [Signing Inspector](/docs/tools/signing).
+
+### MsgPack
+
+The compact binary encoding Hyperliquid hashes an L1 action from. Key order matters. See the bytes in the [Signing Inspector](/docs/tools/signing).
+
+### Nonce
+
+The number that makes each signed request unique. Hyperliquid takes each nonce once per signer, within a window of time. The window is in [Hyperliquid's numbers](/docs/reference/numbers#signing).
+
+### Asset ID
+
+The number Hyperliquid uses for a market in an order (`a`). Spot markets are written `@107`, builder-deployed (HIP-3) markets `dex:SYMBOL`. Look one up in the [Asset Resolver](/docs/tools/assets).
+
+### Tick size and lot size
+
+The rules for a valid price and a valid size in a market. The rule, with examples: [the tick-size rule](/docs/tools/orders#the-tick-size-rule).
+
+### IOC, GTC, ALO
+
+Order types. Immediate-or-cancel fills what it can at once and cancels the rest; good-till-cancelled rests on the book; add-liquidity-only (post-only) is rejected if it would fill at once. Build one in the [Order Composer](/docs/tools/orders).
+
+### cloid
+
+A client order ID, chosen by you, to find an order again. Set one in the [Order Composer](/docs/tools/orders).
+
+### Envelope
+
+The outer layer of a multi-sig request, holding the inner action and every signer's signature. The finaliser signs it. Check one in the [Multisig Inspector](/docs/tools/multisig-inspector).

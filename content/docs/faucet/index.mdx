@@ -1,0 +1,93 @@
+---
+title: How the faucet miner works
+description: Turn about 1 USDC of mainnet USDC into 999 testnet USDC per wallet, up to 50 wallets a run. What it costs, what it signs, and how auto mode runs.
+covers: [faucet, auto-mode]
+---
+
+Hyperliquid's testnet faucet gives each address one drip of testnet USDC, and only to addresses that exist on mainnet. The faucet miner creates new wallets, gives each one the <Fact id="activationFee" /> it takes to exist on mainnet, claims the faucet for it, and sends you the testnet USDC.
+
+<Callout type="warn" title="Careful">
+This spends real mainnet USDC from your wallet. hl-tools keeps none of it: the cost is Hyperliquid's activation fee.
+
+While a run goes, your money passes through new wallets whose keys exist only in this browser. If you clear this site's data, or run it in an incognito window and close it, while a new wallet still holds money, that money is lost. If a run stops, get the money back first ([how](/docs/faucet/manual-and-recovery)).
+</Callout>
+
+## What it costs
+
+Each wallet costs <Fact id="activationFee" /> on mainnet and brings in **999 testnet USDC** (the faucet's 1,000, less the testnet's own activation fee).
+
+| Wallets | Taken from your account | Back to you at the end | Mainnet cost | Testnet USDC |
+| --- | --- | --- | --- | --- |
+| 1 | 2 USDC | 1 USDC | 1 USDC | 999 |
+| 5 | 6 USDC | 1 USDC | 5 USDC | 4,995 |
+| 11 | 12 USDC | 1 USDC | 11 USDC | 10,989 |
+| N | N + 1 USDC | 1 USDC | N USDC | N × 999 |
+
+For 10,000 testnet USDC you need 11 wallets: 10 bring in 9,990.
+
+Your wallet's pop-up shows a send of **N** USDC, but **N + 1** leaves your account: the extra 1 USDC is the activation fee of the first new wallet, which Hyperliquid charges on top of the send.
+
+## Before you start
+
+- A wallet on **Ethereum mainnet or Arbitrum** in your browser, with a Hyperliquid account.
+- **N + 1 USDC** in that account's perps balance (what you can withdraw) or its spot balance. A unified account pays from spot.
+
+## Auto mode
+
+<Diagram name="faucet-chain" alt="Your wallet sends the first new wallet the amount plus 1 USDC. Each new wallet claims the testnet faucet, sends you the testnet USDC and passes the rest of the mainnet USDC to the next. The last one sends what is left back to you." />
+
+<Steps>
+<Step>
+
+### Connect your wallet
+
+Open the [faucet miner](/faucet-miner), click **Connect Wallet**, then **Got it, let's go** on the notice. Your mainnet and testnet balances appear at the top.
+
+</Step>
+<Step>
+
+### Choose how many wallets
+
+Under **Auto Mode**, enter the **Mainnet USDC to burn**: 1 to 50, one wallet per dollar. The preview shows what your wallet signs, what it is debited, what comes back, and the testnet USDC you will receive.
+
+</Step>
+<Step>
+
+### Start and approve once
+
+Click **Start Chain** (above 10 wallets, confirm with **Confirm & Start**). Approve the one send in your wallet. That is the only signature: the new wallets sign their own steps in this page.
+
+</Step>
+<Step>
+
+### Watch it run
+
+**Auto Chain Progress** shows each wallet: **Claim faucet**, **Drain testnet to you**, **Forward mainnet**. Each step waits for Hyperliquid to show the money before the next, checking every 2 seconds. If it sees nothing for 30 seconds, the run stops with an error and the money stays where it was. The last wallet sends the remaining <Fact id="activationFee" /> back to you.
+
+</Step>
+</Steps>
+
+<Video src="/docs/video/faucet-run.mp4" poster="/docs/video/faucet-run.webp" caption="An auto run of three wallets, from the one wallet approval to the testnet USDC arriving." width={2048} height={1536} />
+
+## What happens next
+
+When it finishes, the card shows **Testnet collected** and your testnet balance goes up. The testnet USDC lands in your testnet **perps** balance, or in **spot** if your testnet account is unified. **Run Again** starts a new run.
+
+## Good to know
+
+<Accordions>
+<Accordion title="If a run stops halfway">
+Money may still sit in a new wallet. Nothing is lost: drain it back from the progress card or from Manual mode. See [Manual mode and getting funds back](/docs/faucet/manual-and-recovery).
+</Accordion>
+<Accordion title="Where the new wallets' keys are kept">
+In this browser's storage, created before any money is sent to them. Clearing this site's data while a wallet still holds money loses that money.
+</Accordion>
+<Accordion title="The faucet may refuse">
+Hyperliquid's faucet can refuse or limit claims. The run stops with an error, and the money stays in the wallet that was running.
+</Accordion>
+<Accordion title="The wallet picker">
+This page's wallet picker can also connect through WalletConnect, and it contacts WalletConnect as soon as the page opens. No other page of hl-tools does. See the [privacy policy](/privacy).
+</Accordion>
+</Accordions>
+
+<TryIt to="/faucet-miner">Open the faucet miner</TryIt>
