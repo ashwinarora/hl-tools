@@ -29,6 +29,13 @@ export default function Footer() {
 					</p>
 				</div>
 				<div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+					<Link
+						to="/docs/$"
+						params={{ _splat: "" }}
+						className="hover:text-foreground"
+					>
+						Docs
+					</Link>
 					<Link to="/changes" className="hover:text-foreground">
 						Rule changes
 					</Link>

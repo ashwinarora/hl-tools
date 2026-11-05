@@ -1,0 +1,12 @@
+{
+  "title": "What you can propose",
+  "pages": [
+    "send",
+    "staking",
+    "vaults",
+    "api-wallets",
+    "account-mode",
+    "change-signers",
+    "raw-json"
+  ]
+}

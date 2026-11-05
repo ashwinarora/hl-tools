@@ -1,0 +1,58 @@
+---
+title: The treasury page
+description: Everything a treasury's page shows - live balances, signers, API wallets, pending proposals, staking, vaults, the signing log and Hyperliquid's own record.
+covers: [overview, pending, staking, vaults, log, chain, csv, nicknames, hide, outcomes]
+---
+
+Each treasury has its own page, open to its signers once they sign in. The top shows the treasury's name and address, its network, and how many must sign, like **2 of 3 signers**. **Propose an action** starts a new proposal.
+
+## The figures at the top
+
+The tiles above every tab show what the treasury holds: its **Balance**, what **Can be moved now**, what is **In use** by open positions and orders, and what is **In staking** and **In vaults**. A manual account shows its perps account value and spot USDC separately.
+
+Balances, positions and orders arrive live from Hyperliquid as they change. There is nothing to reload.
+
+<Shot src="/docs/img/ms-treasury.webp" alt="A treasury page: its name and address, 2 of 3 signers, the holding tiles, the tabs, the balances, and the Signers and API wallets cards" width={2224} height={1640} caption="A made-up treasury, Acme Treasury, on testnet." />
+
+## The tabs
+
+| Tab | What it shows |
+| --- | --- |
+| **Overview** | Balances, positions, outcome shares and open orders. The account mode, the **Signers** card and the **API wallets** card |
+| **Pending** | Proposals not yet carried out, with the number waiting in the tab's name |
+| **Staking** | HYPE in spot, in the staking balance, staked and on its way back. See [Staking](/docs/multisig/actions/staking) |
+| **Vaults** | Each deposit's worth, profit, and when it can be withdrawn. See [Vaults](/docs/multisig/actions/vaults) |
+| **Signing log** | What happened here: who proposed, signed, said no and sent |
+| **On Hyperliquid** | Hyperliquid's own record: transfers, trades, orders and funding, whoever caused them |
+
+## Signing log and Hyperliquid's record
+
+These are two records. The **Signing log** explains what happened here. **On Hyperliquid** is the proof.
+
+In **On Hyperliquid**, each outgoing transfer is tied to the proposal that caused it. **None on record** means no proposal known here explains it: it was signed and sent another way, for example with another tool. If none of the signers knows it, find out who signed it.
+
+Wherever a proposal reads as accepted, the page checks it against Hyperliquid's record. That record covers the account's newest 300 transactions.
+
+## Exporting
+
+**Download CSV** saves the Signing log or a table of **On Hyperliquid**, with times in UTC and every figure to its last decimal. **Export as a file** saves the Signing log as JSON.
+
+## Good to know
+
+<Accordions>
+<Accordion title="Nicknames">
+Use **Give this address a nickname** next to an address. A nickname is up to <Fact id="nicknameLength" />, is used only in this treasury, any signer can set one, and the address is always shown beside it. You sign the address, never the name. **Name yourself** on your own row tells your co-signers who you are.
+</Accordion>
+<Accordion title="Hiding a treasury">
+In the **⋯** menu next to the name, **Hide from my list** removes it from your list in this browser, with **Undo**. Your co-signers' lists do not change.
+</Accordion>
+<Accordion title="Outcome shares">
+Shares of a prediction outcome are listed under the Overview's **Outcomes** tab, never among the balances.
+</Accordion>
+<Accordion title="'Hyperliquid's signer list differs from the copy kept here'">
+Someone changed the signers in a way this page has not caught up with. Click **Ask again** to read the list from Hyperliquid.
+</Accordion>
+<Accordion title="Times">
+Times are in your own time zone. Hover over one to see it in UTC.
+</Accordion>
+</Accordions>

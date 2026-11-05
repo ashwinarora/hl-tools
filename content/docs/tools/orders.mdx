@@ -1,0 +1,114 @@
+---
+title: Order Composer & Failure Explainer
+description: Build an order payload that passes Hyperliquid's price and size rules, or find out what an exchange response or error means.
+covers: [orders]
+keywords: [tick size, lot size, szDecimals, significant figures, price must be divisible, invalid price, rounding, min order value, TP/SL, IOC, ALO, cloid]
+---
+
+Two tools on one page. **Compose** builds an order action from what you want to do and checks every price and size first. **Explain a response** reads what the exchange sent back and says, status by status, what happened and why.
+
+<TryIt to="/tools/orders?sample=tick">Explain a tick-size error</TryIt>
+
+## The tick-size rule
+
+A price is valid with **at most 5 significant figures** and **at most 6 − `szDecimals` decimals on perps** (8 − `szDecimals` on spot and outcomes). A whole number is always valid. A size has at most `szDecimals` decimals. The [Asset Resolver](/docs/tools/assets) shows a market's `szDecimals`.
+
+| Market | `szDecimals` | Price | Valid? |
+| --- | --- | --- | --- |
+| Perp | 4 | `2667.1` | Yes |
+| Perp | 4 | `2667.15` | No: 6 significant figures. Use `2667.1` or `2667.2` |
+| Perp | 5 | `106543.5` | No: 7 significant figures. Use `106543` or `106544`: a whole number is always valid |
+| Perp | 2 | `1.23456` | No: 6 significant figures and 5 decimals (at most 4). Use `1.2346` |
+| Spot | 0 | `0.000012345` | No: 9 decimals (at most 8). Use `0.00001234` or `0.00001235` |
+
+Rounding a price to the nearest valid one, in TypeScript:
+
+```ts
+/** The nearest valid price: 5 significant figures, (6 or 8) − szDecimals decimals. */
+function validPrice(px: number, szDecimals: number, spot = false): string {
+  const maxDecimals = (spot ? 8 : 6) - szDecimals;
+  // a whole number is always valid: from 5 integer digits up, round to one
+  const rounded =
+    Math.abs(px) >= 10_000 ? Math.round(px) : Number(px.toPrecision(5));
+  const text = rounded.toFixed(Math.max(0, maxDecimals));
+  // Hyperliquid hashes the string as written: no trailing zeros
+  return text.includes(".") ? text.replace(/\.?0+$/, "") : text;
+}
+```
+
+It rounds to the nearest. To stay on your side of the book, round a buy down and a sell up; **Pre-flight** below offers both. All the figures: [Hyperliquid's numbers](/docs/reference/numbers#orders).
+
+## When to use it
+
+- Hyperliquid answered "Price must be divisible by tick size." and you want the nearest valid price.
+- A response says `"status":"ok"` but your order never showed up.
+- An IOC (immediate-or-cancel) order filled only part of its size.
+- You need a correct TP/SL bracket and want to check the JSON your code should send.
+
+## How to use it
+
+Switch between **Compose** and **Explain a response** at the top.
+
+<Steps>
+<Step>
+
+### Compose: pick a market
+
+Type a symbol in the market picker. The market is resolved the same way as in the [Asset Resolver](/docs/tools/assets). The line below shows the live mid price, with the network and the time it was read. The first time you pick a market, **Size** and **Limit price** are filled with example values near the mid.
+
+</Step>
+<Step>
+
+### Compose: say what you want
+
+Under **What do you want to do?**, pick one of six intents: **IOC limit**, **Post-only limit** (ALO: add liquidity only), **Market (IOC with slippage)**, **Reduce-only close**, **Open long with TP/SL** or **Open short with TP/SL**. Then choose **Buy** or **Sell**, and fill in **Size** and **Limit price** (or **Slippage** for market-style orders). The TP/SL intents ask instead for **Limit entry (Gtc)** (good till cancelled) or **Market entry (IOC)**, then add **Take-profit trigger**, **Stop-loss trigger** and a choice between **Market on trigger (10% slippage)** and **Limit at trigger price**.
+
+Next to the price, **Use mid** fills in the mid rounded to a valid price, and a short note says whether your price would take liquidity or rest on the book.
+
+**Advanced: cloid and builder fee** holds the optional cloid (a client order id you choose: `0x` and 32 hex digits) and a builder address and fee.
+
+</Step>
+<Step>
+
+### Explain: paste what came back
+
+Switch to **Explain a response** and paste into **Response**. It takes a JSON response body, an `orderStatus` result, `orderUpdates` items, a bare error string or an HTTP error line such as `422 Failed to deserialize…`. Or click one of the buttons under **Samples**.
+
+Optionally paste the action you sent into **Request action (optional)**. Each status is then paired with its order, and partial fills are spotted.
+
+</Step>
+</Steps>
+
+## Reading the result
+
+**Compose** shows four parts:
+
+- **Pre-flight**: one row per order (entry, take profit, stop loss). Each price and size is shown as the exact string sent to Hyperliquid, with ✓ or ✗ and the rule it was checked against. The rules are [the tick-size rule](#the-tick-size-rule) above. A failed value offers the nearest valid values below and above: click one to use it. The **Notional (price × size)** line compares the order's value with the minimum.
+- Warnings, for example a post-only price that crosses the mid and would be rejected.
+- **Exchange action (unsigned)**: the JSON to sign, only once nothing fails. Otherwise you see **No payload until the errors above are fixed**. **Inspect what signing this would hash** opens it in the [Signing Inspector](/docs/tools/signing).
+- **What happens after acceptance**: the order's events in sequence.
+
+
+**Explain a response** starts with a summary in green, amber or red. Then comes one card per entry of `statuses`, labelled with its outcome: accepted, resting, filled, partially filled, waiting, cancelled, rejected, error or unknown. Each card lists every field with its meaning. An error hl-tools knows also gets a **Cause**, a **Fix**, a "documented" or "undocumented" tag and its category. Fields it does not know are listed at the end under **Fields hl-core doesn't recognise**.
+
+<Shot src="/docs/img/tool-orders.webp" alt="Explain a response with the tick-size sample: a red summary, and the rejected status with its cause, fix and documented tag" width={2332} height={1400} />
+
+## Good to know
+
+<Accordions>
+<Accordion title="Why is there no plain market order?">
+Hyperliquid has no market order type. A market order is an IOC limit order priced at the mid plus or minus your slippage, which is what **Market (IOC with slippage)** builds. Rounding a derived price always goes in the safe direction, and the table says so.
+</Accordion>
+<Accordion title="Does the composer ever round for me?">
+No. A price or size you typed is never changed silently: an invalid one blocks the payload until you pick a rounding. Only prices the composer works out itself are rounded: market-style prices (the table says how) and the value **Use mid** fills in.
+</Accordion>
+<Accordion title='My response says "ok" but the order failed'>
+HTTP 200 and `"status":"ok"` only mean the request was read. Each order has its own entry in `response.data.statuses`, and an entry can still hold an error. The explainer gives each entry its own card for that reason.
+</Accordion>
+<Accordion title='What does "undocumented" mean on an error?'>
+The error's exact wording does not appear in Hyperliquid's published list of error responses. Its cause and fix come from hl-tools' own catalogue. Every card with a tag links to Hyperliquid's list.
+</Accordion>
+<Accordion title="Network, sharing and links">
+Compose reads markets and mids from the network chosen in the header (**Mainnet** or **Testnet**); Explain needs no network. Nothing is signed or sent from this page. Pasted text stays out of the page's address until you press **Share** on the Explain tab: after you confirm the content is public, the response and request go into the link's `#share=` fragment. `?sample=` opens a sample (`tpsl` for Compose, `tick`, `partial`, `signer`, `422` and others for Explain), and `?tab=explain` opens the second tab. "Last verified against protocol docs" at the top links to [/changes](/changes).
+</Accordion>
+</Accordions>

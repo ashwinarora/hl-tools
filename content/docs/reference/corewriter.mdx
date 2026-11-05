@@ -1,0 +1,36 @@
+---
+title: CoreWriter and precompiles
+description: Every CoreWriter action with its ID and fields, how the bytes are laid out, and every read precompile's address, inputs and output.
+covers: [corewriter-reference]
+keywords: [CoreWriter, sendRawAction, action id, precompile, L1Read, "0x3333", "0x0800", HyperEVM]
+---
+
+{/* jargon: a reference for contract developers, in their own words */}
+
+The tables below are what the [CoreWriter Workbench](/docs/tools/corewriter) decodes and builds with. They are generated from the same rule files, so this page and the tool agree.
+
+CoreWriter is the HyperEVM contract a contract calls to send an action to HyperCore, Hyperliquid's trading layer. Read precompiles are fixed addresses that return HyperCore state to the EVM.
+
+## How the bytes are laid out
+
+<RuleTable id="corewriter-encoding" />
+
+An action's prices and sizes are always scaled by 10^8, whatever the market's `szDecimals`. HyperCore then applies its own tick and lot rules ([Hyperliquid's numbers](/docs/reference/numbers#orders)). USDC amounts are scaled by 10^6.
+
+Orders and vault transfers are delayed: HyperCore runs them a few seconds after the EVM block, not in it. The EVM transaction succeeding says nothing about what HyperCore did; the [Cross-layer Trace](/docs/tools/trace) shows both.
+
+## Actions
+
+<RuleTable id="corewriter-actions" />
+
+ID 14 is not defined. An ID that is not in this table, or a version byte other than 1, is dropped by HyperCore.
+
+<TryIt to="/tools/corewriter?tab=build">Build an action</TryIt>
+
+## Read precompiles
+
+Inputs and outputs are raw ABI, with no function selector. Gas is 2,000 plus 65 for each byte of input and output. An invalid input (an unknown asset, token, vault or user) reverts and uses all the gas passed. A perp price divides by 10^(6 − `szDecimals`), a spot price by 10^(8 − the base token's `szDecimals`).
+
+<RuleTable id="precompiles" />
+
+<TryIt to="/tools/corewriter?tab=precompiles">Query a precompile live</TryIt>

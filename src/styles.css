@@ -1,7 +1,15 @@
 @import 'tailwindcss';
-@plugin '@tailwindcss/typography';
 
 @import 'tw-animate-css';
+
+/*
+ * The docs (/docs, Fumadocs). Its colours come from this file's own tokens
+ * (the shadcn preset reads --background, --card, --muted… defined below), so
+ * one stylesheet serves the whole site and the docs look like the rest of it.
+ * Its typography plugin provides `prose` for the docs pages.
+ */
+@import 'fumadocs-ui/css/shadcn.css';
+@import 'fumadocs-ui/css/preset.css';
 
 /*
  * The two typefaces are served from this site (the files are bundled from the
@@ -206,6 +214,28 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
+}
+
+/*
+ * Docs: the brand colour for links and the active page (the shadcn preset
+ * would use --primary, which is the foreground here), and the docs layout
+ * placed under the site's 56px sticky header, as wide as the header.
+ */
+:root,
+.dark {
+  --color-fd-primary: var(--brand);
+  --color-fd-primary-foreground: var(--brand-foreground);
+  --fd-layout-width: 1440px;
+  --fd-banner-height: 3.5rem;
+}
+
+#nd-sidebar {
+  --color-fd-primary-foreground: var(--brand-foreground);
+}
+
+/* the docs' phone menu opens below the site header, not under it */
+#nd-sidebar-mobile {
+  top: var(--fd-banner-height);
 }
 
 html,

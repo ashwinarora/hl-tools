@@ -1,0 +1,82 @@
+---
+title: WebSocket Workbench
+description: Subscribe to a Hyperliquid WebSocket channel, watch what arrives, and see what a client misses while its socket is down.
+covers: [websocket]
+keywords: [ws, wss, subscription, l2Book, userEvents, ping, post, stream]
+---
+
+Open one subscription to Hyperliquid's WebSocket, see the acknowledgement, the first message and the live stream, then cut the connection on purpose and compare the state before and after.
+
+<TryIt to="/tools/websocket?sample=l2book">Watch the BTC order book</TryIt>
+
+## When to use it
+
+- Your bot reconnected and you want to know whether it missed trades or fills in the gap.
+- A subscription gets no answer and you suspect the parameters, for example `"HYPE/USDC"` where the channel wants a coin string like `@107`.
+- You need to know whether a channel sends a full snapshot, a snapshot then updates, or bare events.
+- You want a recording of a real stream to replay while you build a client.
+
+## How to use it
+
+<Steps>
+<Step>
+
+### Choose a channel and its parameters
+
+Pick a **Channel** under **Subscription**. Its parameters appear below it, each checked before anything is sent. A coin is looked up on the selected network: a valid coin turns green, a wrong one gets "Did you mean …?" with the right coin string. The exact **Subscription message** is shown as JSON.
+
+</Step>
+<Step>
+
+### Connect and watch
+
+Click **Connect & subscribe**. The **Connection** panel shows the network, the WebSocket address, the status and "last data … s ago". **Acknowledgement** shows the server's `subscriptionResponse`, and **First data message** shows the first message on the channel. **Live stream** lists the last 300 messages, newest first. Click a row to see its JSON. **Unsubscribe** sends an unsubscribe and closes the socket.
+
+</Step>
+<Step>
+
+### Cut the connection and reconnect
+
+Click **Simulate disconnect**. The socket is closed in this page, the state it had built is kept, and whatever Hyperliquid sends meanwhile is lost, as for a real drop. Wait a moment, then click **Reconnect**. The page subscribes again and fills in **State before disconnect vs after reconnect**.
+
+</Step>
+<Step>
+
+### Record, replay, export
+
+While connected, click **Record**, then **Stop & save**. The recording goes into the list under **Record & replay**. Each one has **Replay**, **Export** and a delete button. **Import session** loads an exported file. **Replay bundled sample** plays an 8-second recording of mainnet BTC trades. **Replay speed** sets 1×, 10× or instant.
+
+</Step>
+</Steps>
+
+<Shot src="/docs/img/tool-websocket.webp" alt="The Connection panel after replaying the bundled sample: replay finished, the acknowledgement, the first data message and the channel notes" width={1340} height={1380} caption="Replaying the bundled BTC trades sample." />
+
+## Reading the result
+
+The freshness dot is green while data arrives, then amber and red as it goes quiet. On channels that are often silent (`bbo`, event channels, a user's channels), a long silence reads "(silence is normal on this channel)".
+
+The semantics card below the message blocks names the channel's model, its dedupe key and how to recover after a reconnect. No Hyperliquid channel carries a sequence number or resume cursor, so the card always says "none". The table **Ordering and recovery by channel** at the bottom of the page compares all channels.
+
+After **Reconnect**, the diff panel counts entries **added**, **removed**, **changed** and **unchanged**, and shows both states side by side. It then says what the gap cost:
+
+- A snapshot channel, where every message is the full state, has nothing to backfill.
+- For `trades` and `userFills`, the page asks Hyperliquid's REST API what happened during the gap. It reports how many trades or fills there were and how many the new snapshot recovered. The rest must be fetched over REST.
+- For other channels, the gap cannot be measured automatically, and the panel says so.
+
+
+## Good to know
+
+<Accordions>
+<Accordion title="Where are recordings kept, and how big can they be?">
+In this browser's IndexedDB, until you delete them. A recording stops at 5,000 messages, 8 MB or 30 minutes, whichever comes first. A file you import is checked strictly, saved to the list and replayed at once.
+</Accordion>
+<Accordion title="What does an exported file contain?">
+The subscription and every message with its time since the start. Export replaces every address with a stable stand-in (`0x00…01`, `0x00…02`, …), so who-did-what survives but the real addresses do not. The copy kept in this browser is not changed.
+</Accordion>
+<Accordion title="Which network does it connect to?">
+The one chosen in the header (**Mainnet** or **Testnet**), on Hyperliquid's own WebSocket address. If you switch the header while connected, the stream stays where it was and a notice says so. Click **Resubscribe** to move. The page sends a ping every 30 seconds, because Hyperliquid closes a connection after 60 seconds without traffic.
+</Accordion>
+<Accordion title="Can I share a session or a link?">
+There is no Share button here. Export the session and send the file. `?sample=l2book` or `?sample=trades` opens the page on BTC and connects straight away. "Last verified against protocol docs" at the top links to [/changes](/changes).
+</Accordion>
+</Accordions>

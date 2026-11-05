@@ -1,0 +1,59 @@
+---
+title: Is it safe?
+description: What hl-tools can and cannot do with your money, what it keeps and where, and what to check in your wallet before you approve anything.
+covers: [safety]
+keywords: [security, trust, who runs it, open source, AGPL, scam]
+---
+
+The short answer: hl-tools never holds your wallet's keys, and nothing happens to your money unless you approve it in your own wallet. The one exception is the faucet miner: it creates wallets of its own in this browser, and they sign their own steps ([below](#things-worth-knowing)). This page explains the parts that need a closer look.
+
+## What hl-tools cannot do
+
+- **Sign for you.** It has no key of yours and never asks for one or for a seed phrase. Every signature comes from your wallet, after you approve it there.
+- **Change what was signed.** In the Multisig, the amount, the destination and every other field are fixed when the proposal is made. A finaliser can only send it exactly as it was signed.
+- **Move a treasury's money alone.** Only the treasury's signers, as many of them as it requires, can approve an action. hl-tools is not one of them.
+
+## What hl-tools keeps, and where
+
+**In your browser:** the network and theme you chose, proposals you made or opened, recorded WebSocket sessions, what you typed into a Multisig form and did not finish (kept for <Fact id="draftKept" />), names you gave treasuries, and the faucet miner's generated wallets. Clearing this site's data in your browser removes them.
+
+**On the hl-tools server, only if you sign in to the Multisig:** your wallet address, the treasuries you and your co-signers added, the proposals and signatures you share, nicknames, and what you marked as read. Your co-signers see these, and so can the server's operator. The [privacy policy](/privacy) lists every item.
+
+The server cannot forge a signature or move funds. Every browser checks each signature itself and compares the signers with Hyperliquid's own list. The worst a server could do is delay or hide a proposal. The Multisig also works without signing in, by passing proposals on as links or files.
+
+## What to check in your wallet
+
+Your wallet shows what you are about to sign. Read it there, not only on the page.
+
+| You are | Your wallet shows | Check |
+| --- | --- | --- |
+| Signing a Multisig proposal | The treasury (`payloadMultiSigUser`), the finaliser (`outerSigner`) and the action's fields | The treasury, the destination and the amount |
+| Signing a vault step | A code (`connectionId`), not the action | That it matches the code on the page |
+| Sending as finaliser | `multiSigActionHash` | That you meant to send this proposal |
+| Signing in | A sign-in message | It approves nothing and cannot move funds |
+| Using the faucet miner | A send of mainnet USDC | The amount you chose |
+
+If anything in the wallet differs from the page, reject it in the wallet. [You've been asked to sign](/docs/multisig/sign#before-you-sign-a-payment) shows a wallet's pop-up field by field.
+
+## Who runs hl-tools
+
+- **One independent developer**, not Hyperliquid and not a company. hl-tools is not affiliated with Hyperliquid.
+- **Open source.** The app is under the AGPL licence and its code is on [GitHub](https://github.com/ashwinarora/hl-tools): anyone can read what it does.
+- **The treasury lives on Hyperliquid, not here.** A treasury is Hyperliquid's own multi-sig account. If hl-tools went away, the treasury and its money would stay on Hyperliquid, and its signers could still act on it with any tool that supports Hyperliquid's multi-sig, such as Hyperliquid's Python SDK.
+
+## Things worth knowing
+
+<Accordions>
+<Accordion title="A treasury's own key still works outside Hyperliquid">
+Turning an account into a treasury protects it on Hyperliquid only. On HyperEVM and every other chain, that address still answers to its own key alone. Keep that key safe: it gets the account back if the signers ever convert it back.
+</Accordion>
+<Accordion title="An approved API wallet acts without the signers">
+An API wallet can trade with everything the treasury holds and move it into vaults. It cannot send funds to another account or withdraw them. Approve one only for a bot you trust. See [API wallets](/docs/multisig/actions/api-wallets).
+</Accordion>
+<Accordion title="The faucet miner's wallets live in this browser">
+The faucet miner creates wallets and keeps their keys in this browser's storage. If you clear the browser's data while one still holds money, that money is lost. Recover it first: see [getting funds back](/docs/faucet/manual-and-recovery).
+</Accordion>
+<Accordion title="The signing network 1337">
+A vault step is signed while your wallet is on a network numbered 1337, which the page offers to add. It holds no money and nothing is ever sent on it. The wallet goes back to its own network after signing.
+</Accordion>
+</Accordions>

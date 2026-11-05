@@ -1,0 +1,65 @@
+---
+title: Hyperliquid's numbers
+description: The fees, minimums, limits and waiting times hl-tools works with, taken from its own rule files, with where each one comes from.
+covers: [numbers]
+keywords: [fees, limits, rate limit, nonce window, tick size, minimum order, open orders, websocket limits, lockup]
+---
+
+{/* jargon: the developer sections at the end name the API's own terms */}
+
+These are the figures behind the forms and checks in hl-tools. They are read from the same rule files the app uses, so this page and the app agree. Each rule set's sources and the date it was last checked are on the [rule changes](/changes) page.
+
+## Fees
+
+| What | Amount | Notes |
+| --- | --- | --- |
+| First send to an address Hyperliquid has never seen | <Fact id="activationFee" /> | Charged once per new address |
+| Withdrawal to Arbitrum | <Fact id="withdrawalFee" /> | Kept by the bridge out of the amount; an amount of <Fact id="withdrawalFee" /> or less is refused |
+| Creating a treasury, changing its signers | Nothing | |
+
+## Multisig
+
+| What | Value |
+| --- | --- |
+| Signers in a treasury, at most | <Fact id="maxSigners" /> |
+| Signing window | <Fact id="windowNormal" />, or almost <Fact id="windowLonger" /> with the longer window (**3 days** under **Advanced** on the form) |
+| A half-filled form is kept in this browser for | <Fact id="draftKept" /> |
+| A nickname's length, at most | <Fact id="nicknameLength" /> |
+
+## Staking
+
+| What | Mainnet | Testnet |
+| --- | --- | --- |
+| Lockup after staking, before unstaking | <Fact id="stakeLockup" /> | <Fact id="stakeLockupTestnet" /> |
+| Wait for a return to spot | <Fact id="returnWait" /> | <Fact id="returnWaitTestnet" /> |
+| Returns to spot waiting at once, at most | <Fact id="maxPendingReturns" /> | <Fact id="maxPendingReturns" /> |
+
+## Vaults
+
+| What | Mainnet | Testnet |
+| --- | --- | --- |
+| Smallest deposit | <Fact id="vaultMinDeposit" /> | <Fact id="vaultMinDeposit" /> |
+| Lockup, HLP | <Fact id="hlpLockup" /> | <Fact id="hlpLockupTestnet" /> |
+| Lockup, any other vault | <Fact id="vaultLockup" /> | <Fact id="vaultLockupTestnet" /> |
+
+## For developers
+
+The rules the [developer tools](/docs/tools) check against. Each table is generated from the rule file it names.
+
+### Orders
+
+<RuleTable id="order-rules" />
+
+### Signing
+
+<RuleTable id="signing-rules" />
+
+### Rate limits
+
+<RuleTable id="rate-limits" />
+
+CoreWriter's actions and the read precompiles have [their own page](/docs/reference/corewriter).
+
+## Where these come from
+
+Some figures were measured on testnet by hl-tools; others come from Hyperliquid's documentation where they could not be measured, such as mainnet waits of several days. The rule files say which is which, and Hyperliquid can change any of them. When a rule changes, hl-tools updates its rule set, and the change is listed on [/changes](/changes).

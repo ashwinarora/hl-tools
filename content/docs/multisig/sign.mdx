@@ -1,0 +1,92 @@
+---
+title: You've been asked to sign
+description: How to check a Multisig proposal and approve it in your wallet, what your wallet will show, and how to take back a signature or say no.
+covers: [sign, say-no, take-back]
+---
+
+A co-signer has proposed something for your treasury and needs your approval. Signing approves it. It does not send anything: the finaliser does that once enough signers have signed.
+
+## Before you sign a payment
+
+- **The destination, every character.** Compare it with an address you got another way, not only with the proposer's message. Look-alike addresses share their first and last characters.
+- **The amount and the token.** The amount is the largest figure on the page; that is exactly what is signed.
+- **The treasury** is yours, and **the finaliser** is a co-signer you know.
+- **Judge the action, not the title.** A title or note is the proposer's words and is not signed.
+- **An amber line about a similar payment** means one paying the same amount to the same place is still waiting. Make sure you are not paying twice.
+- **Your wallet shows the same fields** ([below](#what-your-wallet-shows)). If anything differs, reject it there.
+
+## Steps
+
+<Steps>
+<Step>
+
+### Open the proposal
+
+Signed in, it is in your inbox under **Waiting for your signature**. Otherwise, open the link or file your co-signer sent you.
+
+</Step>
+<Step>
+
+### Read what it does
+
+The status at the top says where the proposal stands, for example **Collecting signatures · 1 of 2**. Below it, the action: the amount in large type, the destination and the treasury written out in full, and the finaliser. A title or note, if any, was written by the proposer and is not signed.
+
+</Step>
+<Step>
+
+### Sign
+
+Under **Your part**, click **Sign as 0x…**. If the page needs your wallet on another network first, the button says **Switch to … and sign**: the signature names that network, but nothing is sent or paid there.
+
+</Step>
+<Step>
+
+### Check it in your wallet, then approve
+
+Compare what your wallet shows with the page. If anything differs, reject it in the wallet.
+
+</Step>
+</Steps>
+
+<Shot src="/docs/img/ms-proposal-sign.webp" alt="A payment proposal at Collecting signatures 1 of 2: 2500 USDC to the design studio in large type, the treasury, destination and finaliser written out, and Your part with Sign as 0x07ef…c8ba and Say no" width={2252} height={2004} />
+
+## What your wallet shows
+
+<WalletPrompt kind="send" />
+
+Every prompt shows the treasury (`payloadMultiSigUser`) and the finaliser (`outerSigner`), then the action's own fields:
+
+| Action | Also shows |
+| --- | --- |
+| A send or a withdrawal | The destination and the amount |
+| Perps ↔ spot | The amount and the direction |
+| Stake or return to spot | The amount as a whole number of HYPE's smallest unit: 100000000 is 1 HYPE |
+| Move between validators | The validator's address, the amount, and `isUndelegate` (false to stake, true to unstake) |
+| Approve an API wallet | The API wallet's address |
+| Remove an API wallet | An address of all zeros and the wallet's name |
+| Change signers | The new list of signers and the number that must sign |
+| Switch account mode | `unifiedAccount` for unified, `disabled` for manual |
+| A vault deposit or withdrawal | A code (`connectionId`) instead of the action. Compare it with the code on the page |
+
+The page repeats this for the proposal in front of you, right under **Your part**.
+
+## What happens next
+
+The page says **Signature added**. If you are signed in, your co-signers see it at once. If not, pass your copy on to the next signer: see [Working together](/docs/multisig/together). Once enough have signed, the finaliser [sends it to Hyperliquid](/docs/multisig/send).
+
+## If you disagree
+
+<Accordions>
+<Accordion title="Take back my signature">
+Removes your signature from the proposal on the page while it is open. It cannot pull back a signature someone already has: a copy passed on, or one the finaliser has seen, still counts on Hyperliquid until the signing window closes. To be sure a proposal never goes through, ask the finaliser not to send it.
+</Accordion>
+<Accordion title="Say no">
+Tells your co-signers you are against it. It ends nothing: the others can still sign, and the finaliser can still send it if enough agree. **Take back my no** removes it, and signing replaces it. No reason is stored.
+</Accordion>
+<Accordion title="Only the proposer can cancel">
+**Cancel for everyone** belongs to the proposer. See [Working together](/docs/multisig/together).
+</Accordion>
+<Accordion title="A vault step asks to add a network">
+Vault actions are signed as a code, under a network numbered 1337 that your wallet has to hold. The page offers **Add the signing network**: one approval, once. Nothing is ever sent on it. See [Vaults](/docs/multisig/actions/vaults).
+</Accordion>
+</Accordions>

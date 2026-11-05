@@ -1,0 +1,61 @@
+---
+title: Proposal statuses
+description: Every status a Multisig proposal can show at the top of its page, what it means, and what to do about it.
+covers: [judging, collecting, ready, not-yet-valid, submitted, carried-out, in-effect, withdrawn, declined, used, refused, expired, overtaken, stuck, cannot-pass, finaliser-no, not-multisig, unknown, unsupported, closed]
+---
+
+The top of every proposal page says where the proposal stands. This is what each status means.
+
+## Still open
+
+| Status | Means | What to do |
+| --- | --- | --- |
+| **Checking signatures…** | The page is checking each signature against the signers Hyperliquid lists. | Wait a moment. |
+| **Collecting signatures · 1 of 2** | It needs more signatures. The line says who can still sign, and how long the signing window has left. | Signers: [sign](/docs/multisig/sign). |
+| **Ready · 2 of 2 signatures** | Enough have signed. | The finaliser: [send it](/docs/multisig/send). |
+| **Cannot be sent yet** | It is signed, but Hyperliquid would not take it yet, for example an unstake inside its lockup. | Wait until the time it shows. |
+| **Waiting on you** | Your no is what holds it up. | Take back your no, or leave it. |
+| **Cannot pass as things stand** | Too many signers said no for it to reach the number needed. | Talk to your co-signers, or let the proposer cancel it. |
+
+## Finished
+
+| Status | Means | What to do |
+| --- | --- | --- |
+| **Sent · accepted by Hyperliquid** | Done. | Nothing. |
+| **Carried out, not reported here** | Hyperliquid carried it out, but it was sent another way, for example while signed out. | Nothing. It was closed so nobody signs it again. |
+| **In effect** | A signer change that is already live. | Nothing. |
+| **Already used · it most likely went through** | Hyperliquid had already taken its number. | Check **On Hyperliquid** before proposing anything again. |
+
+## Ended without going through
+
+| Status | Means | What to do |
+| --- | --- | --- |
+| **Refused by Hyperliquid · cannot be sent again** | Hyperliquid said no, and its number is used up. The reason is shown. | Fix the cause, then **Propose it again**. |
+| **Cancelled by the proposer** | The proposer took it off everyone's list. | Nothing. Signatures already given stay valid until the window closes. |
+| **The finaliser will not send it** | The finaliser said no. | The proposer can propose it again with another finaliser. |
+| **Expired** | Its signing window closed before it was sent. | **Propose it again**. |
+| **Cannot be sent any more** | A newer payment of a kind that goes in order was sent first. | **Propose it again**. |
+| **Cannot be finished** | Its finaliser is no longer a signer. | **Propose it again** with another finaliser. |
+| **Closed** | The proposal was closed on the hl-tools server. | Nothing. |
+
+## When the page cannot judge it
+
+| Status | Means |
+| --- | --- |
+| **Not a treasury on testnet** (or mainnet) | The address is not a multi-sig on that network. Check the network. |
+| **Signers not loaded** | The signer list could not be read from Hyperliquid yet. The page tries again. |
+| An action this page cannot sign | A trading action, which a treasury makes through an [API wallet](/docs/multisig/actions/api-wallets), or a form of action hl-tools has not tested. |
+
+## Good to know
+
+<Accordions>
+<Accordion title="'Propose it again' is a new proposal">
+It opens the form filled in with the same action and a new proposal number. Signatures do not carry over: everyone signs again.
+</Accordion>
+<Accordion title="Notes under the status">
+Anything that must not be missed is shown in full under the status. Everything else is folded into **N notes**.
+</Accordion>
+<Accordion title="The timeline">
+Each proposal page has a timeline: when it was proposed, signed, said no to and sent, from the hl-tools server's history or from the copy's own dates.
+</Accordion>
+</Accordions>

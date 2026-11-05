@@ -1,0 +1,104 @@
+---
+title: Signing Inspector
+description: Why does Hyperliquid say "User or API Wallet 0x… does not exist"? See exactly what gets hashed and who signed it.
+covers: [signing]
+keywords: [EIP712, eip-712, typed data, phantom agent, msgpack, signature, does not exist, recover signer, connectionId, signatureChainId, "0x66eee"]
+---
+
+Paste a Hyperliquid action or a whole `/exchange` request body and see exactly what is hashed and signed, step by step, and which address the signature recovers to.
+
+<TryIt to="/tools/signing?sample=order">Inspect a sample order</TryIt>
+
+## Common causes of "does not exist"
+
+`User or API Wallet 0x… does not exist` names the address your signature recovers to. Usually one of these:
+
+- **The address is a stranger.** The bytes you signed are not the bytes Hyperliquid hashed:
+  - a number written differently: `"100.0"` or `"0.10"` instead of `"100"` or `"0.1"`;
+  - keys in another order than the SDK writes them (L1 actions hash the action's MsgPack bytes as written);
+  - the other network: the phantom agent's `source` is `a` on mainnet and `b` on testnet;
+  - a nonce, `vaultAddress` or `expiresAfter` that differs between what you signed and what you sent;
+  - on a user-signed action, another `signatureChainId` or `hyperliquidChain`, or fields in another order than the EIP-712 type.
+- **The address is your own wallet or API wallet.** The signature is right; the account is the problem. An API wallet may be unapproved, approved on the other network only, or removed. A wallet that never received anything on this network does not exist there yet.
+- **The inspector recovers your address, but Hyperliquid names another.** Your code sent something else: paste the exact request body it sent.
+
+## When to use it
+
+- Hyperliquid answers `User or API Wallet 0x… does not exist` and the causes above did not settle it.
+- Your own code and an SDK sign the same order differently.
+- A transfer or approval is refused and you want to check its `signatureChainId` and `hyperliquidChain`.
+
+Two signing schemes exist. An **L1 action** (orders, cancels) is encoded as MsgPack, hashed with the nonce, and the hash is signed through a "phantom agent", a small EIP-712 message. A **user-signed action** (sends, approvals) signs its own fields as EIP-712 typed data. The [glossary](/docs/reference/glossary#l1-action) explains each term.
+
+## How to use it
+
+<Steps>
+<Step>
+
+### Pick the network
+
+Use the **Mainnet** / **Testnet** switch in the site header. The phantom agent's source and the expected `hyperliquidChain` depend on it. Loading a sample switches to the sample's network.
+
+</Step>
+<Step>
+
+### Paste the payload
+
+Paste the `action` object or the whole request body into **Action or request body**. From a full body, the nonce, signature, `vaultAddress` and `expiresAfter` are read for you. Or choose one under **Load a known-good sample**: each is a Python SDK signing vector.
+
+**Format** and **Minify** keep key order and number spelling, so they never change what is hashed.
+
+</Step>
+<Step>
+
+### Fill in what the body does not carry
+
+**Nonce** (L1 actions need it; **Use now** fills in the current time), **expiresAfter (optional)**, **vaultAddress (optional)**, **Signature (optional)** as `{"r","s","v"}` or 65-byte hex, and **Expected signer (optional)**, the wallet or API wallet you meant to sign with.
+
+</Step>
+<Step>
+
+### Read the result
+
+The right side updates as you type. Start with the verdict at the top.
+
+</Step>
+</Steps>
+
+To find why two payloads sign differently, switch to **Compare two payloads**, paste one into **A** and one into **B**, or press **Load example: trailing zero in price**. **Copy A → B** and **Swap** help you edit one side.
+
+<Shot src="/docs/img/tool-signing.webp" alt="The Signing Inspector with the order sample: the signing family, the recovered signer marked as matching, a nonce warning, and the first step of what gets signed" width={2332} height={1400} />
+
+## Reading the result
+
+**Signing family** names the scheme (**L1 action (phantom agent)**, **User-signed action** or **Multi-sig envelope**), the action type and the network. **Recovered signer** is the address the signature recovers to. It turns green when it matches **Expected signer** and red when it does not. Red means the bytes you signed are not the bytes shown here.
+
+**Diagnostics** lists what Hyperliquid would hash differently or refuse. Click a field path to find its bytes in the MsgPack step.
+
+**What gets signed** walks through every step, reproducing the official Python SDK byte for byte:
+
+- For an L1 action: **Action as hashed** (marked **canonical**, or **differs from canonical** with a diff against what Hyperliquid would hash), **MsgPack serialisation** (**Raw** bytes or **Decoded** field by field), **Hash preimage**, and **Action hash → phantom agent**.
+- For a user-signed action: **Action fields → EIP-712 message**, the fields that are signed. `type` and `signatureChainId` are not.
+- For both: **EIP-712 typed data**, **EIP-712 hashes** (`domainSeparator`, `structHash` and the signed `digest`), and **Signature → signer**.
+
+In compare mode, the banner says **Identical signing digests** or **The payloads sign different bytes**, with the first MsgPack byte that differs and its field. **Field-level differences**, both byte views and both **Digests** follow.
+
+## Good to know
+
+<Accordions>
+<Accordion title="Why does a trailing zero change the signature?">
+L1 actions hash the MsgPack bytes of the action as written. `"100"` and `"100.0"`, a different key order or a different letter case are different bytes, so the hash and the recovered address change. Hyperliquid then recovers an address it does not know.
+</Accordion>
+<Accordion title="Does the inspector sign or send anything?">
+No. It has no field for a key and never signs. It computes everything in the page and makes no request to Hyperliquid. The pasted payload stays out of the link unless you press **Share** and tick **I confirm this content is public**: the payload, signature included, then goes into the link's `#share=` fragment.
+</Accordion>
+<Accordion title="My payload is a multi-sig request">
+Multi-sig envelopes are not inspected here. The page offers **Open in Multisig Inspector**, which decodes the inner action and checks every signature.
+</Accordion>
+<Accordion title="Why a warning about the nonce?">
+Hyperliquid takes a nonce only between two days in the past and one day in the future. An older nonce gets a warning, which is fine when you reproduce an old test vector.
+</Accordion>
+<Accordion title="vaultAddress and expiresAfter on a user-signed action">
+They are not part of a user-signed action's signature, so the inspector warns and leaves them out. Both are hashed only for L1 actions.
+</Accordion>
+</Accordions>

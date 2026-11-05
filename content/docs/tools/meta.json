@@ -1,0 +1,14 @@
+{
+  "title": "Developer tools",
+  "pages": [
+    "index",
+    "assets",
+    "signing",
+    "corewriter",
+    "trace",
+    "orders",
+    "websocket",
+    "rpc",
+    "multisig-inspector"
+  ]
+}

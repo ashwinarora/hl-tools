@@ -1,0 +1,62 @@
+---
+title: Account mode
+description: Manual and unified accounts on Hyperliquid, what each means for a treasury's balances and payments, and how to switch between them.
+covers: [accountMode, mode]
+---
+
+Hyperliquid keeps an account's money in one of two ways, its account mode. The mode decides which ways of sending work, and every Multisig form follows it.
+
+| Mode | Balances | Payments |
+| --- | --- | --- |
+| **Manual** | Two: perps and spot. Moving USDC between them is a **Perps ↔ spot** proposal | You choose which balance pays and which one the receiver gets it in |
+| **Unified** | One balance for both | Taken from that one balance, with nothing to choose |
+
+The treasury's Overview shows its mode as a tag, such as **unified account**, next to the balances.
+
+## Switch the mode
+
+<Steps>
+<Step>
+
+### Open the form
+
+On the Overview, click **Change** next to the mode tag. Or choose **Switch account mode** in **Propose an action**.
+
+</Step>
+<Step>
+
+### Choose the mode
+
+The form says **This treasury's mode now: …**. Under **Switch to**, pick **Unified account** or **Manual account**. The form says what changes.
+
+</Step>
+<Step>
+
+### Create, sign, send
+
+As with any proposal. Your wallet shows the mode in Hyperliquid's own word for it: `unifiedAccount` for unified, `disabled` for manual.
+
+</Step>
+</Steps>
+
+## What changes
+
+- **To unified**: the perps balance and the spot USDC become one balance. Positions and open orders stay as they are.
+- **To manual**: perps and spot become separate balances again. The USDC stays in the spot balance; moving some to perps is a **Perps ↔ spot** proposal afterwards.
+
+## Good to know
+
+<Accordions>
+<Accordion title="Back to manual needs nothing open">
+Hyperliquid refuses a switch back to manual while the treasury has open positions or orders. The form stops you and says so. A running TWAP order stops the switch too, and the page cannot see one.
+</Accordion>
+<Accordion title="Waiting proposals the switch would break">
+Some waiting proposals only work in one mode. The form names any that would be refused after the switch. Carry them out first, or propose them again afterwards.
+</Accordion>
+<Accordion title="Already in that mode">
+Hyperliquid accepts it and nothing changes. The form tells you before you create it.
+</Accordion>
+<Accordion title="The mode could not be read">
+The balances say so, and the forms warn instead of guessing. Click the round arrow to read it again.
+</Accordion>
+</Accordions>

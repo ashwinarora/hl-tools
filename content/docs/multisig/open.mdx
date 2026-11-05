@@ -1,0 +1,59 @@
+---
+title: Open a treasury
+description: The ways into the Multisig - sign in, add a treasury you sign for, open a proposal from a link or file, or look at any treasury without a wallet.
+covers: [open, sign-in, add]
+---
+
+The [Multisig start page](/multisig) offers four ways in. Which one you need depends on whether you sign in and whether you are a signer.
+
+| You want to | Use | Wallet |
+| --- | --- | --- |
+| See your treasuries and what needs you | **Sign in with your wallet** | Yes |
+| Open a proposal someone sent you, or propose without signing in | **Open or start a proposal** | To sign |
+| Turn an account into a treasury | **Create a treasury** | Yes |
+| Look at any treasury's signers, balances and history | **Open the multi-sig inspector** | No |
+
+<Shot src="/docs/img/ms-start.webp" alt="The Multisig start page with four cards: With your team, Without signing in, Create a treasury, and Look at a treasury" width={2224} height={1200} />
+
+## Sign in
+
+Click **Sign in with your wallet** and approve one message in your wallet. It proves which wallet you are. It approves nothing and cannot move funds.
+
+Signed in, the start page becomes your inbox, **Needs you**, and the side column lists **My treasuries**. Several wallets can stay signed in in one browser: choose one in your wallet to use it, with no new signature.
+
+## Add a treasury you sign for
+
+A treasury created here is added to its signers' lists by itself. For one created elsewhere, click **+ Add an existing one** in the side column, paste the treasury's address and click **Check on testnet** (or mainnet). If your wallet is one of its signers, click **Add to my treasuries**.
+
+## Open a proposal from a link or a file
+
+Click **Open or start a proposal**. Under **Open a proposal**, paste the link or the proposal's text and click **Open**, or click **Upload file**. A link opens the proposal directly too. The proposal is decoded in this page.
+
+Proposals you made or opened are listed under **Recent in this browser**.
+
+## Propose without signing in
+
+Under **Start a proposal**, paste the **Treasury address**, click **Check on testnet**, then **Propose an action →**. **Lab treasury (testnet)** fills in a demo treasury to explore with.
+
+## Look at any treasury
+
+**Open the multi-sig inspector** shows any treasury's signers, approved API wallets, balances, open orders and recent actions. It needs no wallet and changes nothing. See the [Multisig Inspector](/docs/tools/multisig-inspector).
+
+## Good to know
+
+<Accordions>
+<Accordion title="Which network a page is on">
+A Multisig link carries its network. Opening a link for testnet switches the page to testnet, whatever the header showed. Changing the header afterwards moves the page to the other network.
+</Accordion>
+<Accordion title="'This address is not a treasury on testnet'">
+The address is a normal account on that network. Check the network in the header: a treasury on mainnet is not one on testnet.
+</Accordion>
+<Accordion title="'Your wallet is not one of its signers'">
+Only signers can add a treasury to their list. Switch your wallet to one of its signers, or ask a signer to share proposals with you as links.
+</Accordion>
+<Accordion title="Hiding a treasury">
+In a treasury's **⋯** menu, **Hide from my list** removes it from your list in this browser. Your co-signers' lists do not change. **Show in my list again** brings it back.
+</Accordion>
+</Accordions>
+
+<TryIt to="/multisig">Open the Multisig</TryIt>

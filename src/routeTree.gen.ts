@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
+import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
 import { Route as HowToUseRouteImport } from './routes/how-to-use'
 import { Route as ChangesRouteImport } from './routes/changes'
 import { Route as MultisigRouteRouteImport } from './routes/multisig/route'
@@ -34,6 +36,10 @@ import { Route as MultisigGlossaryRouteImport } from './routes/multisig/glossary
 import { Route as MultisigCreateRouteImport } from './routes/multisig/create'
 import { Route as MultisigAddRouteImport } from './routes/multisig/add'
 import { Route as FaucetMinerHowToUseRouteImport } from './routes/faucet-miner/how-to-use'
+import { Route as DocsChar123Char125DotmdRouteImport } from './routes/docs/{$}[.]md'
+import { Route as DocsSitemapDotxmlRouteImport } from './routes/docs/sitemap[.]xml'
+import { Route as DocsSplatRouteImport } from './routes/docs/$'
+import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as MultisigTNetworkAddressRouteImport } from './routes/multisig/t.$network.$address'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -44,6 +50,16 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
+  id: '/llms-full.txt',
+  path: '/llms-full.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowToUseRoute = HowToUseRouteImport.update({
@@ -161,6 +177,26 @@ const FaucetMinerHowToUseRoute = FaucetMinerHowToUseRouteImport.update({
   path: '/how-to-use',
   getParentRoute: () => FaucetMinerRouteRoute,
 } as any)
+const DocsChar123Char125DotmdRoute = DocsChar123Char125DotmdRouteImport.update({
+  id: '/docs/{$}.md',
+  path: '/docs/{$}.md',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsSitemapDotxmlRoute = DocsSitemapDotxmlRouteImport.update({
+  id: '/docs/sitemap.xml',
+  path: '/docs/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsSplatRoute = DocsSplatRouteImport.update({
+  id: '/docs/$',
+  path: '/docs/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSearchRoute = ApiSearchRouteImport.update({
+  id: '/api/search',
+  path: '/api/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MultisigTNetworkAddressRoute = MultisigTNetworkAddressRouteImport.update({
   id: '/t/$network/$address',
   path: '/t/$network/$address',
@@ -173,8 +209,14 @@ export interface FileRoutesByFullPath {
   '/multisig': typeof MultisigRouteRouteWithChildren
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/search': typeof ApiSearchRoute
+  '/docs/$': typeof DocsSplatRoute
+  '/docs/sitemap.xml': typeof DocsSitemapDotxmlRoute
+  '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/multisig/add': typeof MultisigAddRoute
   '/multisig/create': typeof MultisigCreateRoute
@@ -199,8 +241,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/search': typeof ApiSearchRoute
+  '/docs/$': typeof DocsSplatRoute
+  '/docs/sitemap.xml': typeof DocsSitemapDotxmlRoute
+  '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/multisig/add': typeof MultisigAddRoute
   '/multisig/create': typeof MultisigCreateRoute
@@ -228,8 +276,14 @@ export interface FileRoutesById {
   '/multisig': typeof MultisigRouteRouteWithChildren
   '/changes': typeof ChangesRoute
   '/how-to-use': typeof HowToUseRoute
+  '/llms-full.txt': typeof LlmsFullDottxtRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/search': typeof ApiSearchRoute
+  '/docs/$': typeof DocsSplatRoute
+  '/docs/sitemap.xml': typeof DocsSitemapDotxmlRoute
+  '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/faucet-miner/how-to-use': typeof FaucetMinerHowToUseRoute
   '/multisig/add': typeof MultisigAddRoute
   '/multisig/create': typeof MultisigCreateRoute
@@ -258,8 +312,14 @@ export interface FileRouteTypes {
     | '/multisig'
     | '/changes'
     | '/how-to-use'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/privacy'
     | '/sitemap.xml'
+    | '/api/search'
+    | '/docs/$'
+    | '/docs/sitemap.xml'
+    | '/docs/{$}.md'
     | '/faucet-miner/how-to-use'
     | '/multisig/add'
     | '/multisig/create'
@@ -284,8 +344,14 @@ export interface FileRouteTypes {
     | '/'
     | '/changes'
     | '/how-to-use'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/privacy'
     | '/sitemap.xml'
+    | '/api/search'
+    | '/docs/$'
+    | '/docs/sitemap.xml'
+    | '/docs/{$}.md'
     | '/faucet-miner/how-to-use'
     | '/multisig/add'
     | '/multisig/create'
@@ -312,8 +378,14 @@ export interface FileRouteTypes {
     | '/multisig'
     | '/changes'
     | '/how-to-use'
+    | '/llms-full.txt'
+    | '/llms.txt'
     | '/privacy'
     | '/sitemap.xml'
+    | '/api/search'
+    | '/docs/$'
+    | '/docs/sitemap.xml'
+    | '/docs/{$}.md'
     | '/faucet-miner/how-to-use'
     | '/multisig/add'
     | '/multisig/create'
@@ -341,8 +413,14 @@ export interface RootRouteChildren {
   MultisigRouteRoute: typeof MultisigRouteRouteWithChildren
   ChangesRoute: typeof ChangesRoute
   HowToUseRoute: typeof HowToUseRoute
+  LlmsFullDottxtRoute: typeof LlmsFullDottxtRoute
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
   PrivacyRoute: typeof PrivacyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiSearchRoute: typeof ApiSearchRoute
+  DocsSplatRoute: typeof DocsSplatRoute
+  DocsSitemapDotxmlRoute: typeof DocsSitemapDotxmlRoute
+  DocsChar123Char125DotmdRoute: typeof DocsChar123Char125DotmdRoute
   Rpc1337Route: typeof Rpc1337Route
   ToolsAssetsRoute: typeof ToolsAssetsRoute
   ToolsCorewriterRoute: typeof ToolsCorewriterRoute
@@ -368,6 +446,20 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms-full.txt': {
+      id: '/llms-full.txt'
+      path: '/llms-full.txt'
+      fullPath: '/llms-full.txt'
+      preLoaderRoute: typeof LlmsFullDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-to-use': {
@@ -531,6 +623,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FaucetMinerHowToUseRouteImport
       parentRoute: typeof FaucetMinerRouteRoute
     }
+    '/docs/{$}.md': {
+      id: '/docs/{$}.md'
+      path: '/docs/{$}.md'
+      fullPath: '/docs/{$}.md'
+      preLoaderRoute: typeof DocsChar123Char125DotmdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/sitemap.xml': {
+      id: '/docs/sitemap.xml'
+      path: '/docs/sitemap.xml'
+      fullPath: '/docs/sitemap.xml'
+      preLoaderRoute: typeof DocsSitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/$': {
+      id: '/docs/$'
+      path: '/docs/$'
+      fullPath: '/docs/$'
+      preLoaderRoute: typeof DocsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/search': {
+      id: '/api/search'
+      path: '/api/search'
+      fullPath: '/api/search'
+      preLoaderRoute: typeof ApiSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/multisig/t/$network/$address': {
       id: '/multisig/t/$network/$address'
       path: '/t/$network/$address'
@@ -586,8 +706,14 @@ const rootRouteChildren: RootRouteChildren = {
   MultisigRouteRoute: MultisigRouteRouteWithChildren,
   ChangesRoute: ChangesRoute,
   HowToUseRoute: HowToUseRoute,
+  LlmsFullDottxtRoute: LlmsFullDottxtRoute,
+  LlmsDottxtRoute: LlmsDottxtRoute,
   PrivacyRoute: PrivacyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiSearchRoute: ApiSearchRoute,
+  DocsSplatRoute: DocsSplatRoute,
+  DocsSitemapDotxmlRoute: DocsSitemapDotxmlRoute,
+  DocsChar123Char125DotmdRoute: DocsChar123Char125DotmdRoute,
   Rpc1337Route: Rpc1337Route,
   ToolsAssetsRoute: ToolsAssetsRoute,
   ToolsCorewriterRoute: ToolsCorewriterRoute,

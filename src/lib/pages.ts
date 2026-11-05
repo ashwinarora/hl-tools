@@ -24,11 +24,6 @@ export const PAGES = {
 		description:
 			"Run a multisig treasury on Hyperliquid with your own wallets: create one from your account, propose sends, staking and vault moves, sign and send. Open source.",
 	},
-	"/multisig/glossary": {
-		title: "Hyperliquid Multisig glossary — hl-tools",
-		description:
-			"The words of a multisig on Hyperliquid in plain language: treasury, signer, threshold, proposal, finaliser, signing window, API wallet, account mode and more.",
-	},
 	"/tools/assets": {
 		title: "Asset Resolver for Hyperliquid — hl-tools",
 		description:
@@ -73,11 +68,6 @@ export const PAGES = {
 		title: "Testnet USDC Faucet Miner for Hyperliquid — hl-tools",
 		description:
 			"Get more Hyperliquid testnet USDC than one faucet drip: chain generated wallets through the testnet faucet, signed with your own wallet in your browser.",
-	},
-	"/faucet-miner/how-to-use": {
-		title: "How the Hyperliquid testnet faucet miner works — hl-tools",
-		description:
-			"How the faucet miner turns $1 of mainnet USDC into about $1,000 of Hyperliquid testnet USDC, step by step, and what it signs along the way.",
 	},
 	"/changes": {
 		title: "Hyperliquid protocol rule changes — hl-tools",

@@ -1,0 +1,54 @@
+---
+title: Setting up for real money
+description: Before a treasury holds real funds - a fresh account or your existing one, choosing signers and how many must sign, hardware wallets, and losing a key.
+covers: [real-money]
+keywords: [fund, company, team treasury, production, mainnet, threshold, hardware wallet, Ledger, Trezor, lost key, best practice]
+---
+
+The [quick start](/docs/multisig/quick-start) shows the flow on testnet. This page covers the choices to make before a treasury holds money that matters. Read [who runs hl-tools](/docs/safety#who-runs-hl-tools) first.
+
+## A fresh account or the one you have
+
+Either can become a treasury. Converting changes who can act for the account; it moves nothing.
+
+| | A fresh account | Your existing account |
+| --- | --- | --- |
+| Its own key | New, so you can keep it offline from the start | Has been used, maybe on a laptop or a phone |
+| Positions and orders | None | They stay, and only an approved API wallet can trade or close them afterwards |
+| Moving the money in | A send from your existing account, after you have tested | Nothing to move |
+
+A fresh account is the simpler choice for most teams: convert it, send one small payment through it, then move the rest in. Before converting, it must have received something on Hyperliquid: send it a few USDC first.
+
+If you convert an account that trades, close its positions and cancel its orders first, or [approve an API wallet](/docs/multisig/actions/api-wallets) for a bot you trust. After converting, only an approved API wallet can place or cancel orders for it.
+
+## Choosing signers
+
+- **One signer, one person, one device.** Two signers on the same laptop fall to one theft.
+- **Leave room for a lost key.** Changing the signers is itself a proposal, decided by the current number. With 2 of 3, one lost key still leaves two who can replace it. With 3 of 3, one lost key means nobody can act for the treasury again, not even to change its signers.
+- **A common choice** is a majority: 2 of 3, or 3 of 5. A higher number means more keys must be stolen before money can be taken, and fewer can be lost.
+- **Every signer must be in use on Hyperliquid** before you add them, and the account cannot be one of its own signers.
+
+## Hardware wallets
+
+A hardware wallet connected through your browser wallet (for example Rabby or MetaMask) signs like any other: the browser wallet hands it the request. Devices differ in what they show. Some show the fields, some only a summary. Before relying on one, make a testnet treasury with the same devices and run one payment through it, start to finish.
+
+## Test on testnet first
+
+Make a treasury on testnet with the same signers and the same number, and have each signer propose, sign and send once. That is when you find a wallet that cannot sign, a signer who cannot find the proposal, or a finaliser who is never online. Testnet money has no value; the [faucet miner](/docs/faucet) gets you some.
+
+## Keep the account's own key
+
+After converting, the account's own key can no longer act alone on Hyperliquid. Keep it anyway, offline:
+
+- It still controls the same address on HyperEVM and every other chain.
+- It controls the whole account again if the signers ever [convert it back](/docs/multisig/actions/change-signers#convert-back-to-a-normal-account). If nobody holds it then, the account is locked for good.
+
+## When a key is lost or a signer leaves
+
+Propose a [signer change](/docs/multisig/actions/change-signers) that removes them and adds whoever replaces them. The remaining signers decide it, by the current number, so act while enough of you can still sign.
+
+- **A stolen key** cannot move money alone unless the number is 1. Remove it before a second key goes the same way.
+- **Until the change goes through**, a departing signer can still sign, and their signatures on waiting proposals still count.
+- **Waiting proposals** that could no longer be sent once they are removed are listed on the form, under **Waiting proposals this changes**. Carry out the ones that matter first.
+
+<TryIt to="/multisig/create?network=testnet">Try your setup on testnet</TryIt>

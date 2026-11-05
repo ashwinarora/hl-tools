@@ -1,0 +1,59 @@
+---
+title: Raw JSON
+description: For experts - propose any other user-signed Hyperliquid action by writing it as JSON, and what the form refuses or fills in for you.
+covers: [raw]
+---
+
+**Raw JSON** proposes any user-signed Hyperliquid action the guided forms do not cover, written as Hyperliquid's own JSON. It is for people who know Hyperliquid's action format. Everyone else should use the guided forms: they check more and explain more.
+
+## Steps
+
+<Steps>
+<Step>
+
+### Choose Raw JSON
+
+In **Propose an action**, choose **Raw JSON**.
+
+</Step>
+<Step>
+
+### Paste the action
+
+Paste the inner action into **Action JSON**, for example an `approveBuilderFee` action. Not the whole request: just the action object with its `type`.
+
+The form fills in the fields that tie the action to this proposal: the network, the one your wallet signs under, and its time. A line says when it replaced what you wrote.
+
+</Step>
+<Step>
+
+### Check the preview and create
+
+The preview shows the action as every signer will sign it. Amounts and tokens are judged as the guided forms judge them, as amber lines. Then create it as usual.
+
+</Step>
+</Steps>
+
+## What the form refuses
+
+| You paste | Use instead |
+| --- | --- |
+| A `vaultTransfer` | **Vault** forms |
+| An order, a cancel or another trading action | Trading needs speed: approve an [API wallet](/docs/multisig/actions/api-wallets) for a bot |
+| A `convertToMultiSigUser` | **Change signers** |
+| A `userSetAbstraction` | **Switch account mode** |
+| A whole multi-sig request | Paste only the inner action |
+
+## Good to know
+
+<Accordions>
+<Accordion title="A raw usdSend goes in order">
+Hyperliquid takes `usdSend` actions only in order of their dates. Once one goes through, older waiting ones, and older withdrawals, are refused. The **Send USDC** form uses `sendAsset`, which is not bound by this.
+</Accordion>
+<Accordion title="Reading a raw proposal later">
+Every signer sees the action in plain words where hl-tools knows it, and the exact JSON under **Show the exact action**. Check the JSON when the plain words say little.
+</Accordion>
+<Accordion title="Inspecting before you propose">
+To see how an action will be signed and hashed, paste it into the [Signing Inspector](/docs/tools/signing) first.
+</Accordion>
+</Accordions>

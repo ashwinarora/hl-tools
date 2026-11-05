@@ -1,0 +1,82 @@
+---
+title: CoreWriter Workbench
+description: What does 0x01000001… tell HyperCore to do? Decode or build CoreWriter action bytes and query read precompiles live.
+covers: [corewriter]
+keywords: [sendRawAction, action id, raw action, "0x3333", precompile, L1Read, cast send, encodedTif, "1e8"]
+---
+
+Decode the raw bytes a contract sends to HyperCore, build them from fields, and read HyperCore state the way a contract does.
+
+HyperCore is Hyperliquid's own trading layer; HyperEVM is its EVM chain. CoreWriter is the HyperEVM contract at `0x3333…3333` whose `sendRawAction(bytes)` lets a contract send an action to HyperCore. Read precompiles are fixed-address contracts that return HyperCore state to the EVM. Every action ID, field and precompile address is listed in [CoreWriter and precompiles](/docs/reference/corewriter).
+
+<TryIt to="/tools/corewriter?sample=limit-order">Decode a real limit order</TryIt>
+
+## When to use it
+
+- A log or a calldata holds `0x01000001…` and you want to know which action it is and what each field says.
+- Your contract's action did nothing on HyperCore, and you suspect a field was scaled or encoded wrongly.
+- You want a `cast` command or Solidity that sends an action.
+- You want to see what a precompile returns for an account, market or token right now.
+
+## How to use it
+
+The page has three modes: **Decode bytes**, **Build action** and **Read precompiles**. The mode you pick is kept in the page's link (`?tab=`); the bytes you paste are not.
+
+<Steps>
+<Step>
+
+### Decode bytes
+
+Paste into **Hex** under **Raw action bytes**: the bytes passed to `sendRawAction`, or the whole `sendRawAction` calldata. `0x` is optional and whitespace is ignored. Or click one of the **Samples**, real payloads from mainnet and testnet transactions; a sample switches to its own network.
+
+<Shot src="/docs/img/tool-corewriter.webp" alt="Decode bytes with the limit order sample: the field table with raw and human values, and the bytes colour-coded by field" width={2332} height={1720} />
+
+</Step>
+<Step>
+
+### Build action
+
+Choose the **Action** (its ID and name) and fill in its fields. Where a unit is shown, enter the value in that unit: it is scaled exactly, or refused with a reason. Asset and token fields have a search, so you can pick a market or token instead of typing its index. The result is shown the same way as a decode.
+
+</Step>
+<Step>
+
+### Read precompiles
+
+Leave **JSON-RPC endpoint** empty to use the network's public HyperEVM RPC, or enter your own. Expand a precompile, adjust its inputs (they come filled with examples), and press **Query live**.
+
+</Step>
+</Steps>
+
+
+## Reading the result
+
+The decoded panel is headed by the action's name, its ID, the encoding version and the network. Its description names the HyperCore action it is equivalent to. Orders and vault transfers carry **Delayed a few seconds on HyperCore**: HyperCore runs them a few seconds after the EVM block, not in it.
+
+The table lists every field with its Solidity **type**, the **raw** integer in the bytes and the **human** value (a price, an amount in its token, a market's name). A note under a value says how it was scaled (for example `raw ÷ 10^8`). Below the table, the bytes view colours the version byte, the 3-byte action ID and the fields; **Decoded** shows the same as JSON.
+
+**Send it yourself** turns the action into a **cast send**, **cast call**, **Solidity** or **Calldata** snippet. Enter **Calling contract / sender (optional)** to use it as `--from` for `cast call`. `cast send` signs with `--ledger` or a keystore (`--account`); the page never asks for a key.
+
+Two answers mean the bytes would do nothing:
+
+- **Unknown encoding version**: only version 1 is defined, so the body is not decoded. Any decode would be a guess.
+- **Action ID … is not defined for version 1**: HyperCore would drop the action.
+
+A precompile result shows the network and the time it was read, a **Decoded output** table (raw and human values), and, folded, the **Raw JSON-RPC request and response** with an estimate of the gas used.
+
+## Good to know
+
+<Accordions>
+<Accordion title="The bytes decode, but nothing happened on HyperCore">
+The EVM transaction succeeding says nothing about HyperCore. The sender (the contract calling CoreWriter) must already exist on HyperCore, and HyperCore checks the action only after the EVM block. Paste the transaction into the [Cross-layer Trace](/docs/tools/trace) to see what HyperCore did.
+</Accordion>
+<Accordion title="Why did the precompile revert?">
+Precompiles revert on invalid input, such as an unknown asset, token, vault or user, and use up all the gas passed to the call.
+</Accordion>
+<Accordion title="Which state does a precompile return?">
+HyperCore state as of the EVM block. Inputs and outputs are raw ABI without a function selector; the page encodes and decodes them for you.
+</Accordion>
+<Accordion title="Is my custom RPC URL saved?">
+No. A custom URL stays in this tab's memory only; it is not stored.
+</Accordion>
+</Accordions>

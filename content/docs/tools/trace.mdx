@@ -1,0 +1,82 @@
+---
+title: Cross-layer Trace
+description: My HyperEVM transaction succeeded, so why did nothing happen on HyperCore? Follow one transaction from EVM to Core.
+covers: [trace]
+keywords: [EVM to Core, RawAction, CoreWriter log, system address, deposit not credited, "0x2222", transaction hash]
+---
+
+Paste a HyperEVM transaction hash and follow it into HyperCore: the receipt, each action it sent through CoreWriter, what HyperCore should have done, and what Hyperliquid shows it did.
+
+HyperEVM is Hyperliquid's EVM chain and HyperCore its trading layer. A contract reaches HyperCore through CoreWriter (see the [CoreWriter Workbench](/docs/tools/corewriter)) or by sending tokens to a system address. The EVM transaction can succeed while HyperCore drops the action, and nothing on the EVM side reports it.
+
+<TryIt to="/tools/trace?sample=limit-order">Trace a real limit order</TryIt>
+
+## When to use it
+
+- Your contract placed an order through CoreWriter, the transaction succeeded, and no order appeared.
+- A contract paid USDC to an account on HyperCore, for example through Circle's CoreDepositWallet, and the account never received it.
+- You need to know whether the calling contract existed on HyperCore when the action was sent.
+- You want to see how long after the EVM block an action took effect.
+
+## How to use it
+
+<Steps>
+<Step>
+
+### Pick the network
+
+Use the **Mainnet** / **Testnet** switch in the site header. The field's label names the network it reads: **HyperEVM transaction hash on mainnet**.
+
+</Step>
+<Step>
+
+### Paste the hash and press Trace
+
+A hash is `0x` followed by 64 hex characters. Or click one of the **Real transactions:** below the field; each switches to its own network. The hash goes into the page's link (`?tx=`); the network does not, so whoever opens the link reads it on their own network.
+
+</Step>
+<Step>
+
+### Follow the network if it changes
+
+If you switch network after a trace, the result stays on the old one and the page offers **Trace the same hash on …**. If the hash is not on the selected network but is on the other, the page offers **Switch to testnet and trace** (or mainnet). It never switches for you.
+
+</Step>
+</Steps>
+
+<Shot src="/docs/img/tool-trace.webp" alt="A traced limit order on mainnet: the four linked stages from HyperEVM transaction to HyperCore effect, then the expected and observed effect compared field by field" width={2332} height={1520} />
+
+## Reading the result
+
+The top line shows the hash, the network, the time it was read, and how many CoreWriter actions, EVM → Core transfers and logs the receipt holds. **View on explorer** opens the transaction in a HyperEVM block explorer.
+
+Each CoreWriter action gets an **Action 1 of N** section:
+
+- A four-stage flow: **HyperEVM tx** → **RawAction log** → **Decoded action** → **HyperCore effect**. Each link carries a badge: **observed** (read directly from the chain or the API), **inferred** (derived by a rule or a heuristic) or **unknown** (could not be determined). The last stage shows how many seconds after the EVM block the effect appeared.
+- **Expected HyperCore effect**, worked out from the decoded action, next to **Observed on HyperCore**, read from Hyperliquid's info API for the sender, with a table of expected against observed values.
+- **Checks**: conditions that make an action fail without an EVM revert, such as **Sender did not exist on HyperCore at the time** or **EVM transaction reverted**.
+- The action's bytes, with **Open in CoreWriter Workbench**.
+
+Each token sent to a system address gets an **EVM → Core transfer 1 of N** section, tagged **credited**, **no credit observed** or **not verified**. Its flow runs **HyperEVM tx** → **Transfer log** → **Expected credit** → **HyperCore credit**, checked against the credited account's HyperCore ledger.
+
+Further down: **Why CoreWriter actions fail silently** (the order of operations inside a block), the **Receipt**, and **Raw requests**, every JSON-RPC and info API request the trace made, with its response.
+
+## Good to know
+
+<Accordions>
+<Accordion title="Which actions are traced?">
+Limit orders, USD class transfers, `sendAsset` and `spotSend`. Every other action decodes, but its effect shows **Trace not supported for this action yet**.
+</Accordion>
+<Accordion title="Why is an order match only inferred?">
+An order with a cloid (a client order ID) is looked up by that ID, so the match is observed. Without one, it can only be matched by asset, side, price, size and time, so the match is inferred.
+</Accordion>
+<Accordion title="A transfer says no credit observed. Why?">
+Hyperliquid does not report why it drops a transfer. The EVM transaction only emits a log, and whether HyperCore honours it is not reported back. The trace says only whether a credit was observed.
+</Accordion>
+<Accordion title="Could not read the transaction">
+The public HyperEVM RPC allows 100 requests per minute per IP. Wait a moment and press **Retry**.
+</Accordion>
+<Accordion title="The transaction reverted">
+A reverted transaction's logs are discarded, so HyperCore never sees its actions. The trace puts this at the top of **Checks**.
+</Accordion>
+</Accordions>

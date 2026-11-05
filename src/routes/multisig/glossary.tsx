@@ -1,8 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { GlossaryScreen } from "#/components/multisig/GlossaryScreen";
-import { pageHead } from "#/lib/pages";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+// The glossary moved into the docs; keep old links (and their search standing) working.
 export const Route = createFileRoute("/multisig/glossary")({
-	head: () => pageHead("/multisig/glossary"),
-	component: GlossaryScreen,
+	beforeLoad: () => {
+		throw redirect({
+			to: "/docs/$",
+			params: { _splat: "reference/glossary" },
+			statusCode: 301,
+		});
+	},
 });
