@@ -150,6 +150,8 @@ const FIELD_NOTES: ReadonlySet<string> = new Set([
 	"withdraw.own_address",
 	"agent.in_use",
 	"agent.expiry_window",
+	"agent.replaces",
+	"agent.limit",
 ]);
 
 /** Shown only once the user has tried to create: an untouched form is not an error. */

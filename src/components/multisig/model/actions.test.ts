@@ -2024,6 +2024,47 @@ describe("an API wallet's expiry (measured: fixtures/multisig/agent-expiry.json)
 		).toContain("agent.expiry_in_name");
 		expect(AGENT_EXPIRY.tooLong).toContain("16");
 	});
+	it("says when a name replaces a wallet, and when a fourth name may be refused", () => {
+		const lab = { name: "lab", address: A };
+		const replaced = buildAction(
+			form({ kind: "approveAgent", agentAddress: RECIPIENT, agentName: "lab" }),
+			ctx({ agents: [lab] }),
+		);
+		expect(codes(replaced.issues)).toContain("agent.replaces");
+		const three = [lab, { name: "b", address: B }, { name: "c", address: C }];
+		const fourth = buildAction(
+			form({ kind: "approveAgent", agentAddress: RECIPIENT, agentName: "d" }),
+			ctx({ agents: three }),
+		);
+		expect(codes(fourth.issues)).toContain("agent.limit");
+		// the one without a name does not count, and neither does a list not read
+		expect(
+			codes(
+				buildAction(
+					form({
+						kind: "approveAgent",
+						agentAddress: RECIPIENT,
+						agentName: "d",
+					}),
+					ctx({
+						agents: [lab, { name: "", address: B }, { name: "c", address: C }],
+					}),
+				).issues,
+			),
+		).not.toContain("agent.limit");
+		expect(
+			codes(
+				buildAction(
+					form({
+						kind: "approveAgent",
+						agentAddress: RECIPIENT,
+						agentName: "d",
+					}),
+					ctx({ agents: null }),
+				).issues,
+			),
+		).not.toContain("agent.limit");
+	});
 	it("reads days from a link or a draft only when the form offers them", () => {
 		expect(agentDaysOf("30")).toBe("30");
 		expect(agentDaysOf(7)).toBe("7");

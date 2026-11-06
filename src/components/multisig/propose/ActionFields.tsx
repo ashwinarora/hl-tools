@@ -454,6 +454,7 @@ export function ActionFields({
 							placeholder="trading-bot"
 							aria-invalid={!!error("agentName")}
 						/>
+						<FieldNotes texts={notes("agentName")} />
 					</Field>
 					<Field
 						label={AGENT_EXPIRY.label}

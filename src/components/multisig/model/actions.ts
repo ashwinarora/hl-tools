@@ -185,6 +185,8 @@ export function modeTargetFor(
 export const AGENT_DAY_CHOICES = ["1", "7", "30", "90", "180"] as const;
 export type AgentDays = (typeof AGENT_DAY_CHOICES)[number];
 export const DEFAULT_AGENT_DAYS: AgentDays = "7";
+/** Named API wallets Hyperliquid allows an account with little traded volume (measured: errors `agent-limit`). */
+const AGENT_NAMED_USUAL = 3;
 const DAY_MS = 86_400_000;
 
 /** A number of days from a link or a stored draft, when the form offers it. */
@@ -211,6 +213,10 @@ export const AGENT_EXPIRY = {
 	inName:
 		"Choose the expiry below rather than in the name: Hyperliquid reads the end of the name as the expiry.",
 	tooLong: `Hyperliquid takes a name of at most ${AGENT_NAME_MAX} characters.`,
+	replaces: (name: string) =>
+		`An API wallet named "${isolated(visibleText(name))}" is already approved: this one replaces it, and the old key stops acting for the treasury.`,
+	limit:
+		"This treasury already has three named API wallets. Hyperliquid may refuse a fourth for an account with little traded volume: remove one first, or use the name of one to replace it.",
 	beforeWindow:
 		"It expires before the signing window closes: if this is sent late, Hyperliquid refuses it as expired. Choose a longer time or send it soon.",
 	passed:
@@ -1031,6 +1037,26 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 						path: "action.agentName",
 					}),
 				);
+			// a name in use replaces that wallet; a fourth name may be refused (errors: agent-limit)
+			const listed = ctx.agents ?? null;
+			if (name && listed) {
+				const same = listed.find((a) => a.name === name);
+				if (same && same.address.toLowerCase() !== agent)
+					issues.push(
+						issue("agent.replaces", "warning", AGENT_EXPIRY.replaces(name), {
+							path: "action.agentName",
+						}),
+					);
+				else if (
+					!same &&
+					listed.filter((a) => a.name !== "").length >= AGENT_NAMED_USUAL
+				)
+					issues.push(
+						issue("agent.limit", "warning", AGENT_EXPIRY.limit, {
+							path: "action.agentName",
+						}),
+					);
+			}
 			// a wallet without a name gets Hyperliquid's own expiry (not measured for one from here)
 			const validUntil = name
 				? agentValidUntil(
