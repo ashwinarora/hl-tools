@@ -3,8 +3,8 @@ import { defineRuleSet, docs } from "./meta.ts";
 export const ERROR_RULES = defineRuleSet({
 	id: "errors",
 	title: "Exchange error catalog",
-	version: "1.13.0",
-	verifiedAt: "2026-10-19",
+	version: "1.14.0",
+	verifiedAt: "2026-11-07",
 	summary:
 		"Documented order/cancel error strings with their historical-status codes, signing/deposit errors, HTTP-level failures (422 deserialisation, 429 rate limiting) and a small number of pattern-matched messages that are not in the docs (flagged as undocumented).",
 	sources: [
@@ -90,6 +90,11 @@ export const ERROR_RULES = defineRuleSet({
 			version: "1.13.0",
 			date: "2026-10-19",
 			note: "\"Insufficient vault equity for withdrawal\" was also the answer to a mainnet withdrawal of exactly the deposit's worth as `userVaultEquities` reported it (10.005691 USDC, while `vaultDetails` with the depositor's address said `maxWithdrawable` 10.005689). That worth sat above the deposit's precise value for 22 of 25 HLP depositors read the same day, while `maxWithdrawable` was always the precise value cut down to 6 decimals. The entry now names `maxWithdrawable` as the limit; it no longer advises reading `userVaultEquities`.",
+		},
+		{
+			version: "1.14.0",
+			date: "2026-11-07",
+			note: 'Recorded on testnet through a multi-sig: "Agent valid_until already expired." (an approveAgent whose name asks for a moment past, or for one more than 180 days ahead: the same words for both) and "Extra agent name must be between 1 and 16 characters long." (a name of 17 letters or more, the expiry suffix not counted).',
 		},
 	],
 });
@@ -501,6 +506,26 @@ export const ERROR_CATALOG: readonly ErrorEntry[] = [
 		cause:
 			"An approveAgent named the zero address, which removes the API wallet of the given name, and the account has no API wallet of that name: it was removed or replaced already, it expired, or the name is spelled differently (recorded on testnet).",
 		fix: "Read the account's API wallets again. If the wallet is gone there is nothing to remove; for a multi-sig, withdraw the proposal.",
+		documented: false,
+	},
+	{
+		id: "agent-expiry-refused",
+		pattern: /agent valid_until already expired/i,
+		example: "Agent valid_until already expired.",
+		category: "account",
+		cause:
+			'The API wallet\'s name ends in " valid_until <ms>" and Hyperliquid will not take that moment: it has passed, or it is more than 180 days after the approval is carried out. Both get these words (recorded on testnet).',
+		fix: "Propose the approval again with an expiry within 180 days of when it will be sent. For a multi-sig the refused one cannot be reused.",
+		documented: false,
+	},
+	{
+		id: "agent-name-length",
+		pattern: /extra agent name must be between/i,
+		example: "Extra agent name must be between 1 and 16 characters long.",
+		category: "account",
+		cause:
+			'The API wallet\'s name is longer than Hyperliquid takes: 16 characters at most, not counting a " valid_until <ms>" expiry after it (recorded on testnet).',
+		fix: "Propose the approval again with a shorter name. For a multi-sig the refused one cannot be reused.",
 		documented: false,
 	},
 	{

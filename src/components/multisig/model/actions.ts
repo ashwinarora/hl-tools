@@ -10,7 +10,10 @@
 import {
 	type AccountMode,
 	type Address,
+	AGENT_NAME_MAX,
 	activationCharge,
+	agentNameParts,
+	agentNameWithExpiry,
 	Decimal,
 	fromPlain,
 	type Hex,
@@ -178,6 +181,44 @@ export function modeTargetFor(
 	return form.toMode || otherMode(mode);
 }
 
+/** The expiries the form offers, in days. Hyperliquid takes up to 180. */
+export const AGENT_DAY_CHOICES = ["1", "7", "30", "90", "180"] as const;
+export type AgentDays = (typeof AGENT_DAY_CHOICES)[number];
+export const DEFAULT_AGENT_DAYS: AgentDays = "7";
+const DAY_MS = 86_400_000;
+
+/** A number of days from a link or a stored draft, when the form offers it. */
+export function agentDaysOf(v: unknown): AgentDays | null {
+	const s = typeof v === "number" ? String(v) : v;
+	return (AGENT_DAY_CHOICES as readonly unknown[]).includes(s)
+		? (s as AgentDays)
+		: null;
+}
+
+/** The moment an API wallet approved by a proposal of this number stops acting. */
+export function agentValidUntil(nonce: number, days: AgentDays): number {
+	return nonce + Number(days) * DAY_MS;
+}
+
+/** Every sentence of an API wallet's expiry. */
+export const AGENT_EXPIRY = {
+	label: "Expires after",
+	day: (d: AgentDays) => (d === "1" ? "1 day" : `${d} days`),
+	// measured: an API wallet still traded after its moment (fixtures/multisig/agent-expiry.json)
+	hint: "Hyperliquid lists it as expired then, with no proposal, but it may still trade for a while after. To stop it at once, remove it. To keep trading, approve a new key.",
+	unnamed:
+		"Give it a name to choose when it expires. Without one, Hyperliquid chooses.",
+	inName:
+		"Choose the expiry below rather than in the name: Hyperliquid reads the end of the name as the expiry.",
+	tooLong: `Hyperliquid takes a name of at most ${AGENT_NAME_MAX} characters.`,
+	beforeWindow:
+		"It expires before the signing window closes: if this is sent late, Hyperliquid refuses it as expired. Choose a longer time or send it soon.",
+	passed:
+		"This API wallet's expiry has passed by Hyperliquid's clock, so Hyperliquid would refuse it. Propose it again with a later one.",
+	tooFar:
+		"This API wallet's expiry is more than 180 days ahead by Hyperliquid's clock, so Hyperliquid would refuse it. Propose it again with a nearer one.",
+} as const;
+
 /** Every sentence of Remove API wallet. */
 export const REMOVE_AGENT = {
 	/** How a wallet is called in a sentence: by its name, or as the one without. */
@@ -232,6 +273,12 @@ export interface ActionForm {
 	readonly agentAddress: string;
 	readonly agentName: string;
 	/**
+	 * Approve API wallet: how many days it acts before Hyperliquid stops it,
+	 * counted from the proposal's number. Written into the signed name as
+	 * " valid_until <ms>"; a wallet without a name gets no expiry from here.
+	 */
+	readonly agentDays: AgentDays;
+	/**
 	 * Remove API wallet: the name of the wallet to remove, as Hyperliquid
 	 * knows it ("" is the one approved without a name); null while none is
 	 * chosen.
@@ -275,6 +322,7 @@ export const DEFAULT_FORM: ActionForm = {
 	toPerp: "perp",
 	agentAddress: "",
 	agentName: "",
+	agentDays: "7",
 	removeAgent: null,
 	toMode: "",
 	signers: "",
@@ -970,11 +1018,41 @@ export function buildAction(form: ActionForm, ctx: BuildContext): BuiltAction {
 					),
 				);
 			}
+			const name = form.agentName.trim();
+			if ([...name].length > AGENT_NAME_MAX)
+				issues.push(
+					issue("agent.name_length", "error", AGENT_EXPIRY.tooLong, {
+						path: "action.agentName",
+					}),
+				);
+			if (name && agentNameParts(name).validUntil !== null)
+				issues.push(
+					issue("agent.expiry_in_name", "error", AGENT_EXPIRY.inName, {
+						path: "action.agentName",
+					}),
+				);
+			// a wallet without a name gets Hyperliquid's own expiry (not measured for one from here)
+			const validUntil = name
+				? agentValidUntil(
+						ctx.nonce,
+						agentDaysOf(form.agentDays) ?? DEFAULT_AGENT_DAYS,
+					)
+				: null;
+			if (
+				validUntil !== null &&
+				validUntil <= nonceWindow(ctx.nonce).validUntil
+			)
+				issues.push(
+					issue("agent.expiry_window", "warning", AGENT_EXPIRY.beforeWindow, {
+						path: "action.agentDays",
+					}),
+				);
 			return done({
 				type: "approveAgent",
 				...head,
 				agentAddress: agent ?? "",
-				agentName: form.agentName.trim(),
+				agentName:
+					validUntil === null ? name : agentNameWithExpiry(name, validUntil),
 				nonce: ctx.nonce,
 			});
 		}
@@ -1515,12 +1593,22 @@ export function formFromAction(
 					kind: "removeAgent",
 					removeAgent: str(action.agentName),
 				};
-			return {
-				...base,
-				kind: "approveAgent",
-				agentAddress: str(action.agentAddress),
-				agentName: str(action.agentName),
-			};
+			{
+				// the expiry comes back as the days it was given from its proposal's number
+				const parts = agentNameParts(str(action.agentName));
+				const nonce = typeof action.nonce === "number" ? action.nonce : null;
+				const days =
+					parts.validUntil !== null && nonce !== null
+						? agentDaysOf(Math.round((parts.validUntil - nonce) / DAY_MS))
+						: null;
+				return {
+					...base,
+					kind: "approveAgent",
+					agentAddress: str(action.agentAddress),
+					agentName: parts.name,
+					agentDays: days ?? DEFAULT_AGENT_DAYS,
+				};
+			}
 		case "userSetAbstraction": {
 			const toMode = modeTargetOf(action);
 			// any other mode has no form: it stays as it was written

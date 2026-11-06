@@ -1,6 +1,7 @@
 export * from "./account.ts";
 export * from "./action.ts";
 export * from "./address.ts";
+export * from "./agent.ts";
 export * from "./codec.ts";
 export * from "./describe.ts";
 export * from "./diagnose.ts";

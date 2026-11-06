@@ -17,6 +17,12 @@ import {
 import { useOutcomeLists } from "../live/useOutcomeLists";
 import { API_WALLET_FORMER, API_WALLET_SENTENCE } from "../model/apiWallet";
 import {
+	ASHDEX,
+	ashdexOrigin,
+	ashdexTreasuryLink,
+	isAshdexName,
+} from "../model/ashdex";
+import {
 	amountText,
 	compareAmount,
 	compareNumber,
@@ -324,6 +330,7 @@ export function OverviewTab({
 	const active = state.agents?.filter((g) => g.validUntil > now).length ?? null;
 	// a proposal is made by a signer of an account that is still a multi-sig
 	const canPropose = !frozen && !!me && signers.includes(me);
+	const ashdex = ashdexOrigin(network);
 
 	const hydrated = usePrefsHydrated();
 	const prefsKey = treasuryKey(network, address);
@@ -650,12 +657,41 @@ export function OverviewTab({
 												</>
 											)}
 										</span>
+										{ashdex && !expired && isAshdexName(g.name) && (
+											<a
+												href={ashdexTreasuryLink(ashdex, {
+													network,
+													treasury: address,
+													agent: g.address,
+												})}
+												target="_blank"
+												rel="noopener noreferrer"
+												className={`${linkButtonSm} mt-1.5`}
+											>
+												{ASHDEX.trade}
+											</a>
+										)}
 									</PersonRow>
 								);
 							})}
 							<p className="mt-2.5 text-xs text-subtle-foreground">
 								{frozen ? API_WALLET_FORMER : API_WALLET_SENTENCE}
 							</p>
+							{ashdex && canPropose && !frozen && (
+								<p className="mt-1.5 text-xs">
+									<a
+										href={ashdexTreasuryLink(ashdex, {
+											network,
+											treasury: address,
+										})}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-brand underline underline-offset-2"
+									>
+										{ASHDEX.make}
+									</a>
+								</p>
+							)}
 						</>
 					)}
 				</Card>

@@ -51,6 +51,7 @@ import {
 	type ActionForm,
 	type ActionKind,
 	actionTypeOf,
+	agentDaysOf,
 	buildProposalInputs,
 	DEFAULT_FORM,
 	destinationOf,
@@ -148,6 +149,7 @@ const FIELD_NOTES: ReadonlySet<string> = new Set([
 	"action.self_send",
 	"withdraw.own_address",
 	"agent.in_use",
+	"agent.expiry_window",
 ]);
 
 /** Shown only once the user has tried to create: an untouched form is not an error. */
@@ -196,6 +198,8 @@ export function ProposeScreen(props: {
 	vault?: string;
 	/** The network in the link; a link without one takes the header's and is rewritten. */
 	network?: string;
+	/** For Approve API wallet: the key, name and expiry a link from Ashdex fills in. */
+	approve?: ApproveLink;
 }) {
 	const navigate = useNavigate();
 	const page = usePageNetwork(props.network, (network) => {
@@ -211,15 +215,23 @@ export function ProposeScreen(props: {
 			// starts a new form: the form on screen is always the one the link names
 			// (and for a removal, another wallet: "remove A" then "remove B")
 			// (and for a vault form, another vault)
-			key={`${page.network}:${props.treasury ?? ""}:${props.kind ?? ""}:${props.supersedes ?? ""}:${props.agent === undefined ? "" : `agent=${props.agent}`}:${props.vault ?? ""}`}
+			key={`${page.network}:${props.treasury ?? ""}:${props.kind ?? ""}:${props.supersedes ?? ""}:${props.agent === undefined ? "" : `agent=${props.agent}`}:${props.vault ?? ""}:${props.approve ? `approve=${props.approve.agentAddress}:${props.approve.agentName ?? ""}:${props.approve.agentDays ?? ""}` : ""}`}
 			treasury={props.treasury}
 			supersedes={props.supersedes}
 			kind={props.kind}
 			agent={props.agent}
 			vault={props.vault}
 			network={page.network}
+			approve={props.approve}
 		/>
 	);
+}
+
+/** What a link from Ashdex fills in on Approve API wallet: all of it public. */
+export interface ApproveLink {
+	readonly agentAddress: string;
+	readonly agentName?: string;
+	readonly agentDays?: string;
 }
 
 /** The form a link opens: empty, or on the kind (and the API wallet or the vault) it asks for. */
@@ -227,6 +239,7 @@ function formForLink(
 	kind?: string,
 	agent?: string,
 	vault?: string,
+	approve?: ApproveLink,
 ): ActionForm {
 	// the Signers card's "Convert back" opens the same form on that choice
 	if (kind === "convertBack")
@@ -241,6 +254,19 @@ function formForLink(
 	// a row of the Vaults tab names its vault; anything but an address is not taken
 	if (asked && isVaultKind(asked) && vault && ADDRESS_RE.test(vault.trim()))
 		return { ...DEFAULT_FORM, kind: asked, vault: vault.trim().toLowerCase() };
+	// Ashdex made a key and asks the signers to approve it; anything but an address is not taken
+	if (
+		asked === "approveAgent" &&
+		approve &&
+		ADDRESS_RE.test(approve.agentAddress.trim())
+	)
+		return {
+			...DEFAULT_FORM,
+			kind: asked,
+			agentAddress: approve.agentAddress.trim().toLowerCase(),
+			agentName: approve.agentName?.trim() ?? "",
+			agentDays: agentDaysOf(approve.agentDays) ?? DEFAULT_FORM.agentDays,
+		};
 	return asked ? { ...DEFAULT_FORM, kind: asked } : DEFAULT_FORM;
 }
 
@@ -256,6 +282,7 @@ function ProposeForm({
 	agent,
 	vault,
 	network,
+	approve,
 }: {
 	treasury?: string;
 	supersedes?: string;
@@ -263,13 +290,14 @@ function ProposeForm({
 	agent?: string;
 	vault?: string;
 	network: Network;
+	approve?: ApproveLink;
 }) {
 	const hydrated = useNetworkHydrated();
 	const navigate = useNavigate();
 	const client = useQueryClient();
 	const wallet = useWalletSigner();
 	const [form, setForm] = useState<ActionForm>(() =>
-		formForLink(kind, agent, vault),
+		formForLink(kind, agent, vault, approve),
 	);
 	const [attempted, setAttempted] = useState(false);
 	/** Fields the reader has been in and left: "required" is said for those only. */
@@ -323,12 +351,13 @@ function ProposeForm({
 			supersedes,
 			agent,
 			vault,
+			agentAddress: approve?.agentAddress,
 		});
 		if (!stored) return;
 		if (!kindOffered(stored.form.kind, signingNetwork() !== null)) return;
 		setForm(stored.form);
 		setRestoredAt(stored.at);
-	}, [kept.hydrated, kept.stored, kind, supersedes, agent, vault]);
+	}, [kept.hydrated, kept.stored, kind, supersedes, agent, vault, approve]);
 
 	const set = <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => {
 		touched.current = true;
@@ -349,7 +378,7 @@ function ProposeForm({
 		kept.clear();
 		touched.current = false;
 		setRestoredAt(null);
-		setForm(formForLink(kind, agent, vault));
+		setForm(formForLink(kind, agent, vault, approve));
 	};
 	const target = useMemo<AccountTarget | null>(
 		() => (hydrated && address ? { address, network } : null),
@@ -1121,6 +1150,7 @@ function ProposeForm({
 													movable={movable}
 													agents={state.agents}
 													agentsFailed={!!state.agentsError}
+													treasury={address}
 													modeFailed={state.modeFailed}
 													now={now}
 													max={amountMax}

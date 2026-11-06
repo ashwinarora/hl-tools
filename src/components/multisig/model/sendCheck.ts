@@ -9,6 +9,8 @@
  */
 import {
 	accountMode,
+	agentExpiryTaken,
+	agentNameParts,
 	type Delegation,
 	isAgentRemoval,
 	judgeStakingSteps,
@@ -27,7 +29,7 @@ import {
 	type VaultStep,
 	vaultActionOf,
 } from "@hl-tools/core";
-import { REMOVE_AGENT } from "./actions";
+import { AGENT_EXPIRY, REMOVE_AGENT } from "./actions";
 import {
 	judgeSwitch,
 	MODE_UNMEASURED,
@@ -131,6 +133,7 @@ export async function checkBeforeSubmit(
 	if (stakingActionOf(action)) return checkStaking([payload], reads, now);
 	if (vaultActionOf(action)) return checkVault([payload], reads, now);
 	if (isAgentRemoval(action)) return checkRemoval(action, multiSigUser, reads);
+	if (action.type === "approveAgent") return checkExpiry(action, reads, now);
 	const toMode = modeTargetOf(action);
 	if (toMode) return checkSwitch(toMode, multiSigUser, reads);
 	// a switch to a mode nobody measured (see `unmeasuredSwitch`): the page of
@@ -197,6 +200,30 @@ async function checkRemoval(
 	// a list that was not read stops nothing
 	if (!agents || agents.some((a) => a.name === name)) return [];
 	return [{ code: "agent-missing", message: REMOVE_AGENT.missing(name) }];
+}
+
+/**
+ * An approval whose name asks for an expiry: Hyperliquid refuses a moment
+ * that has passed or is more than 180 days ahead ("Agent valid_until already
+ * expired."), judged by its own clock when it answers.
+ */
+async function checkExpiry(
+	action: PlainObject,
+	reads: SendReads,
+	now: number,
+): Promise<Refusal[]> {
+	const name = typeof action.agentName === "string" ? action.agentName : "";
+	const { validUntil } = agentNameParts(name);
+	if (validUntil === null) return [];
+	const theirs = await orNull(reads.clock());
+	const at = typeof theirs === "number" ? theirs : now;
+	if (agentExpiryTaken(validUntil, at)) return [];
+	return [
+		{
+			code: "agent-expiry-refused",
+			message: validUntil <= at ? AGENT_EXPIRY.passed : AGENT_EXPIRY.tooFar,
+		},
+	];
 }
 
 /**

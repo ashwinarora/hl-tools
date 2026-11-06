@@ -8,8 +8,8 @@ export const NKTKAS_SIGNING: RuleSource = {
 export const MULTISIG_RULES = defineRuleSet({
 	id: "multisig",
 	title: "Native multi-sig",
-	version: "1.5.0",
-	verifiedAt: "2026-10-13",
+	version: "1.6.0",
+	verifiedAt: "2026-11-07",
 	summary:
 		"A multi-sig user is an ordinary account whose own key can no longer send; up to 10 authorized users sign, a leader (an authorized user, or a funded API wallet of one) collects at least `threshold` distinct signatures and submits a `multiSig` envelope. Inner L1 actions are hashed as `[multiSigUser, outerSigner, action]` with the envelope's nonce, vault and expiry; inner user-signed actions gain `payloadMultiSigUser` and `outerSigner` after `hyperliquidChain`. The leader signs `HyperliquidTransaction:SendMultiSig{hyperliquidChain, multiSigActionHash, nonce}` over the envelope with inner signatures trimmed. Only the leader's nonce set is used; the multi-sig user's rate limit is charged. An envelope Hyperliquid refuses still uses up its number for that leader, so a refused proposal has to be made again. An account's USDC sends (`usdSend`) are taken only in increasing order of their `time`: once a newer one is carried out, an older pending send or bridge withdrawal is refused. Every other kind of action is taken in any order.",
 	sources: [
@@ -48,6 +48,11 @@ export const MULTISIG_RULES = defineRuleSet({
 			version: "1.5.0",
 			date: "2026-10-13",
 			note: "The form of the inner action Hyperliquid hashes (fixtures/multisig/inner-form.json). Hyperliquid reads a multi-sig request, writes the inner action out in its own form (its fields in its own order, an address in lowercase) and checks every signature against that: the signers' and the leader's signatures made over the canonical form were accepted whatever form the body carried, and signatures made over the fields in another order or over an address in capitals were refused (\"Invalid multi-sig outer signer\" when the leader's was, \"Invalid multi-sig inner signer\" when only the signers' were). Measured with a vault deposit under the minimum, which is refused after the signatures are checked. So a pasted request is judged over the canonical action, as a proposal document always was (`requestAsJudged`). Not measured: a decimal string with trailing zeros inside a multi-sig request (a vault action has none).",
+		},
+		{
+			version: "1.6.0",
+			date: "2026-11-07",
+			note: 'An API wallet\'s expiry through a multi-sig (fixtures/multisig/agent-expiry.json). The docs\' " valid_until <ms>" after the name is honoured and taken off: the wallet is listed under the name alone, with `validUntil` exactly the moment asked, and removing it takes that name. A moment more than 180 days ahead is refused, and so is a moment past, both with the same words, "Agent valid_until already expired." (180 days and a minute refused, 180 days less a minute taken). Without the suffix a named wallet gets 90 days. A name is 1 to 16 characters, the suffix not counted ("Extra agent name must be between 1 and 16 characters long." for 17). Approving a new address under a name in use replaces the wallet at once, and its key then trades for the multi-sig account with no `vaultAddress`, as a plain account\'s does.',
 		},
 	],
 });
@@ -101,6 +106,21 @@ export const ABSTRACTION_ENVELOPE_CODES: Readonly<Record<string, string>> = {
 	unifiedAccount: "u",
 	disabled: "i",
 };
+
+/**
+ * An API wallet's expiry, set by " valid_until <ms>" after its name: at most
+ * this far ahead of the moment the approval is carried out (measured, 180
+ * days; the docs say the same).
+ */
+export const AGENT_MAX_VALID_MS = 180 * 86_400_000;
+/**
+ * The longest name Hyperliquid takes for an API wallet, in characters, not
+ * counting the " valid_until <ms>" suffix (measured with plain letters: 16
+ * taken, 17 refused; a name of other characters was not tried).
+ */
+export const AGENT_NAME_MAX = 16;
+/** What a named API wallet approved without the suffix gets (measured). */
+export const AGENT_DEFAULT_VALID_MS = 90 * 86_400_000;
 
 export const MAX_SIGNERS = 10;
 /** `threshold` must be in [1, signers.length] (`Invalid multi-sig threshold`). */
@@ -181,6 +201,10 @@ export const MULTISIG_FACTS: readonly {
 	{
 		id: "agent-bypass",
 		text: "An API wallet approved through the multi-sig acts for the account directly, without an envelope, and survives a revert. It can trade with everything the account holds and move it into vaults; it cannot send it to another account or withdraw it.",
+	},
+	{
+		id: "agent-expiry",
+		text: 'An approval whose name ends in " valid_until <ms>" sets the API wallet\'s expiry to that moment; Hyperliquid lists the wallet under the name without it. A moment past or more than 180 days ahead is refused (`Agent valid_until already expired.`); without it a named wallet gets 90 days. A name is at most 16 characters, the suffix not counted (`Extra agent name must be between 1 and 16 characters long.`).',
 	},
 	{
 		id: "agent-reach",

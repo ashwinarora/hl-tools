@@ -787,3 +787,38 @@ describe("the signing window, by Hyperliquid's clock (audit F-028)", () => {
 		expect(WINDOW_CLOSED).toContain("Hyperliquid's clock");
 	});
 });
+
+describe("checkBeforeSubmit: an API wallet's expiry", () => {
+	const approval = (agentName: string): PlainObject => ({
+		type: "approveAgent",
+		signatureChainId: "0x3e6",
+		hyperliquidChain: "Testnet",
+		agentAddress: "0xdbe64add3251883ba828aa29d9ab39860a67be89",
+		agentName,
+		nonce: 1,
+	});
+	const at = 1_794_000_000_000;
+	const ask = async (name: string, clock: number | null) =>
+		(
+			await checkBeforeSubmit(payload(approval(name)), reads({ clock }).r, at)
+		).map((x) => x.code);
+	it("is judged by Hyperliquid's clock, and by the device's when it does not answer", async () => {
+		expect(await ask(`bot valid_until ${at + 86_400_000}`, at)).toEqual([]);
+		expect(await ask(`bot valid_until ${at - 1}`, at)).toEqual([
+			"agent-expiry-refused",
+		]);
+		// the device's clock says it is fine, Hyperliquid's that it has passed
+		expect(await ask(`bot valid_until ${at + 60_000}`, at + 120_000)).toEqual([
+			"agent-expiry-refused",
+		]);
+		expect(await ask(`bot valid_until ${at - 1}`, null)).toEqual([
+			"agent-expiry-refused",
+		]);
+		expect(await ask(`bot valid_until ${at + 181 * 86_400_000}`, at)).toEqual([
+			"agent-expiry-refused",
+		]);
+	});
+	it("stops nothing for a name without one", async () => {
+		expect(await ask("bot", at)).toEqual([]);
+	});
+});

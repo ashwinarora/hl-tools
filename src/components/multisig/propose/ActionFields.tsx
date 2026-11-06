@@ -17,12 +17,16 @@ import { Callout } from "#/components/hub/status";
 import { cn } from "#/lib/utils";
 import {
 	type ActionForm,
+	AGENT_DAY_CHOICES,
+	AGENT_EXPIRY,
+	type AgentDays,
 	modeTargetFor,
 	type PocketChoice,
 	REMOVE_AGENT,
 	type Receiver,
 } from "../model/actions";
 import { API_WALLET_ACTS, API_WALLET_PROPOSE } from "../model/apiWallet";
+import { ASHDEX, ashdexOrigin, ashdexTreasuryLink } from "../model/ashdex";
 import type { MaxAmount } from "../model/max";
 import { modeLabel } from "../model/mode";
 import { MODE_SWITCH, type ModeTarget } from "../model/modeSwitch";
@@ -172,6 +176,7 @@ export function ActionFields({
 	modeFailed,
 	now,
 	max,
+	treasury,
 }: {
 	form: ActionForm;
 	set: <K extends keyof ActionForm>(key: K, value: ActionForm[K]) => void;
@@ -204,6 +209,8 @@ export function ActionFields({
 	modeFailed: boolean;
 	/** The page's clock, for what has expired. */
 	now: number;
+	/** The treasury the form is for: Ashdex makes an API wallet key for it. */
+	treasury?: string | null;
 	/** The amount's Max (`model/max.ts`); null for a kind with no amount. */
 	max: MaxAmount | null;
 }) {
@@ -417,6 +424,22 @@ export function ActionFields({
 							aria-invalid={!!error("agentAddress")}
 						/>
 						<FieldNotes texts={notes("agentAddress")} />
+						{!form.agentAddress.trim() && treasury && ashdexOrigin(network) ? (
+							<p className="text-xs text-muted-foreground">
+								<a
+									href={ashdexTreasuryLink(ashdexOrigin(network) as string, {
+										network,
+										treasury,
+									})}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-brand underline underline-offset-2"
+								>
+									{ASHDEX.make}
+								</a>{" "}
+								{ASHDEX.makeHint}
+							</p>
+						) : null}
 					</Field>
 					<Field
 						label="Name (optional)"
@@ -429,7 +452,28 @@ export function ActionFields({
 							value={form.agentName}
 							onChange={(e) => set("agentName", e.target.value)}
 							placeholder="trading-bot"
+							aria-invalid={!!error("agentName")}
 						/>
+					</Field>
+					<Field
+						label={AGENT_EXPIRY.label}
+						error={error("agentDays")}
+						hint={
+							form.agentName.trim() ? AGENT_EXPIRY.hint : AGENT_EXPIRY.unnamed
+						}
+					>
+						{form.agentName.trim() ? (
+							<Segmented<AgentDays>
+								label={AGENT_EXPIRY.label}
+								value={form.agentDays}
+								onChange={(v) => set("agentDays", v)}
+								options={AGENT_DAY_CHOICES.map((d) => ({
+									value: d,
+									label: AGENT_EXPIRY.day(d),
+								}))}
+							/>
+						) : null}
+						<FieldNotes texts={notes("agentDays")} />
 					</Field>
 				</>
 			);

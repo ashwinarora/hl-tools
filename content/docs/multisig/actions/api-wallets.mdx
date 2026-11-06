@@ -22,9 +22,9 @@ On the treasury's page, click **Propose an action** and choose **Approve API wal
 </Step>
 <Step>
 
-### Fill in the address and a name
+### Fill in the address, a name and when it expires
 
-Paste the bot's **API wallet address**. **Name** is optional; a name such as `trading-bot` tells several API wallets apart. The name is signed exactly as typed.
+Paste the bot's **API wallet address**. **Name** is optional; a name such as `trading-bot` tells several API wallets apart. Hyperliquid takes at most 16 characters. Under **Expires after**, choose 1, 7, 30, 90 or 180 days. Hyperliquid lists the API wallet as expired then, with no proposal, but it may still trade for a while after. To stop it at once, remove it. A wallet without a name gets the expiry Hyperliquid chooses.
 
 </Step>
 <Step>
@@ -35,6 +35,36 @@ As with any proposal. Once Hyperliquid accepts it, the API wallet appears on the
 
 </Step>
 </Steps>
+
+## Trade for the treasury in Ashdex
+
+[Ashdex](https://ashdex.app) is a trading site that can trade for a treasury with an API wallet. Only the signer who wants to trade needs one.
+
+<Steps>
+<Step>
+
+### Make a key in Ashdex
+
+In Ashdex, choose to trade for a treasury and enter its address. Ashdex makes a new key in your browser. hl-tools does not make or hold it. From the treasury's Overview, **Make a trading key in Ashdex** opens that page.
+
+</Step>
+<Step>
+
+### Ask your co-signers
+
+Ashdex opens **Approve API wallet** here with the address, a name such as `ashdex 1a2b` and 7 days filled in. Create and sign it, then pass it on, like any proposal.
+
+</Step>
+<Step>
+
+### Send it, then trade
+
+Once it is sent and accepted, the proposal's page shows **Trade in Ashdex**, and so does the API wallet's row on the Overview. Ashdex then trades for the treasury until the API wallet expires or is removed.
+
+</Step>
+</Steps>
+
+Sending money out of the treasury still needs a proposal. To keep trading after the expiry, make a new key in Ashdex and approve it. Whether someone else gets the key is up to the one who holds it: Ashdex can pass it on.
 
 ## Remove an API wallet
 
@@ -52,7 +82,7 @@ Hyperliquid takes one removal at a time. Send a second one a minute or two after
 An approved API wallet keeps acting after the treasury is converted back to a normal account. Remove it first if it should stop.
 </Accordion>
 <Accordion title="Expiry">
-The Overview shows when each API wallet expires, in amber when that is within a week.
+The Overview shows when each API wallet expires, in amber when that is within a week. The expiry counts from when the proposal was made. If it would end before the signing window closes, the form says so: Hyperliquid refuses an approval whose expiry has passed.
 </Accordion>
 <Accordion title="Its actions have no proposal">
 What an API wallet does is not proposed or signed by anyone, so no proposal explains it. A vault deposit it makes shows as **None on record** in the Vaults tab's history.
