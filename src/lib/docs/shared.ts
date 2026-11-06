@@ -4,12 +4,13 @@
  */
 import { createGetUrl } from "fumadocs-core/source";
 import { SITE_ORIGIN } from "#/lib/site";
+import { SOCIAL } from "#/lib/social";
 
 export const DOCS_ROUTE = "/docs";
 
 /** Where the page's source lives, for "Edit on GitHub" and "Report a problem". */
 export const REPO = {
-	url: "https://github.com/ashwinarora/hl-tools",
+	url: SOCIAL.github,
 	branch: "main",
 	contentDir: "content/docs",
 } as const;

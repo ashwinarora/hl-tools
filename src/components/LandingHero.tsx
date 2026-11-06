@@ -13,6 +13,7 @@ import { motion } from "motion/react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
+import { SOCIAL } from "#/lib/social";
 
 const fadeIn = (delay: number) => ({
 	initial: { opacity: 0, y: 8 },
@@ -157,7 +158,7 @@ export default function LandingHero() {
 					</div>
 				))}
 				<a
-					href="https://github.com/ashwinarora/hl-tools"
+					href={SOCIAL.github}
 					target="_blank"
 					rel="noopener noreferrer"
 					className="text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"

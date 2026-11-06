@@ -4,6 +4,8 @@
  * string here is held to the same rules as the page (`copy.test.ts`).
  */
 
+import { SOCIAL } from "#/lib/social";
+
 /** Routes the home page links to, with the search they need. */
 export const LINKS = {
 	multisig: "/multisig",
@@ -12,7 +14,7 @@ export const LINKS = {
 	faucet: "/faucet-miner",
 	faucetHow: "/faucet-miner/how-to-use",
 	changes: "/changes",
-	repo: "https://github.com/ashwinarora/hl-tools",
+	repo: SOCIAL.github,
 } as const;
 
 export const MULTISIG = {

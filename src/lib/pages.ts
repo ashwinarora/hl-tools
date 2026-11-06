@@ -10,6 +10,7 @@
  */
 import { SITE } from "#/components/home/facts";
 import { SHARE, SITE_ORIGIN, shareMeta } from "./site";
+import { SOCIAL } from "./social";
 
 export interface PageSeo {
 	readonly title: string;
@@ -111,8 +112,6 @@ export function pageHead(path: PagePath) {
 	};
 }
 
-const REPO = "https://github.com/ashwinarora/hl-tools";
-
 /**
  * The home page's structured data. `WebSite` gives search results the site's
  * name ("hl-tools", the other spellings people type as alternates); the
@@ -143,7 +142,7 @@ export function siteJsonLd() {
 					url: "https://github.com/ashwinarora",
 				},
 				license: "https://www.gnu.org/licenses/agpl-3.0.html",
-				sameAs: [REPO],
+				sameAs: [SOCIAL.github, SOCIAL.x],
 			},
 		],
 	};

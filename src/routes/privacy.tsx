@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { pageHead } from "#/lib/pages";
+import { SOCIAL } from "#/lib/social";
 
 export const Route = createFileRoute("/privacy")({
 	head: () => pageHead("/privacy"),
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/privacy")({
 });
 
 const UPDATED = "2026-10-20";
-const REPO = "https://github.com/ashwinarora/hl-tools";
+const REPO = SOCIAL.github;
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
