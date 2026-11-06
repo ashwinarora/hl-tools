@@ -75,7 +75,10 @@ describe("accountLines: the account being converted", () => {
 		expect(j.lines[0]?.text).toBe(
 			"2 open positions and 1 open order. After converting, only an API wallet can trade or cancel for this account.",
 		);
-		expect(j.lines[1]?.text).toContain('1 API wallet ("bot") keeps acting');
+		// one past its expiry is still listed, and was seen still trading
+		expect(j.lines[1]?.text).toContain(
+			'2 API wallets ("bot", "old") keep acting',
+		);
 		expect(j.lines[1]?.text).toContain("move it into vaults");
 		expect(
 			accountLines(facts({ orders: 3 })).lines[0]?.text.startsWith(

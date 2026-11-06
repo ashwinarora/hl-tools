@@ -225,7 +225,8 @@ export function accountLines(f: AccountFacts): AccountJudgement {
 			text: "Its API wallets could not be read. If it has one, that wallet keeps acting for the account afterwards, without the signers.",
 		});
 	} else {
-		const live = f.agents.filter((a) => a.validUntil > f.now);
+		// every listed wallet: one past its expiry was seen still trading
+		const live = f.agents;
 		if (live.length > 0) {
 			const names = live
 				.map((a) => `"${a.name ? visibleText(a.name) : "unnamed"}"`)

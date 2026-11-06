@@ -31,3 +31,11 @@ export const API_WALLET_PROPOSE =
 
 /** The label of the row that lists them on the treasury strip. */
 export const API_WALLET_ROW = "API wallets (act without the signers)";
+
+/**
+ * Under an API wallet past its expiry that Hyperliquid still lists. Measured
+ * on testnet (fixtures/multisig/agent-expiry.json): such a wallet was still
+ * listed, and its orders still accepted, half an hour after its moment.
+ */
+export const API_WALLET_PAST_EXPIRY =
+	"Past its expiry, but Hyperliquid still lists it, and one like it was seen still trading. Remove it to be sure it stops.";

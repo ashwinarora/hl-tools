@@ -75,7 +75,8 @@ describe("the Change signers form's sentences", () => {
 			now: 1,
 		});
 		expect(live.find((l) => l.code === "back.agents")?.text).toContain(
-			'2 API wallets ("bot", "unnamed") keep acting for the account afterwards',
+			// one past its expiry is still listed, and was seen still trading
+			'3 API wallets ("bot", "old", "unnamed") keep acting for the account afterwards',
 		);
 		expect(
 			convertBackLines({ agents: null, now: 1 }).map((l) => l.code),
@@ -152,10 +153,12 @@ describe("a signer change, as every co-signer reads it (decision D3, audit F-092
 				'1 API wallet ("qa-bot") keeps acting for the treasury after this change',
 			),
 		);
-		// one that has expired acts for nobody
+		// one past its expiry is still listed, and was seen still trading
 		expect(
-			agentsStayLine([{ name: "old", address: C, validUntil: 500 }], 1_000),
-		).toBeNull();
+			agentsStayLine([{ name: "old", address: C, validUntil: 500 }], 1_000)
+				?.text,
+		).toContain('"old"');
+		expect(agentsStayLine([], 1_000)).toBeNull();
 	});
 
 	it("for converting back, says what the form says", () => {

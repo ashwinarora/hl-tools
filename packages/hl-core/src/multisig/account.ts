@@ -130,7 +130,9 @@ export function assessAccount(input: AccountInput): AccountAssessment {
 			),
 		);
 	}
-	const live = agents.filter((a) => !a.expired);
+	// every wallet Hyperliquid still lists: one past its expiry was seen still
+	// trading (fixtures/multisig/agent-expiry.json)
+	const live = agents;
 	if (live.length) {
 		flags.push(
 			issue(
@@ -147,8 +149,8 @@ export function assessAccount(input: AccountInput): AccountAssessment {
 		flags.push(
 			issue(
 				"account.agent_expired",
-				"info",
-				`API wallet ${a.name || "main"} (${a.address}) expired on ${isoTime(a.validUntil)} and can no longer sign.`,
+				"warning",
+				`API wallet ${a.name || "main"} (${a.address}) is past its expiry (${isoTime(a.validUntil)}), but Hyperliquid still lists it, and an API wallet like it was seen still placing orders after its expiry. Remove it to be sure it stops.`,
 			),
 		);
 	}

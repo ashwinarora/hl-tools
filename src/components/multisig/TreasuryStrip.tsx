@@ -203,7 +203,7 @@ export function TreasuryStrip({
 												{short(a.address)}
 											</span>
 											{a.validUntil <= now ? (
-												<Tag>expired</Tag>
+												<Tag tone="warn">past expiry</Tag>
 											) : (
 												<Tag tone="warn" className="whitespace-normal">
 													{/* one piece of text: a flex row would drop the space after "until" */}

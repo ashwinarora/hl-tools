@@ -97,7 +97,7 @@ describe("assessAccount: multi-sig accounts", () => {
 			).signers[0]?.nested,
 		).toBe(false);
 	});
-	it("agents: bypass warning for live ones, info for expired ones, warning when unknown", () => {
+	it("agents: bypass warning for every listed one, a warning for one past its expiry, warning when unknown", () => {
 		const live = {
 			name: "lab",
 			address: SPARE.toUpperCase().replace("0X", "0x"),
@@ -115,6 +115,9 @@ describe("assessAccount: multi-sig accounts", () => {
 		]);
 		expect(r.flags[0]?.message).toContain("lab");
 		expect(r.flags[1]?.message).toContain("main");
+		// past its expiry it was seen still trading (fixtures/multisig/agent-expiry.json)
+		expect(r.flags[0]?.message).toContain("2 approved API wallets");
+		expect(r.flags[1]?.message).toContain("still lists it");
 		expect(codes(assessAccount(base({ agents: null })).flags)).toEqual([
 			"account.agents_unknown",
 		]);

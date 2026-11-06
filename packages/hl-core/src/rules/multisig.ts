@@ -52,7 +52,7 @@ export const MULTISIG_RULES = defineRuleSet({
 		{
 			version: "1.6.0",
 			date: "2026-11-07",
-			note: 'An API wallet\'s expiry through a multi-sig (fixtures/multisig/agent-expiry.json). The docs\' " valid_until <ms>" after the name is honoured and taken off: the wallet is listed under the name alone, with `validUntil` exactly the moment asked, and removing it takes that name. A moment more than 180 days ahead is refused, and so is a moment past, both with the same words, "Agent valid_until already expired." (180 days and a minute refused, 180 days less a minute taken). Without the suffix a named wallet gets 90 days. A name is 1 to 16 characters, the suffix not counted ("Extra agent name must be between 1 and 16 characters long." for 17). Approving a new address under a name in use replaces the wallet at once, and its key then trades for the multi-sig account with no `vaultAddress`, as a plain account\'s does.',
+			note: 'An API wallet\'s expiry through a multi-sig (fixtures/multisig/agent-expiry.json). The docs\' " valid_until <ms>" after the name is honoured and taken off: the wallet is listed under the name alone, with `validUntil` exactly the moment asked, and removing it takes that name. A moment more than 180 days ahead is refused, and so is a moment past, both with the same words, "Agent valid_until already expired." (180 days and a minute refused, 180 days less a minute taken). Without the suffix a named wallet gets 90 days. Past its moment a wallet stays listed, and its orders were still accepted half an hour later: an expiry is not a stop. A name is 1 to 16 characters, the suffix not counted ("Extra agent name must be between 1 and 16 characters long." for 17). Approving a new address under a name in use replaces the wallet at once, and its key then trades for the multi-sig account with no `vaultAddress`, as a plain account\'s does.',
 		},
 	],
 });
@@ -204,7 +204,7 @@ export const MULTISIG_FACTS: readonly {
 	},
 	{
 		id: "agent-expiry",
-		text: 'An approval whose name ends in " valid_until <ms>" sets the API wallet\'s expiry to that moment; Hyperliquid lists the wallet under the name without it. A moment past or more than 180 days ahead is refused (`Agent valid_until already expired.`); without it a named wallet gets 90 days. A name is at most 16 characters, the suffix not counted (`Extra agent name must be between 1 and 16 characters long.`).',
+		text: 'An approval whose name ends in " valid_until <ms>" sets the API wallet\'s expiry to that moment; Hyperliquid lists the wallet under the name without it. A moment past or more than 180 days ahead is refused (`Agent valid_until already expired.`); without it a named wallet gets 90 days. Past its moment the wallet stays listed and was seen still placing orders half an hour later: only a removal is measured to stop it at once. A name is at most 16 characters, the suffix not counted (`Extra agent name must be between 1 and 16 characters long.`).',
 	},
 	{
 		id: "agent-reach",
