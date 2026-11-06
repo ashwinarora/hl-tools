@@ -87,8 +87,6 @@ export function Logo() {
 	);
 }
 
-const REPO = "https://github.com/ashwinarora/hl-tools";
-
 /**
  * The site's header and footer, and the Multisig section, run up to 1440 px
  * wide. The header and the footer use it on every page, so the logo and the
@@ -179,7 +177,7 @@ export default function Header() {
 				<div className="ml-auto flex items-center gap-1.5">
 					<NetworkSwitch compact />
 					<a
-						href={REPO}
+						href={SOCIAL.github}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="hidden size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground sm:inline-flex"
@@ -255,7 +253,7 @@ export default function Header() {
 						Protocol rule changes
 					</Link>
 					<a
-						href={REPO}
+						href={SOCIAL.github}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-surface-2"

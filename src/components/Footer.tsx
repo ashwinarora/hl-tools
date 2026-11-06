@@ -41,7 +41,7 @@ export default function Footer() {
 					</Link>
 					<div className="-mx-2 flex items-center gap-1">
 						<a
-							href="https://github.com/ashwinarora/hl-tools"
+							href={SOCIAL.github}
 							target="_blank"
 							rel="noopener noreferrer"
 							className={ICON_LINK}
