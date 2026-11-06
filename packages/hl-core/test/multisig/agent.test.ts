@@ -23,7 +23,16 @@ const record = JSON.parse(
 		new URL("../../fixtures/multisig/agent-expiry.json", import.meta.url),
 		"utf8",
 	),
-) as { runs: Run[] };
+) as {
+	runs: Run[];
+	afterExpiry: {
+		validUntil: number;
+		lastListedAndAccepted: number;
+		firstRefused: number;
+		refusal: string;
+		listedWhenRefused: boolean;
+	};
+};
 
 describe("an API wallet's expiry in its name", () => {
 	it("reads the measured form, and nothing else", () => {
@@ -114,5 +123,18 @@ describe("as testnet answered (fixtures/multisig/agent-expiry.json)", () => {
 			expect(days).toBeGreaterThan(0.999);
 			expect(days).toBeLessThan(1.001);
 		}
+	});
+});
+
+describe("after the moment (fixtures/multisig/agent-expiry.json, afterExpiry)", () => {
+	const a = record.afterExpiry;
+	it("an API wallet kept trading for a while, then was taken off the list and refused", () => {
+		const minutes = (t: number) => (t - a.validUntil) / 60_000;
+		expect(minutes(a.lastListedAndAccepted)).toBeGreaterThan(25);
+		expect(minutes(a.firstRefused)).toBeLessThan(45);
+		expect(a.listedWhenRefused).toBe(false);
+		expect(
+			explainExchangeError({ status: "err", response: a.refusal }, 200).id,
+		).not.toBe("unknown");
 	});
 });
