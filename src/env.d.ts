@@ -7,6 +7,9 @@ interface ImportMetaEnv {
 	readonly VITE_SUPABASE_PUBLISHABLE_KEY?: string;
 	/** The signing network's link (chain 1337). Absent: no vault forms in the Multisig Signer. */
 	readonly VITE_CHAIN_1337_RPC_URL?: string;
+	/** Ashdex's sites, where a treasury's API wallet trades. Absent: no link to Ashdex. */
+	readonly VITE_ASHDEX_URL?: string;
+	readonly VITE_ASHDEX_TESTNET_URL?: string;
 }
 
 interface ImportMeta {

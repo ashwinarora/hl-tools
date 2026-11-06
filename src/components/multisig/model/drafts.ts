@@ -7,7 +7,12 @@
  * key names both).
  */
 import type { Network } from "@hl-tools/core";
-import { ACTION_KINDS, type ActionForm, DEFAULT_FORM } from "./actions";
+import {
+	ACTION_KINDS,
+	type ActionForm,
+	AGENT_DAY_CHOICES,
+	DEFAULT_FORM,
+} from "./actions";
 import { fromNow } from "./time";
 
 /** A draft older than this is dropped when the store is read. */
@@ -54,6 +59,7 @@ const PICK: {
 	toPerp: ["perp", "spot"],
 	toMode: ["", "unified", "manual"],
 	chain: ["hyperevm", "arbitrum"],
+	agentDays: AGENT_DAY_CHOICES,
 };
 
 /**
@@ -155,6 +161,8 @@ export interface ProposeLink {
 	readonly agent?: string;
 	/** A vault form: the vault's address. */
 	readonly vault?: string;
+	/** Approve API wallet: the address of the key to approve (made in Ashdex). */
+	readonly agentAddress?: string;
 }
 
 /**
@@ -183,6 +191,11 @@ export function proposeDraftFor(
 		if (link.kind === "convertBack" && form.signers !== "null") return null;
 	}
 	if (link.agent !== undefined && form.removeAgent !== link.agent) return null;
+	if (
+		link.agentAddress !== undefined &&
+		form.agentAddress.trim().toLowerCase() !== link.agentAddress.toLowerCase()
+	)
+		return null;
 	if (
 		link.vault !== undefined &&
 		form.vault.trim().toLowerCase() !== link.vault.trim().toLowerCase()

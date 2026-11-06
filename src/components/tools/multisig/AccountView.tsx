@@ -421,7 +421,7 @@ function AccountResult({
 										<td className={`${TD} whitespace-nowrap`}>
 											{isoTime(a.validUntil).slice(0, 10)}{" "}
 											{a.expired ? (
-												<Pill tone="neutral">expired</Pill>
+												<Pill tone="warning">past expiry</Pill>
 											) : (
 												<Pill tone="warning">active</Pill>
 											)}

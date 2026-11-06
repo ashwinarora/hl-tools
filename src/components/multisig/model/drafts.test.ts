@@ -275,3 +275,34 @@ describe("the line that says a draft is back", () => {
 		expect(DRAFT_COPY.clear).toBe("Clear");
 	});
 });
+
+describe("a link from Ashdex and a draft", () => {
+	it("wins over a draft that approves another key, and keeps one for the same key", () => {
+		const stored = {
+			form: form({
+				kind: "approveAgent",
+				agentAddress: RECIPIENT,
+				agentName: "edited",
+			}),
+			at: NOW,
+		};
+		expect(
+			proposeDraftFor(stored, {
+				kind: "approveAgent",
+				agentAddress: "0xdbe64add3251883ba828aa29d9ab39860a67be89",
+			}),
+		).toBe(null);
+		expect(
+			proposeDraftFor(stored, {
+				kind: "approveAgent",
+				agentAddress: RECIPIENT.toUpperCase().replace("0X", "0x"),
+			}),
+		).toBe(stored);
+	});
+
+	it("keeps the days of a stored approval, and drops days the form does not offer", () => {
+		expect(restoredForm({ ...form(), agentDays: "30" })?.agentDays).toBe("30");
+		expect(restoredForm({ ...form(), agentDays: "8" })?.agentDays).toBe("7");
+		expect(restoredForm({ kind: "approveAgent" })?.agentDays).toBe("7");
+	});
+});

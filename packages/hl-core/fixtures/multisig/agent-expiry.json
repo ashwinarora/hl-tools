@@ -1,0 +1,1595 @@
+{
+	"about": "An API wallet's expiry and name, approved through a 2-of-3 multi-sig on testnet (lab treasury 0xf8365a35694f401a554e4ffa51b5afe3b203d148), 2026-11-06 UTC. Scripts: labs/treasury-trading/01-expiry.ts, 02-sequence.sh. `listed` is the treasury's extraAgents entry for that address read right after.",
+	"network": "testnet",
+	"treasury": "0xf8365a35694f401a554e4ffa51b5afe3b203d148",
+	"runs": [
+		{
+			"about": "approve name \"ashdex dbe6 valid_until 1794258383189\"",
+			"file": "2026-11-06T21-06-23-188Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "ashdex dbe6 valid_until 1794258383189",
+				"at": 1793999183189
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0xdbe64add3251883ba828aa29d9ab39860a67be89",
+				"agentName": "ashdex dbe6 valid_until 1794258383189",
+				"nonce": 1793999183189
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"listed": {
+				"name": "ashdex dbe6",
+				"validUntil": 1794258383189
+			}
+		},
+		{
+			"about": "approve name \"ashdex dbe6 valid_until 1809637598995\"",
+			"file": "2026-11-06T21-06-38-995Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "ashdex dbe6 valid_until 1809637598995",
+				"at": 1793999198995
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0x531e3069a7db88c4ee3a041f258ee46300ae589f",
+				"agentName": "ashdex dbe6 valid_until 1809637598995",
+				"nonce": 1793999198995
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Agent valid_until already expired."
+			}
+		},
+		{
+			"about": "approve name \"ashdex dbe6 valid_until 1793995600264\"",
+			"file": "2026-11-06T21-06-40-264Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "ashdex dbe6 valid_until 1793995600264",
+				"at": 1793999200264
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0x531e3069a7db88c4ee3a041f258ee46300ae589f",
+				"agentName": "ashdex dbe6 valid_until 1793995600264",
+				"nonce": 1793999200264
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Agent valid_until already expired."
+			}
+		},
+		{
+			"about": "approve name \"ashdex dbe6 valid_until 1809464801598\"",
+			"file": "2026-11-06T21-06-41-597Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "ashdex dbe6 valid_until 1809464801598",
+				"at": 1793999201598
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0x531e3069a7db88c4ee3a041f258ee46300ae589f",
+				"agentName": "ashdex dbe6 valid_until 1809464801598",
+				"nonce": 1793999201598
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"listed": {
+				"name": "ashdex dbe6",
+				"validUntil": 1809464801598
+			}
+		},
+		{
+			"about": "approve name \"ashdex dbe6 valid_until 1809551278038\"",
+			"file": "2026-11-06T21-06-58-038Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "ashdex dbe6 valid_until 1809551278038",
+				"at": 1793999218040
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0x94ba4014dc2033a10b59ed5989d282b752b4776e",
+				"agentName": "ashdex dbe6 valid_until 1809551278038",
+				"nonce": 1793999218040
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Agent valid_until already expired."
+			}
+		},
+		{
+			"about": "approve name \"ashdex dbe6 valid_until 1809551159346\"",
+			"file": "2026-11-06T21-06-59-346Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "ashdex dbe6 valid_until 1809551159346",
+				"at": 1793999219346
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0x94ba4014dc2033a10b59ed5989d282b752b4776e",
+				"agentName": "ashdex dbe6 valid_until 1809551159346",
+				"nonce": 1793999219346
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-07-14-072Z-001-tt01-order-probe3.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1793999234905
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "65008",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64707764434
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-07-14-072Z-002-tt01-cancel-probe3.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1793999235769
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64707764434
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "remove \"ashdex dbe6\"",
+			"file": "2026-11-06T21-07-30-322Z-001-tt01-remove.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "ashdex dbe6",
+				"at": 1793999250322
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0x0000000000000000000000000000000000000000",
+				"agentName": "ashdex dbe6",
+				"nonce": 1793999250322
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "approve name \"nnnnnnnnnnnnnnnn\"",
+			"file": "2026-11-06T21-08-51-811Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "nnnnnnnnnnnnnnnn",
+				"at": 1793999331812
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0xdbe64add3251883ba828aa29d9ab39860a67be89",
+				"agentName": "nnnnnnnnnnnnnnnn",
+				"nonce": 1793999331812
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"listed": {
+				"name": "nnnnnnnnnnnnnnnn",
+				"validUntil": 1801775333014
+			}
+		},
+		{
+			"about": "remove \"nnnnnnnnnnnnnnnn\"",
+			"file": "2026-11-06T21-10-13-336Z-001-tt01-remove.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "nnnnnnnnnnnnnnnn",
+				"at": 1793999413336
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0x0000000000000000000000000000000000000000",
+				"agentName": "nnnnnnnnnnnnnnnn",
+				"nonce": 1793999413336
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			}
+		},
+		{
+			"about": "approve name \"nnnnnnnnnnnnnnnnn\"",
+			"file": "2026-11-06T21-11-34-859Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "nnnnnnnnnnnnnnnnn",
+				"at": 1793999494859
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0xdbe64add3251883ba828aa29d9ab39860a67be89",
+				"agentName": "nnnnnnnnnnnnnnnnn",
+				"nonce": 1793999494859
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Extra agent name must be between 1 and 16 characters long."
+			},
+			"listed": null
+		},
+		{
+			"about": "approve name \"nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn\"",
+			"file": "2026-11-06T21-11-36-242Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+				"at": 1793999496242
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0xdbe64add3251883ba828aa29d9ab39860a67be89",
+				"agentName": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+				"nonce": 1793999496242
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Extra agent name must be between 1 and 16 characters long."
+			},
+			"listed": null
+		},
+		{
+			"about": "approve name \"nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn\"",
+			"file": "2026-11-06T21-11-37-582Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+				"at": 1793999497582
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0xdbe64add3251883ba828aa29d9ab39860a67be89",
+				"agentName": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+				"nonce": 1793999497582
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Extra agent name must be between 1 and 16 characters long."
+			},
+			"listed": null
+		},
+		{
+			"about": "approve name \"nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn\"",
+			"file": "2026-11-06T21-11-39-016Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+				"at": 1793999499017
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0xdbe64add3251883ba828aa29d9ab39860a67be89",
+				"agentName": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+				"nonce": 1793999499017
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "Extra agent name must be between 1 and 16 characters long."
+			},
+			"listed": null
+		},
+		{
+			"about": "approve name \"ashdex 531e valid_until 1794000100324\"",
+			"file": "2026-11-06T21-11-40-324Z-001-tt01-approve.json",
+			"signedBy": "signers",
+			"asked": {
+				"agentName": "ashdex 531e valid_until 1794000100324",
+				"at": 1793999500324
+			},
+			"action": {
+				"type": "approveAgent",
+				"signatureChainId": "0x66eee",
+				"hyperliquidChain": "Testnet",
+				"agentAddress": "0x531e3069a7db88c4ee3a041f258ee46300ae589f",
+				"agentName": "ashdex 531e valid_until 1794000100324",
+				"nonce": 1793999500324
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "default"
+				}
+			},
+			"listed": {
+				"name": "ashdex 531e",
+				"validUntil": 1794000100324
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-11-41-752Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1793999502597
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "65106",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64708004585
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-11-41-752Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1793999503472
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64708004585
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-22-15-101Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000135796
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64957",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64708543337
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-22-15-101Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000136670
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64708543337
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-22-41-590Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000162290
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64957",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64708565485
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-22-41-590Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000163129
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64708565485
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-24-44-480Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000285197
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "65039",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64708667439
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-24-44-480Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000286060
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64708667439
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-26-47-420Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000408260
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "65023",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64708779722
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-26-47-420Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000409128
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64708779722
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-28-50-546Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000531493
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64999",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64708895974
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-28-50-546Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000532412
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64708895974
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-30-53-772Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000654566
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64952",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64709004552
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-30-53-772Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000655453
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64709004552
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-32-56-712Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000777552
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64920",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64709120369
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-32-56-712Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000778529
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64709120369
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-34-59-973Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000900775
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64945",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64709236817
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-34-59-973Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794000901931
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64709236817
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-37-03-411Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001024203
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64923",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64709347540
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-37-03-411Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001025293
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64709347540
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-39-06-667Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001147470
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64980",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64709457683
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-39-06-667Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001148394
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64709457683
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-41-09-710Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001270529
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64974",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64709567209
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-41-09-710Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001271382
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64709567209
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-43-12-786Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001393635
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64986",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64709676766
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-43-12-786Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001394552
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64709676766
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-49-16-097Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001756972
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64943",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64709999927
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-49-16-097Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001757929
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64709999927
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-50-21-966Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001822684
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "64974",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64710056779
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-50-21-966Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001823509
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64710056779
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T21-50-33-786Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001834504
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "65002",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "order",
+					"data": {
+						"statuses": [
+							{
+								"resting": {
+									"oid": 64710066191
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "cancel signed by the approved API wallet",
+			"file": "2026-11-06T21-50-33-786Z-002-tt01-cancel-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794001835300
+			},
+			"action": {
+				"type": "cancel",
+				"cancels": [
+					{
+						"a": 3,
+						"o": 64710066191
+					}
+				]
+			},
+			"accepted": true,
+			"answer": {
+				"status": "ok",
+				"response": {
+					"type": "cancel",
+					"data": {
+						"statuses": [
+							"success"
+						]
+					}
+				}
+			}
+		},
+		{
+			"about": "order signed by the approved API wallet",
+			"file": "2026-11-06T22-00-36-581Z-001-tt01-order-probe2.json",
+			"signedBy": "API wallet",
+			"asked": {
+				"at": 1794002437291
+			},
+			"action": {
+				"type": "order",
+				"orders": [
+					{
+						"a": 3,
+						"b": true,
+						"p": "65058",
+						"s": "0.0002",
+						"r": false,
+						"t": {
+							"limit": {
+								"tif": "Gtc"
+							}
+						}
+					}
+				],
+				"grouping": "na"
+			},
+			"accepted": false,
+			"answer": {
+				"status": "err",
+				"response": "User or API Wallet 0x531e3069a7db88c4ee3a041f258ee46300ae589f does not exist."
+			}
+		}
+	],
+	"afterExpiry": {
+		"agent": "0x531e3069a7db88c4ee3a041f258ee46300ae589f",
+		"validUntil": 1794000100324,
+		"lastListedAndAccepted": 1794001833000,
+		"firstRefused": 1794002436000,
+		"refusal": "User or API Wallet 0x531e3069a7db88c4ee3a041f258ee46300ae589f does not exist.",
+		"listedWhenRefused": false
+	}
+}

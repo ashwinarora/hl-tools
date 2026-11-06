@@ -15,7 +15,17 @@ import {
 	usePrefsHydrated,
 } from "#/store/multisigPrefsStore";
 import { useOutcomeLists } from "../live/useOutcomeLists";
-import { API_WALLET_FORMER, API_WALLET_SENTENCE } from "../model/apiWallet";
+import {
+	API_WALLET_FORMER,
+	API_WALLET_PAST_EXPIRY,
+	API_WALLET_SENTENCE,
+} from "../model/apiWallet";
+import {
+	ASHDEX,
+	ashdexOrigin,
+	ashdexTreasuryLink,
+	isAshdexName,
+} from "../model/ashdex";
 import {
 	amountText,
 	compareAmount,
@@ -321,9 +331,11 @@ export function OverviewTab({
 	// from the relay's history: only where the relay lists the treasury for this wallet
 	const signed = useLastSigned(network, address, signers, !!treasury);
 	const threshold = state.policy?.threshold ?? treasury?.threshold ?? null;
-	const active = state.agents?.filter((g) => g.validUntil > now).length ?? null;
+	// every wallet Hyperliquid lists can act: one past its expiry was seen still trading
+	const active = state.agents?.length ?? null;
 	// a proposal is made by a signer of an account that is still a multi-sig
 	const canPropose = !frozen && !!me && signers.includes(me);
+	const ashdex = ashdexOrigin(network);
 
 	const hydrated = usePrefsHydrated();
 	const prefsKey = treasuryKey(network, address);
@@ -601,7 +613,7 @@ export function OverviewTab({
 										trailing={
 											<span className="inline-flex items-center gap-2">
 												{expired ? (
-													<Tag>expired</Tag>
+													<Tag tone="warn">past expiry</Tag>
 												) : (
 													<Tag tone={soon ? "warn" : "gray"}>
 														{soon ? "expires " : ""}
@@ -650,12 +662,46 @@ export function OverviewTab({
 												</>
 											)}
 										</span>
+										{expired && (
+											<span className="block text-xs text-warning">
+												{API_WALLET_PAST_EXPIRY}
+											</span>
+										)}
+										{ashdex && !expired && isAshdexName(g.name) && (
+											<a
+												href={ashdexTreasuryLink(ashdex, {
+													network,
+													treasury: address,
+													agent: g.address,
+												})}
+												target="_blank"
+												rel="noopener noreferrer"
+												className={`${linkButtonSm} mt-1.5`}
+											>
+												{ASHDEX.trade}
+											</a>
+										)}
 									</PersonRow>
 								);
 							})}
 							<p className="mt-2.5 text-xs text-subtle-foreground">
 								{frozen ? API_WALLET_FORMER : API_WALLET_SENTENCE}
 							</p>
+							{ashdex && canPropose && !frozen && (
+								<p className="mt-1.5 text-xs">
+									<a
+										href={ashdexTreasuryLink(ashdex, {
+											network,
+											treasury: address,
+										})}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-brand underline underline-offset-2"
+									>
+										{ASHDEX.make}
+									</a>
+								</p>
+							)}
 						</>
 					)}
 				</Card>

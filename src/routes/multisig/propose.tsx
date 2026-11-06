@@ -13,6 +13,9 @@ export const Route = createFileRoute("/multisig/propose")({
 		agent?: string;
 		vault?: string;
 		network?: string;
+		agentAddress?: string;
+		agentName?: string;
+		agentDays?: string;
 	} => ({
 		treasury: typeof s.treasury === "string" ? s.treasury : undefined,
 		supersedes: typeof s.supersedes === "string" ? s.supersedes : undefined,
@@ -24,13 +27,32 @@ export const Route = createFileRoute("/multisig/propose")({
 		vault: typeof s.vault === "string" ? s.vault : undefined,
 		// the form's network: without it a reload would take whatever the header holds by then
 		network: typeof s.network === "string" ? s.network : undefined,
+		// Approve API wallet, from Ashdex: the new key's address, its name and how
+		// many days it acts. All three are public (Hyperliquid lists them); the
+		// key itself never travels.
+		agentAddress:
+			typeof s.agentAddress === "string" ? s.agentAddress : undefined,
+		agentName: typeof s.agentName === "string" ? s.agentName : undefined,
+		agentDays:
+			typeof s.agentDays === "string" || typeof s.agentDays === "number"
+				? String(s.agentDays)
+				: undefined,
 	}),
 	component: ProposePage,
 });
 
 function ProposePage() {
-	const { treasury, supersedes, kind, agent, vault, network } =
-		Route.useSearch();
+	const {
+		treasury,
+		supersedes,
+		kind,
+		agent,
+		vault,
+		network,
+		agentAddress,
+		agentName,
+		agentDays,
+	} = Route.useSearch();
 	return (
 		<ProposeScreen
 			treasury={treasury}
@@ -39,6 +61,11 @@ function ProposePage() {
 			agent={agent}
 			vault={vault}
 			network={network}
+			approve={
+				agentAddress === undefined
+					? undefined
+					: { agentAddress, agentName, agentDays }
+			}
 		/>
 	);
 }

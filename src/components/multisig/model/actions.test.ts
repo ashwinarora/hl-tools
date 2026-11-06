@@ -25,7 +25,9 @@ import {
 import {
 	ACTION_KINDS,
 	type ActionForm,
+	AGENT_EXPIRY,
 	actionTypeOf,
+	agentDaysOf,
 	arrivalPocket,
 	type BuildContext,
 	buildAction,
@@ -202,7 +204,8 @@ const VALID: Record<string, { form: ActionForm; action: object }> = {
 			type: "approveAgent",
 			...HEAD,
 			agentAddress: RECIPIENT,
-			agentName: "bot",
+			// seven days from the proposal's number, as Hyperliquid reads the name
+			agentName: `bot valid_until ${NONCE + 7 * 86_400_000}`,
 			nonce: NONCE,
 		},
 	},
@@ -1979,5 +1982,112 @@ describe("the staking forms", () => {
 			{ type: "cDeposit", ...HEAD, wei: 2000000, nonce: NONCE },
 		] as PlainObject[])
 			expect(formFromAction(alone, "testnet").kind).toBe("raw");
+	});
+});
+
+describe("an API wallet's expiry (measured: fixtures/multisig/agent-expiry.json)", () => {
+	const DAY = 86_400_000;
+	const approve = (over: Partial<ActionForm>) =>
+		buildAction(
+			form({ kind: "approveAgent", agentAddress: RECIPIENT, ...over }),
+			ctx(),
+		);
+	it("writes the days chosen into the signed name, counted from the proposal's number", () => {
+		for (const d of ["1", "7", "30", "90", "180"] as const)
+			expect(
+				approve({ agentName: "ashdex dbe6", agentDays: d }).action,
+			).toMatchObject({
+				agentName: `ashdex dbe6 valid_until ${NONCE + Number(d) * DAY}`,
+			});
+		// 7 days unless chosen
+		expect(DEFAULT_FORM.agentDays).toBe("7");
+	});
+	it("gives no expiry to the wallet without a name", () => {
+		expect(approve({ agentName: "" }).action).toMatchObject({ agentName: "" });
+	});
+	it("says when it would expire before the signing window closes", () => {
+		expect(
+			codes(approve({ agentName: "bot", agentDays: "1" }).issues),
+		).toContain("agent.expiry_window");
+		expect(
+			codes(approve({ agentName: "bot", agentDays: "7" }).issues),
+		).not.toContain("agent.expiry_window");
+		const early = approve({ agentName: "bot", agentDays: "1" }).issues.find(
+			(i) => i.code === "agent.expiry_window",
+		);
+		// said under the field it is about
+		expect(early && fieldOf(early)).toBe("agentDays");
+	});
+	it("refuses a name longer than Hyperliquid takes, and an expiry typed into the name", () => {
+		const long = approve({ agentName: "a".repeat(17) });
+		expect(codes(long.issues)).toContain("agent.name_length");
+		expect(codes(approve({ agentName: "a".repeat(16) }).issues)).not.toContain(
+			"agent.name_length",
+		);
+		expect(
+			codes(approve({ agentName: "bot valid_until 1794258383189" }).issues),
+		).toContain("agent.expiry_in_name");
+		expect(AGENT_EXPIRY.tooLong).toContain("16");
+	});
+	it("says when a name replaces a wallet, and when a fourth name may be refused", () => {
+		const lab = { name: "lab", address: A };
+		const replaced = buildAction(
+			form({ kind: "approveAgent", agentAddress: RECIPIENT, agentName: "lab" }),
+			ctx({ agents: [lab] }),
+		);
+		expect(codes(replaced.issues)).toContain("agent.replaces");
+		const three = [lab, { name: "b", address: B }, { name: "c", address: C }];
+		const fourth = buildAction(
+			form({ kind: "approveAgent", agentAddress: RECIPIENT, agentName: "d" }),
+			ctx({ agents: three }),
+		);
+		expect(codes(fourth.issues)).toContain("agent.limit");
+		// the one without a name does not count, and neither does a list not read
+		expect(
+			codes(
+				buildAction(
+					form({
+						kind: "approveAgent",
+						agentAddress: RECIPIENT,
+						agentName: "d",
+					}),
+					ctx({
+						agents: [lab, { name: "", address: B }, { name: "c", address: C }],
+					}),
+				).issues,
+			),
+		).not.toContain("agent.limit");
+		expect(
+			codes(
+				buildAction(
+					form({
+						kind: "approveAgent",
+						agentAddress: RECIPIENT,
+						agentName: "d",
+					}),
+					ctx({ agents: null }),
+				).issues,
+			),
+		).not.toContain("agent.limit");
+	});
+	it("reads days from a link or a draft only when the form offers them", () => {
+		expect(agentDaysOf("30")).toBe("30");
+		expect(agentDaysOf(7)).toBe("7");
+		expect(agentDaysOf("8")).toBe(null);
+		expect(agentDaysOf(undefined)).toBe(null);
+	});
+	it("comes back as its name and days when proposed again", () => {
+		const built = approve({ agentName: "ashdex dbe6", agentDays: "30" }).action;
+		expect(formFromAction(built as never, "testnet")).toMatchObject({
+			kind: "approveAgent",
+			agentName: "ashdex dbe6",
+			agentDays: "30",
+		});
+	});
+	it("says nothing that is forbidden", () => {
+		for (const line of Object.values(AGENT_EXPIRY)) {
+			const text = typeof line === "function" ? line("7") : line;
+			for (const f of FORBIDDEN_CLAIMS) expect(text).not.toMatch(f);
+		}
 	});
 });

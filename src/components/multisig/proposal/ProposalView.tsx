@@ -97,6 +97,7 @@ import { useTreasuryNames } from "../treasuryName";
 import { useLiveTreasuryState } from "../useTreasuryState";
 import { useWalletSigner } from "../useWalletSigner";
 import { ActionBar } from "./ActionBar";
+import { AshdexCard } from "./AshdexCard";
 import { CopyNotes } from "./CopyNotes";
 import { FirstSign } from "./FirstSign";
 import { LikeWaiting } from "./LikeWaiting";
@@ -131,6 +132,12 @@ const ACTIONABLE: ReadonlySet<Phase> = new Set([
 	"refused",
 	// nothing to send any more, but its proposer can still clear it away
 	"used",
+]);
+/** Phases after Hyperliquid accepted it: an API wallet it approved can trade. */
+const APPROVED: ReadonlySet<Phase> = new Set<Phase>([
+	"submitted",
+	"carried-out",
+	"in-effect",
 ]);
 /** Phases in which what the send costs is still worth saying. */
 const COSTED: ReadonlySet<Phase> = new Set([
@@ -1187,32 +1194,40 @@ export function ProposalView({
 							</>
 						}
 						main={
-							ACTIONABLE.has(stage.phase) && (
-								<div
-									ref={partRef}
-									tabIndex={-1}
-									className="scroll-mt-20 outline-none"
-								>
-									<YourPart
-										// what one wallet did ("Signature added", a refusal) is not
-										// said to the next one that connects
-										key={wallet.address ?? "nobody"}
-										proposal={proposal}
-										stage={stage}
-										wallet={wallet}
-										doc={doc}
-										have={ready?.have ?? 0}
-										need={ready?.need ?? null}
-										signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
-										now={clock}
-										// what is signed, said again where it is signed, and every stop
-										restate={{
-											headline: description.headline,
-											network: target.network,
-										}}
-										stops={stops}
-									/>
-								</div>
+							!ACTIONABLE.has(stage.phase) && APPROVED.has(stage.phase) ? (
+								<AshdexCard
+									action={proposal.payload.action}
+									network={target.network}
+									treasury={proposal.payload.multiSigUser}
+								/>
+							) : (
+								ACTIONABLE.has(stage.phase) && (
+									<div
+										ref={partRef}
+										tabIndex={-1}
+										className="scroll-mt-20 outline-none"
+									>
+										<YourPart
+											// what one wallet did ("Signature added", a refusal) is not
+											// said to the next one that connects
+											key={wallet.address ?? "nobody"}
+											proposal={proposal}
+											stage={stage}
+											wallet={wallet}
+											doc={doc}
+											have={ready?.have ?? 0}
+											need={ready?.need ?? null}
+											signers={state.policy?.authorizedUsers ?? NO_SIGNERS}
+											now={clock}
+											// what is signed, said again where it is signed, and every stop
+											restate={{
+												headline: description.headline,
+												network: target.network,
+											}}
+											stops={stops}
+										/>
+									</div>
+								)
 							)
 						}
 						side={

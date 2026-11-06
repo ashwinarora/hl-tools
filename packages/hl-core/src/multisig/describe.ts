@@ -11,6 +11,7 @@ import { RETURN_QUEUE, STAKE_LOCKUP } from "../rules/staking.ts";
 import { WITHDRAWAL_FEE_USDC } from "../rules/transfers.ts";
 import { VAULT_LOCKUP } from "../rules/vaults.ts";
 import { isAgentRemoval, riskFlags } from "./action.ts";
+import { agentNameParts } from "./agent.ts";
 import { isolated, visibleText } from "./shown.ts";
 import { parseSignersString } from "./signerSet.ts";
 import { waitWords, weiToHype } from "./staking.ts";
@@ -434,12 +435,21 @@ export function describeAction(
 						"That wallet stops acting for the account: from then on only the signers move anything it could. Hyperliquid refuses the removal when the account has no API wallet of that name.",
 					],
 				);
-			return done(
-				`Approve API wallet ${s(action.agentAddress)}${action.agentName ? ` named "${s(action.agentName)}"` : " as the main (unnamed) agent"}`,
-				[
-					"This wallet will act for the account without multi-sig signatures until it expires or is replaced: it can trade with everything the account holds and move it into vaults, but cannot send it to another account or withdraw it.",
-				],
-			);
+			{
+				const named =
+					typeof action.agentName === "string"
+						? agentNameParts(action.agentName)
+						: { name: "", validUntil: null };
+				return done(
+					`Approve API wallet ${s(action.agentAddress)}${named.name ? ` named "${s(named.name)}"` : " as the main (unnamed) agent"}`,
+					[
+						"This wallet will act for the account without multi-sig signatures until it expires or is replaced: it can trade with everything the account holds and move it into vaults, but cannot send it to another account or withdraw it.",
+						named.validUntil !== null
+							? `expires ${isoTime(named.validUntil)}`
+							: "",
+					].filter(Boolean),
+				);
+			}
 		case "approveBuilderFee":
 			return done(
 				`Approve builder ${s(action.builder)} up to ${s(action.maxFeeRate)}`,

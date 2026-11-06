@@ -104,7 +104,8 @@ export function convertBackLines(f: BackFacts): Line[] {
 			text: "Its API wallets could not be read. If it has one, that wallet keeps acting for the account afterwards.",
 		});
 	} else {
-		const live = f.agents.filter((a) => a.validUntil > f.now);
+		// every listed wallet: one past its expiry was seen still trading
+		const live = f.agents;
 		if (live.length > 0) {
 			const names = live
 				.map((a) => `"${a.name ? visibleText(a.name) : "unnamed"}"`)
@@ -131,9 +132,11 @@ export function convertBackLines(f: BackFacts): Line[] {
  */
 export function agentsStayLine(
 	agents: readonly AgentInfo[] | null,
-	now: number,
+	// kept for the callers: an expiry no longer takes a wallet off the list
+	_now: number,
 ): Line | null {
-	const live = (agents ?? []).filter((a) => a.validUntil > now);
+	// every listed wallet: one past its expiry was seen still trading
+	const live = agents ?? [];
 	if (live.length === 0) return null;
 	const names = live
 		.map((a) => `"${a.name ? visibleText(a.name) : "unnamed"}"`)

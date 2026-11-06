@@ -557,6 +557,15 @@ describe("describeAction details", () => {
 				agentName: `lab${String.fromCodePoint(0x202e)}`,
 			} as PlainObject).headline,
 		).toBe(`Approve API wallet ${B} named "lab\\u{202e}"`);
+		// " valid_until <ms>" is Hyperliquid's expiry, not part of the listed name
+		const expiring = describeAction({
+			...SAMPLES.approveAgent,
+			agentName: "ashdex dbe6 valid_until 1794258383189",
+		} as PlainObject);
+		expect(expiring.headline).toBe(
+			`Approve API wallet ${B} named "ashdex dbe6"`,
+		);
+		expect(expiring.lines).toContain("expires 2026-11-09T21:06:23.189Z");
 		// the zero address approves nobody: it removes the wallet of that name
 		const removal = describeAction({
 			...SAMPLES.approveAgent,
