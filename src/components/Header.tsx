@@ -165,13 +165,6 @@ export default function Header() {
 					>
 						Docs
 					</Link>
-					<Link
-						to="/changes"
-						className="inline-flex h-8 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
-						activeProps={{ className: "text-foreground" }}
-					>
-						Changes
-					</Link>
 				</div>
 
 				<div className="ml-auto flex items-center gap-1.5">
@@ -245,12 +238,6 @@ export default function Header() {
 						className="rounded-md px-2 py-2 text-sm hover:bg-surface-2"
 					>
 						Docs
-					</Link>
-					<Link
-						to="/changes"
-						className="rounded-md px-2 py-2 text-sm hover:bg-surface-2"
-					>
-						Protocol rule changes
 					</Link>
 					<a
 						href={SOCIAL.github}

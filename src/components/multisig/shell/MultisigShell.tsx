@@ -3,6 +3,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronDown, ShieldCheck } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { MULTISIG_WRAP } from "#/components/Header";
+import { RULE_SOURCES_SPLAT } from "#/lib/docs/ruleSources";
 import { tool, toolRuleSets, toolVerifiedAt } from "#/lib/tools";
 import {
 	treasuryKey,
@@ -435,7 +436,8 @@ function ShellFoot() {
 				<ShieldCheck className="size-3.5 text-success" aria-hidden />
 				Rules last verified against protocol docs:{" "}
 				<Link
-					to="/changes"
+					to="/docs/$"
+					params={{ _splat: RULE_SOURCES_SPLAT }}
 					className="font-mono text-foreground hover:underline"
 				>
 					{verified ?? "—"}

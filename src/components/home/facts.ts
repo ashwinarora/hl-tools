@@ -4,6 +4,7 @@
  * string here is held to the same rules as the page (`copy.test.ts`).
  */
 
+import { RULE_SOURCES_SPLAT } from "#/lib/docs/ruleSources";
 import { SOCIAL } from "#/lib/social";
 
 /** Routes the home page links to, with the search they need. */
@@ -13,7 +14,10 @@ export const LINKS = {
 	glossary: "/multisig/glossary",
 	faucet: "/faucet-miner",
 	faucetHow: "/faucet-miner/how-to-use",
-	changes: "/changes",
+	ruleSources: {
+		to: "/docs/$",
+		params: { _splat: RULE_SOURCES_SPLAT },
+	},
 	repo: SOCIAL.github,
 } as const;
 

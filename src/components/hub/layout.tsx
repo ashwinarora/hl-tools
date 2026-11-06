@@ -6,6 +6,7 @@ import {
 	ShieldCheck,
 } from "lucide-react";
 import { type ComponentProps, type ReactNode, useId } from "react";
+import { RULE_SOURCES_SPLAT } from "#/lib/docs/ruleSources";
 import { radioGroupKeyDown } from "#/lib/radioGroup";
 import { type ToolDef, toolRuleSets, toolVerifiedAt } from "#/lib/tools";
 import { cn } from "#/lib/utils";
@@ -53,7 +54,8 @@ export function ToolPage({
 						<span>
 							Last verified against protocol docs:{" "}
 							<Link
-								to="/changes"
+								to="/docs/$"
+								params={{ _splat: RULE_SOURCES_SPLAT }}
 								className="font-mono text-foreground hover:underline"
 							>
 								{verified ?? "—"}

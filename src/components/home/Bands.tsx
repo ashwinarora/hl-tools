@@ -310,7 +310,7 @@ function ToolsBand({ wrap }: { wrap: string }) {
 					<Link {...LINKS.lookAtTreasury} className={TEXT_LINK}>
 						Look up any treasury's signers and balances
 					</Link>
-					<Link to={LINKS.changes} className={TEXT_LINK}>
+					<Link {...LINKS.ruleSources} className={TEXT_LINK}>
 						Every rule change, dated
 					</Link>
 				</>

@@ -32,7 +32,7 @@ export * from "./transfers.ts";
 export * from "./vaults.ts";
 export * from "./websocket.ts";
 
-/** Every versioned rule set, in display order. Drives the /changes page. */
+/** Every versioned rule set, in display order. Drives the docs' "Where the rules come from" page. */
 export const RULE_REGISTRY: readonly RuleSetMeta[] = [
 	ASSET_ID_RULES,
 	PRECISION_RULES,

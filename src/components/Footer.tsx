@@ -33,9 +33,6 @@ export default function Footer() {
 					>
 						Docs
 					</Link>
-					<Link to="/changes" className="hover:text-foreground">
-						Rule changes
-					</Link>
 					<Link to="/privacy" className="hover:text-foreground">
 						Privacy
 					</Link>

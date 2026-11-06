@@ -70,11 +70,6 @@ export const PAGES = {
 		description:
 			"Get more Hyperliquid testnet USDC than one faucet drip: chain generated wallets through the testnet faucet, signed with your own wallet in your browser.",
 	},
-	"/changes": {
-		title: "Hyperliquid protocol rule changes — hl-tools",
-		description:
-			"Every Hyperliquid protocol rule hl-tools relies on, with the date each was checked and what changed: asset IDs, precision, signing, multisig and more.",
-	},
 	"/privacy": {
 		title: "Privacy Policy — hl-tools",
 		description:
