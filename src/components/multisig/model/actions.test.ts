@@ -2012,6 +2012,11 @@ describe("an API wallet's expiry (measured: fixtures/multisig/agent-expiry.json)
 		expect(
 			codes(approve({ agentName: "bot", agentDays: "7" }).issues),
 		).not.toContain("agent.expiry_window");
+		const early = approve({ agentName: "bot", agentDays: "1" }).issues.find(
+			(i) => i.code === "agent.expiry_window",
+		);
+		// said under the field it is about
+		expect(early && fieldOf(early)).toBe("agentDays");
 	});
 	it("refuses a name longer than Hyperliquid takes, and an expiry typed into the name", () => {
 		const long = approve({ agentName: "a".repeat(17) });

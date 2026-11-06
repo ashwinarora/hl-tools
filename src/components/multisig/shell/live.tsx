@@ -17,7 +17,18 @@ export function useNow(everyMs = 15_000): number {
 	return now;
 }
 
-/** A moment in the reader's own zone; hovering shows the same moment in UTC. */
+/** False on the server and in the first render in the browser, true after. */
+function useInBrowser(): boolean {
+	const [yes, setYes] = useState(false);
+	useEffect(() => setYes(true), []);
+	return yes;
+}
+
+/**
+ * A moment in the reader's own zone; hovering shows the same moment in UTC.
+ * Written only once the page runs in the browser: the server has another
+ * clock and locale (a form's preview counts from the moment the page opened).
+ */
 export function When({
 	at,
 	seconds = false,
@@ -27,6 +38,8 @@ export function When({
 	seconds?: boolean;
 	className?: string;
 }) {
+	const inBrowser = useInBrowser();
+	if (!inBrowser) return <time className={className} />;
 	return (
 		<time
 			dateTime={isoDateTime(at)}

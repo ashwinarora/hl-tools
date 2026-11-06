@@ -69,7 +69,6 @@ import {
 	proposeDraftFor,
 } from "../model/drafts";
 import { likeWaiting } from "../model/duplicates";
-
 import { loadProposal, saveProposal } from "../model/history";
 import { maxFor } from "../model/max";
 import {
@@ -132,6 +131,7 @@ import { Split } from "../shell/Split";
 import { SwitchToSigner } from "../shell/SwitchToSigner";
 import { useDraft } from "../shell/useDraft";
 import { usePageNetwork } from "../shell/usePageNetwork";
+import { useMounted } from "../shell/WalletBox";
 import { TreasuryStrip } from "../TreasuryStrip";
 import { useKnownProposals } from "../treasury/useKnownProposals";
 import { useTreasuryNames } from "../treasuryName";
@@ -316,6 +316,7 @@ function ProposeForm({
 	} | null>(null);
 	// The preview hashes with a nonce taken when the page opened; the real one is taken on create.
 	const [previewNow] = useState(() => Date.now());
+	const mounted = useMounted();
 	const [superseded, setSuperseded] = useState<Proposal | null>(null);
 	// why a proposal named in the link was not used as the starting point
 	const [notCopied, setNotCopied] = useState<string | null>(null);
@@ -1333,7 +1334,10 @@ function ProposeForm({
 										description="What every signer will sign."
 										bodyClassName="p-3.5"
 									>
-										{action && described ? (
+										{/* once in the browser: the preview counts from the moment the
+										page opened (its number, signing window, an API wallet's
+										expiry), which the server's clock does not share */}
+										{mounted && action && described ? (
 											<div className="space-y-3">
 												<div>
 													{secondDescribed && (
@@ -1604,7 +1608,7 @@ function ProposeForm({
 											)}
 										</div>
 									</Panel>
-									{action && (
+									{mounted && action && (
 										<Panel
 											title="The exact action (for experts)"
 											description="As every signer will sign it. Its time field is set when you create it."

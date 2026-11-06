@@ -1756,6 +1756,8 @@ export function fieldOf(i: Issue): keyof ActionForm | null {
 			return "agentAddress";
 		case "action.agentName":
 			return "agentName";
+		case "action.agentDays":
+			return "agentDays";
 		case "action.removeAgent":
 			return "removeAgent";
 		case "action.abstraction":
