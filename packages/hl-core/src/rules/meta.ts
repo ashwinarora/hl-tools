@@ -1,7 +1,7 @@
 /**
  * Every protocol rule set in hl-core carries a version, the date it was last
- * checked against the primary source, and links to those sources. The app's
- * /changes page and every tool's "last verified" line are generated from this
+ * checked against the primary source, and links to those sources. The docs'
+ * "Where the rules come from" page and every tool's "last verified" line are generated from this
  * metadata, so there is exactly one place to bump when the protocol changes.
  */
 

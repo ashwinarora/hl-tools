@@ -3,6 +3,7 @@
   "pages": [
     "glossary",
     "numbers",
+    "rule-sources",
     "corewriter"
   ]
 }

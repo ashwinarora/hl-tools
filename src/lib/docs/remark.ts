@@ -5,6 +5,7 @@
  *   and in its Markdown copy, so neither can drift from the rule files.
  * - `<RuleTable id="…" />` becomes a table (from `tables.ts`), the same way,
  *   with the rule sets it comes from under it.
+ * - `<RuleSources />` becomes every rule set's section (from `ruleSources.ts`).
  * - The docs' components get a readable Markdown form for "Copy page", the
  *   `.md` pages and `llms.txt` (otherwise their JSX would be copied as is).
  *
@@ -20,6 +21,11 @@ import type { VFile } from "vfile";
 import { marksOf } from "../../components/docs/marks.ts";
 import { FACTS, isFactId } from "./facts.ts";
 import { isPromptKind, onTestnet, PROMPTS, promptMarkdown } from "./prompts.ts";
+import {
+	RULE_SOURCES_PATH,
+	ruleSourceNodes,
+	ruleSourcesMarkdown,
+} from "./ruleSources.ts";
 import { isTableId, provenance, type RuleTableData, TABLES } from "./tables.ts";
 
 /** The site's address, for links in the Markdown copy (read outside the site). */
@@ -196,8 +202,8 @@ function tableNodes(table: RuleTableData): Node[] {
 				{ type: "text", value: `From ${provenance(table)}. ` },
 				{
 					type: "link",
-					url: "/changes",
-					children: [{ type: "text", value: "Rule changes" }],
+					url: RULE_SOURCES_PATH,
+					children: [{ type: "text", value: "Where the rules come from" }],
 				},
 			],
 		},
@@ -205,7 +211,7 @@ function tableNodes(table: RuleTableData): Node[] {
 }
 
 function tableMarkdown(table: RuleTableData): string {
-	return `${markdownTable([table.head, ...table.rows].map((r) => [...r]))}\n\n*From ${provenance(table)}. [Rule changes](${ORIGIN}/changes)*`;
+	return `${markdownTable([table.head, ...table.rows].map((r) => [...r]))}\n\n*From ${provenance(table)}. [Where the rules come from](${ORIGIN}${RULE_SOURCES_PATH})*`;
 }
 
 /** Replaces each `<Fact>` in `parent` with its text; the rest get their Markdown. */
@@ -247,6 +253,17 @@ function walk(parent: Node, file: VFile): void {
 				tableMarkdown(TABLES[id]),
 			);
 			const nodes = tableNodes(TABLES[id]);
+			children.splice(i, 1, ...nodes);
+			i += nodes.length - 1;
+			continue;
+		}
+		if (isJsx(node) && node.name === "RuleSources") {
+			replaceSource(
+				file,
+				node as unknown as Replaceable,
+				ruleSourcesMarkdown(`${ORIGIN}${RULE_SOURCES_PATH}`),
+			);
+			const nodes = ruleSourceNodes() as Node[];
 			children.splice(i, 1, ...nodes);
 			i += nodes.length - 1;
 			continue;
