@@ -1,3 +1,5 @@
+import { SOCIAL } from "./social";
+
 /**
  * The site's own address and what a link to it shows when it is shared (an
  * Open Graph and a Twitter card). A link preview needs absolute URLs, so the
@@ -38,6 +40,7 @@ export function shareMeta(
 		{ property: "og:image:height", content: SHARE.imageHeight },
 		{ property: "og:image:alt", content: SHARE.imageAlt },
 		{ name: "twitter:card", content: "summary_large_image" },
+		{ name: "twitter:site", content: SOCIAL.xHandle },
 		{ name: "twitter:title", content: title },
 		{ name: "twitter:description", content: description },
 		{ name: "twitter:image", content: SHARE.image },
